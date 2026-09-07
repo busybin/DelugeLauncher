@@ -56,6 +56,8 @@ import dev.victorialauncher.ui.applist.buildAppListModel
 import dev.victorialauncher.ui.common.FolderPickerDialog
 import dev.victorialauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,6 +70,9 @@ private val EDGE_ZONE_WIDTH = 52.dp
 
 /** Android only honours this much gesture exclusion per side, so spend it on the strip. */
 private const val GESTURE_EXCLUSION_CAP_DP = 200
+
+/** How long a launch is given to take us off screen before the overlay closes itself. */
+private const val LAUNCH_CLOSE_TIMEOUT_MS = 2000L
 
 /**
  * The home destination: the home screen itself, the app-list overlay layered over it, and the
@@ -112,7 +117,6 @@ fun HomeRoute(
             buildAppListModel(apps, hiddenApps) { nameOverrides[it.key] ?: it.label }
         }
     }
-    val letters = remember(listModel) { listModel.letterIndex.map { it.first } }
 
     var appListVisible by remember { mutableStateOf(false) }
     val scrub = remember { ScrubState() }
@@ -132,9 +136,31 @@ fun HomeRoute(
     // top of the system's own home transition just reads as noise.
     var instantClose by remember { mutableStateOf(false) }
 
+    // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
+    var launchClose by remember { mutableStateOf<Job?>(null) }
+
     fun closeAppList() {
+        launchClose?.cancel()
+        launchClose = null
         appListVisible = false
         scrub.cancel()
+    }
+
+    // Closing the overlay the moment an app is launched puts the home screen on screen for
+    // the few frames before that app's window arrives, which reads as a jolt back to home.
+    // Leave the list up and let it go when we are actually backgrounded instead: by then
+    // nothing of ours is visible, so the close costs nothing and can snap.
+    fun closeAfterLaunch() {
+        instantClose = true
+        launchClose?.cancel()
+        launchClose = scope.launch {
+            // Nothing ever came to the foreground. Rather than leave the list stuck open,
+            // put it away the ordinary animated way.
+            delay(LAUNCH_CLOSE_TIMEOUT_MS)
+            launchClose = null
+            instantClose = false
+            closeAppList()
+        }
     }
 
     LaunchedEffect(settings.edgeSide) { scrub.syncRestingSide(settings.edgeSide) }
@@ -146,7 +172,11 @@ fun HomeRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) closeAppList()
+            if (event == Lifecycle.Event.ON_PAUSE) {
+                // Nothing of ours is on screen any more, so there is nothing to animate.
+                instantClose = true
+                closeAppList()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -328,7 +358,10 @@ fun HomeRoute(
                 viewportHeightPx = viewportHeightPx,
                 visible = appListVisible,
                 favoriteKeys = remember(favoriteKeys) { favoriteKeys.toSet() },
-                onLaunch = { app.appRepository.launch(it.componentName); closeAppList() },
+                onLaunch = { appInfo ->
+                    // A launch that never got off the ground leaves nothing to wait for.
+                    if (app.appRepository.launch(appInfo.componentName)) closeAfterLaunch() else closeAppList()
+                },
                 onSetFavorite = { appInfo, add ->
                     scope.launch {
                         if (add) app.prefs.addFavorite(appInfo.key) else app.prefs.removeFavorite(appInfo.key)
@@ -362,7 +395,7 @@ fun HomeRoute(
 
         if (settings.alwaysShowAz && !appListVisible) {
             EdgeScrubber(
-                letters = letters,
+                letters = listModel.letters,
                 scrubY = { null },
                 pullPx = { 0f },
                 band = band,
@@ -413,7 +446,7 @@ fun HomeRoute(
                 EdgeTouchZone(
                     side = side,
                     widthDp = EDGE_ZONE_WIDTH,
-                    letters = letters,
+                    letters = listModel.letters,
                     band = band,
                     hapticsEnabled = settings.hapticsEnabled,
                     state = scrub,

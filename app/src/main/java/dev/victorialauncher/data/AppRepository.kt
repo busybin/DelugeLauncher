@@ -41,15 +41,18 @@ class AppRepository(private val context: Context) {
         }
     }
 
-    fun launch(componentName: ComponentName) {
+    /** Returns false if the app could not be started, so callers can undo whatever they hid. */
+    fun launch(componentName: ComponentName): Boolean {
         val intent = Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_LAUNCHER)
             .setComponent(componentName)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        try {
+        return try {
             context.startActivity(intent)
+            true
         } catch (e: Exception) {
             // App may have been uninstalled since the list was built; ignore.
+            false
         }
     }
 
