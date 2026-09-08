@@ -152,6 +152,7 @@ fun AppListScreen(
     // behind the overlay never sees the letter change. currentY/currentPull stay as
     // function references so their callers read them in the draw phase, not composition.
     val scrubLetter = scrub.letter
+    val scrubbing = scrub.scrubbing
     val activeSide = scrub.side
     val scrubY = remember(scrub) { scrub::currentY }
     val pullPx = remember(scrub) { scrub::currentPull }
@@ -161,7 +162,10 @@ fun AppListScreen(
     // is the same list the whole time. Only ever read inside a graphicsLayer, so the fade
     // runs in the draw phase instead of recomposing every visible row 60 times a second.
     val othersAlpha by animateFloatAsState(
-        targetValue = if (scrubLetter != null) 0f else 1f,
+        // Only while a finger is travelling through the alphabet: a tap on the edge sets a
+        // letter too, and fading out for it cost a quarter of a second of ghosted list on
+        // every open.
+        targetValue = if (scrubLetter != null && scrubbing) 0f else 1f,
         animationSpec = tween(durationMillis = 180),
         label = "othersAlpha",
     )

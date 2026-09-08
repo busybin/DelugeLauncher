@@ -34,6 +34,17 @@ class ScrubState {
     var active by mutableStateOf(false)
         private set
 
+    /**
+     * True once the finger has actually travelled, as opposed to merely landing. The letter
+     * under a fingertip is reported from the down event so that a tap still places the list,
+     * but the drawn-out affordances — fading every other row away — are worth their cost only
+     * while a finger is genuinely moving through the alphabet. Gating them on this is what
+     * stops a plain tap on the edge spending a quarter of a second fading the list out and
+     * straight back in again.
+     */
+    var scrubbing by mutableStateOf(false)
+        private set
+
     /** Which edge is in play, so the strip only appears on the side actually used. */
     var side by mutableStateOf(EdgeSide.RIGHT)
         private set
@@ -61,7 +72,13 @@ class ScrubState {
     fun begin(side: EdgeSide) {
         this.side = side
         active = true
+        scrubbing = false
         releasing = false
+    }
+
+    /** Called once the gesture passes touch slop, never for a tap. */
+    fun markScrubbing() {
+        scrubbing = true
     }
 
     fun update(y: Float, inwardPx: Float, letter: Char?) {
@@ -73,6 +90,7 @@ class ScrubState {
     /** Releases the elastic pull back to the strip. Suspends until the spring settles. */
     suspend fun release() {
         active = false
+        scrubbing = false
         letter = null
         releasing = true
         releasePull.snapTo(pull)
@@ -90,6 +108,7 @@ class ScrubState {
     /** Cancels a scrub without the spring, for dismissals that snap (the HOME key). */
     fun cancel() {
         active = false
+        scrubbing = false
         letter = null
         releasing = false
         pull = 0f

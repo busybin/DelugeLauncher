@@ -74,6 +74,11 @@ fun EdgeTouchZone(
                         val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) break
+                        // A tap places the list without ever counting as a scrub, so the
+                        // overlay does not spend the tap fading itself out and back in.
+                        if ((change.position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                            state.markScrubbing()
+                        }
                         report(change.position.x, change.position.y)
                         change.consume()
                     }

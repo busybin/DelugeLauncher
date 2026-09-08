@@ -225,9 +225,12 @@ fun HomeRoute(
     ) {
         // Hidden entirely while the list is up, so only the wallpaper sits behind it — and
         // kept composed the same way, so coming back is instant.
+        // Opening answers a finger on the edge, so it happens on the frame the touch lands:
+        // a cross-fade there only puts the home screen and the list on screen together for
+        // long enough to read as lag. Closing still cross-fades.
         val homeAlpha by animateFloatAsState(
             targetValue = if (appListVisible) 0f else 1f,
-            animationSpec = if (instantClose) snap() else tween(90),
+            animationSpec = if (appListVisible || instantClose) snap() else tween(90),
             label = "homeAlpha",
         )
         Box(
@@ -332,7 +335,7 @@ fun HomeRoute(
         // means it neither draws nor receives touches.
         val overlayAlpha by animateFloatAsState(
             targetValue = if (appListVisible) 1f else 0f,
-            animationSpec = if (instantClose) snap() else tween(if (appListVisible) 60 else 90),
+            animationSpec = if (appListVisible || instantClose) snap() else tween(90),
             label = "overlayAlpha",
         )
         Box(
