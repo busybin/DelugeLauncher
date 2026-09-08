@@ -70,6 +70,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -82,6 +83,7 @@ import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.folderToken
 import dev.victorialauncher.data.PaddingSlot
 import dev.victorialauncher.media.NowPlayingWidget
+import dev.victorialauncher.media.openNowPlayingApp
 import dev.victorialauncher.ui.common.AppIcon
 import dev.victorialauncher.ui.common.EditAppDialog
 import dev.victorialauncher.ui.common.FolderIconImage
@@ -377,6 +379,7 @@ fun HomeScreen(
                 NowPlayingBlock(
                     editMode = editMode,
                     heightDp = nowPlayingHeightDp,
+                    contentColor = contentColor,
                     sidePaddingDp = sidePaddingDp,
                     padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                     padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -567,6 +570,7 @@ fun HomeScreen(
                         NowPlayingBlock(
                             editMode = editMode,
                             heightDp = nowPlayingHeightDp,
+                            contentColor = contentColor,
                             sidePaddingDp = sidePaddingDp,
                             padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                             padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -896,6 +900,7 @@ private fun FolderRow(
 private fun NowPlayingBlock(
     editMode: Boolean,
     heightDp: Int,
+    contentColor: Color,
     sidePaddingDp: Int,
     padTop: Int,
     padBottom: Int,
@@ -912,6 +917,7 @@ private fun NowPlayingBlock(
     onCommitPadding: (PaddingSlot, Int) -> Unit,
 ) {
     val density = LocalDensity.current
+    val context = LocalContext.current
 
     PaddingHandle(
         editMode = editMode,
@@ -924,12 +930,15 @@ private fun NowPlayingBlock(
     Box {
         NowPlayingWidget(
             heightDp = heightDp,
+            contentColor = contentColor,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = sidePaddingDp.dp)
                 .recordTouchPosition(touchPosition)
                 .combinedClickable(
-                    onClick = {},
+                    // The transport buttons consume their own taps, so this is only ever the
+                    // card itself — which should get you to what is playing.
+                    onClick = { openNowPlayingApp(context) },
                     onLongClick = {
                         onOpenMenu(
                             with(density) {
