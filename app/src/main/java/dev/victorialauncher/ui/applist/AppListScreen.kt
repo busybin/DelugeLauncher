@@ -52,7 +52,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -184,9 +183,6 @@ fun AppListScreen(
     // Row indices of the highlighted section. Applied *after* the scroll lands, otherwise
     // the new letter lights up a frame before the list moves to it — that was the jitter.
     var highlightRange by remember { mutableStateOf(IntRange.EMPTY) }
-    // Height of the highlighted section, so the tail below the list is only as long as that
-    // section needs to reach the line — not a blanket screenful.
-    var highlightHeightPx by remember { mutableIntStateOf(0) }
 
     // Dismissing on the first tap is what made double-tap-to-lock unreachable: the overlay
     // stops receiving touches the moment it hides, so the second tap never arrived. With the
@@ -236,7 +232,6 @@ fun AppListScreen(
             pendingDismiss?.cancel()
             pendingDismiss = null
             highlightRange = IntRange.EMPTY
-            highlightHeightPx = 0
             overPull = 0f
             stretchPx = 0f
             collapsing = false
@@ -254,13 +249,16 @@ fun AppListScreen(
         return (first.offset - info.viewportStartOffset).toFloat() - idleTopPaddingPx
     }
 
-    fun tailGapRemaining(): Float {
+    /**
+     * How much further the list could still scroll forward. Large whenever the end is not even
+     * on screen; zero when parked against it.
+     */
+    fun forwardRoom(): Float {
         val info = listState.layoutInfo
-        val last = info.visibleItemsInfo.lastOrNull() ?: return 0f
-        // Not the last row at the bottom means the tail is all below the fold.
-        if (last.index < model.rows.size) return 0f
+        val last = info.visibleItemsInfo.lastOrNull() ?: return Float.MAX_VALUE
+        if (last.index < model.rows.size) return Float.MAX_VALUE
         val bottom = (last.offset - info.viewportStartOffset + last.size).toFloat()
-        return (viewportHeightPx - bottom) - idleBottomPaddingPx
+        return bottom + idleBottomPaddingPx - viewportHeightPx
     }
 
     /**
@@ -273,19 +271,17 @@ fun AppListScreen(
         val items = listState.layoutInfo.visibleItemsInfo
         val first = items.firstOrNull() ?: return true
         if (first.index == 0 && items.last().index >= model.rows.size) return true
-        return topGapRemaining() <= 0f && tailGapRemaining() <= 0f
+        return topGapRemaining() <= 0f
     }
 
-    // A manual scroll means the scrub placement has served its purpose, so the alignment
-    // padding can go — but it is ordinary scrollable space, so the finger is allowed to travel
-    // through it rather than having it pulled out from underneath. That matters at both ends of
-    // the alphabet, which the scrub parks against the ends of the scroll range: at A there is
-    // nothing above to scroll back into and at Z nothing below, so retiring the padding there
-    // can only shift the rows themselves, snapping the first or last section into place.
-    // Waiting until a gap has scrolled off means the change is invisible — the top's
-    // compensating scroll has exactly the room it needs, and a tail that is off screen takes
-    // nothing with it. Once gone, the idle gaps are all that is left, so there is no scrolling
-    // back into either unless that letter is picked again.
+    // A manual scroll means the scrub placement has served its purpose, so the alignment gap
+    // can go — but it is ordinary scrollable space, so the finger is allowed to travel through
+    // it rather than having it pulled out from underneath. That matters at A, which the scrub
+    // parks against the top of the scroll range: there is nothing above to scroll back into, so
+    // retiring the gap there could only shift the rows themselves and the first section would
+    // snap upward. Waiting until it has scrolled off the top makes the change invisible, and
+    // once gone the idle gap is all that is left, so there is no scrolling back into it unless
+    // A is picked again.
     var userDragged by remember { mutableStateOf(false) }
     LaunchedEffect(userDragged, scrubLetter) {
         if (!userDragged || scrubLetter != null || highlightRange.isEmpty()) {
@@ -296,14 +292,18 @@ fun AppListScreen(
 
         // The top padding falls from the scrub line back to the idle gap, so that is exactly
         // how far the content would rise — compensating by anything else (this used to use a
-        // bare 8dp) leaves the list jumping by the difference. The tail needs no compensation:
-        // by now it is off screen, so shrinking it moves nothing.
+        // bare 8dp) leaves the list jumping by the difference.
+        //
+        // Except against the bottom, where shrinking the padding shortens the scroll range by
+        // the same amount and the clamp slides us back by whatever no longer fits, doing part
+        // of the job already. Compensating the full amount on top of that is itself a jump, so
+        // only what the clamp cannot absorb is asked for.
         val shrinkBy = (sectionTopPx - idleTopPaddingPx).toFloat()
+        val compensate = minOf(shrinkBy, forwardRoom()).coerceAtLeast(0f)
         highlightRange = IntRange.EMPTY
-        highlightHeightPx = 0
         // dispatchRawDelta rather than scrollBy: the drag that got us here holds the scroll
         // mutex at UserInput priority, and a scrollBy would just be cancelled by it.
-        if (shrinkBy > 0f) listState.dispatchRawDelta(-shrinkBy)
+        if (compensate > 0f) listState.dispatchRawDelta(-compensate)
     }
 
     LaunchedEffect(scrubRowIndex, model) {
@@ -313,8 +313,6 @@ fun AppListScreen(
         // whole tail of the list on every one of the ~26 letter changes in a gesture.
         val end = model.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: model.rows.size
         highlightRange = scrubRowIndex until end
-        highlightHeightPx = listState.layoutInfo.visibleItemsInfo
-            .sumOf { if (it.index in highlightRange) it.size else 0 }
         // This placement is fresh, so the next drag is the one that retires it.
         userDragged = false
     }
@@ -568,14 +566,19 @@ fun AppListScreen(
                 .graphicsLayer { translationY = stretchProvider() },
             // Room above A and below Z so any letter can sit on the same line; without it
             // the ends clamp and land somewhere else entirely.
+            // Room above A so it can sit on the scrub line like every other letter; without
+            // it the top clamps and A lands somewhere else entirely. There is deliberately no
+            // matching room below Z. Reaching the line from the bottom would take most of a
+            // screen of empty space past the settings row, which reads as the list being
+            // broken rather than as placement, so the last letter simply lands as high as its
+            // own content allows.
             contentPadding = with(density) {
-                val needsTail = scrubLetter != null || !highlightRange.isEmpty()
-                if (needsTail) {
-                    val tailPx = (viewportHeightPx - sectionTopPx - highlightHeightPx).coerceAtLeast(96)
-                    PaddingValues(top = sectionTopPx.toDp(), bottom = tailPx.toDp())
+                val top = if (scrubLetter != null || !highlightRange.isEmpty()) {
+                    sectionTopPx.toDp()
                 } else {
-                    PaddingValues(top = IDLE_TOP_PADDING, bottom = IDLE_BOTTOM_PADDING)
+                    IDLE_TOP_PADDING
                 }
+                PaddingValues(top = top, bottom = IDLE_BOTTOM_PADDING)
             },
         ) {
             itemsIndexed(
