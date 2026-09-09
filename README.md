@@ -7,8 +7,10 @@ minimal, list-based Android home screen.
 
 ## Install
 
-Grab the APK from [Releases](../../releases), or wait for it to land on
-[F-Droid](https://f-droid.org).
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="70">](https://f-droid.org/packages/dev.victorialauncher/)
+
+Or grab the APK from [Releases](../../releases). Both carry the same signature,
+so you can move between them without uninstalling.
 
 Once it is installed, pick Victoria Launcher under
 **Settings → Apps → Default apps → Home app**.
