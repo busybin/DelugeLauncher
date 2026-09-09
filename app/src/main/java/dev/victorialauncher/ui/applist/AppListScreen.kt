@@ -58,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -84,6 +85,7 @@ import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.ui.common.EditAppDialog
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -238,26 +240,41 @@ fun AppListScreen(
         }
     }
 
+    // How much of the scrub placement gap is still sitting on screen, over and above the gap
+    // the list idles with. Positive means the first row has further to travel.
+    fun placementGapRemaining(): Float {
+        val info = listState.layoutInfo
+        val first = info.visibleItemsInfo.firstOrNull() ?: return 0f
+        // Not the first row at the top of the list means the gap is long gone above us.
+        if (first.index > 0) return 0f
+        return (first.offset - info.viewportStartOffset).toFloat() - idleTopPaddingPx
+    }
+
     // A manual scroll means the scrub placement has served its purpose, so the alignment
-    // padding can go. It is retired at the *start* of that first drag, while the list is
-    // still parked where the scrub left it and so has room in both directions to absorb the
-    // change. Waiting for the scroll to settle instead means doing it against whichever end
-    // the flick landed on, where the compensating scroll has nowhere to go and the shift
-    // lands on screen as a hitch; deferring past that end leaves the placement padding in
-    // place, which reads as the list overscrolling into a screenful of nothing.
+    // padding can go — but it is ordinary scrollable space, so the finger is allowed to travel
+    // through it rather than having it pulled out from underneath. That matters at A, which
+    // the scrub parks at the very top of the scroll range: there is nothing above to scroll
+    // back into, so retiring the padding there has to shift the rows themselves and the first
+    // section jumps upward. Waiting until the gap has scrolled off the top means the
+    // compensating scroll has exactly the room it needs and nothing moves at all; once it is
+    // gone the idle gap is all that is left, so there is no scrolling back into it either.
     var userDragged by remember { mutableStateOf(false) }
     LaunchedEffect(userDragged, scrubLetter) {
         if (!userDragged || scrubLetter != null || highlightRange.isEmpty()) {
             return@LaunchedEffect
         }
         // The top padding falls from the scrub line back to the idle gap, so that is exactly
-        // how far the content rises — compensating by anything else (this used to use a bare
-        // 8dp) leaves the list jumping by the difference.
+        // how far the content would rise — compensating by anything else (this used to use a
+        // bare 8dp) leaves the list jumping by the difference.
         val shrinkBy = (sectionTopPx - idleTopPaddingPx).toFloat()
+        if (shrinkBy > 0f) {
+            snapshotFlow { placementGapRemaining() }.first { it <= 0f }
+            if (highlightRange.isEmpty()) return@LaunchedEffect
+        }
         highlightRange = IntRange.EMPTY
         highlightHeightPx = 0
-        // dispatchRawDelta rather than scrollBy: the drag that triggered this holds the
-        // scroll mutex at UserInput priority, and a scrollBy would just be cancelled by it.
+        // dispatchRawDelta rather than scrollBy: the drag that got us here holds the scroll
+        // mutex at UserInput priority, and a scrollBy would just be cancelled by it.
         if (shrinkBy > 0f) listState.dispatchRawDelta(-shrinkBy)
     }
 

@@ -4,9 +4,6 @@ package dev.victorialauncher.ui.home
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Box
@@ -132,10 +129,6 @@ fun HomeRoute(
     val nowPlayingHasContent = settings.nowPlayingEnabled && (!listenerGranted || nowPlaying != null)
     val band = favBand ?: ScrubBand.fallbackFor(viewportHeightPx)
 
-    // Dismissals from the HOME key snap rather than cross-fade — anything of ours layered on
-    // top of the system's own home transition just reads as noise.
-    var instantClose by remember { mutableStateOf(false) }
-
     // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
     var launchClose by remember { mutableStateOf<Job?>(null) }
 
@@ -151,14 +144,12 @@ fun HomeRoute(
     // Leave the list up and let it go when we are actually backgrounded instead: by then
     // nothing of ours is visible, so the close costs nothing and can snap.
     fun closeAfterLaunch() {
-        instantClose = true
         launchClose?.cancel()
         launchClose = scope.launch {
             // Nothing ever came to the foreground. Rather than leave the list stuck open,
             // put it away the ordinary animated way.
             delay(LAUNCH_CLOSE_TIMEOUT_MS)
             launchClose = null
-            instantClose = false
             closeAppList()
         }
     }
@@ -172,23 +163,13 @@ fun HomeRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                // Nothing of ours is on screen any more, so there is nothing to animate.
-                instantClose = true
-                closeAppList()
-            }
+            if (event == Lifecycle.Event.ON_PAUSE) closeAppList()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(homeIntentTick) {
-        if (homeIntentTick > 0) {
-            instantClose = true
-            closeAppList()
-        }
-    }
-    LaunchedEffect(appListVisible) {
-        if (appListVisible) instantClose = false
+        if (homeIntentTick > 0) closeAppList()
     }
 
     LaunchedEffect(settings.edgeSide, view, band) {
@@ -225,14 +206,10 @@ fun HomeRoute(
     ) {
         // Hidden entirely while the list is up, so only the wallpaper sits behind it — and
         // kept composed the same way, so coming back is instant.
-        // Opening answers a finger on the edge, so it happens on the frame the touch lands:
-        // a cross-fade there only puts the home screen and the list on screen together for
-        // long enough to read as lag. Closing still cross-fades.
-        val homeAlpha by animateFloatAsState(
-            targetValue = if (appListVisible) 0f else 1f,
-            animationSpec = if (appListVisible || instantClose) snap() else tween(90),
-            label = "homeAlpha",
-        )
+        // No transition either way. Both directions answer a finger directly, and a fade
+        // across them only ever put the home screen and the list on screen together for long
+        // enough to read as lag.
+        val homeAlpha = if (appListVisible) 0f else 1f
         Box(
             modifier = Modifier
                 .graphicsLayer { alpha = homeAlpha }
@@ -333,11 +310,7 @@ fun HomeRoute(
 
         // Kept composed and measured even while hidden, just never placed. Not placing it
         // means it neither draws nor receives touches.
-        val overlayAlpha by animateFloatAsState(
-            targetValue = if (appListVisible) 1f else 0f,
-            animationSpec = if (appListVisible || instantClose) snap() else tween(90),
-            label = "overlayAlpha",
-        )
+        val overlayAlpha = if (appListVisible) 1f else 0f
         Box(
             modifier = Modifier
                 .graphicsLayer { alpha = overlayAlpha }
