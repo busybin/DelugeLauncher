@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.victorialauncher.ui.home
 
+import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.calculateTargetValue
@@ -937,8 +938,17 @@ private fun NowPlayingBlock(
                 .recordTouchPosition(touchPosition)
                 .combinedClickable(
                     // The transport buttons consume their own taps, so this is only ever the
-                    // card itself — which should get you to what is playing.
-                    onClick = { openNowPlayingApp(context) },
+                    // card itself — which should get you to what is playing. Say so when it
+                    // can't, rather than leaving a tap that looks ignored.
+                    onClick = {
+                        if (!openNowPlayingApp(context)) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.now_playing_open_failed),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
                     onLongClick = {
                         onOpenMenu(
                             with(density) {

@@ -143,6 +143,7 @@
 
     <!-- Now Playing -->
     <string name="now_playing_enable_access">Enable Now Playing access</string>
+    <string name="now_playing_open_failed">Can\'t open the app that\'s playing</string>
     <string name="now_playing_unknown_title">Unknown title</string>
     <string name="now_playing_previous">Previous</string>
     <string name="now_playing_play_pause">Play/pause</string>

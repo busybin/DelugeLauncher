@@ -9,7 +9,6 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -74,24 +73,32 @@ fun isListenerEnabled(context: Context) =
     NotificationManagerCompat.getEnabledListenerPackages(context).contains(context.packageName)
 
 /**
- * Brings up whatever is playing. A session may nominate its own activity, which lands on the
- * player's own now-playing screen rather than wherever the app happens to open by default, so
- * that is tried first and the plain launcher intent is the fallback.
+ * Brings up whatever is playing, and reports whether anything could be.
  *
- * Returns false when there is nothing playing, or the owning app offers no way in.
+ * The launcher intent goes first even though a session may nominate its own activity, which
+ * would land on the player's own screen. Sending that PendingIntent starts an activity on
+ * behalf of an app that is in the background, which Android drops on sight from 12 onwards
+ * unless the sender explicitly grants the privilege — and `send()` reports success either
+ * way, so there is no way to notice it went nowhere and fall back. Starting the intent
+ * ourselves has no such problem: we are the foreground app. In practice the launcher intent
+ * resumes the player's existing task anyway, which is the same screen.
  */
 fun openNowPlayingApp(context: Context): Boolean {
     val controller = NowPlayingBus.state.value?.controller ?: return false
 
-    controller.sessionActivity?.let { pending ->
-        if (runCatching { pending.send() }.isSuccess) return true
+    context.packageManager.getLaunchIntentForPackage(controller.packageName)?.let { launch ->
+        if (runCatching {
+                context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.isSuccess
+        ) {
+            return true
+        }
     }
 
-    val launch = context.packageManager.getLaunchIntentForPackage(controller.packageName)
-        ?: return false
-    return runCatching {
-        context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-    }.isSuccess
+    // Nothing launchable — a background service publishing a session, say. The session's own
+    // activity is all that is left, so it is worth a try even knowing it may be dropped.
+    val sessionActivity = controller.sessionActivity ?: return false
+    return runCatching { sessionActivity.send() }.isSuccess
 }
 
 @Composable
@@ -192,10 +199,9 @@ fun NowPlayingWidget(
                     }
                 },
             ),
-        // Tinted from the content colour rather than hardcoded white: on a light wallpaper
-        // with a dark content colour, a white scrim left this card invisible against it while
-        // every other row on the home screen inverted correctly.
-        color = contentColor.copy(alpha = 0.10f),
+        // No scrim: the block sits on the wallpaper like the favourites above it do, so the
+        // only thing separating it from them is its own spacing.
+        color = Color.Transparent,
         shape = RoundedCornerShape(16.dp),
     ) {
         Row(
@@ -204,13 +210,8 @@ fun NowPlayingWidget(
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // One plate either way, so a track with no artwork is the same shape and weight
-            // in the row as one with it.
             Box(
-                modifier = Modifier
-                    .size(artSize)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(contentColor.copy(alpha = 0.12f)),
+                modifier = Modifier.size(artSize),
                 contentAlignment = Alignment.Center,
             ) {
                 val art = current.art
@@ -219,16 +220,18 @@ fun NowPlayingWidget(
                         bitmap = art.asImageBitmap(),
                         contentDescription = null,
                         // Cropped, not fitted: album art that isn't square used to letterbox
-                        // and leave the plate showing through down two edges.
+                        // inside its box and sit visibly smaller than the square it was given.
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp)),
                     )
                 } else {
                     Icon(
                         Icons.Filled.MusicNote,
                         contentDescription = null,
                         tint = contentColor.copy(alpha = 0.7f),
-                        modifier = Modifier.size(artSize * 0.55f),
+                        modifier = Modifier.size(artSize * 0.75f),
                     )
                 }
             }
