@@ -206,6 +206,7 @@ fun AppListScreen(
     val maxPullPx = with(density) { 320.dp.toPx() }
     val maxStretchPx = with(density) { MAX_EDGE_STRETCH.toPx() }
     val idleTopPaddingPx = with(density) { IDLE_TOP_PADDING.roundToPx() }
+    val idleBottomPaddingPx = with(density) { IDLE_BOTTOM_PADDING.roundToPx() }
 
     var overPull by remember { mutableFloatStateOf(0f) }
     val collapseAnim = remember { Animatable(0f) }
@@ -240,37 +241,61 @@ fun AppListScreen(
         }
     }
 
-    // How much of the scrub placement gap is still sitting on screen, over and above the gap
-    // the list idles with. Positive means the first row has further to travel.
-    fun placementGapRemaining(): Float {
+    // How much of the scrub placement padding is still sitting on screen at each end, over and
+    // above the gap the list idles with. Positive means that end has further to travel.
+    fun topGapRemaining(): Float {
         val info = listState.layoutInfo
         val first = info.visibleItemsInfo.firstOrNull() ?: return 0f
-        // Not the first row at the top of the list means the gap is long gone above us.
+        // Not the first row at the top means the gap is long gone above us.
         if (first.index > 0) return 0f
         return (first.offset - info.viewportStartOffset).toFloat() - idleTopPaddingPx
     }
 
+    fun tailGapRemaining(): Float {
+        val info = listState.layoutInfo
+        val last = info.visibleItemsInfo.lastOrNull() ?: return 0f
+        // Not the last row at the bottom means the tail is all below the fold.
+        if (last.index < model.rows.size) return 0f
+        val bottom = (last.offset - info.viewportStartOffset + last.size).toFloat()
+        return (viewportHeightPx - bottom) - idleBottomPaddingPx
+    }
+
+    /**
+     * Whether the placement padding can be retired without anything appearing to move.
+     *
+     * A list short enough to show both ends at once can never clear either gap by scrolling,
+     * so it is let through rather than left holding the padding for good.
+     */
+    fun placementSettled(): Boolean {
+        val items = listState.layoutInfo.visibleItemsInfo
+        val first = items.firstOrNull() ?: return true
+        if (first.index == 0 && items.last().index >= model.rows.size) return true
+        return topGapRemaining() <= 0f && tailGapRemaining() <= 0f
+    }
+
     // A manual scroll means the scrub placement has served its purpose, so the alignment
     // padding can go — but it is ordinary scrollable space, so the finger is allowed to travel
-    // through it rather than having it pulled out from underneath. That matters at A, which
-    // the scrub parks at the very top of the scroll range: there is nothing above to scroll
-    // back into, so retiring the padding there has to shift the rows themselves and the first
-    // section jumps upward. Waiting until the gap has scrolled off the top means the
-    // compensating scroll has exactly the room it needs and nothing moves at all; once it is
-    // gone the idle gap is all that is left, so there is no scrolling back into it either.
+    // through it rather than having it pulled out from underneath. That matters at both ends of
+    // the alphabet, which the scrub parks against the ends of the scroll range: at A there is
+    // nothing above to scroll back into and at Z nothing below, so retiring the padding there
+    // can only shift the rows themselves, snapping the first or last section into place.
+    // Waiting until a gap has scrolled off means the change is invisible — the top's
+    // compensating scroll has exactly the room it needs, and a tail that is off screen takes
+    // nothing with it. Once gone, the idle gaps are all that is left, so there is no scrolling
+    // back into either unless that letter is picked again.
     var userDragged by remember { mutableStateOf(false) }
     LaunchedEffect(userDragged, scrubLetter) {
         if (!userDragged || scrubLetter != null || highlightRange.isEmpty()) {
             return@LaunchedEffect
         }
+        snapshotFlow { placementSettled() }.first { it }
+        if (highlightRange.isEmpty()) return@LaunchedEffect
+
         // The top padding falls from the scrub line back to the idle gap, so that is exactly
         // how far the content would rise — compensating by anything else (this used to use a
-        // bare 8dp) leaves the list jumping by the difference.
+        // bare 8dp) leaves the list jumping by the difference. The tail needs no compensation:
+        // by now it is off screen, so shrinking it moves nothing.
         val shrinkBy = (sectionTopPx - idleTopPaddingPx).toFloat()
-        if (shrinkBy > 0f) {
-            snapshotFlow { placementGapRemaining() }.first { it <= 0f }
-            if (highlightRange.isEmpty()) return@LaunchedEffect
-        }
         highlightRange = IntRange.EMPTY
         highlightHeightPx = 0
         // dispatchRawDelta rather than scrollBy: the drag that got us here holds the scroll

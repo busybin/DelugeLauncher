@@ -4,6 +4,10 @@ package dev.victorialauncher.ui.home
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.Box
@@ -71,6 +75,9 @@ private const val GESTURE_EXCLUSION_CAP_DP = 200
 /** How long a launch is given to take us off screen before the overlay closes itself. */
 private const val LAUNCH_CLOSE_TIMEOUT_MS = 2000L
 
+/** Long enough to read as a settle, short enough not to stand between you and the icons. */
+private const val HOME_FADE_MS = 220
+
 /**
  * The home destination: the home screen itself, the app-list overlay layered over it, and the
  * edge zones that move between them.
@@ -132,9 +139,15 @@ fun HomeRoute(
     // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
     var launchClose by remember { mutableStateOf<Job?>(null) }
 
-    fun closeAppList() {
+    // The home screen fades back in when we put the list away ourselves, but not when the
+    // system did it for us: laying our own fade over Android's home transition — or running it
+    // on resume for a close that happened while we were backgrounded — just reads as noise.
+    var snapHome by remember { mutableStateOf(false) }
+
+    fun closeAppList(snap: Boolean = false) {
         launchClose?.cancel()
         launchClose = null
+        snapHome = snap
         appListVisible = false
         scrub.cancel()
     }
@@ -163,13 +176,13 @@ fun HomeRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) closeAppList()
+            if (event == Lifecycle.Event.ON_PAUSE) closeAppList(snap = true)
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(homeIntentTick) {
-        if (homeIntentTick > 0) closeAppList()
+        if (homeIntentTick > 0) closeAppList(snap = true)
     }
 
     LaunchedEffect(settings.edgeSide, view, band) {
@@ -206,10 +219,18 @@ fun HomeRoute(
     ) {
         // Hidden entirely while the list is up, so only the wallpaper sits behind it — and
         // kept composed the same way, so coming back is instant.
-        // No transition either way. Both directions answer a finger directly, and a fade
-        // across them only ever put the home screen and the list on screen together for long
-        // enough to read as lag.
-        val homeAlpha = if (appListVisible) 0f else 1f
+        // Opening answers a finger on the edge and must not lag behind it, so it snaps. Coming
+        // back gets a short decelerating fade: the wallpaper is already there, so this is only
+        // the icons settling in, and cutting them in on a single frame is what read as a jolt.
+        val homeAlpha by animateFloatAsState(
+            targetValue = if (appListVisible) 0f else 1f,
+            animationSpec = if (appListVisible || snapHome) {
+                snap()
+            } else {
+                tween(HOME_FADE_MS, easing = LinearOutSlowInEasing)
+            },
+            label = "homeAlpha",
+        )
         Box(
             modifier = Modifier
                 .graphicsLayer { alpha = homeAlpha }
