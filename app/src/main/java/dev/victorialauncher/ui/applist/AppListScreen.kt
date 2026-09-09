@@ -193,8 +193,10 @@ fun AppListScreen(
     // setting on, the dismiss waits out the double-tap window and a second tap cancels it.
     var pendingDismiss by remember { mutableStateOf<Job?>(null) }
 
-    // Pull-to-collapse, done the way pull-to-refresh is done: one nested-scroll connection
-    // that actually *consumes* the drag.
+    // Pull-to-collapse from either end, done the way pull-to-refresh is done: one
+    // nested-scroll connection that actually *consumes* the drag. Held signed throughout —
+    // positive is pulled down off the top, negative is pulled up off the bottom — so one
+    // gesture serves both ends rather than each needing its own path.
     //
     // The previous versions watched the raw pointer stream without consuming, so the list
     // scrolled and the overlay tracked the pull at the same time, and reversing direction
@@ -208,6 +210,7 @@ fun AppListScreen(
     val idleTopPaddingPx = with(density) { IDLE_TOP_PADDING.roundToPx() }
     val idleBottomPaddingPx = with(density) { IDLE_BOTTOM_PADDING.roundToPx() }
 
+    /** Signed: positive pulled down off the top of the list, negative up off the bottom. */
     var overPull by remember { mutableFloatStateOf(0f) }
     val collapseAnim = remember { Animatable(0f) }
     var collapsing by remember { mutableStateOf(false) }
@@ -323,8 +326,12 @@ fun AppListScreen(
             /** True between the first drag of a gesture and the fling that ends it. */
             private var dragging = false
 
-            /** Whether the drag in progress began with the list already parked at the top. */
-            private var pullEligible = false
+            /**
+             * Whether the drag in progress began with the list already parked against that
+             * end, which is what makes a pull from it a collapse rather than a scroll.
+             */
+            private var topPullEligible = false
+            private var bottomPullEligible = false
 
             private fun stretch(delta: Float) {
                 // Rubber band: the further it goes, the less each pixel counts.
@@ -367,9 +374,10 @@ fun AppListScreen(
                     // A finger on the list, as opposed to a programmatic scrub scroll.
                     userDragged = true
                     // Collapsing has to be a deliberate pull from rest. Letting a scroll that
-                    // merely *arrives* at the top turn into one is what made a fast flick
+                    // merely *arrives* at an end turn into one is what made a fast flick
                     // shrink and fade the whole list halfway through the gesture.
-                    pullEligible = !listState.canScrollBackward
+                    topPullEligible = !listState.canScrollBackward
+                    bottomPullEligible = !listState.canScrollForward
                 }
                 if (collapsing || stretchSettling) return Offset.Zero
                 // Spend whatever is outstanding before the list is allowed to move again, so
@@ -377,6 +385,11 @@ fun AppListScreen(
                 if (overPull > 0f && available.y < 0f) {
                     val used = maxOf(available.y, -overPull)
                     overPull = (overPull + used).coerceAtLeast(0f)
+                    return Offset(0f, used)
+                }
+                if (overPull < 0f && available.y > 0f) {
+                    val used = minOf(available.y, -overPull)
+                    overPull = (overPull + used).coerceAtMost(0f)
                     return Offset(0f, used)
                 }
                 if (stretchPx > 0f && available.y < 0f) {
@@ -403,9 +416,13 @@ fun AppListScreen(
                     return Offset.Zero
                 }
                 if (available.y == 0f) return Offset.Zero
-                if (available.y > 0f && pullEligible) {
-                    val resistance = 1f - (overPull / maxPullPx).coerceIn(0f, 0.75f)
-                    overPull = (overPull + available.y * resistance).coerceIn(0f, maxPullPx)
+                val pulling = if (available.y > 0f) topPullEligible else bottomPullEligible
+                if (pulling) {
+                    // Signed: pulled down off the top is positive, pulled up off the bottom is
+                    // negative, and every reader below works off the sign rather than a
+                    // separate flag for which end is in play.
+                    val resistance = 1f - (abs(overPull) / maxPullPx).coerceIn(0f, 0.75f)
+                    overPull = (overPull + available.y * resistance).coerceIn(-maxPullPx, maxPullPx)
                     return available
                 }
                 stretch(available.y)
@@ -415,18 +432,21 @@ fun AppListScreen(
             override suspend fun onPreFling(available: Velocity): Velocity {
                 dragging = false
                 if (collapsing || stretchSettling) return Velocity.Zero
-                if (overPull > 0f) {
+                if (overPull != 0f) {
                     val pulled = overPull
-                    val flungDown = available.y > 800f
-                    val dismissing = pulled > dismissPullPx ||
-                        (flungDown && pulled > dismissPullPx / 3f)
+                    val away = if (pulled > 0f) 1f else -1f
+                    // Flung on past the threshold counts even when the pull itself is short.
+                    val flungAway = available.y * away > 800f
+                    val dismissing = abs(pulled) > dismissPullPx ||
+                        (flungAway && abs(pulled) > dismissPullPx / 3f)
                     collapsing = true
                     try {
                         collapseAnim.snapTo(pulled)
                         overPull = 0f
                         if (dismissing) {
                             collapseAnim.animateTo(
-                                targetValue = viewportHeightPx.toFloat(),
+                                // Off whichever edge it was heading for.
+                                targetValue = viewportHeightPx.toFloat() * away,
                                 animationSpec = tween(240, easing = FastOutLinearInEasing),
                             )
                             currentDismiss()
@@ -531,7 +551,7 @@ fun AppListScreen(
               .fillMaxSize()
               .graphicsLayer {
                   val pulled = collapseProvider()
-                  val progress = (pulled / dismissPullPx).coerceIn(0f, 1f)
+                  val progress = (abs(pulled) / dismissPullPx).coerceIn(0f, 1f)
                   translationY = pulled * 0.6f
                   val scale = 1f - 0.12f * progress
                   scaleX = scale
