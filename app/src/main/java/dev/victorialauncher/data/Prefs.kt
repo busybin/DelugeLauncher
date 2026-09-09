@@ -19,7 +19,7 @@ import org.json.JSONObject
 enum class EdgeSide { LEFT, RIGHT, BOTH }
 enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE }
 
-/** AUTO picks light or dark text from the wallpaper's own colours. */
+/** AUTO picks light or dark text from the wallpaper's own colors. */
 enum class TextColorMode { AUTO, LIGHT, DARK }
 
 private val Context.dataStore by preferencesDataStore(name = "victoria_prefs")

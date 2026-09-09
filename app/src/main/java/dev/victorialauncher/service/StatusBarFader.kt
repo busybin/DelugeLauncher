@@ -22,7 +22,7 @@ import androidx.core.view.WindowInsetsControllerCompat
  * That API is Android 11+, so older versions (and any failure) fall back to the ordinary
  * sliding show/hide.
  *
- * Requesting a second animation cancels the first, and a cancelled controller throws from
+ * Requesting a second animation cancels the first, and a canceled controller throws from
  * `setInsetsAndAlpha` — so the in-flight animator has to be torn down with it, and every
  * write to the controller is guarded.
  */
@@ -87,7 +87,7 @@ object StatusBarFader {
                     animator = ValueAnimator.ofFloat(from, to).apply {
                         duration = durationMs
                         addUpdateListener { anim ->
-                            // The controller can be cancelled out from under us at any point;
+                            // The controller can be canceled out from under us at any point;
                             // writing to it after that throws.
                             val live = controller
                             if (live == null) {

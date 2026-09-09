@@ -66,8 +66,8 @@
     <string name="settings_text_size">Text size</string>
     <string name="settings_favorite_spacing">Spacing between favorites</string>
     <string name="settings_font">Font</string>
-    <string name="settings_text_colour">Text colour</string>
-    <string name="settings_text_colour_detail">Auto reads the wallpaper and picks whichever is legible</string>
+    <string name="settings_text_color">Text color</string>
+    <string name="settings_text_color_detail">Auto reads the wallpaper and picks whichever is legible</string>
     <string name="settings_right_handed">Right-handed layout</string>
     <string name="settings_right_handed_detail">Lines icons and names up against the right edge</string>
     <string name="settings_show_names">Show names under favorites</string>
@@ -104,10 +104,10 @@
     <string name="font_serif">Serif</string>
     <string name="font_monospace">Monospace</string>
 
-    <!-- Text colour choices -->
-    <string name="text_colour_auto">Auto</string>
-    <string name="text_colour_light">Light</string>
-    <string name="text_colour_dark">Dark</string>
+    <!-- Text color choices -->
+    <string name="text_color_auto">Auto</string>
+    <string name="text_color_light">Light</string>
+    <string name="text_color_dark">Dark</string>
 
     <!-- Edge choices -->
     <string name="edge_left">Left</string>

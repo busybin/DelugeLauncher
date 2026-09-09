@@ -18,7 +18,7 @@ object ScrubberGeometry {
         return idx.coerceIn(0, count - 1)
     }
 
-    /** Screen-space centre of the letter at [index]. */
+    /** Screen-space center of the letter at [index]. */
     fun letterCenterY(index: Int, topPx: Float, heightPx: Float, count: Int): Float {
         if (count <= 0) return topPx
         val spacing = heightPx / count

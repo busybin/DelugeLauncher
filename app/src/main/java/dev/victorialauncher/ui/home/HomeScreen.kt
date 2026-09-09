@@ -240,7 +240,7 @@ fun HomeScreen(
         dragOffset = 0f
     }
 
-    /** Swap with the neighbour once the held row has travelled past its midpoint. */
+    /** Swap with the neighbor once the held row has traveled past its midpoint. */
     fun onDragBy(amount: Float) {
         val order = dragOrder ?: return
         val from = draggingIndex ?: return

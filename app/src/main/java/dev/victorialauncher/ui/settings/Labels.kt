@@ -24,9 +24,9 @@ fun AppFont.labelRes(): Int = when (this) {
 
 @StringRes
 fun TextColorMode.labelRes(): Int = when (this) {
-    TextColorMode.AUTO -> R.string.text_colour_auto
-    TextColorMode.LIGHT -> R.string.text_colour_light
-    TextColorMode.DARK -> R.string.text_colour_dark
+    TextColorMode.AUTO -> R.string.text_color_auto
+    TextColorMode.LIGHT -> R.string.text_color_light
+    TextColorMode.DARK -> R.string.text_color_dark
 }
 
 @StringRes

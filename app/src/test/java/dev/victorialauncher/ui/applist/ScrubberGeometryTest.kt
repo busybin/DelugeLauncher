@@ -42,16 +42,16 @@ class ScrubberGeometryTest {
     }
 
     @Test
-    fun `letter centres sit in the middle of their slot`() {
+    fun `letter centers sit in the middle of their slot`() {
         assertEquals(105f, ScrubberGeometry.letterCenterY(0, top, height, count), 0.01f)
         assertEquals(115f, ScrubberGeometry.letterCenterY(1, top, height, count), 0.01f)
     }
 
     @Test
-    fun `centre and index agree, so the letter under the finger is the one that swells`() {
+    fun `center and index agree, so the letter under the finger is the one that swells`() {
         for (index in 0 until count) {
-            val centre = ScrubberGeometry.letterCenterY(index, top, height, count)
-            assertEquals(index, ScrubberGeometry.indexForY(centre, top, height, count))
+            val center = ScrubberGeometry.letterCenterY(index, top, height, count)
+            assertEquals(index, ScrubberGeometry.indexForY(center, top, height, count))
         }
     }
 

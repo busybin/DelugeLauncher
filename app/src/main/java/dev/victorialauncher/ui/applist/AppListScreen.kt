@@ -302,7 +302,7 @@ fun AppListScreen(
         val compensate = minOf(shrinkBy, forwardRoom()).coerceAtLeast(0f)
         highlightRange = IntRange.EMPTY
         // dispatchRawDelta rather than scrollBy: the drag that got us here holds the scroll
-        // mutex at UserInput priority, and a scrollBy would just be cancelled by it.
+        // mutex at UserInput priority, and a scrollBy would just be canceled by it.
         if (compensate > 0f) listState.dispatchRawDelta(-compensate)
     }
 
@@ -458,7 +458,7 @@ fun AppListScreen(
                             )
                         }
                     } finally {
-                        // Also on the way out of a cancelled fling — the next gesture landing
+                        // Also on the way out of a canceled fling — the next gesture landing
                         // on top of this one — or the overlay stays parked halfway down the
                         // screen for good. Nothing of it is on screen by then either way,
                         // because a hidden overlay is measured but never placed.

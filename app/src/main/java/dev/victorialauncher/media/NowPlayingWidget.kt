@@ -199,7 +199,7 @@ fun NowPlayingWidget(
                     }
                 },
             ),
-        // No scrim: the block sits on the wallpaper like the favourites above it do, so the
+        // No scrim: the block sits on the wallpaper like the favorites above it do, so the
         // only thing separating it from them is its own spacing.
         color = Color.Transparent,
         shape = RoundedCornerShape(16.dp),

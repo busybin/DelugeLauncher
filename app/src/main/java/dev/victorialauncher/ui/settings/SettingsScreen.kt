@@ -536,9 +536,9 @@ private fun RowPreview(app: AppInfo?, iconSizeDp: Int, labelSizeSp: Int, font: A
 @Composable
 private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(stringResource(R.string.settings_text_colour), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyMedium)
         Text(
-            stringResource(R.string.settings_text_colour_detail),
+            stringResource(R.string.settings_text_color_detail),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )

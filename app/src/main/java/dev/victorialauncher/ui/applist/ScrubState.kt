@@ -35,7 +35,7 @@ class ScrubState {
         private set
 
     /**
-     * True once the finger has actually travelled, as opposed to merely landing. The letter
+     * True once the finger has actually traveled, as opposed to merely landing. The letter
      * under a fingertip is reported from the down event so that a tap still places the list,
      * but the drawn-out affordances — fading every other row away — are worth their cost only
      * while a finger is genuinely moving through the alphabet. Gating them on this is what

@@ -19,8 +19,8 @@ private val LightText = Color(0xFFFFFFFF)
 private val DarkText = Color(0xFF10161C)
 
 /**
- * Text colour for anything drawn over the wallpaper. AUTO asks the system for the
- * wallpaper's own colours and picks whichever reads against it, re-checking when the
+ * Text color for anything drawn over the wallpaper. AUTO asks the system for the
+ * wallpaper's own colors and picks whichever reads against it, re-checking when the
  * wallpaper changes.
  */
 @Composable

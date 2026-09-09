@@ -29,7 +29,7 @@ ui/
   common/AppIcon.kt             icon rasterisation and the bounded bitmap cache
   common/…                      shared dialogs, icon picker, touch-position modifier
   settings/…                    settings screen and the three picker screens
-  theme/                        Material theme, font mapping, wallpaper-aware text colour
+  theme/                        Material theme, font mapping, wallpaper-aware text color
 media/                          notification-listener service + Now Playing card
 service/                        haptics, status-bar fader, accessibility service, system UI
 widget/                         AppWidgetHost, widget slot, widget picker
@@ -66,7 +66,7 @@ screen behind it is likewise kept laid out — an `AppWidgetHostView` that is ne
 placed loses its layout and returns with its text collapsed.
 
 **Gesture exclusion is spent on the scrub band, not the whole edge.** Android
-honours only 200dp of exclusion per side, so `HomeRoute` clips the excluded
+honors only 200dp of exclusion per side, so `HomeRoute` clips the excluded
 rectangle to the band the strip actually occupies.
 
 ## Recomposition

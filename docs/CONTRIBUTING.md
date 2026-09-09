@@ -47,7 +47,7 @@ leaving the `name` attributes alone. Nothing else needs to change.
 `PackageManager`, `ComponentName` or Compose needs an instrumented test or
 Robolectric, neither of which is set up yet — a PR adding either is welcome.
 
-## Licence
+## License
 
 By contributing you agree your work is licensed under GPL-3.0-or-later. New
 source files should carry the SPDX header the existing ones do.

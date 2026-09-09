@@ -69,7 +69,7 @@ import dev.victorialauncher.R
 /** Width of the invisible strip at each screen edge that opens the app list. */
 private val EDGE_ZONE_WIDTH = 52.dp
 
-/** Android only honours this much gesture exclusion per side, so spend it on the strip. */
+/** Android only honors this much gesture exclusion per side, so spend it on the strip. */
 private const val GESTURE_EXCLUSION_CAP_DP = 200
 
 /** How long a launch is given to take us off screen before the overlay closes itself. */
@@ -192,7 +192,7 @@ fun HomeRoute(
             val h = view.height
             val w = view.width
             if (h > 0 && w > 0) {
-                // Android's back-gesture claims the outer edges, and only honours 200dp of
+                // Android's back-gesture claims the outer edges, and only honors 200dp of
                 // exclusion per side — so spend it on the scrub band rather than spreading it
                 // uselessly over the whole screen height.
                 val capPx = (GESTURE_EXCLUSION_CAP_DP * density).toInt()
@@ -459,7 +459,7 @@ fun HomeRoute(
 
 private fun iconPickerRoute(key: String) = "iconpicker/" + Uri.encode(key)
 
-/** Display and behaviour settings the home destination reads, grouped so they travel as one. */
+/** Display and behavior settings the home destination reads, grouped so they travel as one. */
 @Immutable
 data class HomeSettings(
     val iconSizeDp: Int,
