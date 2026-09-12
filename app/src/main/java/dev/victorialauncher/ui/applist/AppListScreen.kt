@@ -96,9 +96,6 @@ import androidx.compose.ui.res.stringResource
 /** Where the selected letter's section sits, as a fraction down the screen. */
 private const val SECTION_TOP_FRACTION = 0.26f
 
-/** How long a background tap waits for a second one before it dismisses the list. */
-private const val DOUBLE_TAP_WINDOW_MS = 280L
-
 /** Breathing room above A and below the settings row when no scrub has placed the list. */
 private val IDLE_TOP_PADDING = 64.dp
 private val IDLE_BOTTOM_PADDING = 32.dp
@@ -140,8 +137,6 @@ fun AppListScreen(
     contentColor: Color,
     showAlphabet: Boolean,
     alignment: HomeAlignment,
-    doubleTapToLock: Boolean,
-    onDoubleTapLock: () -> Unit,
 ) {
     fun displayName(app: AppInfo) = nameOverrides[app.key] ?: app.label
 
@@ -149,7 +144,6 @@ fun AppListScreen(
     // capture this frame's callbacks — a dismiss half a minute old still has to close the
     // list that is up now.
     val currentDismiss by rememberUpdatedState(onDismiss)
-    val currentDoubleTapLock by rememberUpdatedState(onDoubleTapLock)
 
     // Reading these here confines the invalidation to this composable: the home screen
     // behind the overlay never sees the letter change. currentY/currentPull stay as
@@ -185,11 +179,6 @@ fun AppListScreen(
     // Row indices of the highlighted section. Applied *after* the scroll lands, otherwise
     // the new letter lights up a frame before the list moves to it — that was the jitter.
     var highlightRange by remember { mutableStateOf(IntRange.EMPTY) }
-
-    // Dismissing on the first tap is what made double-tap-to-lock unreachable: the overlay
-    // stops receiving touches the moment it hides, so the second tap never arrived. With the
-    // setting on, the dismiss waits out the double-tap window and a second tap cancels it.
-    var pendingDismiss by remember { mutableStateOf<Job?>(null) }
 
     // Pull-to-collapse from either end, done the way pull-to-refresh is done: one
     // nested-scroll connection that actually *consumes* the drag. Held signed throughout —
@@ -231,8 +220,6 @@ fun AppListScreen(
     // would otherwise still be there the next time it opens.
     LaunchedEffect(visible) {
         if (!visible) {
-            pendingDismiss?.cancel()
-            pendingDismiss = null
             highlightRange = IntRange.EMPTY
             overPull = 0f
             stretchPx = 0f
@@ -504,7 +491,7 @@ fun AppListScreen(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(listConnection)
-            .pointerInput(doubleTapToLock, listState) {
+            .pointerInput(listState) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     val start = down.position
@@ -524,25 +511,7 @@ fun AppListScreen(
                     // itself = a tap on the wallpaper.
                     if (claimed || moved || isOnListContent(start.y)) return@awaitEachGesture
 
-                    val pending = pendingDismiss
-                    when {
-                        pending != null -> {
-                            pending.cancel()
-                            pendingDismiss = null
-                            currentDoubleTapLock()
-                        }
-
-                        doubleTapToLock -> {
-                            pendingDismiss = scope.launch {
-                                delay(DOUBLE_TAP_WINDOW_MS)
-                                pendingDismiss = null
-                                currentDismiss()
-                            }
-                        }
-
-                        // Off by default, so the common case keeps dismissing instantly.
-                        else -> currentDismiss()
-                    }
+                    currentDismiss()
                 }
             },
     ) {

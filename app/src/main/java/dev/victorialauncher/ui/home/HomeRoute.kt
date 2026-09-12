@@ -50,6 +50,7 @@ import dev.victorialauncher.media.isListenerEnabled
 import dev.victorialauncher.service.SystemUi
 import dev.victorialauncher.ui.applist.AppListModel
 import dev.victorialauncher.ui.applist.AppListScreen
+import dev.victorialauncher.ui.applist.BandEditOverlay
 import dev.victorialauncher.ui.applist.EdgeScrubber
 import dev.victorialauncher.ui.applist.EdgeTouchZone
 import dev.victorialauncher.ui.applist.ScrubBand
@@ -68,8 +69,6 @@ import android.net.Uri
 import dev.victorialauncher.R
 
 /** Width of the invisible strip at each screen edge that opens the app list. */
-private val EDGE_ZONE_WIDTH = 52.dp
-
 /** Android only honors this much gesture exclusion per side, so spend it on the strip. */
 private const val GESTURE_EXCLUSION_CAP_DP = 200
 
@@ -102,6 +101,9 @@ fun HomeRoute(
     widgetPosition: Int,
     widgetHeightDp: Int,
     widgetActions: WidgetSlotActions,
+    scrubBandFractions: Pair<Float, Float>?,
+    onSetScrubBand: (Float, Float) -> Unit,
+    onClearScrubBand: () -> Unit,
     onPeekStatusBar: () -> Unit,
     onNavigate: (String) -> Unit,
 ) {
@@ -135,7 +137,25 @@ fun HomeRoute(
     // Don't reserve the block (or its padding) unless there is something to render:
     // no live session means the whole thing collapses, padding included.
     val nowPlayingHasContent = settings.nowPlayingEnabled && (!listenerGranted || nowPlaying != null)
-    val band = favBand ?: ScrubBand.fallbackFor(viewportHeightPx)
+    // While the band is being edited the live value wins; otherwise a range the user set by
+    // hand wins over the measured favorites, which is what makes it stop following them.
+    var bandEditMode by remember { mutableStateOf(false) }
+    var liveBand by remember { mutableStateOf<ScrubBand?>(null) }
+    val storedBand = scrubBandFractions?.let { (top, height) ->
+        ScrubBand(topPx = viewportHeightPx * top, heightPx = viewportHeightPx * height)
+    }
+    val band = liveBand ?: storedBand ?: favBand ?: ScrubBand.fallbackFor(viewportHeightPx)
+
+    /** Locking is a strip gesture now, so the toast that explains it lives with the strip. */
+    fun lockOrExplain() {
+        if (!SystemUi.lockScreen()) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_enable_accessibility_lock),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
 
     // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
     var launchClose by remember { mutableStateOf<Job?>(null) }
@@ -177,6 +197,18 @@ fun HomeRoute(
     // to the system and left the home screen stuck in it.
     BackHandler(enabled = homeEditMode) { homeEditMode = false }
 
+    fun commitBand() {
+        liveBand?.let { edited ->
+            if (viewportHeightPx > 0) {
+                onSetScrubBand(edited.topPx / viewportHeightPx, edited.heightPx / viewportHeightPx)
+            }
+        }
+        liveBand = null
+        bandEditMode = false
+    }
+
+    BackHandler(enabled = bandEditMode) { commitBand() }
+
     // Leaving the launcher (screen off, another app) should always drop us back to the home
     // screen rather than reopening onto the overlay.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -191,10 +223,10 @@ fun HomeRoute(
         if (homeIntentTick > 0) closeAppList(snap = true)
     }
 
-    LaunchedEffect(settings.edgeSide, view, band) {
+    LaunchedEffect(settings.edgeSide, settings.edgeZoneWidthDp, view, band) {
         view.post {
             val density = view.resources.displayMetrics.density
-            val widthPx = (EDGE_ZONE_WIDTH.value * density).toInt()
+            val widthPx = (settings.edgeZoneWidthDp * density).toInt()
             val h = view.height
             val w = view.width
             if (h > 0 && w > 0) {
@@ -385,16 +417,6 @@ fun HomeRoute(
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
                 alignment = settings.alignment,
-                doubleTapToLock = settings.doubleTapToLock,
-                onDoubleTapLock = {
-                    if (!SystemUi.lockScreen()) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_enable_accessibility_lock),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                },
             )
         }
 
@@ -437,9 +459,21 @@ fun HomeRoute(
             )
         }
 
+        if (bandEditMode) {
+            BandEditOverlay(
+                band = liveBand ?: band,
+                side = scrub.side,
+                viewportHeightPx = viewportHeightPx,
+                contentColor = settings.contentColor,
+                onBandChange = { liveBand = it },
+                onReset = { liveBand = null; bandEditMode = false; onClearScrubBand() },
+                onDone = { commitBand() },
+            )
+        }
+
         // Edge zones sit on top of everything, so one unbroken touch opens the list and then
         // scrubs it as the finger moves.
-        if (!homeEditMode) {
+        if (!homeEditMode && !bandEditMode) {
             val sides = remember(settings.edgeSide) {
                 when (settings.edgeSide) {
                     EdgeSide.LEFT -> listOf(EdgeSide.LEFT)
@@ -450,12 +484,14 @@ fun HomeRoute(
             sides.forEach { side ->
                 EdgeTouchZone(
                     side = side,
-                    widthDp = EDGE_ZONE_WIDTH,
+                    widthDp = settings.edgeZoneWidthDp.dp,
                     letters = listModel.letters,
                     band = band,
                     hapticsEnabled = settings.hapticsEnabled,
                     state = scrub,
                     onOpen = { appListVisible = true },
+                    onDoubleTap = if (settings.doubleTapToLock) ({ lockOrExplain() }) else null,
+                    onLongPress = { liveBand = band; bandEditMode = true },
                     modifier = Modifier.align(
                         if (side == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
                     ),

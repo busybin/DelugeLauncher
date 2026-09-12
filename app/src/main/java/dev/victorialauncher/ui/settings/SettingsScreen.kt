@@ -95,7 +95,9 @@ fun SettingsScreen(
     onSetShowFavoriteLabels: (Boolean) -> Unit,
     onSetTextColorMode: (TextColorMode) -> Unit,
     onSetDoubleTapToLock: (Boolean) -> Unit,
+    edgeZoneWidthDp: Int,
     onSetEdgeSide: (EdgeSide) -> Unit,
+    onSetEdgeZoneWidth: (Int) -> Unit,
     onSetAlwaysShowAz: (Boolean) -> Unit,
     onSetShowAlphabet: (Boolean) -> Unit,
     onSetAlignment: (HomeAlignment) -> Unit,
@@ -212,6 +214,15 @@ fun SettingsScreen(
                     )
                     RowDivider()
                     EdgeSideRow(edgeSide, onSetEdgeSide)
+                    RowDivider()
+                    SliderRow(
+                        label = stringResource(R.string.settings_edge_zone_width),
+                        value = edgeZoneWidthDp.toFloat(),
+                        range = 32f..96f,
+                        valueLabel = "${edgeZoneWidthDp}dp",
+                        onValueChange = { onSetEdgeZoneWidth(it.roundToInt()) },
+                        step = 4f,
+                    )
                     RowDivider()
                     SwitchRowWithDetail(
                         label = stringResource(R.string.settings_double_tap_lock),

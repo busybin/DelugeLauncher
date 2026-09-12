@@ -56,6 +56,13 @@ class ScrubState {
     private val releasePull = Animatable(0f)
     private var releasing by mutableStateOf(false)
 
+    /**
+     * When the strip was last tapped, so a second tap can be recognized. Deliberately not
+     * snapshot state: nothing draws from it, and both edge zones share one holder so a
+     * double tap works even with the strip enabled on both sides.
+     */
+    var lastTapUptimeMs: Long = 0L
+
     fun currentY(): Float? = if (active) y else null
 
     fun currentPull(): Float = if (releasing) releasePull.value else pull
