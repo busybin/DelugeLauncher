@@ -51,6 +51,8 @@
     <string name="applist_band_top">Top of the A-Z strip</string>
     <string name="applist_band_bottom">Bottom of the A-Z strip</string>
 
+    <string name="applist_search">Search apps</string>
+
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">Enable Victoria Launcher in Settings → Accessibility to open notifications</string>
     <string name="toast_enable_accessibility_lock">Enable Victoria Launcher in Settings → Accessibility to lock the screen</string>
@@ -87,6 +89,10 @@
     <string name="settings_always_show_az">Always show A-Z</string>
     <string name="settings_show_alphabet">Show letters in the app list</string>
     <string name="settings_edge_zone_width">Edge swipe width</string>
+    <string name="settings_search_bar">Search bar in the app list</string>
+    <string name="settings_search_bar_detail">A box above the list for filtering by name</string>
+    <string name="settings_sort_by_usage">Sort by how often you use apps</string>
+    <string name="settings_sort_by_usage_detail">Within each letter, most used first</string>
     <string name="settings_alignment">Alignment</string>
     <string name="settings_shade_gesture">Swipe down for notifications</string>
     <string name="settings_shade_ready">Ready — pull down on the home screen</string>

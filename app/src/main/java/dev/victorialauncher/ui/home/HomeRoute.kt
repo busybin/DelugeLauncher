@@ -101,6 +101,7 @@ fun HomeRoute(
     widgetPosition: Int,
     widgetHeightDp: Int,
     widgetActions: WidgetSlotActions,
+    launchCounts: Map<String, Int>,
     scrubBandFractions: Pair<Float, Float>?,
     onSetScrubBand: (Float, Float) -> Unit,
     onClearScrubBand: () -> Unit,
@@ -118,10 +119,13 @@ fun HomeRoute(
         appsByKey,
         hiddenApps,
         nameOverrides,
+        // Empty unless the sort is on, so an ordinary launch doesn't rebuild the whole list.
+        if (settings.sortByUsage) launchCounts else emptyMap(),
     ) {
         val apps = appsByKey.values.toList()
+        val counts = if (settings.sortByUsage) launchCounts else emptyMap()
         value = withContext(Dispatchers.Default) {
-            buildAppListModel(apps, hiddenApps) { nameOverrides[it.key] ?: it.label }
+            buildAppListModel(apps, hiddenApps, { nameOverrides[it.key] ?: it.label }, counts)
         }
     }
 
@@ -165,7 +169,12 @@ fun HomeRoute(
     // on resume for a close that happened while we were backgrounded — just reads as noise.
     var snapHome by remember { mutableStateOf(false) }
 
+    // Hoisted so closing the list clears it; the overlay stays composed while hidden, so a
+    // query left behind would still be filtering the next time it opened.
+    var appListQuery by remember { mutableStateOf("") }
+
     fun closeAppList(snap: Boolean = false) {
+        appListQuery = ""
         launchClose?.cancel()
         launchClose = null
         snapHome = snap
@@ -416,6 +425,10 @@ fun HomeRoute(
                 onDismiss = { closeAppList() },
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
+                edgeSide = settings.edgeSide,
+                searchEnabled = settings.appListSearch,
+                query = appListQuery,
+                onQueryChange = { appListQuery = it },
                 alignment = settings.alignment,
             )
         }
@@ -473,7 +486,7 @@ fun HomeRoute(
 
         // Edge zones sit on top of everything, so one unbroken touch opens the list and then
         // scrubs it as the finger moves.
-        if (!homeEditMode && !bandEditMode) {
+        if (!homeEditMode && !bandEditMode && appListQuery.isEmpty()) {
             val sides = remember(settings.edgeSide) {
                 when (settings.edgeSide) {
                     EdgeSide.LEFT -> listOf(EdgeSide.LEFT)

@@ -6,6 +6,9 @@ import dev.victorialauncher.data.AppRepository
 import dev.victorialauncher.data.IconPackRepository
 import dev.victorialauncher.data.Prefs
 import dev.victorialauncher.widget.VictoriaAppWidgetHost
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 class VictoriaApp : Application() {
 
@@ -18,10 +21,13 @@ class VictoriaApp : Application() {
     lateinit var widgetHost: VictoriaAppWidgetHost
         private set
 
+    /** Outlives any screen, for work that must finish even as the launcher is left behind. */
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     override fun onCreate() {
         super.onCreate()
         prefs = Prefs(this)
-        appRepository = AppRepository(this)
+        appRepository = AppRepository(this, prefs, appScope)
         iconPackRepository = IconPackRepository(this)
         widgetHost = VictoriaAppWidgetHost(this, HOST_ID)
     }

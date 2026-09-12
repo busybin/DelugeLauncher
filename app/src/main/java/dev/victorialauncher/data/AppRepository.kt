@@ -8,8 +8,14 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.provider.Settings
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 
-class AppRepository(private val context: Context) {
+class AppRepository(
+    private val context: Context,
+    private val prefs: Prefs,
+    private val scope: CoroutineScope,
+) {
 
     private val pm: PackageManager get() = context.packageManager
 
@@ -55,6 +61,9 @@ class AppRepository(private val context: Context) {
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         return try {
             context.startActivity(intent)
+            // Counted whether or not the usage sort is on, so switching it on later has a
+            // history to order by instead of starting from nothing.
+            scope.launch { prefs.incrementLaunchCount(componentName.flattenToString()) }
             true
         } catch (e: Exception) {
             // App may have been uninstalled since the list was built; ignore.

@@ -76,6 +76,8 @@ fun SettingsScreen(
     edgeSide: EdgeSide,
     alwaysShowAz: Boolean,
     showAlphabet: Boolean,
+    sortByUsage: Boolean,
+    appListSearch: Boolean,
     alignment: HomeAlignment,
     nowPlayingEnabled: Boolean,
     nowPlayingListenerEnabled: Boolean,
@@ -100,6 +102,8 @@ fun SettingsScreen(
     onSetEdgeZoneWidth: (Int) -> Unit,
     onSetAlwaysShowAz: (Boolean) -> Unit,
     onSetShowAlphabet: (Boolean) -> Unit,
+    onSetSortByUsage: (Boolean) -> Unit,
+    onSetAppListSearch: (Boolean) -> Unit,
     onSetAlignment: (HomeAlignment) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
@@ -234,6 +238,20 @@ fun SettingsScreen(
                     SwitchRow(stringResource(R.string.settings_always_show_az), alwaysShowAz, onSetAlwaysShowAz)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_show_alphabet), showAlphabet, onSetShowAlphabet)
+                    RowDivider()
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_search_bar),
+                        detail = stringResource(R.string.settings_search_bar_detail),
+                        checked = appListSearch,
+                        onCheckedChange = onSetAppListSearch,
+                    )
+                    RowDivider()
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_sort_by_usage),
+                        detail = stringResource(R.string.settings_sort_by_usage_detail),
+                        checked = sortByUsage,
+                        onCheckedChange = onSetSortByUsage,
+                    )
                     RowDivider()
                     Row(
                         modifier = Modifier

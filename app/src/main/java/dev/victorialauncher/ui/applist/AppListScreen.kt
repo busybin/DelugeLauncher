@@ -18,6 +18,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -103,6 +112,9 @@ private val IDLE_BOTTOM_PADDING = 32.dp
 /** Smallest comfortable row, so a tap beside a small icon still lands on its app. */
 private val MIN_ROW_HEIGHT = 48.dp
 
+/** How far rows are held back from the edge the A-Z strip occupies. */
+private val STRIP_INSET = 56.dp
+
 /** How far either end of the list may be dragged past its content. */
 private val MAX_EDGE_STRETCH = 40.dp
 
@@ -136,6 +148,10 @@ fun AppListScreen(
     onDismiss: () -> Unit,
     contentColor: Color,
     showAlphabet: Boolean,
+    edgeSide: EdgeSide,
+    searchEnabled: Boolean,
+    query: String,
+    onQueryChange: (String) -> Unit,
     alignment: HomeAlignment,
 ) {
     fun displayName(app: AppInfo) = nameOverrides[app.key] ?: app.label
@@ -154,6 +170,15 @@ fun AppListScreen(
     val scrubY = remember(scrub) { scrub::currentY }
     val pullPx = remember(scrub) { scrub::currentPull }
 
+    // Searching is a different mode from scrubbing: the letters shrink to whatever matched,
+    // so the strip is hidden and placement stays out of it until the query is cleared.
+    val searching = searchEnabled && query.isNotBlank()
+    val displayModel = remember(model, query, searchEnabled) {
+        if (!searching) model else model.filtered { displayName(it).contains(query.trim(), ignoreCase = true) }
+    }
+    /** Height of the pinned search field, so list-relative offsets can be compared to taps. */
+    var searchHeightPx by remember { mutableIntStateOf(0) }
+
     val listState = rememberLazyListState()
     // Rows outside the scrubbed letter fade out; the section itself never moves, because it
     // is the same list the whole time. Only ever read inside a graphicsLayer, so the fade
@@ -171,9 +196,9 @@ fun AppListScreen(
     // The LazyColumn always holds the full list — while scrubbing it's just hidden and
     // pre-scrolled, with the letter's apps drawn over the top. Filtering the rows themselves
     // meant that on release the unfiltered list was briefly parked back at A.
-    val scrubRowIndex = remember(model, scrubLetter) {
+    val scrubRowIndex = remember(displayModel, scrubLetter) {
         val letter = scrubLetter ?: return@remember -1
-        model.letterIndex.firstOrNull { it.first == letter }?.second ?: -1
+        displayModel.letterIndex.firstOrNull { it.first == letter }?.second ?: -1
     }
 
     // Row indices of the highlighted section. Applied *after* the scroll lands, otherwise
@@ -218,8 +243,10 @@ fun AppListScreen(
     // Everything the overlay left behind has to be cleared explicitly, because it stays
     // composed while hidden: the tail padding and the collapse transform from the last scrub
     // would otherwise still be there the next time it opens.
+    val focusManager = LocalFocusManager.current
     LaunchedEffect(visible) {
         if (!visible) {
+            focusManager.clearFocus()
             highlightRange = IntRange.EMPTY
             overPull = 0f
             stretchPx = 0f
@@ -245,7 +272,7 @@ fun AppListScreen(
     fun forwardRoom(): Float {
         val info = listState.layoutInfo
         val last = info.visibleItemsInfo.lastOrNull() ?: return Float.MAX_VALUE
-        if (last.index < model.rows.size) return Float.MAX_VALUE
+        if (last.index < displayModel.rows.size) return Float.MAX_VALUE
         val bottom = (last.offset - info.viewportStartOffset + last.size).toFloat()
         return bottom + idleBottomPaddingPx - viewportHeightPx
     }
@@ -259,7 +286,7 @@ fun AppListScreen(
     fun placementSettled(): Boolean {
         val items = listState.layoutInfo.visibleItemsInfo
         val first = items.firstOrNull() ?: return true
-        if (first.index == 0 && items.last().index >= model.rows.size) return true
+        if (first.index == 0 && items.last().index >= displayModel.rows.size) return true
         return topGapRemaining() <= 0f
     }
 
@@ -295,12 +322,12 @@ fun AppListScreen(
         if (compensate > 0f) listState.dispatchRawDelta(-compensate)
     }
 
-    LaunchedEffect(scrubRowIndex, model) {
+    LaunchedEffect(scrubRowIndex, displayModel) {
         if (scrubRowIndex < 0) return@LaunchedEffect
         listState.scrollToItem(scrubRowIndex)
         // The next letter's header ends this section. Walking the rows to find it copied the
         // whole tail of the list on every one of the ~26 letter changes in a gesture.
-        val end = model.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: model.rows.size
+        val end = displayModel.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: displayModel.rows.size
         highlightRange = scrubRowIndex until end
         // This placement is fresh, so the next drag is the one that retires it.
         userDragged = false
@@ -509,7 +536,7 @@ fun AppListScreen(
 
                     // A tap no row, letter or scroll claimed, landing clear of the list
                     // itself = a tap on the wallpaper.
-                    if (claimed || moved || isOnListContent(start.y)) return@awaitEachGesture
+                    if (claimed || moved || isOnListContent(start.y - searchHeightPx)) return@awaitEachGesture
 
                     currentDismiss()
                 }
@@ -529,11 +556,25 @@ fun AppListScreen(
               }
               .background(Color.Black.copy(alpha = dimAlpha)),
       ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+        if (searchEnabled) {
+            // Pinned above the list rather than scrolling with it as a first item: every row
+            // index the scrub placement works from would shift by one, and the field would
+            // disappear the moment you scrolled.
+            SearchField(
+                query = query,
+                onQueryChange = onQueryChange,
+                contentColor = contentColor,
+                edgeSide = edgeSide,
+                showAlphabet = showAlphabet,
+                modifier = Modifier.onSizeChanged { searchHeightPx = it.height },
+            )
+        }
         CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .graphicsLayer { translationY = stretchProvider() },
             // Room above A and below Z so any letter can sit on the same line; without it
             // the ends clamp and land somewhere else entirely.
@@ -549,11 +590,19 @@ fun AppListScreen(
                 } else {
                     IDLE_TOP_PADDING
                 }
-                PaddingValues(top = top, bottom = IDLE_BOTTOM_PADDING)
+                // The strip is drawn over this list, not beside it, so without an inset on
+                // the side it occupies the letters sit on top of the rows.
+                val stripInset = if (showAlphabet) STRIP_INSET else 0.dp
+                PaddingValues(
+                    start = if (edgeSide != EdgeSide.RIGHT) stripInset else 0.dp,
+                    end = if (edgeSide != EdgeSide.LEFT) stripInset else 0.dp,
+                    top = top,
+                    bottom = IDLE_BOTTOM_PADDING,
+                )
             },
         ) {
             itemsIndexed(
-                items = model.rows,
+                items = displayModel.rows,
                 key = { _, row ->
                     when (row) {
                         is AppListRow.Header -> "header:${row.text}"
@@ -634,6 +683,7 @@ fun AppListScreen(
             }
         }
         }
+        }
 
         // Fade the list out as it scrolls off the top.
         Box(
@@ -648,9 +698,9 @@ fun AppListScreen(
                 ),
         )
 
-        if (showAlphabet) {
+        if (showAlphabet && !searching) {
             EdgeScrubber(
-                letters = model.letters,
+                letters = displayModel.letters,
                 scrubY = scrubY,
                 pullPx = pullPx,
                 band = band,
@@ -844,4 +894,52 @@ private fun AppRow(
             )
         }
     }
+}
+
+/** The app list's own search box, styled against the wallpaper rather than a surface. */
+@Composable
+private fun SearchField(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    contentColor: Color,
+    edgeSide: EdgeSide,
+    showAlphabet: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val stripInset = if (showAlphabet) STRIP_INSET else 0.dp
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        singleLine = true,
+        placeholder = { Text(stringResource(R.string.applist_search), color = contentColor.copy(alpha = 0.6f)) },
+        leadingIcon = {
+            Icon(Icons.Filled.Search, contentDescription = null, tint = contentColor.copy(alpha = 0.7f))
+        },
+        trailingIcon = {
+            if (query.isNotEmpty()) {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.icon_picker_clear_search),
+                        tint = contentColor.copy(alpha = 0.7f),
+                    )
+                }
+            }
+        },
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedTextColor = contentColor,
+            unfocusedTextColor = contentColor,
+            cursorColor = contentColor,
+            focusedBorderColor = contentColor.copy(alpha = 0.5f),
+            unfocusedBorderColor = contentColor.copy(alpha = 0.25f),
+        ),
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(
+                start = if (edgeSide != EdgeSide.RIGHT) stripInset else 20.dp,
+                end = if (edgeSide != EdgeSide.LEFT) stripInset else 20.dp,
+                top = 8.dp,
+                bottom = 4.dp,
+            ),
+    )
 }
