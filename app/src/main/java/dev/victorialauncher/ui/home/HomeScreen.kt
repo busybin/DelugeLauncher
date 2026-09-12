@@ -76,6 +76,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
@@ -91,6 +92,7 @@ import dev.victorialauncher.data.folderToken
 import dev.victorialauncher.data.PaddingSlot
 import dev.victorialauncher.media.NowPlayingWidget
 import dev.victorialauncher.media.openNowPlayingApp
+import dev.victorialauncher.service.HapticUtil
 import dev.victorialauncher.ui.common.AppIcon
 import dev.victorialauncher.ui.common.TouchAnchoredMenu
 import dev.victorialauncher.ui.common.LocalIconConfig
@@ -206,6 +208,7 @@ fun HomeScreen(
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val touchPosition = remember { mutableStateOf(Offset.Zero) }
     val density = LocalDensity.current
+    val view = LocalView.current
     val scope = rememberCoroutineScope()
 
     // A stepped value shows immediately and is written at the same time; holding it locally
@@ -572,6 +575,10 @@ fun HomeScreen(
                     Modifier.pointerInput(index, displayItems.size) {
                         detectDragGestures(
                             onDragStart = {
+                                // The handle is small and the row does not move until the
+                                // finger does, so a tick is the only confirmation that the
+                                // grab took.
+                                HapticUtil.tick(view, hapticsEnabled)
                                 dragOrder = displayItems
                                 draggingIndex = index
                                 dragOffset = 0f
