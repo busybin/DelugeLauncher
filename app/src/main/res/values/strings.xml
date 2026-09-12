@@ -18,7 +18,8 @@
     <string name="action_open_settings">Victoria Launcher settings</string>
 
     <!-- Home screen -->
-    <string name="home_reorder_hint">Hold and drag to reorder</string>
+    <string name="home_drag_handle">Reorder</string>
+    <string name="home_edit_hint">Tap \u2212 and + to adjust, drag the handle to reorder</string>
     <string name="home_no_favorites_title">No favorites yet</string>
     <string name="home_no_favorites_body">Touch the screen edge to open the app list, or pick your favorites from the list below.</string>
     <string name="home_choose_favorites">Choose favorites</string>
@@ -30,11 +31,11 @@
     <string name="home_display_name_label">Display name</string>
 
     <!-- Edit-mode drag handles -->
-    <string name="handle_side_padding">↔ Side padding · %1$ddp</string>
-    <string name="handle_vertical">↕ %1$s · %2$ddp</string>
+    <string name="handle_side_padding">Side padding</string>
     <string name="handle_widget_top">Widget top</string>
     <string name="handle_widget_bottom">Widget bottom</string>
     <string name="handle_widget_height">Widget height</string>
+    <string name="handle_widget_side_padding">Widget side padding</string>
     <string name="handle_favorites_top">Favorites top</string>
     <string name="handle_favorites_bottom">Favorites bottom</string>
     <string name="handle_now_playing_top">Now Playing top</string>

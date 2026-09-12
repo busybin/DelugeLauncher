@@ -12,7 +12,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.rememberScrollState
@@ -34,9 +35,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -88,6 +91,7 @@ import dev.victorialauncher.data.PaddingSlot
 import dev.victorialauncher.media.NowPlayingWidget
 import dev.victorialauncher.media.openNowPlayingApp
 import dev.victorialauncher.ui.common.AppIcon
+import dev.victorialauncher.ui.common.TouchAnchoredMenu
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.EditAppDialog
 import dev.victorialauncher.ui.common.FolderIconImage
@@ -147,6 +151,7 @@ fun HomeScreen(
     sidePaddingDp: Int,
     widgetSidePaddingDp: Int,
     onSetSidePadding: (Int) -> Unit,
+    onSetWidgetSidePadding: (Int) -> Unit,
     paddings: HomePaddings,
     widgetIds: List<Int>,
     widgetPosition: Int,
@@ -197,11 +202,24 @@ fun HomeScreen(
     val density = LocalDensity.current
     val scope = rememberCoroutineScope()
 
-    // While a padding handle is being dragged we track it locally so layout follows the
-    // finger, and only write the final value to storage on release.
+    // A stepped value shows immediately and is written at the same time; holding it locally
+    // as well means repeated taps compound instead of each one reading back the stale stored
+    // value while DataStore catches up.
+    var backgroundMenu by remember { mutableStateOf(false) }
+    var backgroundMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+
     var liveSlot by remember { mutableStateOf<PaddingSlot?>(null) }
     var liveValue by remember { mutableIntStateOf(0) }
     fun padOf(slot: PaddingSlot): Int = if (liveSlot == slot) liveValue else paddings[slot]
+    fun setPadding(slot: PaddingSlot, value: Int) {
+        liveSlot = slot
+        liveValue = value
+        onCommitPadding(slot, value)
+    }
+
+    // The background drag is disabled while a padding is being adjusted; leaving edit mode
+    // has to release that or the home screen stops scrolling entirely.
+    LaunchedEffect(editMode) { if (!editMode) liveSlot = null }
 
     // Show the widget slot when a widget exists, and also in edit mode when there isn't one —
     // that placeholder is the only way back to the picker once a widget has been removed.
@@ -335,7 +353,19 @@ fun HomeScreen(
                         ),
                     )
                 },
-            ),
+            )
+            // Rows, the widget and the edge zones all claim their own presses, so the only
+            // thing that reaches this is bare wallpaper — which until now was the one part of
+            // the home screen that answered nothing at all.
+            .pointerInput(editMode) {
+                if (editMode) return@pointerInput
+                detectTapGestures(
+                    onLongPress = { offset ->
+                        backgroundMenuOffset = with(density) { DpOffset(offset.x.toDp(), offset.y.toDp()) }
+                        backgroundMenu = true
+                    },
+                )
+            },
     ) {
         Column(
             modifier = Modifier
@@ -363,7 +393,7 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        stringResource(R.string.home_reorder_hint),
+                        stringResource(R.string.home_edit_hint),
                         color = contentColor.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         modifier = Modifier.weight(1f),
@@ -374,7 +404,23 @@ fun HomeScreen(
                         Text(stringResource(R.string.action_done))
                     }
                 }
-                SidePaddingHandle(sidePaddingDp = sidePaddingDp, onSetSidePadding = onSetSidePadding)
+                StepperRow(
+                    label = stringResource(R.string.handle_side_padding),
+                    value = sidePaddingDp,
+                    range = 0..96,
+                    step = PADDING_STEP_DP,
+                    onChange = onSetSidePadding,
+                )
+                if (showWidgetSlot) {
+                    Spacer(Modifier.height(6.dp))
+                    StepperRow(
+                        label = stringResource(R.string.handle_widget_side_padding),
+                        value = widgetSidePaddingDp,
+                        range = 0..96,
+                        step = PADDING_STEP_DP,
+                        onChange = onSetWidgetSidePadding,
+                    )
+                }
                 Spacer(Modifier.height(6.dp))
             }
 
@@ -397,9 +443,7 @@ fun HomeScreen(
                     onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
                     onOpenSettings = { nowPlayingMenu = false; onOpenSettings() },
                     onResize = onResizeNowPlaying,
-                    onDragPadding = { slot, v -> liveSlot = slot; liveValue = v },
-                    currentPadding = { slot -> padOf(slot) },
-                    onCommitPadding = { slot, v -> onCommitPadding(slot, v); liveSlot = null },
+                    onSetPadding = { slot, v -> setPadding(slot, v) },
                 )
             }
 
@@ -422,6 +466,28 @@ fun HomeScreen(
             }
 
             displayItems.forEachIndexed { index, item ->
+                // Reordering hangs off a visible grab handle now. It used to be a long press
+                // anywhere on the row, which nothing on screen advertised and which fought
+                // every other thing a long press could mean.
+                val dragHandle = if (editMode) {
+                    Modifier.pointerInput(index, displayItems.size) {
+                        detectDragGestures(
+                            onDragStart = {
+                                dragOrder = displayItems
+                                draggingIndex = index
+                                dragOffset = 0f
+                            },
+                            onDragEnd = { commitDragOrder() },
+                            onDragCancel = { commitDragOrder() },
+                        ) { change, amount ->
+                            change.consume()
+                            onDragBy(amount.y)
+                        }
+                    }
+                } else {
+                    null
+                }
+
                 // Spacing handles live outside the draggable wrapper: inside it they would
                 // travel with a dragged row and skew the height the swap threshold uses.
                 if (item is HomeItem.Widget) {
@@ -429,18 +495,14 @@ fun HomeScreen(
                         editMode = editMode,
                         label = R.string.handle_widget_top,
                         value = padOf(PaddingSlot.WIDGET_TOP),
-                        onDrag = { d -> liveSlot = PaddingSlot.WIDGET_TOP; liveValue = d },
-                        current = { padOf(PaddingSlot.WIDGET_TOP) },
-                        onCommit = { onCommitPadding(PaddingSlot.WIDGET_TOP, it); liveSlot = null },
+                        onChange = { setPadding(PaddingSlot.WIDGET_TOP, it) },
                     )
                 } else if (index == firstRowIndex) {
                     PaddingHandle(
                         editMode = editMode,
                         label = R.string.handle_favorites_top,
                         value = padOf(PaddingSlot.FAVORITES_TOP),
-                        onDrag = { d -> liveSlot = PaddingSlot.FAVORITES_TOP; liveValue = d },
-                        current = { padOf(PaddingSlot.FAVORITES_TOP) },
-                        onCommit = { onCommitPadding(PaddingSlot.FAVORITES_TOP, it); liveSlot = null },
+                        onChange = { setPadding(PaddingSlot.FAVORITES_TOP, it) },
                     )
                 }
 
@@ -464,41 +526,32 @@ fun HomeScreen(
                                 alpha = 0.9f
                             }
                         }
-                        .then(
-                            if (editMode) {
-                                Modifier.pointerInput(index, displayItems.size) {
-                                    detectDragGesturesAfterLongPress(
-                                        onDragStart = {
-                                            dragOrder = displayItems
-                                            draggingIndex = index
-                                            dragOffset = 0f
-                                        },
-                                        onDragEnd = { commitDragOrder() },
-                                        onDragCancel = { commitDragOrder() },
-                                    ) { change, amount ->
-                                        change.consume()
-                                        onDragBy(amount.y)
-                                    }
-                                }
-                            } else {
-                                Modifier
-                            }
-                        ),
                 ) {
                     when (item) {
-                        HomeItem.Widget -> WidgetSlot(
-                            widgetIds = widgetIds,
-                            heightDp = widgetHeightDp,
-                            onEditLayout = { onEditModeChange(true) },
-                            actions = widgetActions,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = widgetSidePaddingDp.dp),
-                        )
+                        HomeItem.Widget -> Box {
+                            WidgetSlot(
+                                widgetIds = widgetIds,
+                                heightDp = widgetHeightDp,
+                                onEditLayout = { onEditModeChange(true) },
+                                actions = widgetActions,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = widgetSidePaddingDp.dp),
+                            )
+                            // The widget is a row in the order like any other, so it needs a
+                            // handle of its own to be moved among them.
+                            if (dragHandle != null) {
+                                DragHandle(
+                                    contentColor = contentColor,
+                                    modifier = Modifier.align(Alignment.TopEnd).then(dragHandle),
+                                )
+                            }
+                        }
 
                         is HomeItem.FolderItem -> FolderRow(
                             folder = item.folder,
                             members = item.folder.apps.mapNotNull { appsByKey[it] },
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
+                            dragHandle = dragHandle,
                             iconSizeDp = iconSizeDp,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
@@ -530,6 +583,7 @@ fun HomeScreen(
                             app = item.app,
                             label = displayName(item.app),
                             editMode = editMode,
+                            dragHandle = dragHandle,
                             iconSizeDp = iconSizeDp,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
@@ -555,20 +609,19 @@ fun HomeScreen(
                 if (item is HomeItem.Widget) {
                     if (editMode) {
                         Spacer(Modifier.height(6.dp))
-                        HeightHandle(
-                            label = R.string.handle_widget_height,
-                            heightDp = widgetHeightDp,
+                        StepperRow(
+                            label = stringResource(R.string.handle_widget_height),
+                            value = widgetHeightDp,
                             range = 80..900,
-                            onResize = { widgetActions.onResize(it) },
+                            step = HEIGHT_STEP_DP,
+                            onChange = { widgetActions.onResize(it) },
                         )
                     }
                     PaddingHandle(
                         editMode = editMode,
                         label = R.string.handle_widget_bottom,
                         value = padOf(PaddingSlot.WIDGET_BOTTOM),
-                        onDrag = { d -> liveSlot = PaddingSlot.WIDGET_BOTTOM; liveValue = d },
-                        current = { padOf(PaddingSlot.WIDGET_BOTTOM) },
-                        onCommit = { onCommitPadding(PaddingSlot.WIDGET_BOTTOM, it); liveSlot = null },
+                        onChange = { setPadding(PaddingSlot.WIDGET_BOTTOM, it) },
                     )
                     // Now Playing sits between the widget and the favorites.
                     if (nowPlayingHasContent) {
@@ -588,9 +641,7 @@ fun HomeScreen(
                             onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
                             onOpenSettings = { nowPlayingMenu = false; onOpenSettings() },
                             onResize = onResizeNowPlaying,
-                            onDragPadding = { slot, v -> liveSlot = slot; liveValue = v },
-                            currentPadding = { slot -> padOf(slot) },
-                            onCommitPadding = { slot, v -> onCommitPadding(slot, v); liveSlot = null },
+                            onSetPadding = { slot, v -> setPadding(slot, v) },
                         )
                     }
                 } else if (index == lastRowIndex) {
@@ -598,14 +649,40 @@ fun HomeScreen(
                         editMode = editMode,
                         label = R.string.handle_favorites_bottom,
                         value = padOf(PaddingSlot.FAVORITES_BOTTOM),
-                        onDrag = { d -> liveSlot = PaddingSlot.FAVORITES_BOTTOM; liveValue = d },
-                        current = { padOf(PaddingSlot.FAVORITES_BOTTOM) },
-                        onCommit = { onCommitPadding(PaddingSlot.FAVORITES_BOTTOM, it); liveSlot = null },
+                        onChange = { setPadding(PaddingSlot.FAVORITES_BOTTOM, it) },
                     )
                 } else {
                     Spacer(Modifier.height(itemSpacingDp.dp))
                 }
             }
+        }
+
+        TouchAnchoredMenu(
+            expanded = backgroundMenu,
+            offset = backgroundMenuOffset,
+            onDismissRequest = { backgroundMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_edit_layout)) },
+                leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
+                onClick = { backgroundMenu = false; onEditModeChange(true) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.widget_add)) },
+                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                onClick = { backgroundMenu = false; widgetActions.onAddWidget() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.home_choose_favorites)) },
+                leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
+                onClick = { backgroundMenu = false; onManageFavorites() },
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_open_settings)) },
+                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                onClick = { backgroundMenu = false; onOpenSettings() },
+            )
         }
     }
 
@@ -646,6 +723,8 @@ private fun FavoriteRow(
     app: AppInfo,
     label: String,
     editMode: Boolean,
+    /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
+    dragHandle: Modifier?,
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
@@ -704,6 +783,9 @@ private fun FavoriteRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = alignment.arrangement(),
         ) {
+            if (dragHandle != null && alignment == HomeAlignment.RIGHT) {
+                DragHandle(contentColor, dragHandle)
+            }
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
@@ -717,9 +799,12 @@ private fun FavoriteRow(
                     textAlign = alignment.textAlign(),
                 )
             }
+            if (dragHandle != null && alignment != HomeAlignment.RIGHT) {
+                DragHandle(contentColor, dragHandle)
+            }
         }
 
-        DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
+        TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_move_to_folder)) },
                 leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },
@@ -763,6 +848,8 @@ private fun FolderRow(
     members: List<AppInfo>,
     expanded: Boolean,
     editMode: Boolean,
+    /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
+    dragHandle: Modifier?,
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
@@ -821,6 +908,9 @@ private fun FolderRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = alignment.arrangement(),
             ) {
+                if (dragHandle != null && alignment == HomeAlignment.RIGHT) {
+                    DragHandle(contentColor, dragHandle)
+                }
                 AlignedIconLabel(
                     alignment = alignment,
                     showLabel = showLabels,
@@ -839,9 +929,12 @@ private fun FolderRow(
                         fontSize = (labelSizeSp - 3).coerceAtLeast(9).sp,
                     )
                 }
+                if (dragHandle != null && alignment != HomeAlignment.RIGHT) {
+                    DragHandle(contentColor, dragHandle)
+                }
             }
 
-            DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
+            TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.home_folder_choose_apps)) },
                     leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
@@ -933,9 +1026,7 @@ private fun NowPlayingBlock(
     onEditLayout: () -> Unit,
     onOpenSettings: () -> Unit,
     onResize: (Int) -> Unit,
-    onDragPadding: (PaddingSlot, Int) -> Unit,
-    currentPadding: (PaddingSlot) -> Int,
-    onCommitPadding: (PaddingSlot, Int) -> Unit,
+    onSetPadding: (PaddingSlot, Int) -> Unit,
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -944,9 +1035,7 @@ private fun NowPlayingBlock(
         editMode = editMode,
         label = R.string.handle_now_playing_top,
         value = padTop,
-        onDrag = { onDragPadding(PaddingSlot.NOW_PLAYING_TOP, it) },
-        current = { currentPadding(PaddingSlot.NOW_PLAYING_TOP) },
-        onCommit = { onCommitPadding(PaddingSlot.NOW_PLAYING_TOP, it) },
+        onChange = { onSetPadding(PaddingSlot.NOW_PLAYING_TOP, it) },
     )
     Box {
         NowPlayingWidget(
@@ -979,7 +1068,7 @@ private fun NowPlayingBlock(
                     },
                 ),
         )
-        DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
+        TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_edit_layout)) },
                 leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
@@ -994,20 +1083,19 @@ private fun NowPlayingBlock(
     }
     if (editMode) {
         Spacer(Modifier.height(6.dp))
-        HeightHandle(
-            label = R.string.handle_now_playing_height,
-            heightDp = heightDp,
+        StepperRow(
+            label = stringResource(R.string.handle_now_playing_height),
+            value = heightDp,
             range = 48..220,
-            onResize = onResize,
+            step = HEIGHT_STEP_DP,
+            onChange = onResize,
         )
     }
     PaddingHandle(
         editMode = editMode,
         label = R.string.handle_now_playing_bottom,
         value = padBottom,
-        onDrag = { onDragPadding(PaddingSlot.NOW_PLAYING_BOTTOM, it) },
-        current = { currentPadding(PaddingSlot.NOW_PLAYING_BOTTOM) },
-        onCommit = { onCommitPadding(PaddingSlot.NOW_PLAYING_BOTTOM, it) },
+        onChange = { onSetPadding(PaddingSlot.NOW_PLAYING_BOTTOM, it) },
     )
 }
 @Composable
@@ -1049,6 +1137,17 @@ private fun FolderIcon(
             }
         }
     }
+}
+
+/** The grab handle that reorders a row in edit mode. */
+@Composable
+private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
+    Icon(
+        Icons.Filled.DragHandle,
+        contentDescription = stringResource(R.string.home_drag_handle),
+        tint = contentColor.copy(alpha = 0.6f),
+        modifier = modifier.size(40.dp).padding(8.dp),
+    )
 }
 
 /**
@@ -1127,98 +1226,4 @@ private fun FolderEditDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
-}
-
-/** Drag sideways to inset every home element equally from the screen edges. */
-@Composable
-private fun SidePaddingHandle(sidePaddingDp: Int, onSetSidePadding: (Int) -> Unit) {
-    val density = LocalDensity.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(26.dp)
-            .padding(horizontal = 12.dp)
-            .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-            .draggable(
-                orientation = Orientation.Horizontal,
-                state = rememberDraggableState { delta ->
-                    val deltaDp = with(density) { delta.toDp().value }
-                    onSetSidePadding((sidePaddingDp + deltaDp).roundToInt().coerceIn(0, 96))
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(stringResource(R.string.handle_side_padding, sidePaddingDp), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-    }
-}
-
-/** Drag bar for an element's own height, shown below it in edit mode. */
-@Composable
-private fun HeightHandle(
-    @StringRes label: Int,
-    heightDp: Int,
-    range: IntRange,
-    onResize: (Int) -> Unit,
-) {
-    val density = LocalDensity.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(26.dp)
-            .padding(horizontal = 12.dp)
-            .background(Color.White.copy(alpha = 0.18f), RoundedCornerShape(8.dp))
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    val deltaDp = with(density) { delta.toDp().value }
-                    onResize((heightDp + deltaDp).roundToInt().coerceIn(range.first, range.last))
-                },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(stringResource(R.string.handle_vertical, stringResource(label), heightDp), color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp)
-    }
-}
-
-/**
- * A block of vertical space that becomes a drag handle in edit mode, so spacing above and
- * below each element is set by dragging it rather than by a slider.
- */
-@Composable
-private fun PaddingHandle(
-    editMode: Boolean,
-    @StringRes label: Int,
-    value: Int,
-    current: () -> Int,
-    onDrag: (Int) -> Unit,
-    onCommit: (Int) -> Unit,
-) {
-    if (!editMode) {
-        Spacer(Modifier.height(value.dp))
-        return
-    }
-
-    val density = LocalDensity.current
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(maxOf(value, 28).dp)
-            .padding(horizontal = 12.dp)
-            .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
-            .draggable(
-                orientation = Orientation.Vertical,
-                state = rememberDraggableState { delta ->
-                    val deltaDp = with(density) { delta.toDp().value }
-                    onDrag((current() + deltaDp).roundToInt().coerceIn(0, 400))
-                },
-                onDragStopped = { onCommit(current()) },
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            stringResource(R.string.handle_vertical, stringResource(label), value),
-            color = Color.White.copy(alpha = 0.75f),
-            fontSize = 11.sp,
-        )
-    }
 }

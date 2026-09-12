@@ -172,6 +172,11 @@ fun HomeRoute(
 
     BackHandler(enabled = appListVisible) { closeAppList() }
 
+    // Every stepper commits as it is tapped, so there is nothing to save on the way out —
+    // but leaving edit mode had to be done through the Done button, and BACK simply escaped
+    // to the system and left the home screen stuck in it.
+    BackHandler(enabled = homeEditMode) { homeEditMode = false }
+
     // Leaving the launcher (screen off, another app) should always drop us back to the home
     // screen rather than reopening onto the overlay.
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -269,6 +274,7 @@ fun HomeRoute(
                 sidePaddingDp = settings.sidePaddingDp,
                 widgetSidePaddingDp = settings.widgetSidePaddingDp,
                 onSetSidePadding = { scope.launch { app.prefs.setSidePaddingDp(it) } },
+                onSetWidgetSidePadding = { scope.launch { app.prefs.setWidgetSidePaddingDp(it) } },
                 paddings = homePaddings,
                 widgetIds = widgetIds,
                 widgetPosition = widgetPosition,
