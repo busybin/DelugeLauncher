@@ -232,6 +232,8 @@ fun AppListScreen(
     val dismissCommitPx = dismissPullPx * COMMIT_FRACTION
     // Per-frame drag big enough to call a flick rather than a deliberate push.
     val fastDragPx = with(density) { 12.dp.toPx() }
+    // How far a gesture may have scrolled the list and still count as starting at the end.
+    val nearEndPx = with(density) { 48.dp.toPx() }
     val maxPullPx = with(density) { 320.dp.toPx() }
     val maxStretchPx = with(density) { MAX_EDGE_STRETCH.toPx() }
     val idleTopPaddingPx = with(density) { IDLE_TOP_PADDING.roundToPx() }
@@ -356,7 +358,7 @@ fun AppListScreen(
         userDragged = false
     }
 
-    val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, fastDragPx, viewportHeightPx, listState) {
+    val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, fastDragPx, nearEndPx, viewportHeightPx, listState) {
         object : NestedScrollConnection {
             /** True between the first drag of a gesture and the fling that ends it. */
             private var dragging = false
@@ -369,15 +371,19 @@ fun AppListScreen(
             private var bottomPullEligible = false
 
             /**
-             * Set once a drag that started mid-list reaches an end gently.
+             * Whether this gesture may collapse the overlay.
              *
-             * Requiring the gesture to *begin* against the end meant scrolling back to the
-             * top and pushing on did nothing, and the collapse only answered on a second,
-             * separate drag. What actually needed guarding against was a fast flick slamming
-             * into the end and shrinking the overlay mid-scroll, so speed is the test rather
-             * than where the finger started.
+             * Requiring it to *begin* against the end meant scrolling back to the top and
+             * pushing on did nothing, and a collapse only answered on a second, separate
+             * drag. What actually needs guarding against is a flick slamming into the end and
+             * shrinking the overlay mid-scroll — so a gesture arms if it barely scrolled the
+             * list at all, or if it is travelling slowly by the time it gets there. A long
+             * fast flick satisfies neither.
              */
-            private var arrivedSlowly = false
+            private var pullArmed = false
+
+            /** How far this gesture has scrolled the list, to tell a pull from a flick. */
+            private var scrolledInGesture = 0f
 
             private fun stretch(delta: Float) {
                 // Rubber band: the further it goes, the less each pixel counts.
@@ -424,7 +430,8 @@ fun AppListScreen(
                     // shrink and fade the whole list halfway through the gesture.
                     topPullEligible = !listState.canScrollBackward
                     bottomPullEligible = !listState.canScrollForward
-                    arrivedSlowly = false
+                    pullArmed = false
+                    scrolledInGesture = 0f
                 }
                 if (collapsing || stretchSettling) return Offset.Zero
                 // Spend whatever is outstanding before the list is allowed to move again, so
@@ -462,10 +469,11 @@ fun AppListScreen(
                 if (collapsing || stretchSettling || source != NestedScrollSource.Drag) {
                     return Offset.Zero
                 }
+                scrolledInGesture += abs(consumed.y)
                 if (available.y == 0f) return Offset.Zero
-                if (abs(available.y) <= fastDragPx) arrivedSlowly = true
-                val atThisEnd = if (available.y > 0f) topPullEligible else bottomPullEligible
-                val pulling = atThisEnd || arrivedSlowly
+                if (scrolledInGesture <= nearEndPx || abs(available.y) <= fastDragPx) pullArmed = true
+                val startedAtThisEnd = if (available.y > 0f) topPullEligible else bottomPullEligible
+                val pulling = startedAtThisEnd || pullArmed
                 if (pulling) {
                     // Signed: pulled down off the top is positive, pulled up off the bottom is
                     // negative, and every reader below works off the sign rather than a
@@ -480,6 +488,8 @@ fun AppListScreen(
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 dragging = false
+                pullArmed = false
+                scrolledInGesture = 0f
                 if (collapsing || stretchSettling) return Velocity.Zero
                 if (overPull != 0f) {
                     val pulled = overPull

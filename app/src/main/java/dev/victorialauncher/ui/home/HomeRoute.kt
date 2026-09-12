@@ -587,7 +587,11 @@ fun HomeRoute(
                 viewportHeightPx = viewportHeightPx,
                 contentColor = settings.contentColor,
                 onBandChange = { liveBand = it },
-                onReset = { liveBand = null; bandEditMode = false; onClearScrubBand() },
+                // Stays open rather than exiting: dropping the stored range hands the
+                // strip back to the favorites, and the point of a reset is watching it land
+                // there. Done then leaves without storing anything, since there is nothing
+                // being edited any more.
+                onReset = { liveBand = null; onClearScrubBand() },
                 onDone = { commitBand() },
             )
         }
