@@ -48,6 +48,7 @@ import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.IconPackRepository
 import dev.victorialauncher.data.TextColorMode
 import dev.victorialauncher.ui.common.AppIcon
@@ -78,6 +79,7 @@ fun SettingsScreen(
     showAlphabet: Boolean,
     sortByUsage: Boolean,
     appListSearch: Boolean,
+    swipeUpOpensList: Boolean,
     alignment: HomeAlignment,
     nowPlayingEnabled: Boolean,
     nowPlayingListenerEnabled: Boolean,
@@ -103,7 +105,11 @@ fun SettingsScreen(
     onSetAlwaysShowAz: (Boolean) -> Unit,
     onSetShowAlphabet: (Boolean) -> Unit,
     onSetSortByUsage: (Boolean) -> Unit,
+    onSetSwipeUpOpensList: (Boolean) -> Unit,
     onSetAppListSearch: (Boolean) -> Unit,
+    quickLaunchLeftLabel: String?,
+    quickLaunchRightLabel: String?,
+    onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
     onSetAlignment: (HomeAlignment) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
@@ -238,6 +244,25 @@ fun SettingsScreen(
                     SwitchRow(stringResource(R.string.settings_always_show_az), alwaysShowAz, onSetAlwaysShowAz)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_show_alphabet), showAlphabet, onSetShowAlphabet)
+                    RowDivider()
+                    QuickLaunchRow(
+                        label = stringResource(R.string.settings_quick_launch_left),
+                        value = quickLaunchLeftLabel,
+                        onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.LEFT) },
+                    )
+                    RowDivider()
+                    QuickLaunchRow(
+                        label = stringResource(R.string.settings_quick_launch_right),
+                        value = quickLaunchRightLabel,
+                        onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.RIGHT) },
+                    )
+                    RowDivider()
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_swipe_up_list),
+                        detail = stringResource(R.string.settings_swipe_up_list_detail),
+                        checked = swipeUpOpensList,
+                        onCheckedChange = onSetSwipeUpOpensList,
+                    )
                     RowDivider()
                     SwitchRowWithDetail(
                         label = stringResource(R.string.settings_search_bar),
@@ -607,6 +632,28 @@ private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> U
                 FilledChip(stringResource(mode.labelRes()), selected == mode) { onSelect(mode) }
             }
         }
+    }
+}
+
+@Composable
+private fun QuickLaunchRow(label: String, value: String?, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                value ?: stringResource(R.string.settings_quick_launch_none),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+        )
     }
 }
 

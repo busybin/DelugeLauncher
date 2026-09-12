@@ -43,6 +43,7 @@ import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.data.HomePaddings
+import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.PaddingSlot
 import dev.victorialauncher.data.folderToken
 import dev.victorialauncher.media.NowPlayingBus
@@ -358,6 +359,16 @@ fun HomeRoute(
                 alignment = settings.alignment,
                 editMode = homeEditMode,
                 onEditModeChange = { homeEditMode = it },
+                swipeUpOpensAppList = settings.swipeUpOpensAppList,
+                onSwipeUp = { appListVisible = true },
+                quickLaunchEnabled = settings.quickLaunchLeft != null || settings.quickLaunchRight != null,
+                onQuickLaunch = { slot ->
+                    val target = when (slot) {
+                        QuickLaunchSlot.LEFT -> settings.quickLaunchLeft
+                        QuickLaunchSlot.RIGHT -> settings.quickLaunchRight
+                    }
+                    target?.let { app.appRepository.launch(it.componentName) }
+                },
                 onPeekStatusBar = onPeekStatusBar,
                 onExpandShade = {
                     // Say so rather than failing silently — that way a pull that does nothing

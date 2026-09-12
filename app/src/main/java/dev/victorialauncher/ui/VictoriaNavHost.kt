@@ -35,6 +35,8 @@ import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.TextColorMode
+import androidx.compose.ui.res.stringResource
+import dev.victorialauncher.R
 import dev.victorialauncher.data.folderIdFromToken
 import dev.victorialauncher.media.isListenerEnabled
 import dev.victorialauncher.service.SystemUi
@@ -45,6 +47,7 @@ import dev.victorialauncher.ui.common.warmIconCache
 import dev.victorialauncher.ui.home.FavoriteEntry
 import dev.victorialauncher.ui.home.HomeRoute
 import dev.victorialauncher.ui.home.HomeSettings
+import dev.victorialauncher.ui.settings.AppPickerScreen
 import dev.victorialauncher.ui.settings.FolderAppsScreen
 import dev.victorialauncher.ui.settings.HiddenAppsScreen
 import dev.victorialauncher.ui.settings.ManageFavoritesScreen
@@ -336,6 +339,7 @@ fun VictoriaNavHost(
                 showAlphabet = showAlphabet,
                 sortByUsage = sortByUsage,
                 appListSearch = appListSearchEnabled,
+                swipeUpOpensList = swipeUpOpensList,
                 alignment = alignment,
                 nowPlayingEnabled = nowPlayingEnabled,
                 nowPlayingListenerEnabled = listenerEnabled,
@@ -359,6 +363,14 @@ fun VictoriaNavHost(
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
                 onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
+                onSetSwipeUpOpensList = { scope.launch { app.prefs.setSwipeUpOpensList(it) } },
+                quickLaunchLeftLabel = quickLaunchLeftKey?.let { key ->
+                    appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
+                },
+                quickLaunchRightLabel = quickLaunchRightKey?.let { key ->
+                    appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
+                },
+                onOpenQuickLaunchPicker = { slot -> navController.navigate("apppicker/" + slot.name) },
                 onSetAlignment = { scope.launch { app.prefs.setAlignment(it) } },
                 onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
                 shadeGestureReady = remember(homeIntentTick) { SystemUi.canExpandShade() },
@@ -409,6 +421,27 @@ fun VictoriaNavHost(
                             app.prefs.removeAppFromFolder(id, appInfo.key)
                         }
                     }
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("apppicker/{slot}") { entry ->
+            val slot = runCatching {
+                QuickLaunchSlot.valueOf(entry.arguments?.getString("slot").orEmpty())
+            }.getOrDefault(QuickLaunchSlot.LEFT)
+            AppPickerScreen(
+                title = stringResource(
+                    if (slot == QuickLaunchSlot.LEFT) R.string.settings_quick_launch_left
+                    else R.string.settings_quick_launch_right
+                ),
+                allApps = allApps,
+                selectedKey = if (slot == QuickLaunchSlot.LEFT) quickLaunchLeftKey else quickLaunchRightKey,
+                nameOverrides = nameOverrides,
+                iconSizeDp = iconSizeDp,
+                onPick = { picked ->
+                    scope.launch { app.prefs.setQuickLaunch(slot, picked?.key) }
+                    navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() },
             )

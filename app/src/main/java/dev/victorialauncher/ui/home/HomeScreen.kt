@@ -12,6 +12,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
@@ -84,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.Folder
+import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.folderToken
@@ -99,6 +101,7 @@ import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.widget.WidgetSlot
 import dev.victorialauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.annotation.StringRes
 import dev.victorialauncher.R
@@ -181,6 +184,10 @@ fun HomeScreen(
     alignment: HomeAlignment,
     editMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
+    swipeUpOpensAppList: Boolean,
+    onSwipeUp: () -> Unit,
+    quickLaunchEnabled: Boolean,
+    onQuickLaunch: (QuickLaunchSlot) -> Unit,
     onPeekStatusBar: () -> Unit,
     onExpandShade: () -> Unit,
     onManageFavorites: () -> Unit,
@@ -292,9 +299,13 @@ fun HomeScreen(
 
     val peekPullPx = with(density) { 30.dp.toPx() }
     val deepPullPx = with(density) { 200.dp.toPx() }
+    val swipeUpPx = with(density) { 120.dp.toPx() }
+    val quickLaunchPx = with(density) { 80.dp.toPx() }
     var rawPullDown by remember { mutableFloatStateOf(0f) }
+    var rawPullUp by remember { mutableFloatStateOf(0f) }
     var pullActionFired by remember { mutableStateOf(false) }
     var peekFired by remember { mutableStateOf(false) }
+    var swipeUpFired by remember { mutableStateOf(false) }
 
     // Free vertical drag with spring bounce at both ends, outside edit mode.
     val offsetY = remember { Animatable(0f) }
@@ -312,7 +323,13 @@ fun HomeScreen(
             .draggable(
                 orientation = Orientation.Vertical,
                 enabled = !editMode && liveSlot == null,
-                onDragStarted = { rawPullDown = 0f; pullActionFired = false; peekFired = false },
+                onDragStarted = {
+                    rawPullDown = 0f
+                    rawPullUp = 0f
+                    pullActionFired = false
+                    peekFired = false
+                    swipeUpFired = false
+                },
                 state = rememberDraggableState { delta ->
                     // Undamped downward travel once already at the top drives the status-bar
                     // gestures; the damped offset would need more than a screen of dragging.
@@ -326,6 +343,15 @@ fun HomeScreen(
                             onPeekStatusBar()
                         }
                     }
+                    // The mirror of the pull-down, measured from the bottom of the stack: a
+                    // push up past the end of the content opens the app list.
+                    if (swipeUpOpensAppList && delta < 0f && offsetY.value <= minOffset + 2f) {
+                        rawPullUp -= delta
+                        if (!swipeUpFired && rawPullUp > swipeUpPx) {
+                            swipeUpFired = true
+                            onSwipeUp()
+                        }
+                    }
                     scope.launch {
                         val next = offsetY.value + delta
                         val outOfBounds = next > 0f || next < minOffset
@@ -337,9 +363,14 @@ fun HomeScreen(
                     if (!pullActionFired && rawPullDown > peekPullPx && velocity > 2200f) {
                         onExpandShade()
                     }
+                    if (swipeUpOpensAppList && !swipeUpFired && rawPullUp > peekPullPx && velocity < -2200f) {
+                        onSwipeUp()
+                    }
                     rawPullDown = 0f
+                    rawPullUp = 0f
                     pullActionFired = false
                     peekFired = false
+                    swipeUpFired = false
 
                     val decay = exponentialDecay<Float>(frictionMultiplier = 1.6f)
                     val target = decay.calculateTargetValue(offsetY.value, velocity)
@@ -353,6 +384,39 @@ fun HomeScreen(
                         ),
                     )
                 },
+            )
+            .then(
+                // Only worth a pointer handler when something is actually bound to it.
+                if (quickLaunchEnabled) {
+                    Modifier.pointerInput(editMode, contentHeight) {
+                        var eligible = false
+                        var travelled = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = { start ->
+                                // The empty space under the whole stack. Anywhere higher is a
+                                // row, the widget, or Now Playing, and belongs to them.
+                                eligible = !editMode && start.y > offsetY.value + contentHeight
+                                travelled = 0f
+                            },
+                            onDragEnd = {
+                                if (eligible && abs(travelled) > quickLaunchPx) {
+                                    onQuickLaunch(
+                                        if (travelled < 0f) QuickLaunchSlot.LEFT else QuickLaunchSlot.RIGHT
+                                    )
+                                }
+                                eligible = false
+                            },
+                            onDragCancel = { eligible = false },
+                        ) { change, dx ->
+                            if (eligible) {
+                                change.consume()
+                                travelled += dx
+                            }
+                        }
+                    }
+                } else {
+                    Modifier
+                }
             )
             // Rows, the widget and the edge zones all claim their own presses, so the only
             // thing that reaches this is bare wallpaper — which until now was the one part of
