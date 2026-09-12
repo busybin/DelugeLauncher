@@ -144,7 +144,9 @@
 
     <!-- Widgets -->
     <string name="widget_add">Add widget</string>
-    <string name="widget_add_custom">Add custom widget</string>
+    <string name="widget_add_another">Add another widget</string>
+    <string name="widget_remove_this">Remove this widget</string>
+    <string name="widget_unavailable">This widget is no longer available</string>
     <string name="widget_change_settings">Change widget settings</string>
     <string name="widget_none_found">No widgets found on this device.</string>
 

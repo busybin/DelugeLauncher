@@ -145,9 +145,10 @@ fun HomeScreen(
     labelSizeSp: Int,
     itemSpacingDp: Int,
     sidePaddingDp: Int,
+    widgetSidePaddingDp: Int,
     onSetSidePadding: (Int) -> Unit,
     paddings: HomePaddings,
-    widgetId: Int,
+    widgetIds: List<Int>,
     widgetPosition: Int,
     widgetHeightDp: Int,
     hapticsEnabled: Boolean,
@@ -204,7 +205,7 @@ fun HomeScreen(
 
     // Show the widget slot when a widget exists, and also in edit mode when there isn't one —
     // that placeholder is the only way back to the picker once a widget has been removed.
-    val hasWidget = widgetId > 0
+    val hasWidget = widgetIds.isNotEmpty()
     val showWidgetSlot = hasWidget || editMode
 
     // Reordering runs against a local copy and is committed once on release; going through
@@ -486,12 +487,11 @@ fun HomeScreen(
                 ) {
                     when (item) {
                         HomeItem.Widget -> WidgetSlot(
-                            widgetId = widgetId,
+                            widgetIds = widgetIds,
                             heightDp = widgetHeightDp,
-                            hapticsEnabled = hapticsEnabled,
                             onEditLayout = { onEditModeChange(true) },
                             actions = widgetActions,
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = sidePaddingDp.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = widgetSidePaddingDp.dp),
                         )
 
                         is HomeItem.FolderItem -> FolderRow(

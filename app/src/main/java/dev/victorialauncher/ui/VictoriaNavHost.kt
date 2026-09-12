@@ -229,39 +229,35 @@ fun VictoriaNavHost(
     val widgetPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val id = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
-            if (id != -1) {
-                // Replacing a widget has to release the one it replaces, or its ID stays
-                // allocated in the host and its provider keeps broadcasting updates forever.
-                val previous = widgetId
-                if (previous > 0 && previous != id) app.widgetHost.deleteAppWidgetId(previous)
-                scope.launch { app.prefs.setWidgetId(id) }
-            }
+            // Appended rather than replacing: picking a widget now adds a page.
+            if (id != -1) scope.launch { app.prefs.addWidgetId(id) }
         }
     }
 
-    val widgetActions = remember(widgetId) {
+    val widgetActions = remember {
         WidgetSlotActions(
             onAddWidget = { widgetPickerLauncher.launch(Intent(context, WidgetPickerActivity::class.java)) },
-            onRemoveWidget = {
+            onRemoveWidget = { id ->
                 scope.launch {
-                    if (widgetId > 0) app.widgetHost.deleteAppWidgetId(widgetId)
-                    app.prefs.setWidgetId(-1)
+                    // Releasing the host id matters: left allocated, its provider keeps
+                    // broadcasting updates to a widget nobody can see.
+                    if (id > 0) app.widgetHost.deleteAppWidgetId(id)
+                    app.prefs.removeWidgetId(id)
                 }
             },
-            onWidgetSettings = {
-                val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(widgetId)
-                val configure = info?.configure
+            onWidgetSettings = { id ->
+                val configure = AppWidgetManager.getInstance(context).getAppWidgetInfo(id)?.configure
                 if (configure != null) {
                     val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
                         component = configure
-                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId)
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
                     }
                     runCatching { context.startActivity(intent) }
                 }
             },
-            onAppInfo = {
-                val info = AppWidgetManager.getInstance(context).getAppWidgetInfo(widgetId)
-                info?.let { app.appRepository.openAppInfo(it.provider.packageName) }
+            onAppInfo = { id ->
+                AppWidgetManager.getInstance(context).getAppWidgetInfo(id)
+                    ?.let { app.appRepository.openAppInfo(it.provider.packageName) }
             },
             onResize = { newHeight -> scope.launch { app.prefs.setWidgetHeightDp(newHeight) } },
             onOpenSettings = { navController.navigate("settings") },
@@ -289,7 +285,7 @@ fun VictoriaNavHost(
                 favoriteKeys = favoriteKeys,
                 hiddenApps = hiddenApps,
                 nameOverrides = nameOverrides,
-                widgetId = widgetId,
+                widgetIds = widgetIds,
                 widgetPosition = widgetPosition,
                 widgetHeightDp = widgetHeightDp,
                 widgetActions = widgetActions,
