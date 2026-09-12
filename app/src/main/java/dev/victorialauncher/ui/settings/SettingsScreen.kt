@@ -48,6 +48,7 @@ import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.IconPackRepository
 import dev.victorialauncher.data.TextColorMode
@@ -82,6 +83,7 @@ fun SettingsScreen(
     appListSearchBottom: Boolean,
     swipeUpOpensList: Boolean,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     nowPlayingEnabled: Boolean,
     nowPlayingListenerEnabled: Boolean,
     showAppIcons: Boolean,
@@ -113,6 +115,7 @@ fun SettingsScreen(
     quickLaunchRightLabel: String?,
     onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
     onSetAlignment: (HomeAlignment) -> Unit,
+    onSetIconSide: (IconSide) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
     lockGestureReady: Boolean,
@@ -183,6 +186,8 @@ fun SettingsScreen(
                     TextColorRow(textColorMode, onSetTextColorMode)
                     RowDivider()
                     AlignmentRow(alignment, onSetAlignment)
+                    RowDivider()
+                    IconSideRow(iconSide, onSetIconSide)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
                     RowDivider()
@@ -710,6 +715,23 @@ private fun AlignmentRow(selected: HomeAlignment, onSelect: (HomeAlignment) -> U
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HomeAlignment.entries.forEach { option ->
+                FilledChip(
+                    label = stringResource(option.labelRes()),
+                    selected = option == selected,
+                    onClick = { onSelect(option) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun IconSideRow(selected: IconSide, onSelect: (IconSide) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_icon_side), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            IconSide.entries.forEach { option ->
                 FilledChip(
                     label = stringResource(option.labelRes()),
                     selected = option == selected,

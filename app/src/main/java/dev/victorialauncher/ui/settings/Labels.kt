@@ -6,6 +6,7 @@ import dev.victorialauncher.R
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.TextColorMode
 
 /**
@@ -42,4 +43,10 @@ fun HomeAlignment.labelRes(): Int = when (this) {
     HomeAlignment.LEFT -> R.string.alignment_left
     HomeAlignment.CENTER -> R.string.alignment_center
     HomeAlignment.RIGHT -> R.string.alignment_right
+}
+
+@StringRes
+fun IconSide.labelRes(): Int = when (this) {
+    IconSide.LEFT -> R.string.alignment_left
+    IconSide.RIGHT -> R.string.alignment_right
 }

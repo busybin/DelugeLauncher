@@ -34,6 +34,7 @@ import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.TextColorMode
@@ -174,6 +175,7 @@ fun VictoriaNavHost(
     val quickLaunchRightKey by app.prefs.quickLaunchRight.collectAsState(initial = null)
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val alignment by app.prefs.alignment.collectAsState(initial = HomeAlignment.LEFT)
+    val iconSide by app.prefs.iconSide.collectAsState(initial = IconSide.LEFT)
     val statusBarPeekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
     val scrubBand by app.prefs.scrubBand.collectAsState(initial = null)
     val layoutDefaultsVersion by app.prefs.layoutDefaultsVersion.collectAsState(initial = null)
@@ -217,6 +219,7 @@ fun VictoriaNavHost(
         alwaysShowAz = alwaysShowAz,
         showAlphabet = showAlphabet,
         alignment = alignment,
+        iconSide = iconSide,
         widgetSidePaddingDp = widgetSidePaddingDp,
         edgeZoneWidthDp = edgeZoneWidthDp,
         swipeUpOpensAppList = swipeUpOpensList,
@@ -374,6 +377,7 @@ fun VictoriaNavHost(
                 appListSearchBottom = appListSearchBottom,
                 swipeUpOpensList = swipeUpOpensList,
                 alignment = alignment,
+                iconSide = iconSide,
                 nowPlayingEnabled = nowPlayingEnabled,
                 nowPlayingListenerEnabled = listenerEnabled,
                 onSetIconPack = { scope.launch { app.prefs.setIconPackPackage(it) } },
@@ -406,6 +410,7 @@ fun VictoriaNavHost(
                 },
                 onOpenQuickLaunchPicker = { slot -> navController.navigate("apppicker/" + slot.name) },
                 onSetAlignment = { scope.launch { app.prefs.setAlignment(it) } },
+                onSetIconSide = { scope.launch { app.prefs.setIconSide(it) } },
                 onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
                 shadeGestureReady = remember(homeIntentTick) { SystemUi.canExpandShade() },
                 lockGestureReady = remember(homeIntentTick) { SystemUi.canLockScreen() },

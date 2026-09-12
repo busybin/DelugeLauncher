@@ -89,6 +89,7 @@ import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.data.QuickLaunchSlot
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.folderToken
 import dev.victorialauncher.data.PaddingSlot
@@ -184,11 +185,15 @@ fun HomeScreen(
     contentColor: Color,
     showFavoriteLabels: Boolean,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     editMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
+    onEditScrubBand: () -> Unit,
     centerFavorites: Boolean,
     swipeUpOpensAppList: Boolean,
-    onSwipeUp: () -> Unit,
+    /** Total distance dragged up past the end, and this frame's share of it. */
+    onSwipeUpDrag: (total: Float, delta: Float) -> Unit,
+    onSwipeUpEnd: (velocity: Float) -> Unit,
     quickLaunchEnabled: Boolean,
     onQuickLaunch: (QuickLaunchSlot) -> Unit,
     onPeekStatusBar: () -> Unit,
@@ -322,13 +327,12 @@ fun HomeScreen(
 
     val peekPullPx = with(density) { 30.dp.toPx() }
     val deepPullPx = with(density) { 200.dp.toPx() }
-    val swipeUpPx = with(density) { 120.dp.toPx() }
     val quickLaunchPx = with(density) { 80.dp.toPx() }
     var rawPullDown by remember { mutableFloatStateOf(0f) }
     var rawPullUp by remember { mutableFloatStateOf(0f) }
     var pullActionFired by remember { mutableStateOf(false) }
     var peekFired by remember { mutableStateOf(false) }
-    var swipeUpFired by remember { mutableStateOf(false) }
+
 
     // Free vertical drag with spring bounce at both ends, outside edit mode.
     val offsetY = remember { Animatable(0f) }
@@ -368,7 +372,6 @@ fun HomeScreen(
                     rawPullUp = 0f
                     pullActionFired = false
                     peekFired = false
-                    swipeUpFired = false
                 },
                 state = rememberDraggableState { delta ->
                     // Undamped downward travel once already at the top drives the status-bar
@@ -383,14 +386,12 @@ fun HomeScreen(
                             onPeekStatusBar()
                         }
                     }
-                    // The mirror of the pull-down, measured from the bottom of the stack: a
-                    // push up past the end of the content opens the app list.
+                    // The mirror of the pull-down, measured from the bottom of the stack.
+                    // Reported as it happens rather than fired once at a threshold, so the
+                    // list can come in under the finger instead of appearing fully formed.
                     if (swipeUpOpensAppList && delta < 0f && offsetY.value <= minOffset + 2f) {
                         rawPullUp -= delta
-                        if (!swipeUpFired && rawPullUp > swipeUpPx) {
-                            swipeUpFired = true
-                            onSwipeUp()
-                        }
+                        onSwipeUpDrag(rawPullUp, -delta)
                     }
                     scope.launch {
                         val next = offsetY.value + delta
@@ -403,14 +404,11 @@ fun HomeScreen(
                     if (!pullActionFired && rawPullDown > peekPullPx && velocity > 2200f) {
                         onExpandShade()
                     }
-                    if (swipeUpOpensAppList && !swipeUpFired && rawPullUp > peekPullPx && velocity < -2200f) {
-                        onSwipeUp()
-                    }
+                    if (swipeUpOpensAppList && rawPullUp > 0f) onSwipeUpEnd(velocity)
                     rawPullDown = 0f
                     rawPullUp = 0f
                     pullActionFired = false
                     peekFired = false
-                    swipeUpFired = false
 
                     val decay = exponentialDecay<Float>(frictionMultiplier = 1.6f)
                     val target = decay.calculateTargetValue(offsetY.value, velocity)
@@ -501,6 +499,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    TextButton(onClick = onEditScrubBand) {
+                        Text(stringResource(R.string.handle_az_range))
+                    }
+                    Spacer(Modifier.weight(1f))
                     TextButton(onClick = { onEditModeChange(false) }) {
                         Icon(Icons.Filled.Done, contentDescription = null)
                         Spacer(Modifier.width(4.dp))
@@ -535,6 +537,7 @@ fun HomeScreen(
                     heightDp = nowPlayingHeightDp,
                     contentColor = contentColor,
                     alignment = alignment,
+                    iconSide = iconSide,
                     sidePaddingDp = sidePaddingDp,
                     padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                     padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -665,6 +668,7 @@ fun HomeScreen(
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
                             alignment = alignment,
+                            iconSide = iconSide,
                             menuExpanded = folderMenuFor == item.folder.id,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -697,6 +701,7 @@ fun HomeScreen(
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
                             alignment = alignment,
+                            iconSide = iconSide,
                             menuExpanded = menuForKey == item.app.key,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -737,6 +742,7 @@ fun HomeScreen(
                             heightDp = nowPlayingHeightDp,
                             contentColor = contentColor,
                             alignment = alignment,
+                            iconSide = iconSide,
                             sidePaddingDp = sidePaddingDp,
                             padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                             padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -838,6 +844,7 @@ private fun FavoriteRow(
     contentColor: Color,
     showLabels: Boolean,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -890,13 +897,13 @@ private fun FavoriteRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = alignment.arrangement(),
         ) {
-            if (dragHandle != null && alignment == HomeAlignment.RIGHT) {
+            if (dragHandle != null && iconSide == IconSide.RIGHT) {
                 DragHandle(contentColor, dragHandle)
             }
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
-                iconWidth = iconSizeDp.dp,
+                iconSide = iconSide,
                 icon = { AppIcon(app = app, sizeDp = iconSizeDp) },
             ) { labelModifier ->
                 Text(
@@ -907,7 +914,7 @@ private fun FavoriteRow(
                     textAlign = alignment.textAlign(),
                 )
             }
-            if (dragHandle != null && alignment != HomeAlignment.RIGHT) {
+            if (dragHandle != null && iconSide != IconSide.RIGHT) {
                 DragHandle(contentColor, dragHandle)
             }
         }
@@ -964,6 +971,7 @@ private fun FolderRow(
     contentColor: Color,
     showLabels: Boolean,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -1016,13 +1024,13 @@ private fun FolderRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = alignment.arrangement(),
             ) {
-                if (dragHandle != null && alignment == HomeAlignment.RIGHT) {
+                if (dragHandle != null && iconSide == IconSide.RIGHT) {
                     DragHandle(contentColor, dragHandle)
                 }
                 AlignedIconLabel(
                     alignment = alignment,
                     showLabel = showLabels,
-                    iconWidth = iconSizeDp.dp,
+                    iconSide = iconSide,
                     icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
                 ) { labelModifier ->
                     Text(
@@ -1038,7 +1046,7 @@ private fun FolderRow(
                         fontSize = (labelSizeSp - 3).coerceAtLeast(9).sp,
                     )
                 }
-                if (dragHandle != null && alignment != HomeAlignment.RIGHT) {
+                if (dragHandle != null && iconSide != IconSide.RIGHT) {
                     DragHandle(contentColor, dragHandle)
                 }
             }
@@ -1091,8 +1099,8 @@ private fun FolderRow(
                     ) {
                         AlignedIconLabel(
                             alignment = alignment,
+                            iconSide = iconSide,
                             showLabel = showLabels,
-                            iconWidth = (iconSizeDp * 0.8f).dp,
                             icon = { AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt()) },
                         ) { labelModifier ->
                             Text(
@@ -1125,6 +1133,7 @@ private fun NowPlayingBlock(
     heightDp: Int,
     contentColor: Color,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     sidePaddingDp: Int,
     padTop: Int,
     padBottom: Int,
@@ -1271,47 +1280,36 @@ private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
 @Composable
 private fun RowScope.AlignedIconLabel(
     alignment: HomeAlignment,
+    iconSide: IconSide,
     showLabel: Boolean,
-    /** Width of [icon], so a centered label can be balanced against it. */
-    iconWidth: Dp,
     icon: @Composable () -> Unit,
     label: @Composable RowScope.(Modifier) -> Unit,
 ) {
     // No icon drawn means no gap to leave for one.
-    val showIcons = LocalIconConfig.current.showIcons
-    val gap = if (showIcons) 16.dp else 0.dp
-    when {
-        alignment == HomeAlignment.RIGHT -> {
-            if (showLabel) {
-                label(Modifier.weight(1f))
-                Spacer(Modifier.width(gap))
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
-            icon()
-        }
+    val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
+    // Centering has nothing to push against: a weighted label would span the row and leave
+    // the pair pinned apart, so nothing is weighted and the Row's own arrangement packs icon
+    // and label together in the middle. Left and right hang the label off a weight instead,
+    // which is what drives the icon out to the far edge.
+    val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
+    val filler: @Composable () -> Unit = {
+        if (!showLabel && alignment != HomeAlignment.CENTER) Spacer(Modifier.weight(1f))
+    }
 
-        alignment == HomeAlignment.CENTER && showLabel -> {
-            // Centered means centered on the row, not on whatever the icon left over. The
-            // label takes the weight and a spacer the width of the icon balances it on the
-            // far side, so the text lands on the screen's middle either way.
-            icon()
+    if (iconSide == IconSide.RIGHT) {
+        if (showLabel) {
+            label(labelModifier)
             Spacer(Modifier.width(gap))
-            label(Modifier.weight(1f))
-            if (showIcons) {
-                Spacer(Modifier.width(iconWidth + gap))
-            }
         }
-
-        else -> {
-            icon()
-            if (showLabel) {
-                Spacer(Modifier.width(gap))
-                label(Modifier.weight(1f))
-            } else if (alignment != HomeAlignment.CENTER) {
-                Spacer(Modifier.weight(1f))
-            }
+        filler()
+        icon()
+    } else {
+        icon()
+        if (showLabel) {
+            Spacer(Modifier.width(gap))
+            label(labelModifier)
         }
+        filler()
     }
 }
 

@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.Dp
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.service.HapticUtil
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /** How far the strip may be dragged inward before the pull stops growing. */
 private const val MAX_PULL_DP = 400f
@@ -45,7 +44,6 @@ fun EdgeTouchZone(
     onOpen: () -> Unit,
     /** Null when double-tap-to-lock is off, so a second tap is simply another tap. */
     onDoubleTap: (() -> Unit)?,
-    onLongPress: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -55,7 +53,6 @@ fun EdgeTouchZone(
     // The gesture handler outlives the composition that built it, so it must not close over
     // this frame's callbacks.
     val currentDoubleTap by rememberUpdatedState(onDoubleTap)
-    val currentLongPress by rememberUpdatedState(onLongPress)
 
     Box(
         modifier = modifier
@@ -84,22 +81,12 @@ fun EdgeTouchZone(
 
                     report(down.position.x, down.position.y)
 
-                    // Three things start the same way here, so they are told apart by what
-                    // happens next: moving is a scrub, holding still is the band editor, and
-                    // letting go without either is a tap — which a second tap turns into a
-                    // lock. Opening the list on the down stays untouched through all of it.
+                    // Two things start the same way, told apart by whether the finger moves:
+                    // travelling is a scrub, letting go without it is a tap that a second tap
+                    // turns into a lock. Opening the list on the down is untouched by either.
                     var moved = false
-                    var heldStill = false
                     while (true) {
-                        val event = if (moved) {
-                            awaitPointerEvent()
-                        } else {
-                            withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) { awaitPointerEvent() }
-                        }
-                        if (event == null) {
-                            heldStill = true
-                            break
-                        }
+                        val event = awaitPointerEvent()
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
                         if (!change.pressed) break
                         // A tap places the list without ever counting as a scrub, so the
@@ -112,19 +99,6 @@ fun EdgeTouchZone(
                         }
                         report(change.position.x, change.position.y)
                         change.consume()
-                    }
-
-                    if (heldStill) {
-                        state.cancel()
-                        HapticUtil.tick(view, hapticsEnabled)
-                        currentLongPress()
-                        // Swallow what is left, or lifting would also register as a tap.
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            event.changes.forEach { it.consume() }
-                            if (event.changes.none { it.pressed }) break
-                        }
-                        return@awaitEachGesture
                     }
 
                     scope.launch { state.release() }

@@ -4,12 +4,17 @@ package dev.victorialauncher.ui.home
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -30,6 +35,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
@@ -41,6 +47,7 @@ import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.QuickLaunchSlot
@@ -78,6 +85,12 @@ private const val LAUNCH_CLOSE_TIMEOUT_MS = 2000L
 
 /** Long enough to read as a settle, short enough not to stand between you and the icons. */
 private const val HOME_FADE_MS = 220
+
+/**
+ * How far a swipe up carries the app list in. The same distance a pull collapses it over, so
+ * opening is literally the closing animation run backwards.
+ */
+private val SWIPE_OPEN_DISTANCE = 150.dp
 
 /**
  * The home destination: the home screen itself, the app-list overlay layered over it, and the
@@ -164,6 +177,12 @@ fun HomeRoute(
         }
     }
 
+    // How far in the overlay is: 0 sitting off the bottom, the full distance fully open. The
+    // edge zones jump it straight to open, a swipe drags it there by hand.
+    val openDistancePx = with(LocalDensity.current) { SWIPE_OPEN_DISTANCE.toPx() }
+    val openAnim = remember { Animatable(0f) }
+    val appListState = rememberLazyListState()
+
     // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
     var launchClose by remember { mutableStateOf<Job?>(null) }
 
@@ -178,6 +197,7 @@ fun HomeRoute(
 
     fun closeAppList(snap: Boolean = false) {
         appListQuery = ""
+        scope.launch { openAnim.snapTo(0f) }
         launchClose?.cancel()
         launchClose = null
         snapHome = snap
@@ -363,11 +383,36 @@ fun HomeRoute(
                 contentColor = settings.contentColor,
                 showFavoriteLabels = settings.showFavoriteLabels,
                 alignment = settings.alignment,
+                iconSide = settings.iconSide,
                 editMode = homeEditMode,
                 onEditModeChange = { homeEditMode = it },
+                onEditScrubBand = { liveBand = band; bandEditMode = true },
                 centerFavorites = settings.centerFavorites,
                 swipeUpOpensAppList = settings.swipeUpOpensAppList,
-                onSwipeUp = { appListVisible = true },
+                onSwipeUpDrag = { total, delta ->
+                    appListVisible = true
+                    scope.launch { openAnim.snapTo(total.coerceAtMost(openDistancePx)) }
+                    // Once it is all the way in the finger is usually still moving, so the
+                    // rest of the drag goes to the list rather than stopping dead against it.
+                    if (total > openDistancePx) appListState.dispatchRawDelta(delta)
+                },
+                onSwipeUpEnd = { velocity ->
+                    scope.launch {
+                        val settled = openAnim.value > openDistancePx * 0.4f || velocity < -1200f
+                        if (settled) {
+                            openAnim.animateTo(
+                                targetValue = openDistancePx,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMediumLow,
+                                ),
+                            )
+                        } else {
+                            openAnim.animateTo(0f, tween(160, easing = FastOutLinearInEasing))
+                            closeAppList()
+                        }
+                    }
+                },
                 quickLaunchEnabled = settings.quickLaunchLeft != null || settings.quickLaunchRight != null,
                 onQuickLaunch = { slot ->
                     val target = when (slot) {
@@ -446,9 +491,14 @@ fun HomeRoute(
                 edgeSide = settings.edgeSide,
                 searchEnabled = settings.appListSearch,
                 searchAtBottom = settings.appListSearchBottom,
+                listState = appListState,
+                // Distance still to travel, which is exactly what the collapse transform
+                // takes: the list arrives scaled down and faded, and grows into place.
+                enterPullPx = openDistancePx - openAnim.value,
                 query = appListQuery,
                 onQueryChange = { appListQuery = it },
                 alignment = settings.alignment,
+                iconSide = settings.iconSide,
             )
         }
 
@@ -525,9 +575,12 @@ fun HomeRoute(
                     band = band,
                     hapticsEnabled = settings.hapticsEnabled,
                     state = scrub,
-                    onOpen = { appListVisible = true },
+                    onOpen = {
+                        appListVisible = true
+                        // Opened by touching the edge, so there is nothing to animate in.
+                        scope.launch { openAnim.snapTo(openDistancePx) }
+                    },
                     onDoubleTap = if (settings.doubleTapToLock) ({ lockOrExplain() }) else null,
-                    onLongPress = { liveBand = band; bandEditMode = true },
                     modifier = Modifier.align(
                         if (side == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
                     ),
@@ -552,6 +605,7 @@ data class HomeSettings(
     val alwaysShowAz: Boolean,
     val showAlphabet: Boolean,
     val alignment: HomeAlignment,
+    val iconSide: IconSide,
     val widgetSidePaddingDp: Int,
     val edgeZoneWidthDp: Int,
     val swipeUpOpensAppList: Boolean,

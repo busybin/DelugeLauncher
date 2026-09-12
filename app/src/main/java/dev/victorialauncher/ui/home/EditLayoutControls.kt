@@ -26,9 +26,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.victorialauncher.R
 
-/** Paddings move in smaller jumps than heights, which have a lot more range to cover. */
-const val PADDING_STEP_DP = 4
-const val HEIGHT_STEP_DP = 8
+/** A dp at a time: coarser steps were quicker to travel but never landed where you wanted. */
+const val PADDING_STEP_DP = 1
+const val HEIGHT_STEP_DP = 1
 
 /** Widest a padding can be pushed; roughly a phone screen. */
 private val PADDING_RANGE = 0..400

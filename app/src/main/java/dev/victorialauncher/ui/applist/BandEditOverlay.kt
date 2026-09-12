@@ -3,6 +3,7 @@ package dev.victorialauncher.ui.applist
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -73,7 +76,23 @@ fun BandEditOverlay(
         onBandChange(ScrubBand(topPx = band.topPx, heightPx = bottom - band.topPx))
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f))) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.6f))
+            // Swallow everything. Without this the scrim is only paint: taps went straight
+            // through to the app list behind and launched whatever was under the finger,
+            // leaving the editor sitting on top of the app that just opened.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                        if (event.changes.none { it.pressed }) break
+                    }
+                }
+            },
+    ) {
         Box(
             modifier = Modifier
                 .align(alignment)

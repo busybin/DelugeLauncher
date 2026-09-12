@@ -21,6 +21,9 @@ enum class EdgeSide { LEFT, RIGHT, BOTH }
 /** Which edge favorites and app rows line up against. */
 enum class HomeAlignment { LEFT, CENTER, RIGHT }
 
+/** Which side of an app's name its icon sits on. */
+enum class IconSide { LEFT, RIGHT }
+
 /** The two swipe directions under the favorites that can launch an app. */
 enum class QuickLaunchSlot { LEFT, RIGHT }
 enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE }
@@ -80,6 +83,7 @@ class Prefs(private val context: Context) {
         val WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
         val SHOW_APP_ICONS = booleanPreferencesKey("show_app_icons")
         val ALIGNMENT = stringPreferencesKey("alignment")
+        val ICON_SIDE = stringPreferencesKey("icon_side")
         val STATUS_BAR_PEEK_SECONDS = intPreferencesKey("status_bar_peek_seconds")
         val AZ_BAND_TOP_FRACTION = floatPreferencesKey("az_band_top_fraction")
         val AZ_BAND_HEIGHT_FRACTION = floatPreferencesKey("az_band_height_fraction")
@@ -254,6 +258,11 @@ class Prefs(private val context: Context) {
             pref[Keys.ALIGN_RIGHT] == true -> HomeAlignment.RIGHT
             else -> HomeAlignment.LEFT
         }
+    }.distinctUntilChanged()
+
+    val iconSide: Flow<IconSide> = data.map {
+        runCatching { IconSide.valueOf(it[Keys.ICON_SIDE] ?: IconSide.LEFT.name) }
+            .getOrDefault(IconSide.LEFT)
     }.distinctUntilChanged()
 
     /** How long a pull-down keeps the status bar on screen before it fades away again. */
@@ -550,6 +559,10 @@ class Prefs(private val context: Context) {
             // Kept in step so a downgrade still lands on the side the user picked.
             it[Keys.ALIGN_RIGHT] = v == HomeAlignment.RIGHT
         }
+    }
+
+    suspend fun setIconSide(v: IconSide) {
+        context.dataStore.edit { it[Keys.ICON_SIDE] = v.name }
     }
 
     suspend fun setStatusBarPeekSeconds(v: Int) {

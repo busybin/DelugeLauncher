@@ -35,6 +35,7 @@
     <string name="handle_widget_bottom">Widget bottom</string>
     <string name="handle_widget_height">Widget height</string>
     <string name="handle_widget_side_padding">Widget side padding</string>
+    <string name="handle_az_range">A-Z strip range</string>
     <string name="handle_favorites_top">Favorites top</string>
     <string name="handle_favorites_bottom">Favorites bottom</string>
     <string name="handle_now_playing_top">Now Playing top</string>
@@ -100,6 +101,7 @@
     <string name="settings_sort_by_usage">Sort by how often you use apps</string>
     <string name="settings_sort_by_usage_detail">Within each letter, most used first</string>
     <string name="settings_alignment">Alignment</string>
+    <string name="settings_icon_side">Icon side</string>
     <string name="settings_shade_gesture">Swipe down for notifications</string>
     <string name="settings_shade_ready">Ready — pull down on the home screen</string>
     <string name="settings_shade_not_ready">Pull down on the home screen. If nothing happens, enable Victoria Launcher under Accessibility — and if that switch is greyed out, allow restricted settings from App info first.</string>

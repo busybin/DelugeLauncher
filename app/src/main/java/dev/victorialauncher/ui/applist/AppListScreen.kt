@@ -41,7 +41,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
@@ -90,6 +90,7 @@ import androidx.compose.ui.unit.sp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.ui.common.AppIcon
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.recordTouchPosition
@@ -147,11 +148,16 @@ fun AppListScreen(
     contentColor: Color,
     showAlphabet: Boolean,
     edgeSide: EdgeSide,
+    /** Hoisted so a swipe that overshoots the opening animation can keep scrolling it. */
+    listState: LazyListState,
+    /** How far the list still has to travel to be fully open; 0 once it has arrived. */
+    enterPullPx: Float,
     searchEnabled: Boolean,
     searchAtBottom: Boolean,
     query: String,
     onQueryChange: (String) -> Unit,
     alignment: HomeAlignment,
+    iconSide: IconSide,
 ) {
     fun displayName(app: AppInfo) = nameOverrides[app.key] ?: app.label
 
@@ -178,7 +184,6 @@ fun AppListScreen(
     /** Height of the pinned search field, so list-relative offsets can be compared to taps. */
     var searchHeightPx by remember { mutableIntStateOf(0) }
 
-    val listState = rememberLazyListState()
     // Rows outside the scrubbed letter fade out; the section itself never moves, because it
     // is the same list the whole time. Only ever read inside a graphicsLayer, so the fade
     // runs in the draw phase instead of recomposing every visible row 60 times a second.
@@ -225,7 +230,15 @@ fun AppListScreen(
     var overPull by remember { mutableFloatStateOf(0f) }
     val collapseAnim = remember { Animatable(0f) }
     var collapsing by remember { mutableStateOf(false) }
-    val collapseProvider: () -> Float = { if (collapsing) collapseAnim.value else overPull }
+    // Entering and collapsing are the same transform in opposite directions, so the distance
+    // left to travel on the way in is fed through the very same path.
+    val collapseProvider: () -> Float = {
+        when {
+            collapsing -> collapseAnim.value
+            enterPullPx > 0f -> enterPullPx
+            else -> overPull
+        }
+    }
 
     // Both ends of the list share one elastic. A drag past an end stretches it, a fling into
     // an end seeds it with the leftover *velocity*, and it always springs back to rest.
@@ -627,6 +640,7 @@ fun AppListScreen(
                     is AppListRow.Entry -> AppRow(
                         contentColor = contentColor,
                         alignment = alignment,
+                        iconSide = iconSide,
                         app = row.app,
                         label = displayName(row.app),
                         iconSizeDp = iconSizeDp,
@@ -795,6 +809,7 @@ private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, a
 private fun AppRow(
     contentColor: Color,
     alignment: HomeAlignment,
+    iconSide: IconSide,
     touchPosition: MutableState<Offset>,
     app: AppInfo,
     label: String,
@@ -864,7 +879,7 @@ private fun AppRow(
                     },
                 )
             }
-            if (alignment == HomeAlignment.RIGHT) {
+            if (iconSide == IconSide.RIGHT) {
                 text()
                 Spacer(Modifier.width(gap))
                 AppIcon(app = app, sizeDp = iconSizeDp)
