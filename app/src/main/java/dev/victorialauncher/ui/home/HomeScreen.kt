@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
-import androidx.compose.material.icons.filled.DragHandle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Info
@@ -79,6 +80,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -490,7 +492,12 @@ fun HomeScreen(
         ) {
             if (editMode) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 72.dp, top = 4.dp, bottom = 4.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // The overlay draws under the status bar, so without this the Done
+                        // button sits behind the clock.
+                        .statusBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -895,6 +902,7 @@ private fun FavoriteRow(
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
+                iconWidth = iconSizeDp.dp,
                 icon = { AppIcon(app = app, sizeDp = iconSizeDp) },
             ) { labelModifier ->
                 Text(
@@ -1020,6 +1028,7 @@ private fun FolderRow(
                 AlignedIconLabel(
                     alignment = alignment,
                     showLabel = showLabels,
+                    iconWidth = iconSizeDp.dp,
                     icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
                 ) { labelModifier ->
                     Text(
@@ -1089,6 +1098,7 @@ private fun FolderRow(
                         AlignedIconLabel(
                             alignment = alignment,
                             showLabel = showLabels,
+                            iconWidth = (iconSizeDp * 0.8f).dp,
                             icon = { AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt()) },
                         ) { labelModifier ->
                             Text(
@@ -1249,7 +1259,7 @@ private fun FolderIcon(
 @Composable
 private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
     Icon(
-        Icons.Filled.DragHandle,
+        Icons.Filled.Menu,
         contentDescription = stringResource(R.string.home_drag_handle),
         tint = contentColor.copy(alpha = 0.6f),
         modifier = modifier.size(40.dp).padding(8.dp),
@@ -1268,27 +1278,45 @@ private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
 private fun RowScope.AlignedIconLabel(
     alignment: HomeAlignment,
     showLabel: Boolean,
+    /** Width of [icon], so a centered label can be balanced against it. */
+    iconWidth: Dp,
     icon: @Composable () -> Unit,
     label: @Composable RowScope.(Modifier) -> Unit,
 ) {
     // No icon drawn means no gap to leave for one.
-    val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
-    val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
-    if (alignment == HomeAlignment.RIGHT) {
-        if (showLabel) {
-            label(labelModifier)
-            Spacer(Modifier.width(gap))
-        } else {
-            Spacer(Modifier.weight(1f))
+    val showIcons = LocalIconConfig.current.showIcons
+    val gap = if (showIcons) 16.dp else 0.dp
+    when {
+        alignment == HomeAlignment.RIGHT -> {
+            if (showLabel) {
+                label(Modifier.weight(1f))
+                Spacer(Modifier.width(gap))
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
+            icon()
         }
-        icon()
-    } else {
-        icon()
-        if (showLabel) {
+
+        alignment == HomeAlignment.CENTER && showLabel -> {
+            // Centered means centered on the row, not on whatever the icon left over. The
+            // label takes the weight and a spacer the width of the icon balances it on the
+            // far side, so the text lands on the screen's middle either way.
+            icon()
             Spacer(Modifier.width(gap))
-            label(labelModifier)
-        } else if (alignment != HomeAlignment.CENTER) {
-            Spacer(Modifier.weight(1f))
+            label(Modifier.weight(1f))
+            if (showIcons) {
+                Spacer(Modifier.width(iconWidth + gap))
+            }
+        }
+
+        else -> {
+            icon()
+            if (showLabel) {
+                Spacer(Modifier.width(gap))
+                label(Modifier.weight(1f))
+            } else if (alignment != HomeAlignment.CENTER) {
+                Spacer(Modifier.weight(1f))
+            }
         }
     }
 }

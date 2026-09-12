@@ -353,6 +353,10 @@ fun HomeRoute(
                     scope.launch { app.prefs.setHomePadding(slot, value) }
                 },
                 onFavoritesBoundsChanged = { top, bottom ->
+                    // Measured in window space, so a home screen still travelling under the
+                    // open overlay would drag the alphabet along with it. Whatever the band
+                    // was when the list opened is what it stays.
+                    if (appListVisible) return@HomeScreen
                     favBand = ScrubBand(topPx = top, heightPx = bottom - top)
                 },
                 nowPlayingHasContent = nowPlayingHasContent,

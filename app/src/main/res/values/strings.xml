@@ -19,7 +19,7 @@
 
     <!-- Home screen -->
     <string name="home_drag_handle">Reorder</string>
-    <string name="home_edit_hint">Tap \u2212 and + to adjust, drag the handle to reorder</string>
+    <string name="home_edit_hint">Drag the handles to reorder</string>
     <string name="home_no_favorites_title">No favorites yet</string>
     <string name="home_no_favorites_body">Touch the screen edge to open the app list, or pick your favorites from the list below.</string>
     <string name="home_choose_favorites">Choose favorites</string>
@@ -86,6 +86,7 @@
     <string name="settings_edge_side">Which edge opens the app list</string>
     <string name="settings_double_tap_lock">Double-tap to lock screen</string>
     <string name="settings_double_tap_lock_detail">Tap the A-Z strip twice</string>
+    <string name="settings_lock_needs_accessibility">Locking the screen needs Victoria Launcher enabled under Accessibility</string>
     <string name="settings_always_show_az">Always show A-Z</string>
     <string name="settings_show_alphabet">Show letters in the app list</string>
     <string name="settings_edge_zone_width">Edge swipe width</string>

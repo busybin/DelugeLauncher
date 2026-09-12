@@ -113,6 +113,7 @@ fun SettingsScreen(
     onSetAlignment: (HomeAlignment) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
+    lockGestureReady: Boolean,
     onOpenAccessibilitySettings: () -> Unit,
     onOpenHiddenApps: () -> Unit,
     onOpenFavorites: () -> Unit,
@@ -240,6 +241,28 @@ fun SettingsScreen(
                         checked = doubleTapToLock,
                         onCheckedChange = onSetDoubleTapToLock,
                     )
+                    // Switching it on does nothing at all without the permission, so the way
+                    // to grant it belongs right here rather than buried in a toast later.
+                    if (doubleTapToLock && !lockGestureReady) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(R.string.settings_lock_needs_accessibility),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                modifier = Modifier.weight(1f),
+                            )
+                            FilledChip(
+                                stringResource(R.string.settings_enable),
+                                selected = false,
+                                onClick = onOpenAccessibilitySettings,
+                            )
+                        }
+                    }
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_always_show_az), alwaysShowAz, onSetAlwaysShowAz)
                     RowDivider()

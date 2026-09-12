@@ -41,5 +41,8 @@ object SystemUi {
      */
     fun canExpandShade(): Boolean = VictoriaAccessibilityService.isConnected || reflectionWorked
 
+    /** Locking has no fallback: the accessibility action is the only way to do it at all. */
+    fun canLockScreen(): Boolean = VictoriaAccessibilityService.isConnected
+
     fun lockScreen(): Boolean = VictoriaAccessibilityService.lockScreen()
 }

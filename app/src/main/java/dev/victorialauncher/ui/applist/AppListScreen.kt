@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -564,11 +565,12 @@ fun AppListScreen(
                 modifier = Modifier.onSizeChanged { searchHeightPx = it.height },
             )
         }
+        Box(modifier = Modifier.weight(1f)) {
         CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
         LazyColumn(
             state = listState,
             modifier = Modifier
-                .weight(1f)
+                .fillMaxSize()
                 .graphicsLayer { translationY = stretchProvider() },
             // Room above A and below Z so any letter can sit on the same line; without it
             // the ends clamp and land somewhere else entirely.
@@ -677,9 +679,9 @@ fun AppListScreen(
             }
         }
         }
-        }
 
-        // Fade the list out as it scrolls off the top.
+        // Fade the list out as it scrolls off the top. Inside the list's own box, so it
+        // shades the rows rather than the search field pinned above them.
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -691,6 +693,8 @@ fun AppListScreen(
                     )
                 ),
         )
+        }
+        }
 
         if (showAlphabet && !searching) {
             EdgeScrubber(
@@ -920,20 +924,28 @@ private fun SearchField(
                 }
             }
         },
+        shape = RoundedCornerShape(28.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedTextColor = contentColor,
             unfocusedTextColor = contentColor,
             cursorColor = contentColor,
-            focusedBorderColor = contentColor.copy(alpha = 0.5f),
-            unfocusedBorderColor = contentColor.copy(alpha = 0.25f),
+            focusedBorderColor = contentColor.copy(alpha = 0.45f),
+            unfocusedBorderColor = contentColor.copy(alpha = 0.2f),
+            focusedContainerColor = Color.Black.copy(alpha = 0.25f),
+            unfocusedContainerColor = Color.Black.copy(alpha = 0.25f),
         ),
         modifier = modifier
+            // The overlay draws under the status bar, so without this the field sits behind
+            // the clock.
+            .statusBarsPadding()
             .fillMaxWidth()
             .padding(
-                start = if (edgeSide != EdgeSide.RIGHT) stripInset else 20.dp,
-                end = if (edgeSide != EdgeSide.LEFT) stripInset else 20.dp,
-                top = 8.dp,
-                bottom = 4.dp,
+                // Lines up with the rows' own inset instead of hugging the screen edge, and
+                // clears the A-Z strip on whichever side it occupies.
+                start = (if (edgeSide != EdgeSide.RIGHT) stripInset else 0.dp) + 20.dp,
+                end = (if (edgeSide != EdgeSide.LEFT) stripInset else 0.dp) + 20.dp,
+                top = 12.dp,
+                bottom = 8.dp,
             ),
     )
 }
