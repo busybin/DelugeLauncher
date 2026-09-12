@@ -100,7 +100,8 @@
     <string name="settings_search_bar_bottom">Search bar at the bottom</string>
     <string name="settings_sort_by_usage">Sort by how often you use apps</string>
     <string name="settings_sort_by_usage_detail">Within each letter, most used first</string>
-    <string name="settings_alignment">Alignment</string>
+    <string name="settings_alignment_favorites">Favorites alignment</string>
+    <string name="settings_alignment_applist">App list alignment</string>
     <string name="settings_icon_side">Icon side</string>
     <string name="settings_shade_gesture">Swipe down for notifications</string>
     <string name="settings_shade_ready">Ready — pull down on the home screen</string>

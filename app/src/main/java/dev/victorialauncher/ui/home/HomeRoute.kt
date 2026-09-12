@@ -497,7 +497,7 @@ fun HomeRoute(
                 enterPullPx = openDistancePx - openAnim.value,
                 query = appListQuery,
                 onQueryChange = { appListQuery = it },
-                alignment = settings.alignment,
+                alignment = settings.appListAlignment,
                 iconSide = settings.iconSide,
             )
         }
@@ -605,6 +605,7 @@ data class HomeSettings(
     val alwaysShowAz: Boolean,
     val showAlphabet: Boolean,
     val alignment: HomeAlignment,
+    val appListAlignment: HomeAlignment,
     val iconSide: IconSide,
     val widgetSidePaddingDp: Int,
     val edgeZoneWidthDp: Int,

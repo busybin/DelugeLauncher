@@ -879,7 +879,16 @@ private fun AppRow(
                     },
                 )
             }
+            // Centred rows balance the icon with a spacer on the label's far side, so the
+            // text lands on the screen's centre line rather than the pair straddling it.
+            val showIcons = LocalIconConfig.current.showIcons
+            val balance: @Composable () -> Unit = {
+                if (alignment == HomeAlignment.CENTER && showIcons) {
+                    Spacer(Modifier.width(iconSizeDp.dp + gap))
+                }
+            }
             if (iconSide == IconSide.RIGHT) {
+                balance()
                 text()
                 Spacer(Modifier.width(gap))
                 AppIcon(app = app, sizeDp = iconSizeDp)
@@ -887,6 +896,7 @@ private fun AppRow(
                 AppIcon(app = app, sizeDp = iconSizeDp)
                 Spacer(Modifier.width(gap))
                 text()
+                balance()
             }
         }
 

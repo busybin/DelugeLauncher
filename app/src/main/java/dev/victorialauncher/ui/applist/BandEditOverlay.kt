@@ -28,7 +28,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -76,23 +75,26 @@ fun BandEditOverlay(
         onBandChange(ScrubBand(topPx = band.topPx, heightPx = bottom - band.topPx))
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.6f))
-            // Swallow everything. Without this the scrim is only paint: taps went straight
-            // through to the app list behind and launched whatever was under the finger,
-            // leaving the editor sitting on top of the app that just opened.
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        event.changes.forEach { it.consume() }
-                        if (event.changes.none { it.pressed }) break
+    Box(modifier = modifier.fillMaxSize()) {
+        // A sibling drawn first, not a wrapper: as a wrapper it intercepted on the way down
+        // and ate its own buttons. Behind everything else it only ever catches what the
+        // handles and buttons did not, which is the whole job — without it the scrim is just
+        // paint and taps launch whatever app is underneath.
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.6f))
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            event.changes.forEach { it.consume() }
+                            if (event.changes.none { it.pressed }) break
+                        }
                     }
-                }
-            },
-    ) {
+                },
+        )
+
         Box(
             modifier = Modifier
                 .align(alignment)

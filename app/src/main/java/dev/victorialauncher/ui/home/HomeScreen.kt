@@ -904,6 +904,7 @@ private fun FavoriteRow(
                 alignment = alignment,
                 showLabel = showLabels,
                 iconSide = iconSide,
+                iconWidth = iconSizeDp.dp,
                 icon = { AppIcon(app = app, sizeDp = iconSizeDp) },
             ) { labelModifier ->
                 Text(
@@ -1031,6 +1032,7 @@ private fun FolderRow(
                     alignment = alignment,
                     showLabel = showLabels,
                     iconSide = iconSide,
+                    iconWidth = iconSizeDp.dp,
                     icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
                 ) { labelModifier ->
                     Text(
@@ -1101,6 +1103,7 @@ private fun FolderRow(
                             alignment = alignment,
                             iconSide = iconSide,
                             showLabel = showLabels,
+                            iconWidth = (iconSizeDp * 0.8f).dp,
                             icon = { AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt()) },
                         ) { labelModifier ->
                             Text(
@@ -1282,21 +1285,30 @@ private fun RowScope.AlignedIconLabel(
     alignment: HomeAlignment,
     iconSide: IconSide,
     showLabel: Boolean,
+    /** Width of [icon], so a centered label can be balanced against it. */
+    iconWidth: Dp,
     icon: @Composable () -> Unit,
     label: @Composable RowScope.(Modifier) -> Unit,
 ) {
+    val showIcons = LocalIconConfig.current.showIcons
     // No icon drawn means no gap to leave for one.
-    val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
-    // Centering has nothing to push against: a weighted label would span the row and leave
-    // the pair pinned apart, so nothing is weighted and the Row's own arrangement packs icon
-    // and label together in the middle. Left and right hang the label off a weight instead,
-    // which is what drives the icon out to the far edge.
-    val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
+    val gap = if (showIcons) 16.dp else 0.dp
+    val centered = alignment == HomeAlignment.CENTER
+    // Left and right hang the label off a weight, which is what drives the icon out to the
+    // far edge. Centering cannot: a weighted label spans the row and the pair ends up pinned
+    // apart. Nothing is weighted there, and a spacer the width of the icon sits on the far
+    // side of the label — so the Row centres a group whose midpoint is the label's own, and
+    // the text lands on the screen's centre line with its icon still beside it.
+    val labelModifier = if (centered) Modifier else Modifier.weight(1f)
+    val balance: @Composable () -> Unit = {
+        if (centered && showLabel && showIcons) Spacer(Modifier.width(iconWidth + gap))
+    }
     val filler: @Composable () -> Unit = {
-        if (!showLabel && alignment != HomeAlignment.CENTER) Spacer(Modifier.weight(1f))
+        if (!showLabel && !centered) Spacer(Modifier.weight(1f))
     }
 
     if (iconSide == IconSide.RIGHT) {
+        balance()
         if (showLabel) {
             label(labelModifier)
             Spacer(Modifier.width(gap))
@@ -1310,6 +1322,7 @@ private fun RowScope.AlignedIconLabel(
             label(labelModifier)
         }
         filler()
+        balance()
     }
 }
 

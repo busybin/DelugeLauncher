@@ -83,6 +83,7 @@ fun SettingsScreen(
     appListSearchBottom: Boolean,
     swipeUpOpensList: Boolean,
     alignment: HomeAlignment,
+    appListAlignment: HomeAlignment,
     iconSide: IconSide,
     nowPlayingEnabled: Boolean,
     nowPlayingListenerEnabled: Boolean,
@@ -115,6 +116,7 @@ fun SettingsScreen(
     quickLaunchRightLabel: String?,
     onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
     onSetAlignment: (HomeAlignment) -> Unit,
+    onSetAppListAlignment: (HomeAlignment) -> Unit,
     onSetIconSide: (IconSide) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
@@ -185,7 +187,17 @@ fun SettingsScreen(
                     RowDivider()
                     TextColorRow(textColorMode, onSetTextColorMode)
                     RowDivider()
-                    AlignmentRow(alignment, onSetAlignment)
+                    AlignmentRow(
+                        stringResource(R.string.settings_alignment_favorites),
+                        alignment,
+                        onSetAlignment,
+                    )
+                    RowDivider()
+                    AlignmentRow(
+                        stringResource(R.string.settings_alignment_applist),
+                        appListAlignment,
+                        onSetAppListAlignment,
+                    )
                     RowDivider()
                     IconSideRow(iconSide, onSetIconSide)
                     RowDivider()
@@ -709,9 +721,9 @@ private fun QuickLaunchRow(label: String, value: String?, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AlignmentRow(selected: HomeAlignment, onSelect: (HomeAlignment) -> Unit) {
+private fun AlignmentRow(label: String, selected: HomeAlignment, onSelect: (HomeAlignment) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(stringResource(R.string.settings_alignment), style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HomeAlignment.entries.forEach { option ->

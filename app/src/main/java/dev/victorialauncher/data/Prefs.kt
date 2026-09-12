@@ -83,6 +83,7 @@ class Prefs(private val context: Context) {
         val WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
         val SHOW_APP_ICONS = booleanPreferencesKey("show_app_icons")
         val ALIGNMENT = stringPreferencesKey("alignment")
+        val APPLIST_ALIGNMENT = stringPreferencesKey("applist_alignment")
         val ICON_SIDE = stringPreferencesKey("icon_side")
         val STATUS_BAR_PEEK_SECONDS = intPreferencesKey("status_bar_peek_seconds")
         val AZ_BAND_TOP_FRACTION = floatPreferencesKey("az_band_top_fraction")
@@ -248,17 +249,26 @@ class Prefs(private val context: Context) {
     val showAppIcons: Flow<Boolean> = data.map { it[Keys.SHOW_APP_ICONS] ?: true }.distinctUntilChanged()
 
     /**
-     * Reads the three-way key, falling back to the old right-handed boolean so an upgrade
-     * keeps whichever side the user had chosen.
+     * Reads [key], falling back to the shared alignment and then to the old right-handed
+     * boolean, so an upgrade keeps whichever side the user had chosen and splitting the two
+     * lists apart starts them both where they already were.
      */
-    val alignment: Flow<HomeAlignment> = data.map { pref ->
-        val stored = pref[Keys.ALIGNMENT]
-        when {
+    private fun readAlignment(pref: Preferences, key: Preferences.Key<String>): HomeAlignment {
+        val stored = pref[key] ?: pref[Keys.ALIGNMENT]
+        return when {
             stored != null -> runCatching { HomeAlignment.valueOf(stored) }.getOrDefault(HomeAlignment.LEFT)
             pref[Keys.ALIGN_RIGHT] == true -> HomeAlignment.RIGHT
             else -> HomeAlignment.LEFT
         }
-    }.distinctUntilChanged()
+    }
+
+    /** How the favorites on the home screen line up. */
+    val alignment: Flow<HomeAlignment> =
+        data.map { readAlignment(it, Keys.ALIGNMENT) }.distinctUntilChanged()
+
+    /** How the A-Z list lines up, which people want to differ from the home screen. */
+    val appListAlignment: Flow<HomeAlignment> =
+        data.map { readAlignment(it, Keys.APPLIST_ALIGNMENT) }.distinctUntilChanged()
 
     val iconSide: Flow<IconSide> = data.map {
         runCatching { IconSide.valueOf(it[Keys.ICON_SIDE] ?: IconSide.LEFT.name) }
@@ -559,6 +569,10 @@ class Prefs(private val context: Context) {
             // Kept in step so a downgrade still lands on the side the user picked.
             it[Keys.ALIGN_RIGHT] = v == HomeAlignment.RIGHT
         }
+    }
+
+    suspend fun setAppListAlignment(v: HomeAlignment) {
+        context.dataStore.edit { it[Keys.APPLIST_ALIGNMENT] = v.name }
     }
 
     suspend fun setIconSide(v: IconSide) {
