@@ -187,7 +187,6 @@ fun VictoriaNavHost(
         edgeSide = edgeSide,
         alwaysShowAz = alwaysShowAz,
         showAlphabet = showAlphabet,
-        alignRight = alignRight,
         alignment = alignment,
         widgetSidePaddingDp = widgetSidePaddingDp,
         edgeZoneWidthDp = edgeZoneWidthDp,
@@ -306,6 +305,7 @@ fun VictoriaNavHost(
                 hiddenCount = hiddenApps.size,
                 iconPacks = iconPacks,
                 iconPackPackage = iconPackPackage,
+                showAppIcons = showAppIcons,
                 // The Settings app rather than whatever happens to sort first: a stable,
                 // recognizable icon to judge a size against on every device.
                 previewApp = remember(allApps) {
@@ -333,10 +333,11 @@ fun VictoriaNavHost(
                 edgeSide = edgeSide,
                 alwaysShowAz = alwaysShowAz,
                 showAlphabet = showAlphabet,
-                alignRight = alignRight,
+                alignment = alignment,
                 nowPlayingEnabled = nowPlayingEnabled,
                 nowPlayingListenerEnabled = listenerEnabled,
                 onSetIconPack = { scope.launch { app.prefs.setIconPackPackage(it) } },
+                onSetShowAppIcons = { scope.launch { app.prefs.setShowAppIcons(it) } },
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 onSetLabelSize = { scope.launch { app.prefs.setLabelSizeSp(it) } },
                 onSetItemSpacing = { scope.launch { app.prefs.setItemSpacingDp(it) } },
@@ -352,7 +353,7 @@ fun VictoriaNavHost(
                 onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
                 onSetAlwaysShowAz = { scope.launch { app.prefs.setAlwaysShowAz(it) } },
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
-                onSetAlignRight = { scope.launch { app.prefs.setAlignRight(it) } },
+                onSetAlignment = { scope.launch { app.prefs.setAlignment(it) } },
                 onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
                 shadeGestureReady = remember(homeIntentTick) { SystemUi.canExpandShade() },
                 onOpenAccessibilitySettings = {

@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +47,7 @@ import dev.victorialauncher.BuildConfig
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconPackRepository
 import dev.victorialauncher.data.TextColorMode
 import dev.victorialauncher.ui.common.AppIcon
@@ -74,10 +76,12 @@ fun SettingsScreen(
     edgeSide: EdgeSide,
     alwaysShowAz: Boolean,
     showAlphabet: Boolean,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     nowPlayingEnabled: Boolean,
     nowPlayingListenerEnabled: Boolean,
+    showAppIcons: Boolean,
     onSetIconPack: (String?) -> Unit,
+    onSetShowAppIcons: (Boolean) -> Unit,
     onSetIconSize: (Int) -> Unit,
     onSetLabelSize: (Int) -> Unit,
     onSetItemSpacing: (Int) -> Unit,
@@ -94,7 +98,7 @@ fun SettingsScreen(
     onSetEdgeSide: (EdgeSide) -> Unit,
     onSetAlwaysShowAz: (Boolean) -> Unit,
     onSetShowAlphabet: (Boolean) -> Unit,
-    onSetAlignRight: (Boolean) -> Unit,
+    onSetAlignment: (HomeAlignment) -> Unit,
     onSetNowPlayingEnabled: (Boolean) -> Unit,
     shadeGestureReady: Boolean,
     onOpenAccessibilitySettings: () -> Unit,
@@ -132,7 +136,7 @@ fun SettingsScreen(
                     // Live preview of exactly how a home row will render.
                     RowPreview(previewApp, iconSizeDp, labelSizeSp, font)
                     RowDivider()
-                    IconPackRow(iconPacks, iconPackPackage, onSetIconPack)
+                    IconPackRow(iconPacks, iconPackPackage, showAppIcons, onSetIconPack, onSetShowAppIcons)
                     RowDivider()
                     SliderRow(
                         label = stringResource(R.string.settings_icon_size),
@@ -162,12 +166,7 @@ fun SettingsScreen(
                     RowDivider()
                     TextColorRow(textColorMode, onSetTextColorMode)
                     RowDivider()
-                    SwitchRowWithDetail(
-                        label = stringResource(R.string.settings_right_handed),
-                        detail = stringResource(R.string.settings_right_handed_detail),
-                        checked = alignRight,
-                        onCheckedChange = onSetAlignRight,
-                    )
+                    AlignmentRow(alignment, onSetAlignment)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
                     RowDivider()
@@ -478,7 +477,13 @@ private fun SliderRow(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun IconPackRow(packs: List<IconPackRepository.IconPackInfo>, selected: String?, onSelect: (String?) -> Unit) {
+private fun IconPackRow(
+    packs: List<IconPackRepository.IconPackInfo>,
+    selected: String?,
+    showIcons: Boolean,
+    onSelect: (String?) -> Unit,
+    onSetShowIcons: (Boolean) -> Unit,
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_icon_pack), style = MaterialTheme.typography.bodyMedium)
         FlowRow(
@@ -486,10 +491,18 @@ private fun IconPackRow(packs: List<IconPackRepository.IconPackInfo>, selected: 
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilledChip(stringResource(R.string.settings_icon_pack_default), selected == null) { onSelect(null) }
-            packs.forEach { pack ->
-                FilledChip(pack.label, selected == pack.packageName) { onSelect(pack.packageName) }
+            FilledChip(stringResource(R.string.settings_icon_pack_default), showIcons && selected == null) {
+                onSetShowIcons(true)
+                onSelect(null)
             }
+            packs.forEach { pack ->
+                FilledChip(pack.label, showIcons && selected == pack.packageName) {
+                    onSetShowIcons(true)
+                    onSelect(pack.packageName)
+                }
+            }
+            // Not a pack but a choice about packs: draw no icons at all.
+            FilledChip(stringResource(R.string.settings_icon_pack_no_icons), !showIcons) { onSetShowIcons(false) }
         }
         if (packs.isEmpty()) {
             Text(
@@ -563,6 +576,23 @@ private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> U
         ) {
             TextColorMode.entries.forEach { mode ->
                 FilledChip(stringResource(mode.labelRes()), selected == mode) { onSelect(mode) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlignmentRow(selected: HomeAlignment, onSelect: (HomeAlignment) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_alignment), style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeAlignment.entries.forEach { option ->
+                FilledChip(
+                    label = stringResource(option.labelRes()),
+                    selected = option == selected,
+                    onClick = { onSelect(option) },
+                )
             }
         }
     }

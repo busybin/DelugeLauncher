@@ -307,7 +307,7 @@ fun HomeRoute(
                 nowPlayingHasContent = nowPlayingHasContent,
                 contentColor = settings.contentColor,
                 showFavoriteLabels = settings.showFavoriteLabels,
-                alignRight = settings.alignRight,
+                alignment = settings.alignment,
                 editMode = homeEditMode,
                 onEditModeChange = { homeEditMode = it },
                 onPeekStatusBar = onPeekStatusBar,
@@ -377,7 +377,7 @@ fun HomeRoute(
                 onDismiss = { closeAppList() },
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
-                alignRight = settings.alignRight,
+                alignment = settings.alignment,
                 doubleTapToLock = settings.doubleTapToLock,
                 onDoubleTapLock = {
                     if (!SystemUi.lockScreen()) {
@@ -472,7 +472,6 @@ data class HomeSettings(
     val edgeSide: EdgeSide,
     val alwaysShowAz: Boolean,
     val showAlphabet: Boolean,
-    val alignRight: Boolean,
     val alignment: HomeAlignment,
     val widgetSidePaddingDp: Int,
     val edgeZoneWidthDp: Int,

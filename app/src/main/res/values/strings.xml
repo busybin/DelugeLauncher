@@ -61,6 +61,7 @@
     <string name="settings_preview_sample">Sample app</string>
     <string name="settings_icon_pack">Icon pack</string>
     <string name="settings_icon_pack_default">Default</string>
+    <string name="settings_icon_pack_no_icons">None</string>
     <string name="settings_icon_pack_none">No icon pack apps found on this device.</string>
     <string name="settings_icon_size">Icon size</string>
     <string name="settings_text_size">Text size</string>
@@ -68,8 +69,6 @@
     <string name="settings_font">Font</string>
     <string name="settings_text_color">Text color</string>
     <string name="settings_text_color_detail">Auto reads the wallpaper and picks whichever is legible</string>
-    <string name="settings_right_handed">Right-handed layout</string>
-    <string name="settings_right_handed_detail">Lines icons and names up against the right edge</string>
     <string name="settings_show_names">Show names under favorites</string>
     <string name="settings_hide_status_bar">Hide status bar</string>
     <string name="settings_status_bar_timeout">Status bar stays for</string>
@@ -82,6 +81,7 @@
     <string name="settings_double_tap_lock_detail">Tap twice on empty space in the app list</string>
     <string name="settings_always_show_az">Always show A-Z</string>
     <string name="settings_show_alphabet">Show letters in the app list</string>
+    <string name="settings_alignment">Alignment</string>
     <string name="settings_shade_gesture">Swipe down for notifications</string>
     <string name="settings_shade_ready">Ready — pull down on the home screen</string>
     <string name="settings_shade_not_ready">Pull down on the home screen. If nothing happens on your device, enable Victoria Launcher under Accessibility</string>
@@ -110,6 +110,11 @@
     <string name="text_color_auto">Auto</string>
     <string name="text_color_light">Light</string>
     <string name="text_color_dark">Dark</string>
+
+    <!-- Alignment choices -->
+    <string name="alignment_left">Left</string>
+    <string name="alignment_center">Center</string>
+    <string name="alignment_right">Right</string>
 
     <!-- Edge choices -->
     <string name="edge_left">Left</string>

@@ -49,8 +49,9 @@ class MainActivity : ComponentActivity() {
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
             val iconOverrides by app.prefs.iconOverrides.collectAsState(initial = emptyMap())
-            val iconConfig = remember(iconPackPackage, iconOverrides) {
-                IconConfig(iconPackPackage, iconOverrides)
+            val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
+            val iconConfig = remember(iconPackPackage, iconOverrides, showAppIcons) {
+                IconConfig(iconPackPackage, iconOverrides, showAppIcons)
             }
 
             VictoriaTheme(font = font) {

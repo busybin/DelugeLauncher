@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import dev.victorialauncher.R
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.EdgeSide
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.TextColorMode
 
 /**
@@ -34,4 +35,11 @@ fun EdgeSide.labelRes(): Int = when (this) {
     EdgeSide.LEFT -> R.string.edge_left
     EdgeSide.RIGHT -> R.string.edge_right
     EdgeSide.BOTH -> R.string.edge_both
+}
+
+@StringRes
+fun HomeAlignment.labelRes(): Int = when (this) {
+    HomeAlignment.LEFT -> R.string.alignment_left
+    HomeAlignment.CENTER -> R.string.alignment_center
+    HomeAlignment.RIGHT -> R.string.alignment_right
 }

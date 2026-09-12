@@ -22,6 +22,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -80,12 +81,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.Folder
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.folderToken
 import dev.victorialauncher.data.PaddingSlot
 import dev.victorialauncher.media.NowPlayingWidget
 import dev.victorialauncher.media.openNowPlayingApp
 import dev.victorialauncher.ui.common.AppIcon
+import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.EditAppDialog
 import dev.victorialauncher.ui.common.FolderIconImage
 import dev.victorialauncher.ui.common.recordTouchPosition
@@ -169,7 +172,7 @@ fun HomeScreen(
     nowPlayingHasContent: Boolean,
     contentColor: Color,
     showFavoriteLabels: Boolean,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     editMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
     onPeekStatusBar: () -> Unit,
@@ -381,6 +384,7 @@ fun HomeScreen(
                     editMode = editMode,
                     heightDp = nowPlayingHeightDp,
                     contentColor = contentColor,
+                    alignment = alignment,
                     sidePaddingDp = sidePaddingDp,
                     padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                     padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -500,7 +504,7 @@ fun HomeScreen(
                             sidePaddingDp = sidePaddingDp,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
-                            alignRight = alignRight,
+                            alignment = alignment,
                             menuExpanded = folderMenuFor == item.folder.id,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -531,7 +535,7 @@ fun HomeScreen(
                             sidePaddingDp = sidePaddingDp,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
-                            alignRight = alignRight,
+                            alignment = alignment,
                             menuExpanded = menuForKey == item.app.key,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -572,6 +576,7 @@ fun HomeScreen(
                             editMode = editMode,
                             heightDp = nowPlayingHeightDp,
                             contentColor = contentColor,
+                            alignment = alignment,
                             sidePaddingDp = sidePaddingDp,
                             padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
                             padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
@@ -646,7 +651,7 @@ private fun FavoriteRow(
     sidePaddingDp: Int,
     contentColor: Color,
     showLabels: Boolean,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -697,29 +702,20 @@ private fun FavoriteRow(
                 )
                 .padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = alignment.arrangement(),
         ) {
-            if (alignRight) {
-                if (showLabels) {
-                    Text(
-                        label,
-                        color = contentColor,
-                        fontSize = labelSizeSp.sp,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.End,
-                    )
-                    Spacer(Modifier.width(16.dp))
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
-                AppIcon(app = app, sizeDp = iconSizeDp)
-            } else {
-                AppIcon(app = app, sizeDp = iconSizeDp)
-                if (showLabels) {
-                    Spacer(Modifier.width(16.dp))
-                    Text(label, color = contentColor, fontSize = labelSizeSp.sp, modifier = Modifier.weight(1f))
-                } else {
-                    Spacer(Modifier.weight(1f))
-                }
+            AlignedIconLabel(
+                alignment = alignment,
+                showLabel = showLabels,
+                icon = { AppIcon(app = app, sizeDp = iconSizeDp) },
+            ) { labelModifier ->
+                Text(
+                    label,
+                    color = contentColor,
+                    fontSize = labelSizeSp.sp,
+                    modifier = labelModifier,
+                    textAlign = alignment.textAlign(),
+                )
             }
         }
 
@@ -772,7 +768,7 @@ private fun FolderRow(
     sidePaddingDp: Int,
     contentColor: Color,
     showLabels: Boolean,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -823,27 +819,26 @@ private fun FolderRow(
                     )
                     .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = alignment.arrangement(),
             ) {
-                if (!alignRight) FolderIcon(members, iconSizeDp, contentColor, folder.icon)
-                if (showLabels) {
-                    if (!alignRight) Spacer(Modifier.width(16.dp))
+                AlignedIconLabel(
+                    alignment = alignment,
+                    showLabel = showLabels,
+                    icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
+                ) { labelModifier ->
                     Text(
                         folder.name,
                         color = contentColor,
                         fontSize = labelSizeSp.sp,
-                        modifier = Modifier.weight(1f),
-                        textAlign = if (alignRight) TextAlign.End else TextAlign.Start,
+                        modifier = labelModifier,
+                        textAlign = alignment.textAlign(),
                     )
                     Text(
                         "${members.size}",
                         color = contentColor.copy(alpha = 0.5f),
                         fontSize = (labelSizeSp - 3).coerceAtLeast(9).sp,
                     )
-                    if (alignRight) Spacer(Modifier.width(16.dp))
-                } else {
-                    Spacer(Modifier.weight(1f))
                 }
-                if (alignRight) FolderIcon(members, iconSizeDp, contentColor, folder.icon)
             }
 
             DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
@@ -878,18 +873,32 @@ private fun FolderRow(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = (sidePaddingDp + 24).dp, end = sidePaddingDp.dp)
+                            // Members sit one indent inside their folder, on whichever side
+                            // the folder's own name is on.
+                            .padding(
+                                start = if (alignment == HomeAlignment.RIGHT) sidePaddingDp.dp else (sidePaddingDp + 24).dp,
+                                end = if (alignment == HomeAlignment.RIGHT) (sidePaddingDp + 24).dp else sidePaddingDp.dp,
+                            )
                             .combinedClickable(
                                 onClick = { onOpenApp(member) },
                                 onLongClick = { onRemoveApp(member) },
                             )
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = alignment.arrangement(),
                     ) {
-                        AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt())
-                        if (showLabels) {
-                            Spacer(Modifier.width(16.dp))
-                            Text(displayName(member), color = contentColor, fontSize = labelSizeSp.sp)
+                        AlignedIconLabel(
+                            alignment = alignment,
+                            showLabel = showLabels,
+                            icon = { AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt()) },
+                        ) { labelModifier ->
+                            Text(
+                                displayName(member),
+                                color = contentColor,
+                                fontSize = labelSizeSp.sp,
+                                modifier = labelModifier,
+                                textAlign = alignment.textAlign(),
+                            )
                         }
                     }
                 }
@@ -912,6 +921,7 @@ private fun NowPlayingBlock(
     editMode: Boolean,
     heightDp: Int,
     contentColor: Color,
+    alignment: HomeAlignment,
     sidePaddingDp: Int,
     padTop: Int,
     padBottom: Int,
@@ -942,6 +952,7 @@ private fun NowPlayingBlock(
         NowPlayingWidget(
             heightDp = heightDp,
             contentColor = contentColor,
+            alignment = alignment,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = sidePaddingDp.dp)
@@ -1006,6 +1017,7 @@ private fun FolderIcon(
     contentColor: Color,
     iconOverride: String?,
 ) {
+    if (!LocalIconConfig.current.showIcons) return
     var drewOverride = false
     if (iconOverride != null) {
         drewOverride = FolderIconImage(iconOverride, sizeDp)
@@ -1038,6 +1050,52 @@ private fun FolderIcon(
         }
     }
 }
+
+/**
+ * Lays an icon and its label against whichever edge the user picked.
+ *
+ * Left and right hang the label off a weight so it fills the row and pushes the icon to the
+ * far side. Centering cannot: a weighted label would still span the row and leave the pair
+ * pinned apart, so nothing is weighted and the Row's own Center arrangement packs them
+ * together in the middle.
+ */
+@Composable
+private fun RowScope.AlignedIconLabel(
+    alignment: HomeAlignment,
+    showLabel: Boolean,
+    icon: @Composable () -> Unit,
+    label: @Composable RowScope.(Modifier) -> Unit,
+) {
+    // No icon drawn means no gap to leave for one.
+    val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
+    val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
+    if (alignment == HomeAlignment.RIGHT) {
+        if (showLabel) {
+            label(labelModifier)
+            Spacer(Modifier.width(gap))
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        icon()
+    } else {
+        icon()
+        if (showLabel) {
+            Spacer(Modifier.width(gap))
+            label(labelModifier)
+        } else if (alignment != HomeAlignment.CENTER) {
+            Spacer(Modifier.weight(1f))
+        }
+    }
+}
+
+private fun HomeAlignment.textAlign() = when (this) {
+    HomeAlignment.LEFT -> TextAlign.Start
+    HomeAlignment.CENTER -> TextAlign.Center
+    HomeAlignment.RIGHT -> TextAlign.End
+}
+
+private fun HomeAlignment.arrangement() =
+    if (this == HomeAlignment.CENTER) Arrangement.Center else Arrangement.Start
 
 /** Folders get the same treatment as apps: their own name and their own icon. */
 @Composable

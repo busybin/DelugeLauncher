@@ -66,6 +66,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -105,6 +106,7 @@ fun openNowPlayingApp(context: Context): Boolean {
 fun NowPlayingWidget(
     heightDp: Int = 64,
     contentColor: Color = Color.White,
+    alignment: HomeAlignment = HomeAlignment.LEFT,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -210,7 +212,10 @@ fun NowPlayingWidget(
                 .padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
+            // Mirrored for a right-handed layout so the artwork sits under the favorites'
+            // icons rather than opposite them. Centering leaves it alone: a full-width card
+            // has nothing to center against.
+            val artwork: @Composable () -> Unit = { Box(
                 modifier = Modifier.size(artSize),
                 contentAlignment = Alignment.Center,
             ) {
@@ -234,9 +239,8 @@ fun NowPlayingWidget(
                         modifier = Modifier.size(artSize * 0.75f),
                     )
                 }
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+            } }
+            val details: @Composable RowScope.() -> Unit = { Column(modifier = Modifier.weight(1f)) {
                 Text(
                     current.title.ifBlank { stringResource(R.string.now_playing_unknown_title) },
                     color = contentColor,
@@ -251,8 +255,8 @@ fun NowPlayingWidget(
                     overflow = TextOverflow.Ellipsis,
                     fontSize = artistSp,
                 )
-            }
-            Row(
+            } }
+            val controls: @Composable () -> Unit = { Row(
                 horizontalArrangement = Arrangement.spacedBy((heightDp * 0.10f).coerceIn(6f, 24f).dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -284,6 +288,19 @@ fun NowPlayingWidget(
                 ) {
                     current.controller.transportControls.skipToNext()
                 }
+            } }
+
+            if (alignment == HomeAlignment.RIGHT) {
+                controls()
+                Spacer(Modifier.width(12.dp))
+                details()
+                Spacer(Modifier.width(12.dp))
+                artwork()
+            } else {
+                artwork()
+                Spacer(Modifier.width(12.dp))
+                details()
+                controls()
             }
         }
     }

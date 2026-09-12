@@ -79,7 +79,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.ui.common.AppIcon
+import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.ui.common.EditAppDialog
 import kotlinx.coroutines.Job
@@ -137,7 +139,7 @@ fun AppListScreen(
     onDismiss: () -> Unit,
     contentColor: Color,
     showAlphabet: Boolean,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     doubleTapToLock: Boolean,
     onDoubleTapLock: () -> Unit,
 ) {
@@ -601,10 +603,10 @@ fun AppListScreen(
                     },
                 ) {
                 when (row) {
-                    is AppListRow.Header -> SectionHeader(row.text, labelSizeSp, contentColor, alignRight)
+                    is AppListRow.Header -> SectionHeader(row.text, labelSizeSp, contentColor, alignment)
                     is AppListRow.Entry -> AppRow(
                         contentColor = contentColor,
-                        alignRight = alignRight,
+                        alignment = alignment,
                         app = row.app,
                         label = displayName(row.app),
                         iconSizeDp = iconSizeDp,
@@ -636,9 +638,13 @@ fun AppListScreen(
                         .heightIn(min = MIN_ROW_HEIGHT)
                         .padding(horizontal = 28.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (alignRight) Arrangement.End else Arrangement.Start,
+                    horizontalArrangement = when (alignment) {
+                        HomeAlignment.LEFT -> Arrangement.Start
+                        HomeAlignment.CENTER -> Arrangement.Center
+                        HomeAlignment.RIGHT -> Arrangement.End
+                    },
                 ) {
-                    if (alignRight) {
+                    if (alignment == HomeAlignment.RIGHT) {
                         Text(
                             stringResource(R.string.action_open_settings),
                             color = contentColor.copy(alpha = 0.8f),
@@ -733,10 +739,14 @@ fun AppListScreen(
 }
 
 @Composable
-private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, alignRight: Boolean) {
+private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, alignment: HomeAlignment) {
     Box(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
-        contentAlignment = if (alignRight) Alignment.CenterEnd else Alignment.CenterStart,
+        contentAlignment = when (alignment) {
+            HomeAlignment.LEFT -> Alignment.CenterStart
+            HomeAlignment.CENTER -> Alignment.Center
+            HomeAlignment.RIGHT -> Alignment.CenterEnd
+        },
     ) {
         Text(
             text = text,
@@ -751,7 +761,7 @@ private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, a
 @Composable
 private fun AppRow(
     contentColor: Color,
-    alignRight: Boolean,
+    alignment: HomeAlignment,
     touchPosition: MutableState<Offset>,
     app: AppInfo,
     label: String,
@@ -804,21 +814,31 @@ private fun AppRow(
                 .heightIn(min = MIN_ROW_HEIGHT)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (alignment == HomeAlignment.CENTER) Arrangement.Center else Arrangement.Start,
         ) {
-            if (alignRight) {
+            val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
+            val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
+            val text: @Composable () -> Unit = {
                 Text(
                     label,
                     color = contentColor,
                     fontSize = labelSizeSp.sp,
-                    modifier = Modifier.weight(1f),
-                    textAlign = TextAlign.End,
+                    modifier = labelModifier,
+                    textAlign = when (alignment) {
+                        HomeAlignment.LEFT -> TextAlign.Start
+                        HomeAlignment.CENTER -> TextAlign.Center
+                        HomeAlignment.RIGHT -> TextAlign.End
+                    },
                 )
-                Spacer(Modifier.width(16.dp))
+            }
+            if (alignment == HomeAlignment.RIGHT) {
+                text()
+                Spacer(Modifier.width(gap))
                 AppIcon(app = app, sizeDp = iconSizeDp)
             } else {
                 AppIcon(app = app, sizeDp = iconSizeDp)
-                Spacer(Modifier.width(16.dp))
-                Text(label, color = contentColor, fontSize = labelSizeSp.sp, modifier = Modifier.weight(1f))
+                Spacer(Modifier.width(gap))
+                text()
             }
         }
 
