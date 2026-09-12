@@ -4,10 +4,13 @@ package dev.victorialauncher.ui.home
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationState
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateDecay
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
@@ -182,6 +185,10 @@ fun HomeRoute(
     val openDistancePx = with(LocalDensity.current) { SWIPE_OPEN_DISTANCE.toPx() }
     val openAnim = remember { Animatable(0f) }
     val appListState = rememberLazyListState()
+    // Set once a swipe has carried past fully open and started scrolling the list, so the
+    // flick that ends it can be handed on rather than stopping dead.
+    var swipeScrolledList by remember { mutableStateOf(false) }
+    val flingDecay = rememberSplineBasedDecay<Float>()
 
     // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
     var launchClose by remember { mutableStateOf<Job?>(null) }
@@ -394,7 +401,10 @@ fun HomeRoute(
                     scope.launch { openAnim.snapTo(total.coerceAtMost(openDistancePx)) }
                     // Once it is all the way in the finger is usually still moving, so the
                     // rest of the drag goes to the list rather than stopping dead against it.
-                    if (total > openDistancePx) appListState.dispatchRawDelta(delta)
+                    if (total > openDistancePx) {
+                        swipeScrolledList = true
+                        appListState.dispatchRawDelta(delta)
+                    }
                 },
                 onSwipeUpEnd = { velocity ->
                     scope.launch {
@@ -412,6 +422,23 @@ fun HomeRoute(
                             closeAppList()
                         }
                     }
+                    // The scrolling half of this gesture was fed the drag raw, which carries
+                    // no momentum of its own — so a flick that starts after the list is
+                    // already moving has to have its velocity handed over explicitly, or the
+                    // list stops the instant the finger leaves.
+                    if (swipeScrolledList && velocity < 0f) {
+                        scope.launch {
+                            appListState.scroll {
+                                var travelled = 0f
+                                AnimationState(initialValue = 0f, initialVelocity = -velocity)
+                                    .animateDecay(flingDecay) {
+                                        scrollBy(value - travelled)
+                                        travelled = value
+                                    }
+                            }
+                        }
+                    }
+                    swipeScrolledList = false
                 },
                 quickLaunchEnabled = settings.quickLaunchLeft != null || settings.quickLaunchRight != null,
                 onQuickLaunch = { slot ->
