@@ -118,6 +118,12 @@ private val STRIP_INSET = 56.dp
 private val MAX_EDGE_STRETCH = 40.dp
 
 /**
+ * How much of the collapse travel commits it. Shared with the swipe that opens the list, so
+ * closing takes the same push as opening rather than roughly twice it.
+ */
+private const val COMMIT_FRACTION = 0.4f
+
+/**
  * Damping for the edge elastic. Under 1 so a fling into an end overshoots and comes back
  * once — a bumper, not a bounce.
  */
@@ -220,7 +226,12 @@ fun AppListScreen(
     // outstanding, and winding back up spends the pull before the list moves again — so the
     // gesture is always in exactly one state.
     val density = LocalDensity.current
+    // The travel a collapse is drawn over, and the share of it that commits — deliberately
+    // the same fraction the swipe-up uses to open, so the two gestures answer alike.
     val dismissPullPx = with(density) { 150.dp.toPx() }
+    val dismissCommitPx = dismissPullPx * COMMIT_FRACTION
+    // Per-frame drag big enough to call a flick rather than a deliberate push.
+    val fastDragPx = with(density) { 12.dp.toPx() }
     val maxPullPx = with(density) { 320.dp.toPx() }
     val maxStretchPx = with(density) { MAX_EDGE_STRETCH.toPx() }
     val idleTopPaddingPx = with(density) { IDLE_TOP_PADDING.roundToPx() }
@@ -345,7 +356,7 @@ fun AppListScreen(
         userDragged = false
     }
 
-    val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, viewportHeightPx, listState) {
+    val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, fastDragPx, viewportHeightPx, listState) {
         object : NestedScrollConnection {
             /** True between the first drag of a gesture and the fling that ends it. */
             private var dragging = false
@@ -356,6 +367,17 @@ fun AppListScreen(
              */
             private var topPullEligible = false
             private var bottomPullEligible = false
+
+            /**
+             * Set once a drag that started mid-list reaches an end gently.
+             *
+             * Requiring the gesture to *begin* against the end meant scrolling back to the
+             * top and pushing on did nothing, and the collapse only answered on a second,
+             * separate drag. What actually needed guarding against was a fast flick slamming
+             * into the end and shrinking the overlay mid-scroll, so speed is the test rather
+             * than where the finger started.
+             */
+            private var arrivedSlowly = false
 
             private fun stretch(delta: Float) {
                 // Rubber band: the further it goes, the less each pixel counts.
@@ -402,6 +424,7 @@ fun AppListScreen(
                     // shrink and fade the whole list halfway through the gesture.
                     topPullEligible = !listState.canScrollBackward
                     bottomPullEligible = !listState.canScrollForward
+                    arrivedSlowly = false
                 }
                 if (collapsing || stretchSettling) return Offset.Zero
                 // Spend whatever is outstanding before the list is allowed to move again, so
@@ -440,7 +463,9 @@ fun AppListScreen(
                     return Offset.Zero
                 }
                 if (available.y == 0f) return Offset.Zero
-                val pulling = if (available.y > 0f) topPullEligible else bottomPullEligible
+                if (abs(available.y) <= fastDragPx) arrivedSlowly = true
+                val atThisEnd = if (available.y > 0f) topPullEligible else bottomPullEligible
+                val pulling = atThisEnd || arrivedSlowly
                 if (pulling) {
                     // Signed: pulled down off the top is positive, pulled up off the bottom is
                     // negative, and every reader below works off the sign rather than a
@@ -461,8 +486,8 @@ fun AppListScreen(
                     val away = if (pulled > 0f) 1f else -1f
                     // Flung on past the threshold counts even when the pull itself is short.
                     val flungAway = available.y * away > 800f
-                    val dismissing = abs(pulled) > dismissPullPx ||
-                        (flungAway && abs(pulled) > dismissPullPx / 3f)
+                    val dismissing = abs(pulled) > dismissCommitPx ||
+                        (flungAway && abs(pulled) > dismissCommitPx * 0.4f)
                     collapsing = true
                     try {
                         collapseAnim.snapTo(pulled)

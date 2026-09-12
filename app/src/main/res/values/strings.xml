@@ -47,7 +47,7 @@
     <string name="applist_remove_favorite">Remove from favorites</string>
     <string name="applist_hide">Hide from list</string>
 
-    <string name="applist_band_hint">Drag the handles to set how far the A-Z strip reaches</string>
+    <string name="applist_band_hint">Drag the band to move it, or either handle to resize it</string>
     <string name="applist_band_top">Top of the A-Z strip</string>
     <string name="applist_band_bottom">Bottom of the A-Z strip</string>
 

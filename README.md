@@ -17,6 +17,42 @@ Once it is installed, pick Victoria Launcher under
 
 Requires Android 8.0 (API 26) or newer.
 
+## Getting started
+
+The home screen starts almost empty on purpose — everything is added by you.
+
+- **Long-press the wallpaper** for the main menu: add favorites, add a widget,
+  edit the layout, or open settings.
+- **Swipe in from either edge** of the screen for the full A-Z app list, and
+  slide your thumb along the letters to jump straight to one. Tap the edge and
+  let go to just open the list.
+- **Long-press any app** — on the home screen or in the A-Z list — to rename it,
+  change its icon, hide it, or move it into a folder.
+- **Edit layout** turns on drag handles for reordering and steppers for every
+  gap, height and margin, including how far the A-Z strip reaches.
+
+Worth knowing about in **Settings**:
+
+- Alignment and icon side, set separately for favorites and the A-Z list
+- A search box in the app list, at the top or the bottom
+- Sorting each letter by how often you open its apps
+- Swipe up from the home screen to open the app list
+- Swipe left or right below your favorites to launch a chosen app
+- Now Playing controls, which need notification access
+- Double-tap the A-Z strip to lock the screen, which needs an accessibility
+  service — if that toggle is greyed out, open App info and allow restricted
+  settings first (Android blocks it for apps installed outside a store)
+
+Work profiles and private space are picked up automatically; a locked private
+space simply hides its apps until you unlock it.
+
+## Changelog
+
+Per-release notes live in
+[fastlane/metadata/android/en-US/changelogs](fastlane/metadata/android/en-US/changelogs),
+and are shown on each [GitHub release](../../releases) and on the app's F-Droid
+page.
+
 ## Build
 
 You need JDK 17 and an Android SDK with platform 35.

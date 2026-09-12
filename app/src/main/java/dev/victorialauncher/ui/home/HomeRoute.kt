@@ -164,9 +164,17 @@ fun HomeRoute(
     // hand wins over the measured favorites, which is what makes it stop following them.
     var bandEditMode by remember { mutableStateOf(false) }
     var liveBand by remember { mutableStateOf<ScrubBand?>(null) }
-    val storedBand = scrubBandFractions?.let { (top, height) ->
-        ScrubBand(topPx = viewportHeightPx * top, heightPx = viewportHeightPx * height)
-    }
+    // Clamped on the way back in as well as on the way out: a range stored from a bad
+    // measurement would otherwise put the strip off screen for good, with no gesture left to
+    // reach it and fix it.
+    val storedBand = scrubBandFractions
+        ?.takeIf { (top, height) -> top.isFinite() && height.isFinite() && height > 0f }
+        ?.let { (top, height) ->
+            val bandHeight = (viewportHeightPx * height).coerceIn(0f, viewportHeightPx.toFloat())
+            val bandTop = (viewportHeightPx * top)
+                .coerceIn(0f, (viewportHeightPx - bandHeight).coerceAtLeast(0f))
+            ScrubBand(topPx = bandTop, heightPx = bandHeight)
+        }
     val band = liveBand ?: storedBand ?: favBand ?: ScrubBand.fallbackFor(viewportHeightPx)
 
     /** Locking is a strip gesture now, so the toast that explains it lives with the strip. */

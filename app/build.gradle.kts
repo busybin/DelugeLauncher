@@ -97,8 +97,6 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-    debugImplementation("androidx.compose.ui:ui-tooling")
-
     testImplementation("junit:junit:4.13.2")
     // Real JSON on the unit-test classpath; the android.jar stub only throws.
     testImplementation("org.json:json:20231013")

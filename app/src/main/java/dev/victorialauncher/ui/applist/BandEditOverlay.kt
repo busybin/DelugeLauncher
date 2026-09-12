@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -64,15 +66,27 @@ fun BandEditOverlay(
     val minHeightPx = with(density) { MIN_BAND_HEIGHT.toPx() }
     val alignment = if (side == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd
 
+    val viewportPx = viewportHeightPx.toFloat()
+
+    // Every bound is coerced against a range that cannot invert. Written the obvious way,
+    // a band taller than the viewport gives coerceIn a minimum above its maximum, which
+    // throws rather than clamping — and the strip ends up somewhere unreachable.
     fun moveTop(delta: Float) {
-        val top = (band.topPx + delta).coerceIn(0f, band.bottomPx - minHeightPx)
+        val top = (band.topPx + delta).coerceIn(0f, (band.bottomPx - minHeightPx).coerceAtLeast(0f))
         onBandChange(ScrubBand(topPx = top, heightPx = band.bottomPx - top))
     }
 
     fun moveBottom(delta: Float) {
-        val bottom = (band.bottomPx + delta)
-            .coerceIn(band.topPx + minHeightPx, viewportHeightPx.toFloat())
+        val lowest = band.topPx + minHeightPx
+        val bottom = (band.bottomPx + delta).coerceIn(lowest, viewportPx.coerceAtLeast(lowest))
         onBandChange(ScrubBand(topPx = band.topPx, heightPx = bottom - band.topPx))
+    }
+
+    /** Slides the whole range without resizing it; the handles only ever moved one edge. */
+    fun moveWhole(delta: Float) {
+        val highest = (viewportPx - band.heightPx).coerceAtLeast(0f)
+        val top = (band.topPx + delta).coerceIn(0f, highest)
+        onBandChange(ScrubBand(topPx = top, heightPx = band.heightPx))
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -101,14 +115,23 @@ fun BandEditOverlay(
                 .offset { IntOffset(0, band.topPx.roundToInt()) }
                 .width(96.dp)
                 .height(with(density) { band.heightPx.toDp() })
-                .background(contentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                .background(contentColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    state = rememberDraggableState { moveWhole(it) },
+                ),
         )
 
         BandHandle(alignment, band.topPx, contentColor, R.string.applist_band_top) { moveTop(it) }
         BandHandle(alignment, band.bottomPx, contentColor, R.string.applist_band_bottom) { moveBottom(it) }
 
+        // Pinned to the bottom rather than the middle, where a handle can sit on top of them.
         Column(
-            modifier = Modifier.align(Alignment.Center).fillMaxWidth().padding(horizontal = 32.dp),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
@@ -117,7 +140,8 @@ fun BandEditOverlay(
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 TextButton(onClick = onReset) { Text(stringResource(R.string.action_reset)) }
                 TextButton(onClick = onDone) { Text(stringResource(R.string.action_done)) }
             }
