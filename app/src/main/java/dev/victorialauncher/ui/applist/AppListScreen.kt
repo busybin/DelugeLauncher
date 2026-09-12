@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -147,6 +148,7 @@ fun AppListScreen(
     showAlphabet: Boolean,
     edgeSide: EdgeSide,
     searchEnabled: Boolean,
+    searchAtBottom: Boolean,
     query: String,
     onQueryChange: (String) -> Unit,
     alignment: HomeAlignment,
@@ -531,7 +533,10 @@ fun AppListScreen(
 
                     // A tap no row, letter or scroll claimed, landing clear of the list
                     // itself = a tap on the wallpaper.
-                    if (claimed || moved || isOnListContent(start.y - searchHeightPx)) return@awaitEachGesture
+                    // Taps are in overlay space and the list is in its own; only a field above it
+                    // shifts the two apart.
+                    val listOffset = if (searchEnabled && !searchAtBottom) searchHeightPx else 0
+                    if (claimed || moved || isOnListContent(start.y - listOffset)) return@awaitEachGesture
 
                     currentDismiss()
                 }
@@ -552,7 +557,7 @@ fun AppListScreen(
               .background(Color.Black.copy(alpha = dimAlpha)),
       ) {
         Column(modifier = Modifier.fillMaxSize()) {
-        if (searchEnabled) {
+        if (searchEnabled && !searchAtBottom) {
             // Pinned above the list rather than scrolling with it as a first item: every row
             // index the scrub placement works from would shift by one, and the field would
             // disappear the moment you scrolled.
@@ -560,7 +565,7 @@ fun AppListScreen(
                 query = query,
                 onQueryChange = onQueryChange,
                 contentColor = contentColor,
-                edgeSide = edgeSide,
+                activeSide = activeSide,
                 showAlphabet = showAlphabet,
                 modifier = Modifier.onSizeChanged { searchHeightPx = it.height },
             )
@@ -586,12 +591,13 @@ fun AppListScreen(
                 } else {
                     IDLE_TOP_PADDING
                 }
-                // The strip is drawn over this list, not beside it, so without an inset on
-                // the side it occupies the letters sit on top of the rows.
-                val stripInset = if (showAlphabet) STRIP_INSET else 0.dp
+                // The strip is drawn over this list, not beside it, so the side it occupies
+                // has to be held clear. Only that side: with both edges enabled the strip is
+                // still only ever on the one you opened from, and insetting the other leaves
+                // a margin against nothing.
                 PaddingValues(
-                    start = if (edgeSide != EdgeSide.RIGHT) stripInset else 0.dp,
-                    end = if (edgeSide != EdgeSide.LEFT) stripInset else 0.dp,
+                    start = if (showAlphabet && activeSide == EdgeSide.LEFT) STRIP_INSET else 0.dp,
+                    end = if (showAlphabet && activeSide == EdgeSide.RIGHT) STRIP_INSET else 0.dp,
                     top = top,
                     bottom = IDLE_BOTTOM_PADDING,
                 )
@@ -693,6 +699,16 @@ fun AppListScreen(
                     )
                 ),
         )
+        }
+        if (searchEnabled && searchAtBottom) {
+            SearchField(
+                query = query,
+                onQueryChange = onQueryChange,
+                contentColor = contentColor,
+                activeSide = activeSide,
+                showAlphabet = showAlphabet,
+                atBottom = true,
+            )
         }
         }
 
@@ -900,11 +916,11 @@ private fun SearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     contentColor: Color,
-    edgeSide: EdgeSide,
+    activeSide: EdgeSide,
     showAlphabet: Boolean,
+    atBottom: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val stripInset = if (showAlphabet) STRIP_INSET else 0.dp
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
@@ -935,17 +951,17 @@ private fun SearchField(
             unfocusedContainerColor = Color.Black.copy(alpha = 0.25f),
         ),
         modifier = modifier
-            // The overlay draws under the status bar, so without this the field sits behind
-            // the clock.
-            .statusBarsPadding()
+            // The overlay draws under both system bars, so without this the field sits behind
+            // the clock at the top, or the gesture pill at the bottom.
+            .then(if (atBottom) Modifier.navigationBarsPadding() else Modifier.statusBarsPadding())
             .fillMaxWidth()
             .padding(
                 // Lines up with the rows' own inset instead of hugging the screen edge, and
                 // clears the A-Z strip on whichever side it occupies.
-                start = (if (edgeSide != EdgeSide.RIGHT) stripInset else 0.dp) + 20.dp,
-                end = (if (edgeSide != EdgeSide.LEFT) stripInset else 0.dp) + 20.dp,
-                top = 12.dp,
-                bottom = 8.dp,
+                start = (if (showAlphabet && activeSide == EdgeSide.LEFT) STRIP_INSET else 0.dp) + 20.dp,
+                end = (if (showAlphabet && activeSide == EdgeSide.RIGHT) STRIP_INSET else 0.dp) + 20.dp,
+                top = if (atBottom) 8.dp else 12.dp,
+                bottom = if (atBottom) 12.dp else 8.dp,
             ),
     )
 }

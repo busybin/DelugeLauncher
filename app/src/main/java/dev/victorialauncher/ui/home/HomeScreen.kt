@@ -501,12 +501,6 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        stringResource(R.string.home_edit_hint),
-                        color = contentColor.copy(alpha = 0.7f),
-                        fontSize = 11.sp,
-                        modifier = Modifier.weight(1f),
-                    )
                     TextButton(onClick = { onEditModeChange(false) }) {
                         Icon(Icons.Filled.Done, contentDescription = null)
                         Spacer(Modifier.width(4.dp))

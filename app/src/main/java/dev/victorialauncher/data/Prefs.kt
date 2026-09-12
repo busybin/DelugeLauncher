@@ -70,6 +70,7 @@ class Prefs(private val context: Context) {
         val WIDGET_SIDE_PADDING_DP = intPreferencesKey("widget_side_padding_dp")
         val SWIPE_UP_OPENS_LIST = booleanPreferencesKey("swipe_up_opens_list")
         val APPLIST_SEARCH_ENABLED = booleanPreferencesKey("applist_search_enabled")
+        val APPLIST_SEARCH_BOTTOM = booleanPreferencesKey("applist_search_bottom")
         val SORT_BY_USAGE = booleanPreferencesKey("sort_by_usage")
         val LAUNCH_COUNTS = stringPreferencesKey("launch_counts_json")
         val EDGE_ZONE_WIDTH_DP = intPreferencesKey("edge_zone_width_dp")
@@ -220,6 +221,10 @@ class Prefs(private val context: Context) {
 
     val appListSearchEnabled: Flow<Boolean> =
         data.map { it[Keys.APPLIST_SEARCH_ENABLED] ?: false }.distinctUntilChanged()
+
+    /** Within thumb reach on a tall phone, rather than up by the status bar. */
+    val appListSearchBottom: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_SEARCH_BOTTOM] ?: false }.distinctUntilChanged()
 
     /** Orders each letter's apps by how often they were opened from here, rather than by name. */
     val sortByUsage: Flow<Boolean> = data.map { it[Keys.SORT_BY_USAGE] ?: false }.distinctUntilChanged()
@@ -499,6 +504,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setAppListSearchEnabled(v: Boolean) {
         context.dataStore.edit { it[Keys.APPLIST_SEARCH_ENABLED] = v }
+    }
+
+    suspend fun setAppListSearchBottom(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_SEARCH_BOTTOM] = v }
     }
 
     suspend fun setSortByUsage(v: Boolean) {

@@ -79,6 +79,7 @@ fun SettingsScreen(
     showAlphabet: Boolean,
     sortByUsage: Boolean,
     appListSearch: Boolean,
+    appListSearchBottom: Boolean,
     swipeUpOpensList: Boolean,
     alignment: HomeAlignment,
     nowPlayingEnabled: Boolean,
@@ -107,6 +108,7 @@ fun SettingsScreen(
     onSetSortByUsage: (Boolean) -> Unit,
     onSetSwipeUpOpensList: (Boolean) -> Unit,
     onSetAppListSearch: (Boolean) -> Unit,
+    onSetAppListSearchBottom: (Boolean) -> Unit,
     quickLaunchLeftLabel: String?,
     quickLaunchRightLabel: String?,
     onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
@@ -115,6 +117,7 @@ fun SettingsScreen(
     shadeGestureReady: Boolean,
     lockGestureReady: Boolean,
     onOpenAccessibilitySettings: () -> Unit,
+    onOpenAppInfo: () -> Unit,
     onOpenHiddenApps: () -> Unit,
     onOpenFavorites: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
@@ -256,11 +259,7 @@ fun SettingsScreen(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 modifier = Modifier.weight(1f),
                             )
-                            FilledChip(
-                                stringResource(R.string.settings_enable),
-                                selected = false,
-                                onClick = onOpenAccessibilitySettings,
-                            )
+                            AccessibilityActions(onOpenAccessibilitySettings, onOpenAppInfo)
                         }
                     }
                     RowDivider()
@@ -293,6 +292,14 @@ fun SettingsScreen(
                         checked = appListSearch,
                         onCheckedChange = onSetAppListSearch,
                     )
+                    if (appListSearch) {
+                        RowDivider()
+                        SwitchRow(
+                            stringResource(R.string.settings_search_bar_bottom),
+                            appListSearchBottom,
+                            onSetAppListSearchBottom,
+                        )
+                    }
                     RowDivider()
                     SwitchRowWithDetail(
                         label = stringResource(R.string.settings_sort_by_usage),
@@ -319,7 +326,7 @@ fun SettingsScreen(
                             )
                         }
                         if (!shadeGestureReady) {
-                            FilledChip(stringResource(R.string.settings_enable), selected = false, onClick = onOpenAccessibilitySettings)
+                            AccessibilityActions(onOpenAccessibilitySettings, onOpenAppInfo)
                         }
                     }
                 }
@@ -655,6 +662,22 @@ private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> U
                 FilledChip(stringResource(mode.labelRes()), selected == mode) { onSelect(mode) }
             }
         }
+    }
+}
+
+/**
+ * Getting to the accessibility toggle, and to the screen that unblocks it.
+ *
+ * Android 13 and later refuse to let an app installed outside an app store be switched on
+ * under Accessibility at all — the toggle is there but greyed, with no explanation offered at
+ * the point of failure. It has to be unblocked first from the app's own info screen, under the
+ * overflow menu, so that screen is one tap away here rather than something to go hunting for.
+ */
+@Composable
+private fun AccessibilityActions(onOpenAccessibilitySettings: () -> Unit, onOpenAppInfo: () -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilledChip(stringResource(R.string.settings_app_info), selected = false, onClick = onOpenAppInfo)
+        FilledChip(stringResource(R.string.settings_enable), selected = false, onClick = onOpenAccessibilitySettings)
     }
 }
 

@@ -7,6 +7,8 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.LauncherApps
+import android.os.UserHandle
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -93,24 +95,47 @@ fun VictoriaNavHost(
     LaunchedEffect(Unit) { app.prefs.ensureInstallMarker() }
 
     DisposableEffect(Unit) {
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_PACKAGE_ADDED)
-            addAction(Intent.ACTION_PACKAGE_REMOVED)
-            addAction(Intent.ACTION_PACKAGE_CHANGED)
-            addDataScheme("package")
-        }
-        val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) {
-                scope.launch {
-                    // An app that ships a new icon in an update changes none of the cache
-                    // key's components, so nothing else would invalidate the stale bitmap.
-                    clearIconCache()
-                    reloadApps()
-                }
+        val launcherApps = context.getSystemService(LauncherApps::class.java)
+        fun refresh() {
+            scope.launch {
+                // An app that ships a new icon in an update changes none of the cache
+                // key's components, so nothing else would invalidate the stale bitmap.
+                clearIconCache()
+                reloadApps()
             }
         }
+
+        // LauncherApps reports package changes across every profile. The PACKAGE_* broadcasts
+        // only ever describe the profile we run in, so an app installed into a work profile or
+        // a private space would never reach the list.
+        val callback = object : LauncherApps.Callback() {
+            override fun onPackageAdded(packageName: String?, user: UserHandle?) = refresh()
+            override fun onPackageRemoved(packageName: String?, user: UserHandle?) = refresh()
+            override fun onPackageChanged(packageName: String?, user: UserHandle?) = refresh()
+            override fun onPackagesAvailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
+            override fun onPackagesUnavailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
+        }
+        runCatching { launcherApps.registerCallback(callback) }
+
+        // Locking a private space removes the whole profile rather than any package, so it
+        // arrives as one of these instead and no package callback ever fires.
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_MANAGED_PROFILE_AVAILABLE)
+            addAction(Intent.ACTION_MANAGED_PROFILE_UNAVAILABLE)
+            addAction("android.intent.action.PROFILE_ACCESSIBLE")
+            addAction("android.intent.action.PROFILE_INACCESSIBLE")
+            addAction("android.intent.action.PROFILE_ADDED")
+            addAction("android.intent.action.PROFILE_REMOVED")
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, intent: Intent) = refresh()
+        }
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-        onDispose { context.unregisterReceiver(receiver) }
+
+        onDispose {
+            runCatching { launcherApps.unregisterCallback(callback) }
+            context.unregisterReceiver(receiver)
+        }
     }
 
     val hiddenApps by app.prefs.hiddenApps.collectAsState(initial = emptySet())
@@ -141,6 +166,7 @@ fun VictoriaNavHost(
     val widgetSidePaddingDp by app.prefs.widgetSidePaddingDp.collectAsState(initial = sidePaddingDp)
     val swipeUpOpensList by app.prefs.swipeUpOpensList.collectAsState(initial = false)
     val appListSearchEnabled by app.prefs.appListSearchEnabled.collectAsState(initial = false)
+    val appListSearchBottom by app.prefs.appListSearchBottom.collectAsState(initial = false)
     val sortByUsage by app.prefs.sortByUsage.collectAsState(initial = false)
     val launchCounts by app.prefs.launchCounts.collectAsState(initial = emptyMap())
     val edgeZoneWidthDp by app.prefs.edgeZoneWidthDp.collectAsState(initial = 56)
@@ -195,6 +221,7 @@ fun VictoriaNavHost(
         edgeZoneWidthDp = edgeZoneWidthDp,
         swipeUpOpensAppList = swipeUpOpensList,
         appListSearch = appListSearchEnabled,
+        appListSearchBottom = appListSearchBottom,
         sortByUsage = sortByUsage,
         quickLaunchLeft = quickLaunchLeftKey?.let { appsByKey[it] },
         quickLaunchRight = quickLaunchRightKey?.let { appsByKey[it] },
@@ -344,6 +371,7 @@ fun VictoriaNavHost(
                 showAlphabet = showAlphabet,
                 sortByUsage = sortByUsage,
                 appListSearch = appListSearchEnabled,
+                appListSearchBottom = appListSearchBottom,
                 swipeUpOpensList = swipeUpOpensList,
                 alignment = alignment,
                 nowPlayingEnabled = nowPlayingEnabled,
@@ -368,6 +396,7 @@ fun VictoriaNavHost(
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
                 onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
+                onSetAppListSearchBottom = { scope.launch { app.prefs.setAppListSearchBottom(it) } },
                 onSetSwipeUpOpensList = { scope.launch { app.prefs.setSwipeUpOpensList(it) } },
                 quickLaunchLeftLabel = quickLaunchLeftKey?.let { key ->
                     appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
@@ -383,6 +412,13 @@ fun VictoriaNavHost(
                 onOpenAccessibilitySettings = {
                     context.startActivity(
                         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                },
+                onOpenAppInfo = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                            .setData(Uri.fromParts("package", context.packageName, null))
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 },
                 onOpenHiddenApps = { navController.navigate("settings/hidden") },

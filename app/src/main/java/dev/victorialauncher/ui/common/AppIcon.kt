@@ -200,5 +200,5 @@ private fun resolveDrawable(
 ): Drawable =
     decodeIconOverride(context, victoriaApp, overrideValue)
         ?: victoriaApp.iconPackRepository.getIcon(iconPackPackage, app.componentName) {
-            victoriaApp.appRepository.loadIcon(app.componentName)
+            victoriaApp.appRepository.loadIcon(app)
         }

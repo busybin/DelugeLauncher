@@ -328,9 +328,9 @@ fun HomeRoute(
                 nowPlayingHeightDp = settings.nowPlayingHeightDp,
                 onResizeNowPlaying = { scope.launch { app.prefs.setNowPlayingHeightDp(it) } },
                 widgetActions = widgetActions,
-                onLaunch = { app.appRepository.launch(it.componentName) },
+                onLaunch = { app.appRepository.launch(it) },
                 onRemoveFavorite = { scope.launch { app.prefs.removeFavorite(it.key) } },
-                onOpenFolderApp = { app.appRepository.launch(it.componentName) },
+                onOpenFolderApp = { app.appRepository.launch(it) },
                 onRenameFolder = { folder, name ->
                     scope.launch { app.prefs.upsertFolder(folder.copy(name = name)) }
                 },
@@ -374,7 +374,7 @@ fun HomeRoute(
                         QuickLaunchSlot.LEFT -> settings.quickLaunchLeft
                         QuickLaunchSlot.RIGHT -> settings.quickLaunchRight
                     }
-                    target?.let { app.appRepository.launch(it.componentName) }
+                    target?.let { app.appRepository.launch(it) }
                 },
                 onPeekStatusBar = onPeekStatusBar,
                 onExpandShade = {
@@ -391,7 +391,7 @@ fun HomeRoute(
                 onManageFavorites = { onNavigate("favorites") },
                 onSetName = { appInfo, name -> scope.launch { app.prefs.setNameOverride(appInfo.key, name) } },
                 onChangeIcon = { appInfo -> onNavigate(iconPickerRoute(appInfo.key)) },
-                onAppInfo = { app.appRepository.openAppInfo(it.packageName) },
+                onAppInfo = { app.appRepository.openAppInfo(it) },
                 onOpenSettings = { onNavigate("settings") },
             )
         }
@@ -424,7 +424,7 @@ fun HomeRoute(
                 favoriteKeys = remember(favoriteKeys) { favoriteKeys.toSet() },
                 onLaunch = { appInfo ->
                     // A launch that never got off the ground leaves nothing to wait for.
-                    if (app.appRepository.launch(appInfo.componentName)) closeAfterLaunch() else closeAppList()
+                    if (app.appRepository.launch(appInfo)) closeAfterLaunch() else closeAppList()
                 },
                 onSetFavorite = { appInfo, add ->
                     scope.launch {
@@ -436,7 +436,7 @@ fun HomeRoute(
                     closeAppList()
                     onNavigate(iconPickerRoute(appInfo.key))
                 },
-                onAppInfo = { app.appRepository.openAppInfo(it.packageName) },
+                onAppInfo = { app.appRepository.openAppInfo(it) },
                 onHideApp = { appInfo -> scope.launch { app.prefs.setHidden(appInfo.key, true) } },
                 onMoveToFolder = { appInfo -> closeAppList(); folderPickerFor = appInfo },
                 onOpenSettings = { closeAppList(); onNavigate("settings") },
@@ -445,6 +445,7 @@ fun HomeRoute(
                 showAlphabet = settings.showAlphabet,
                 edgeSide = settings.edgeSide,
                 searchEnabled = settings.appListSearch,
+                searchAtBottom = settings.appListSearchBottom,
                 query = appListQuery,
                 onQueryChange = { appListQuery = it },
                 alignment = settings.alignment,
@@ -555,6 +556,7 @@ data class HomeSettings(
     val edgeZoneWidthDp: Int,
     val swipeUpOpensAppList: Boolean,
     val appListSearch: Boolean,
+    val appListSearchBottom: Boolean,
     val sortByUsage: Boolean,
     val quickLaunchLeft: AppInfo?,
     val quickLaunchRight: AppInfo?,

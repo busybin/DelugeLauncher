@@ -2,6 +2,7 @@
 package dev.victorialauncher.data
 
 import android.content.ComponentName
+import android.os.UserHandle
 import androidx.compose.runtime.Immutable
 
 /**
@@ -13,10 +14,21 @@ import androidx.compose.runtime.Immutable
 data class AppInfo(
     val componentName: ComponentName,
     val label: String,
+    /** Which profile owns this activity: work, private space, or the main one. */
+    val user: UserHandle? = null,
+    /** The profile's serial. Zero is the main profile, which is what every old key assumed. */
+    val userSerial: Long = 0L,
 ) {
     // Held rather than derived: this is the map key for overrides, favorites and list item
     // keys, so it is asked for several times per visible row per frame while scrubbing, and
     // flattenToString() builds a new string every time.
-    val key: String = componentName.flattenToString()
+    //
+    // The main profile's key is byte-for-byte what it was before profiles existed, so every
+    // stored favorite, rename, icon and hidden entry still matches. Only apps from a second
+    // profile carry the suffix, and those could not have been stored before anyway.
+    val key: String =
+        if (userSerial == 0L) componentName.flattenToString()
+        else componentName.flattenToString() + "|u" + userSerial
+
     val packageName: String get() = componentName.packageName
 }
