@@ -25,6 +25,11 @@ class AppRepository(private val context: Context) {
                     label = ri.loadLabel(pm)?.toString() ?: ai.packageName,
                 )
             }
+            // Launching ourselves through the MAIN+LAUNCHER filter starts a task that isn't
+            // rooted at HOME: it shows up in the app switcher and leaves the system unsure
+            // which task is home until the default launcher is set again. Nothing good comes
+            // of listing the launcher inside its own app list.
+            .filterNot { it.componentName.packageName == context.packageName }
             .distinctBy { it.key }
             .sortedBy { it.label.lowercase() }
     }
@@ -43,6 +48,7 @@ class AppRepository(private val context: Context) {
 
     /** Returns false if the app could not be started, so callers can undo whatever they hid. */
     fun launch(componentName: ComponentName): Boolean {
+        if (componentName.packageName == context.packageName) return false
         val intent = Intent(Intent.ACTION_MAIN)
             .addCategory(Intent.CATEGORY_LAUNCHER)
             .setComponent(componentName)

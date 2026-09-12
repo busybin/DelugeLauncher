@@ -24,7 +24,8 @@ import androidx.compose.ui.res.stringResource
 fun EditAppDialog(
     currentName: String,
     onConfirmName: (String?) -> Unit,
-    onChangeIcon: () -> Unit,
+    /** Receives whatever is typed, because picking an icon navigates away from this dialog. */
+    onChangeIcon: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var text by remember { mutableStateOf(currentName) }
@@ -35,7 +36,7 @@ fun EditAppDialog(
             Column {
                 OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.home_display_name_label)) })
                 Spacer(Modifier.height(8.dp))
-                TextButton(onClick = onChangeIcon) { Text(stringResource(R.string.action_change_icon)) }
+                TextButton(onClick = { onChangeIcon(text) }) { Text(stringResource(R.string.action_change_icon)) }
             }
         },
         confirmButton = { TextButton(onClick = { onConfirmName(text) }) { Text(stringResource(R.string.action_save)) } },

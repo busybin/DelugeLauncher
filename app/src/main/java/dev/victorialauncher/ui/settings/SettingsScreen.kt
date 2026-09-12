@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
 import dev.victorialauncher.BuildConfig
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
@@ -81,7 +82,9 @@ fun SettingsScreen(
     onSetLabelSize: (Int) -> Unit,
     onSetItemSpacing: (Int) -> Unit,
     onSetFont: (AppFont) -> Unit,
+    statusBarPeekSeconds: Int,
     onSetHideStatusBar: (Boolean) -> Unit,
+    onSetStatusBarPeekSeconds: (Int) -> Unit,
     onSetDimWallpaper: (Float) -> Unit,
     onSetHaptics: (Boolean) -> Unit,
     onSetDimHome: (Float) -> Unit,
@@ -169,6 +172,16 @@ fun SettingsScreen(
                     SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_hide_status_bar), hideStatusBar, onSetHideStatusBar)
+                    if (hideStatusBar) {
+                        RowDivider()
+                        SliderRow(
+                            label = stringResource(R.string.settings_status_bar_timeout),
+                            value = statusBarPeekSeconds.toFloat(),
+                            range = 1f..30f,
+                            valueLabel = "${statusBarPeekSeconds}s",
+                            onValueChange = { onSetStatusBarPeekSeconds(it.roundToInt()) },
+                        )
+                    }
                     RowDivider()
                     SliderRow(
                         label = stringResource(R.string.settings_dim_home),
@@ -209,6 +222,8 @@ fun SettingsScreen(
                     )
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_always_show_az), alwaysShowAz, onSetAlwaysShowAz)
+                    RowDivider()
+                    SwitchRow(stringResource(R.string.settings_show_alphabet), showAlphabet, onSetShowAlphabet)
                     RowDivider()
                     Row(
                         modifier = Modifier

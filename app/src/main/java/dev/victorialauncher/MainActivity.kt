@@ -21,9 +21,6 @@ import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.theme.VictoriaTheme
 import kotlinx.coroutines.delay
 
-/** How long a pull-down keeps the status bar on screen before it fades away again. */
-private const val STATUS_BAR_PEEK_MS = 5000L
-
 class MainActivity : ComponentActivity() {
 
     /** Bumped whenever HOME is pressed while we're already showing, so overlays can close. */
@@ -36,11 +33,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val hideStatusBar by app.prefs.hideStatusBar.collectAsState(initial = false)
+            val peekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
             // A short pull-down peeks the status bar, then it slides away again.
             var statusBarPeek by remember { mutableStateOf(false) }
-            LaunchedEffect(statusBarPeek) {
+            LaunchedEffect(statusBarPeek, peekSeconds) {
                 if (statusBarPeek) {
-                    delay(STATUS_BAR_PEEK_MS)
+                    delay(peekSeconds * 1000L)
                     statusBarPeek = false
                 }
             }

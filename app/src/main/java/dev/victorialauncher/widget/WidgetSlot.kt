@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.victorialauncher.VictoriaApp
+import dev.victorialauncher.ui.common.TouchAnchoredMenu
 import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -150,7 +150,7 @@ fun WidgetSlot(
             }
         }
 
-        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }, offset = menuOffset) {
+        TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = { menuExpanded = false }) {
             if (widgetId > 0) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_app_info)) },

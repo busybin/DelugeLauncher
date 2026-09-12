@@ -690,7 +690,11 @@ fun AppListScreen(
             EditAppDialog(
                 currentName = displayName(target),
                 onConfirmName = { name -> onSetName(target, name); editDialogFor = null },
-                onChangeIcon = { onChangeIcon(target); editDialogFor = null },
+                onChangeIcon = { name ->
+                    if (name.trim() != displayName(target)) onSetName(target, name.trim())
+                    onChangeIcon(target)
+                    editDialogFor = null
+                },
                 onDismiss = { editDialogFor = null },
             )
         }

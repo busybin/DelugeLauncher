@@ -4,13 +4,20 @@ package dev.victorialauncher.service
 import android.content.Context
 
 object SystemUi {
+    /** Set once reflection has actually opened the shade on this device; see below. */
+    @Volatile
+    private var reflectionWorked = false
+
     /**
      * Pulls down the notification shade.
      *
-     * There is no public API for this. Reflection into StatusBarManager is what launchers
-     * traditionally used, but it throws on Android 12+ for ordinary apps, so we prefer the
-     * accessibility service (which the user has to enable once) and keep reflection as a
-     * fallback for older builds.
+     * There is no public API for this. StatusBarManager.expandNotificationsPanel is a hidden
+     * method, and whether reflection can still reach it is entirely up to the build: stock
+     * Android blocks it, while a number of OEM and custom ROMs either leave it off the
+     * restricted list or exempt whichever app currently holds the home role. That is the whole
+     * explanation for it working on one phone and not the next — same app, same permission,
+     * different ROM policy. The accessibility action is the only sanctioned route, so it is
+     * tried first and reflection is the fallback rather than the other way round.
      *
      * @return true if the shade was actually opened.
      */
@@ -22,12 +29,17 @@ object SystemUi {
             val method = Class.forName("android.app.StatusBarManager")
                 .getMethod("expandNotificationsPanel")
             method.invoke(service)
+            reflectionWorked = true
             true
         }.getOrDefault(false)
     }
 
-    /** Whether the reliable path is available; drives the prompt in settings. */
-    fun canExpandShade(): Boolean = VictoriaAccessibilityService.isConnected
+    /**
+     * Whether the gesture has a way through; drives the prompt in settings. Reflection counts
+     * once it has been seen to work, so a device where the pull-down already opens the shade
+     * stops being told to turn on an accessibility service it does not need.
+     */
+    fun canExpandShade(): Boolean = VictoriaAccessibilityService.isConnected || reflectionWorked
 
     fun lockScreen(): Boolean = VictoriaAccessibilityService.lockScreen()
 }

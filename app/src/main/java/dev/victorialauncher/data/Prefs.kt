@@ -17,6 +17,12 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONObject
 
 enum class EdgeSide { LEFT, RIGHT, BOTH }
+
+/** Which edge favorites and app rows line up against. */
+enum class HomeAlignment { LEFT, CENTER, RIGHT }
+
+/** The two swipe directions under the favorites that can launch an app. */
+enum class QuickLaunchSlot { LEFT, RIGHT }
 enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE }
 
 /** AUTO picks light or dark text from the wallpaper's own colors. */
@@ -60,7 +66,33 @@ class Prefs(private val context: Context) {
         val WIDGET_ID = intPreferencesKey("widget_id")
         val WIDGET_POSITION = intPreferencesKey("widget_position")
         val WIDGET_HEIGHT_DP = intPreferencesKey("widget_height_dp")
+        val WIDGET_IDS = stringPreferencesKey("widget_ids")
+        val WIDGET_SIDE_PADDING_DP = intPreferencesKey("widget_side_padding_dp")
+        val SWIPE_UP_OPENS_LIST = booleanPreferencesKey("swipe_up_opens_list")
+        val APPLIST_SEARCH_ENABLED = booleanPreferencesKey("applist_search_enabled")
+        val SORT_BY_USAGE = booleanPreferencesKey("sort_by_usage")
+        val LAUNCH_COUNTS = stringPreferencesKey("launch_counts_json")
+        val EDGE_ZONE_WIDTH_DP = intPreferencesKey("edge_zone_width_dp")
+        val QUICK_LAUNCH_LEFT = stringPreferencesKey("quick_launch_left_key")
+        val QUICK_LAUNCH_RIGHT = stringPreferencesKey("quick_launch_right_key")
+        val LAYOUT_DEFAULTS_VERSION = intPreferencesKey("layout_defaults_version")
+        val WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
+        val SHOW_APP_ICONS = booleanPreferencesKey("show_app_icons")
+        val ALIGNMENT = stringPreferencesKey("alignment")
+        val STATUS_BAR_PEEK_SECONDS = intPreferencesKey("status_bar_peek_seconds")
+        val AZ_BAND_TOP_FRACTION = floatPreferencesKey("az_band_top_fraction")
+        val AZ_BAND_HEIGHT_FRACTION = floatPreferencesKey("az_band_height_fraction")
     }
+
+    /** Every padding a user can set by hand; their presence is what retires the first-run layout. */
+    private val padKeys = listOf(
+        Keys.NOW_PLAYING_PAD_TOP,
+        Keys.NOW_PLAYING_PAD_BOTTOM,
+        Keys.WIDGET_PAD_TOP,
+        Keys.WIDGET_PAD_BOTTOM,
+        Keys.FAVORITES_PAD_TOP,
+        Keys.FAVORITES_PAD_BOTTOM,
+    )
 
     private val data get() = context.dataStore.data
 
@@ -70,6 +102,23 @@ class Prefs(private val context: Context) {
 
     private fun MutablePreferences.writeFavorites(list: List<String>) {
         this[Keys.FAVORITES] = list.joinToString("\n")
+    }
+
+    /**
+     * Absent means this install predates multiple widgets, so the lone [Keys.WIDGET_ID] is
+     * promoted. An empty string is different: it means every widget was removed, and must not
+     * resurrect that old key.
+     */
+    private fun readWidgetIds(pref: Preferences): List<Int> {
+        val raw = pref[Keys.WIDGET_IDS]
+            ?: return listOfNotNull(pref[Keys.WIDGET_ID]?.takeIf { it > 0 })
+        return raw.split(",").mapNotNull { it.trim().toIntOrNull() }.filter { it > 0 }
+    }
+
+    private fun MutablePreferences.writeWidgetIds(ids: List<Int>) {
+        this[Keys.WIDGET_IDS] = ids.joinToString(",")
+        // Mirrored so a downgrade to a single-widget build still finds one.
+        this[Keys.WIDGET_ID] = ids.firstOrNull() ?: -1
     }
 
     val hiddenApps: Flow<Set<String>> =
@@ -155,6 +204,73 @@ class Prefs(private val context: Context) {
     /** Index into the merged (favorites + widget) home list where the widget sits. 0 = top. */
     val widgetPosition: Flow<Int> = data.map { it[Keys.WIDGET_POSITION] ?: 0 }.distinctUntilChanged()
     val widgetHeightDp: Flow<Int> = data.map { it[Keys.WIDGET_HEIGHT_DP] ?: 180 }.distinctUntilChanged()
+
+    val widgetIds: Flow<List<Int>> = data.map { readWidgetIds(it) }.distinctUntilChanged()
+
+    /**
+     * The widget's own left/right inset. Absent means it has never been set apart, so it
+     * follows the favorites and nothing moves the first time this key appears.
+     */
+    val widgetSidePaddingDp: Flow<Int> =
+        data.map { it[Keys.WIDGET_SIDE_PADDING_DP] ?: it[Keys.SIDE_PADDING_DP] ?: 20 }.distinctUntilChanged()
+
+    /** Opening the app list by swiping up from the home screen. */
+    val swipeUpOpensList: Flow<Boolean> =
+        data.map { it[Keys.SWIPE_UP_OPENS_LIST] ?: false }.distinctUntilChanged()
+
+    val appListSearchEnabled: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_SEARCH_ENABLED] ?: false }.distinctUntilChanged()
+
+    /** Orders each letter's apps by how often they were opened from here, rather than by name. */
+    val sortByUsage: Flow<Boolean> = data.map { it[Keys.SORT_BY_USAGE] ?: false }.distinctUntilChanged()
+
+    val launchCounts: Flow<Map<String, Int>> = data.map { pref ->
+        jsonToMap(pref[Keys.LAUNCH_COUNTS]).mapValues { (_, v) -> v.toIntOrNull() ?: 0 }
+    }.distinctUntilChanged()
+
+    /** Width of the invisible strip at each screen edge that opens the app list. */
+    val edgeZoneWidthDp: Flow<Int> = data.map { it[Keys.EDGE_ZONE_WIDTH_DP] ?: 56 }.distinctUntilChanged()
+
+    val quickLaunchLeft: Flow<String?> = data.map { it[Keys.QUICK_LAUNCH_LEFT] }.distinctUntilChanged()
+
+    val quickLaunchRight: Flow<String?> = data.map { it[Keys.QUICK_LAUNCH_RIGHT] }.distinctUntilChanged()
+
+    /** Drawing icons at all; off leaves text-only rows everywhere. */
+    val showAppIcons: Flow<Boolean> = data.map { it[Keys.SHOW_APP_ICONS] ?: true }.distinctUntilChanged()
+
+    /**
+     * Reads the three-way key, falling back to the old right-handed boolean so an upgrade
+     * keeps whichever side the user had chosen.
+     */
+    val alignment: Flow<HomeAlignment> = data.map { pref ->
+        val stored = pref[Keys.ALIGNMENT]
+        when {
+            stored != null -> runCatching { HomeAlignment.valueOf(stored) }.getOrDefault(HomeAlignment.LEFT)
+            pref[Keys.ALIGN_RIGHT] == true -> HomeAlignment.RIGHT
+            else -> HomeAlignment.LEFT
+        }
+    }.distinctUntilChanged()
+
+    /** How long a pull-down keeps the status bar on screen before it fades away again. */
+    val statusBarPeekSeconds: Flow<Int> =
+        data.map { it[Keys.STATUS_BAR_PEEK_SECONDS] ?: 5 }.distinctUntilChanged()
+
+    /** Null while the A-Z strip follows the favorites; a set range is a fraction of the viewport. */
+    val scrubBand: Flow<Pair<Float, Float>?> = data.map { pref ->
+        val top = pref[Keys.AZ_BAND_TOP_FRACTION]
+        val height = pref[Keys.AZ_BAND_HEIGHT_FRACTION]
+        if (top != null && height != null) top to height else null
+    }.distinctUntilChanged()
+
+    /** 0 = installed before this scheme, 1 = a genuine first run. Absent until [ensureInstallMarker]. */
+    val layoutDefaultsVersion: Flow<Int?> =
+        data.map { it[Keys.LAYOUT_DEFAULTS_VERSION] }.distinctUntilChanged()
+
+    val welcomeSeen: Flow<Boolean> = data.map { it[Keys.WELCOME_SEEN] ?: false }.distinctUntilChanged()
+
+    /** True once any padding has been set by hand, which retires the computed first-run layout. */
+    val hasCustomLayout: Flow<Boolean> =
+        data.map { pref -> padKeys.any { pref.contains(it) } }.distinctUntilChanged()
 
     suspend fun setHidden(componentKey: String, hidden: Boolean) {
         context.dataStore.edit { pref ->
@@ -360,6 +476,107 @@ class Prefs(private val context: Context) {
 
     suspend fun setWidgetHeightDp(v: Int) {
         context.dataStore.edit { it[Keys.WIDGET_HEIGHT_DP] = v }
+    }
+
+    suspend fun addWidgetId(id: Int) {
+        context.dataStore.edit { pref ->
+            val current = readWidgetIds(pref)
+            if (id !in current) pref.writeWidgetIds(current + id)
+        }
+    }
+
+    suspend fun removeWidgetId(id: Int) {
+        context.dataStore.edit { pref -> pref.writeWidgetIds(readWidgetIds(pref) - id) }
+    }
+
+    suspend fun setWidgetSidePaddingDp(v: Int) {
+        context.dataStore.edit { it[Keys.WIDGET_SIDE_PADDING_DP] = v }
+    }
+
+    suspend fun setSwipeUpOpensList(v: Boolean) {
+        context.dataStore.edit { it[Keys.SWIPE_UP_OPENS_LIST] = v }
+    }
+
+    suspend fun setAppListSearchEnabled(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_SEARCH_ENABLED] = v }
+    }
+
+    suspend fun setSortByUsage(v: Boolean) {
+        context.dataStore.edit { it[Keys.SORT_BY_USAGE] = v }
+    }
+
+    /**
+     * Counted for every launch, not just while the usage sort is on, so turning the sort on
+     * later has a history to order by rather than starting from nothing.
+     */
+    suspend fun incrementLaunchCount(componentKey: String) {
+        context.dataStore.edit { pref ->
+            val map = jsonToMap(pref[Keys.LAUNCH_COUNTS]).toMutableMap()
+            map[componentKey] = ((map[componentKey]?.toIntOrNull() ?: 0) + 1).toString()
+            pref[Keys.LAUNCH_COUNTS] = mapToJson(map)
+        }
+    }
+
+    suspend fun setEdgeZoneWidthDp(v: Int) {
+        context.dataStore.edit { it[Keys.EDGE_ZONE_WIDTH_DP] = v }
+    }
+
+    suspend fun setQuickLaunch(slot: QuickLaunchSlot, componentKey: String?) {
+        val key = when (slot) {
+            QuickLaunchSlot.LEFT -> Keys.QUICK_LAUNCH_LEFT
+            QuickLaunchSlot.RIGHT -> Keys.QUICK_LAUNCH_RIGHT
+        }
+        context.dataStore.edit { pref ->
+            if (componentKey.isNullOrBlank()) pref.remove(key) else pref[key] = componentKey
+        }
+    }
+
+    suspend fun setShowAppIcons(v: Boolean) {
+        context.dataStore.edit { it[Keys.SHOW_APP_ICONS] = v }
+    }
+
+    suspend fun setAlignment(v: HomeAlignment) {
+        context.dataStore.edit {
+            it[Keys.ALIGNMENT] = v.name
+            // Kept in step so a downgrade still lands on the side the user picked.
+            it[Keys.ALIGN_RIGHT] = v == HomeAlignment.RIGHT
+        }
+    }
+
+    suspend fun setStatusBarPeekSeconds(v: Int) {
+        context.dataStore.edit { it[Keys.STATUS_BAR_PEEK_SECONDS] = v }
+    }
+
+    suspend fun setScrubBand(topFraction: Float, heightFraction: Float) {
+        context.dataStore.edit {
+            it[Keys.AZ_BAND_TOP_FRACTION] = topFraction
+            it[Keys.AZ_BAND_HEIGHT_FRACTION] = heightFraction
+        }
+    }
+
+    /** Hands the strip back to following the favorites list. */
+    suspend fun clearScrubBand() {
+        context.dataStore.edit {
+            it.remove(Keys.AZ_BAND_TOP_FRACTION)
+            it.remove(Keys.AZ_BAND_HEIGHT_FRACTION)
+        }
+    }
+
+    suspend fun setWelcomeSeen(v: Boolean) {
+        context.dataStore.edit { it[Keys.WELCOME_SEEN] = v }
+    }
+
+    /**
+     * Stamps whether this install is new, once. Nothing writes to the store before the user
+     * changes something, so an empty store is the one reliable signal of a first run — which
+     * is why this has to run before any other setter can muddy it.
+     */
+    suspend fun ensureInstallMarker() {
+        context.dataStore.edit { pref ->
+            if (pref[Keys.LAYOUT_DEFAULTS_VERSION] == null) {
+                pref[Keys.LAYOUT_DEFAULTS_VERSION] = if (pref.asMap().isEmpty()) 1 else 0
+            }
+        }
     }
 
     private fun jsonToMap(json: String?): Map<String, String> {

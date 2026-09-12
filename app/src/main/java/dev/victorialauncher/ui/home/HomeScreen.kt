@@ -609,7 +609,13 @@ fun HomeScreen(
             currentName = folder.name,
             hasCustomIcon = folder.icon != null,
             onConfirm = { name -> onRenameFolder(folder, name); folderRenameFor = null },
-            onChangeIcon = { onChangeFolderIcon(folder); folderRenameFor = null },
+            onChangeIcon = { name ->
+                // Picking an icon leaves this dialog for another screen, taking the half-typed
+                // name with it unless it is saved on the way out.
+                if (name.isNotBlank() && name.trim() != folder.name) onRenameFolder(folder, name.trim())
+                onChangeFolderIcon(folder)
+                folderRenameFor = null
+            },
             onResetIcon = { onResetFolderIcon(folder); folderRenameFor = null },
             onDismiss = { folderRenameFor = null },
         )
@@ -619,7 +625,11 @@ fun HomeScreen(
         EditAppDialog(
             currentName = displayName(app),
             onConfirmName = { name -> onSetName(app, name); renameDialogFor = null },
-            onChangeIcon = { onChangeIcon(app); renameDialogFor = null },
+            onChangeIcon = { name ->
+                if (name.trim() != displayName(app)) onSetName(app, name.trim())
+                onChangeIcon(app)
+                renameDialogFor = null
+            },
             onDismiss = { renameDialogFor = null },
         )
     }
@@ -1035,7 +1045,8 @@ private fun FolderEditDialog(
     currentName: String,
     hasCustomIcon: Boolean,
     onConfirm: (String) -> Unit,
-    onChangeIcon: () -> Unit,
+    /** Receives whatever is typed, because picking an icon navigates away from this dialog. */
+    onChangeIcon: (String) -> Unit,
     onResetIcon: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -1047,7 +1058,7 @@ private fun FolderEditDialog(
             Column {
                 OutlinedTextField(value = text, onValueChange = { text = it }, label = { Text(stringResource(R.string.home_folder_name_label)) })
                 Spacer(Modifier.height(8.dp))
-                TextButton(onClick = onChangeIcon) { Text(stringResource(R.string.action_change_icon)) }
+                TextButton(onClick = { onChangeIcon(text) }) { Text(stringResource(R.string.action_change_icon)) }
                 if (hasCustomIcon) {
                     TextButton(onClick = onResetIcon) { Text(stringResource(R.string.home_folder_use_previews)) }
                 }

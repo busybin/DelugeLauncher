@@ -44,7 +44,9 @@
         <activity
             android:name=".widget.WidgetPickerActivity"
             android:exported="false"
+            android:excludeFromRecents="true"
             android:screenOrientation="portrait"
+            android:taskAffinity=""
             android:theme="@style/Theme.VictoriaLauncher" />
 
         <service

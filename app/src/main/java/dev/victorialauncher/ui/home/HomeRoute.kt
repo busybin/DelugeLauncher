@@ -40,6 +40,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
+import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.data.HomePaddings
 import dev.victorialauncher.data.PaddingSlot
@@ -472,6 +473,16 @@ data class HomeSettings(
     val alwaysShowAz: Boolean,
     val showAlphabet: Boolean,
     val alignRight: Boolean,
+    val alignment: HomeAlignment,
+    val widgetSidePaddingDp: Int,
+    val edgeZoneWidthDp: Int,
+    val swipeUpOpensAppList: Boolean,
+    val appListSearch: Boolean,
+    val sortByUsage: Boolean,
+    val quickLaunchLeft: AppInfo?,
+    val quickLaunchRight: AppInfo?,
+    /** Place the favorites by measurement, until the user sets a padding of their own. */
+    val centerFavorites: Boolean,
     val dimWallpaperAlpha: Float,
     val dimHomeAlpha: Float,
     val hapticsEnabled: Boolean,
