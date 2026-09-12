@@ -1294,17 +1294,16 @@ private fun RowScope.AlignedIconLabel(
     // No icon drawn means no gap to leave for one.
     val gap = if (showIcons) 16.dp else 0.dp
     val centered = alignment == HomeAlignment.CENTER
-    // Left and right hang the label off a weight, which is what drives the icon out to the
-    // far edge. Centering cannot: a weighted label spans the row and the pair ends up pinned
-    // apart. Nothing is weighted there, and a spacer the width of the icon sits on the far
-    // side of the label — so the Row centres a group whose midpoint is the label's own, and
-    // the text lands on the screen's centre line with its icon still beside it.
-    val labelModifier = if (centered) Modifier else Modifier.weight(1f)
+    // fill = false is what keeps the icon beside its label. A plain weight makes the label
+    // span the whole row, which pins the icon to the opposite edge — so a right-aligned row
+    // with its icon on the left put the two at opposite ends of the screen. This way the
+    // label takes only the width it needs, still yielding when a long name would overflow,
+    // and the Row's arrangement moves icon and label together as one.
+    val labelModifier = Modifier.weight(1f, fill = false)
+    // Centering measures the pair, so the text would sit off the middle by half an icon;
+    // balancing the icon on the label's far side puts the text itself on the centre line.
     val balance: @Composable () -> Unit = {
         if (centered && showLabel && showIcons) Spacer(Modifier.width(iconWidth + gap))
-    }
-    val filler: @Composable () -> Unit = {
-        if (!showLabel && !centered) Spacer(Modifier.weight(1f))
     }
 
     if (iconSide == IconSide.RIGHT) {
@@ -1313,7 +1312,6 @@ private fun RowScope.AlignedIconLabel(
             label(labelModifier)
             Spacer(Modifier.width(gap))
         }
-        filler()
         icon()
     } else {
         icon()
@@ -1321,7 +1319,6 @@ private fun RowScope.AlignedIconLabel(
             Spacer(Modifier.width(gap))
             label(labelModifier)
         }
-        filler()
         balance()
     }
 }
@@ -1332,8 +1329,11 @@ private fun HomeAlignment.textAlign() = when (this) {
     HomeAlignment.RIGHT -> TextAlign.End
 }
 
-private fun HomeAlignment.arrangement() =
-    if (this == HomeAlignment.CENTER) Arrangement.Center else Arrangement.Start
+private fun HomeAlignment.arrangement() = when (this) {
+    HomeAlignment.LEFT -> Arrangement.Start
+    HomeAlignment.CENTER -> Arrangement.Center
+    HomeAlignment.RIGHT -> Arrangement.End
+}
 
 /** Folders get the same treatment as apps: their own name and their own icon. */
 @Composable

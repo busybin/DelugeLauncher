@@ -932,10 +932,16 @@ private fun AppRow(
                 .heightIn(min = MIN_ROW_HEIGHT)
                 .padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (alignment == HomeAlignment.CENTER) Arrangement.Center else Arrangement.Start,
+            horizontalArrangement = when (alignment) {
+                HomeAlignment.LEFT -> Arrangement.Start
+                HomeAlignment.CENTER -> Arrangement.Center
+                HomeAlignment.RIGHT -> Arrangement.End
+            },
         ) {
             val gap = if (LocalIconConfig.current.showIcons) 16.dp else 0.dp
-            val labelModifier = if (alignment == HomeAlignment.CENTER) Modifier else Modifier.weight(1f)
+            // fill = false so the label takes only the width it needs and the icon stays
+            // beside it; a plain weight spans the row and pins the icon to the far edge.
+            val labelModifier = Modifier.weight(1f, fill = false)
             val text: @Composable () -> Unit = {
                 Text(
                     label,
