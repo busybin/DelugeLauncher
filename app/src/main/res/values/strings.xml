@@ -159,6 +159,13 @@
     <string name="icon_picker_not_browsable">This pack didn\'t expose a browsable icon list.</string>
     <string name="icon_picker_no_matches">No icons match “%1$s”.</string>
 
+    <!-- Welcome -->
+    <string name="welcome_title">Welcome to Victoria</string>
+    <string name="welcome_favorites">Long-press the wallpaper to add favorites, a widget, or open settings.</string>
+    <string name="welcome_widget">Swipe in from either edge of the screen for all your apps, and slide along the A-Z strip to jump to a letter.</string>
+    <string name="welcome_layout">Edit layout lets you move things around and set the spacing.</string>
+    <string name="welcome_got_it">Got it</string>
+
     <!-- Widgets -->
     <string name="widget_add">Add widget</string>
     <string name="widget_add_another">Add another widget</string>

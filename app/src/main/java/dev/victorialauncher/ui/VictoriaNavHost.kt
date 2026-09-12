@@ -293,6 +293,11 @@ fun VictoriaNavHost(
                 widgetHeightDp = widgetHeightDp,
                 widgetActions = widgetActions,
                 launchCounts = launchCounts,
+                // Both flows start at a value that shows nothing, so the dialog can't flash
+                // before the stored answer arrives. A legacy install is stamped 0 and never
+                // qualifies.
+                showWelcome = layoutDefaultsVersion == 1 && !welcomeSeen,
+                onWelcomeDismissed = { scope.launch { app.prefs.setWelcomeSeen(true) } },
                 scrubBandFractions = scrubBand,
                 onSetScrubBand = { top, height -> scope.launch { app.prefs.setScrubBand(top, height) } },
                 onClearScrubBand = { scope.launch { app.prefs.clearScrubBand() } },

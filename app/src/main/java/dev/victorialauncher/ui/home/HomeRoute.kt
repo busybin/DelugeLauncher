@@ -103,6 +103,8 @@ fun HomeRoute(
     widgetHeightDp: Int,
     widgetActions: WidgetSlotActions,
     launchCounts: Map<String, Int>,
+    showWelcome: Boolean,
+    onWelcomeDismissed: () -> Unit,
     scrubBandFractions: Pair<Float, Float>?,
     onSetScrubBand: (Float, Float) -> Unit,
     onClearScrubBand: () -> Unit,
@@ -359,6 +361,7 @@ fun HomeRoute(
                 alignment = settings.alignment,
                 editMode = homeEditMode,
                 onEditModeChange = { homeEditMode = it },
+                centerFavorites = settings.centerFavorites,
                 swipeUpOpensAppList = settings.swipeUpOpensAppList,
                 onSwipeUp = { appListVisible = true },
                 quickLaunchEnabled = settings.quickLaunchLeft != null || settings.quickLaunchRight != null,
@@ -455,6 +458,10 @@ fun HomeRoute(
                     if (scrub.side == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
                 ),
             )
+        }
+
+        if (showWelcome) {
+            WelcomeDialog(onDismiss = onWelcomeDismissed)
         }
 
         folderPickerFor?.let { target ->

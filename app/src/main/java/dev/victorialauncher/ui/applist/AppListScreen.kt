@@ -63,7 +63,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -93,10 +92,7 @@ import dev.victorialauncher.ui.common.AppIcon
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.ui.common.EditAppDialog
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import dev.victorialauncher.R
@@ -332,8 +328,6 @@ fun AppListScreen(
         // This placement is fresh, so the next drag is the one that retires it.
         userDragged = false
     }
-
-    val scope = rememberCoroutineScope()
 
     val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, viewportHeightPx, listState) {
         object : NestedScrollConnection {

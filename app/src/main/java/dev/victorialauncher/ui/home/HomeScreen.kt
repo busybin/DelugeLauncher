@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -103,7 +102,6 @@ import dev.victorialauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.roundToInt
-import androidx.annotation.StringRes
 import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -184,6 +182,7 @@ fun HomeScreen(
     alignment: HomeAlignment,
     editMode: Boolean,
     onEditModeChange: (Boolean) -> Unit,
+    centerFavorites: Boolean,
     swipeUpOpensAppList: Boolean,
     onSwipeUp: () -> Unit,
     quickLaunchEnabled: Boolean,
@@ -217,12 +216,31 @@ fun HomeScreen(
 
     var liveSlot by remember { mutableStateOf<PaddingSlot?>(null) }
     var liveValue by remember { mutableIntStateOf(0) }
-    fun padOf(slot: PaddingSlot): Int = if (liveSlot == slot) liveValue else paddings[slot]
+
+    // On a fresh install the favorites are placed by measurement rather than by a stored
+    // number: centered, which is where a thumb and the A-Z strip both want them. Landing at
+    // the top of an empty screen is what new users kept reporting as the strip being too
+    // high. Setting any padding by hand retires this for good.
+    var centeredFavTopDp by remember { mutableIntStateOf(0) }
+    var rootY by remember { mutableFloatStateOf(0f) }
+
+    fun padOf(slot: PaddingSlot): Int = when {
+        liveSlot == slot -> liveValue
+        centerFavorites && slot == PaddingSlot.FAVORITES_TOP && centeredFavTopDp > 0 -> centeredFavTopDp
+        else -> paddings[slot]
+    }
+
     fun setPadding(slot: PaddingSlot, value: Int) {
+        // The centered placement is computed, not stored. Touching any other padding retires
+        // it, so write out what is on screen first or the favorites snap to the stock gap.
+        if (centerFavorites && slot != PaddingSlot.FAVORITES_TOP && centeredFavTopDp > 0) {
+            onCommitPadding(PaddingSlot.FAVORITES_TOP, centeredFavTopDp)
+        }
         liveSlot = slot
         liveValue = value
         onCommitPadding(slot, value)
     }
+
 
     // The background drag is disabled while a padding is being adjusted; leaving edit mode
     // has to release that or the home screen stops scrolling entirely.
@@ -316,10 +334,27 @@ fun HomeScreen(
     }
     val editScrollState = rememberScrollState()
 
+    LaunchedEffect(centerFavorites, favBoundsTop, favBoundsBottom, viewportHeight, rootY) {
+        if (!centerFavorites || viewportHeight <= 0 || favBoundsBottom <= favBoundsTop) {
+            return@LaunchedEffect
+        }
+        val blockHeight = favBoundsBottom - favBoundsTop
+        val appliedTopPx = with(density) { padOf(PaddingSlot.FAVORITES_TOP).dp.toPx() }
+        // Everything stacked above the favorites' own gap — a widget, Now Playing, their
+        // paddings — measured rather than assumed, so this works whatever is up there.
+        val above = (favBoundsTop - rootY - offsetY.value) - appliedTopPx
+        val desiredPx = ((viewportHeight - blockHeight) / 2f - above).coerceAtLeast(0f)
+        val desiredDp = with(density) { desiredPx.toDp().value.roundToInt() }
+        // Subtracting the applied gap makes this idempotent, so it settles in one pass; the
+        // guard only stops a rounding wobble from looping.
+        if (abs(desiredDp - centeredFavTopDp) > 1) centeredFavTopDp = desiredDp
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .onSizeChanged { viewportHeight = it.height }
+            .onGloballyPositioned { rootY = it.positionInWindow().y }
             .draggable(
                 orientation = Orientation.Vertical,
                 enabled = !editMode && liveSlot == null,
