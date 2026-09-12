@@ -65,6 +65,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -95,6 +96,8 @@ import dev.victorialauncher.ui.common.AppIcon
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.ui.common.EditAppDialog
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -358,6 +361,8 @@ fun AppListScreen(
         userDragged = false
     }
 
+    val scope = rememberCoroutineScope()
+
     val listConnection = remember(dismissPullPx, maxPullPx, maxStretchPx, fastDragPx, nearEndPx, viewportHeightPx, listState) {
         object : NestedScrollConnection {
             /** True between the first drag of a gesture and the fling that ends it. */
@@ -385,10 +390,37 @@ fun AppListScreen(
             /** How far this gesture has scrolled the list, to tell a pull from a flick. */
             private var scrolledInGesture = 0f
 
+            /** The edge spring, held so a finger arriving mid-settle can take it over. */
+            private var settleJob: Job? = null
+
             private fun stretch(delta: Float) {
                 // Rubber band: the further it goes, the less each pixel counts.
                 val resistance = 1f - (abs(stretchPx) / maxStretchPx).coerceIn(0f, 0.9f)
                 stretchPx = (stretchPx + delta * resistance).coerceIn(-maxStretchPx, maxStretchPx)
+            }
+
+            /**
+             * Runs the edge spring without making the fling wait for it.
+             *
+             * Awaited inside onPostFling it held the connection in its settling state for the
+             * spring's whole duration, and every guard below turns a drag away while that is
+             * true — so a flick that coasted into the end swallowed the next pull entirely and
+             * the collapse only answered on the swipe after. Launched separately it can simply
+             * be cancelled the moment a finger comes back down.
+             */
+            private fun startSettle(velocity: Float) {
+                settleJob?.cancel()
+                settleJob = scope.launch { settleStretch(velocity) }
+            }
+
+            /** Ends a settle in progress and hands its position back to the finger. */
+            private fun takeOverSettle() {
+                settleJob?.cancel()
+                settleJob = null
+                if (stretchSettling) {
+                    stretchPx = stretchAnim.value.coerceIn(-maxStretchPx, maxStretchPx)
+                    stretchSettling = false
+                }
             }
 
             private suspend fun settleStretch(velocity: Float) {
@@ -423,6 +455,9 @@ fun AppListScreen(
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
                 if (source == NestedScrollSource.Drag && !dragging) {
                     dragging = true
+                    // Cancellation is not instant, so the state is handed over here and now
+                    // rather than a frame later when the coroutine notices.
+                    takeOverSettle()
                     // A finger on the list, as opposed to a programmatic scrub scroll.
                     userDragged = true
                     // Collapsing has to be a deliberate pull from rest. Letting a scroll that
@@ -528,7 +563,7 @@ fun AppListScreen(
                     return available
                 }
                 if (stretchPx != 0f) {
-                    settleStretch(available.y)
+                    startSettle(available.y)
                     return available
                 }
                 return Velocity.Zero
@@ -536,7 +571,7 @@ fun AppListScreen(
 
             override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
                 if (collapsing || stretchSettling || available.y == 0f) return Velocity.Zero
-                settleStretch(available.y)
+                startSettle(available.y)
                 return available
             }
         }

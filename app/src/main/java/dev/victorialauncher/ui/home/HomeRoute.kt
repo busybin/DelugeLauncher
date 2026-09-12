@@ -391,7 +391,11 @@ fun HomeRoute(
                     // Measured in window space, so a home screen still travelling under the
                     // open overlay would drag the alphabet along with it. Whatever the band
                     // was when the list opened is what it stays.
-                    if (appListVisible) return@HomeScreen
+                    //
+                    // Edit mode is ignored for the same reason and a better one: it lays the
+                    // favorites out differently, and the strip should match where they
+                    // actually sit rather than where they sit while being rearranged.
+                    if (appListVisible || homeEditMode) return@HomeScreen
                     favBand = ScrubBand(topPx = top, heightPx = bottom - top)
                 },
                 nowPlayingHasContent = nowPlayingHasContent,
