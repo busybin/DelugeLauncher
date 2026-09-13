@@ -36,8 +36,14 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -71,12 +77,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -107,8 +117,14 @@ import androidx.compose.ui.res.stringResource
 /** Where the selected letter's section sits, as a fraction down the screen. */
 private const val SECTION_TOP_FRACTION = 0.26f
 
-/** Breathing room above A and below the settings row when no scrub has placed the list. */
-private val IDLE_TOP_PADDING = 64.dp
+/**
+ * Breathing room above A and below the settings row when no scrub has placed the list.
+ *
+ * Small, because nothing needs holding clear any more: the end fades now switch off when there
+ * is nothing scrolled past them, so the first row is crisp where it rests rather than sitting
+ * inside a permanent fade.
+ */
+private val IDLE_TOP_PADDING = 8.dp
 private val IDLE_BOTTOM_PADDING = 32.dp
 
 /** Smallest comfortable row, so a tap beside a small icon still lands on its app. */
@@ -116,6 +132,20 @@ private val MIN_ROW_HEIGHT = 48.dp
 
 /** How far rows are held back from the edge the A-Z strip occupies. */
 private val STRIP_INSET = 56.dp
+
+/** Sets the settings shortcut apart from the last app above it. */
+private val SETTINGS_ROW_GAP = 20.dp
+
+/** How far the list dissolves at each end. */
+private val FADE_HEIGHT = 56.dp
+
+/**
+ * Gap above and below search results.
+ *
+ * The idle gaps exist so a scrubbed letter can be placed on the scrub line. Search has no
+ * scrub and no line, so results simply start where the list does.
+ */
+private val SEARCH_EDGE_PADDING = 8.dp
 
 /** How far either end of the list may be dragged past its content. */
 private val MAX_EDGE_STRETCH = 40.dp
@@ -132,7 +162,7 @@ private const val COMMIT_FRACTION = 0.4f
  */
 private const val EDGE_STRETCH_DAMPING = 0.55f
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun AppListScreen(
     model: AppListModel,
@@ -161,6 +191,10 @@ fun AppListScreen(
     listState: LazyListState,
     /** How far the list still has to travel to be fully open; 0 once it has arrived. */
     enterPullPx: Float,
+    /** Whether the status bar is set to stay hidden here, so its gap is not reserved. */
+    statusBarHidden: Boolean,
+    /** The model a query runs against, which may carry hidden apps the list itself omits. */
+    searchModel: AppListModel,
     searchEnabled: Boolean,
     searchAtBottom: Boolean,
     query: String,
@@ -187,11 +221,33 @@ fun AppListScreen(
     // Searching is a different mode from scrubbing: the letters shrink to whatever matched,
     // so the strip is hidden and placement stays out of it until the query is cleared.
     val searching = searchEnabled && query.isNotBlank()
-    val displayModel = remember(model, query, searchEnabled) {
-        if (!searching) model else model.filtered { displayName(it).contains(query.trim(), ignoreCase = true) }
+    val displayModel = remember(model, searchModel, query, searchEnabled) {
+        if (!searching) {
+            model
+        } else {
+            searchModel.filtered { displayName(it).contains(query.trim(), ignoreCase = true) }
+        }
     }
+    // Animated rather than switched, so an end does not snap from crisp to faded the moment
+    // the first pixel scrolls past it.
+    val topFade by animateFloatAsState(
+        if (listState.canScrollBackward) 1f else 0f,
+        label = "topFade",
+    )
+    val bottomFade by animateFloatAsState(
+        if (listState.canScrollForward) 1f else 0f,
+        label = "bottomFade",
+    )
+
     /** Height of the pinned search field, so list-relative offsets can be compared to taps. */
     var searchHeightPx by remember { mutableIntStateOf(0) }
+
+    // Each query is a fresh list, so it starts at the top. Without this the offset from
+    // whatever was scrolled before carries over, and a query with few matches lands the
+    // results somewhere past the end of the screen.
+    LaunchedEffect(query) {
+        if (query.isNotBlank()) listState.scrollToItem(0)
+    }
 
     // Rows outside the scrubbed letter fade out; the section itself never moves, because it
     // is the same list the whole time. Only ever read inside a graphicsLayer, so the fade
@@ -239,8 +295,16 @@ fun AppListScreen(
     val nearEndPx = with(density) { 48.dp.toPx() }
     val maxPullPx = with(density) { 320.dp.toPx() }
     val maxStretchPx = with(density) { MAX_EDGE_STRETCH.toPx() }
-    val idleTopPaddingPx = with(density) { IDLE_TOP_PADDING.roundToPx() }
-    val idleBottomPaddingPx = with(density) { IDLE_BOTTOM_PADDING.roundToPx() }
+    // The idle gaps are there so a scrubbed letter can be placed on the scrub line with room
+    // to spare. A pinned search field already separates the list from the screen edge, and the
+    // full gap on top of it read as dead space — and as a gap that changed size the moment you
+    // started typing. Whichever end the field is on gets the search gap either way.
+    val restingTopPadding =
+        if (searchEnabled && !searchAtBottom) SEARCH_EDGE_PADDING else IDLE_TOP_PADDING
+    val restingBottomPadding =
+        if (searchEnabled && searchAtBottom) SEARCH_EDGE_PADDING else IDLE_BOTTOM_PADDING
+    val idleTopPaddingPx = with(density) { restingTopPadding.roundToPx() }
+    val idleBottomPaddingPx = with(density) { restingBottomPadding.roundToPx() }
 
     /** Signed: positive pulled down off the top of the list, negative up off the bottom. */
     var overPull by remember { mutableFloatStateOf(0f) }
@@ -639,7 +703,26 @@ fun AppListScreen(
               }
               .background(Color.Black.copy(alpha = dimAlpha)),
       ) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // The keyboard covers the bottom of the overlay, and with a field pinned down there
+        // the window used to be panned bodily up to reveal it, taking the top of the results
+        // off screen with it. Insetting instead leaves the overlay where it is and gives the
+        // list the space that is actually left.
+        // Ignoring visibility deliberately: a plain statusBarsPadding follows the bar as it
+        // fades, and the inset drops to zero the instant the fade ends, so the whole overlay
+        // jumped up into the space. The gap is held by what the setting asks for instead, which
+        // does not change while the list is open.
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (statusBarHidden) {
+                        Modifier
+                    } else {
+                        Modifier.windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                    }
+                )
+                .imePadding()
+        ) {
         if (searchEnabled && !searchAtBottom) {
             // Pinned above the list rather than scrolling with it as a first item: every row
             // index the scrub placement works from would shift by one, and the field would
@@ -659,7 +742,36 @@ fun AppListScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { translationY = stretchProvider() },
+                .graphicsLayer {
+                    translationY = stretchProvider()
+                    // The mask below blends against this layer alone, so it can take the
+                    // rows' alpha away without touching anything drawn behind them.
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    drawContent()
+                    // Dissolves the rows at both ends rather than painting black over them.
+                    // A painted fade had to be opaque enough to hide text, which left a hard
+                    // step wherever its edge met the overlay — glaring against a pinned search
+                    // field, and darker still where two of them met. Taking the rows' own
+                    // alpha instead leaves the background exactly as it was, so they fade into
+                    // it however light or dark the wallpaper dim has made it.
+                    val fade = (FADE_HEIGHT.toPx() / size.height).coerceIn(0f, 0.5f)
+                    if (fade > 0f) {
+                        // Each end fades only while something is actually scrolled past it.
+                        // A fade that is always on dims the first and last rows even at rest,
+                        // which is what the gap above A was there to hold them clear of.
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                0f to Color.Black.copy(alpha = 1f - topFade),
+                                fade to Color.Black,
+                                1f - fade to Color.Black,
+                                1f to Color.Black.copy(alpha = 1f - bottomFade),
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                },
             // Room above A and below Z so any letter can sit on the same line; without it
             // the ends clamp and land somewhere else entirely.
             // Room above A so it can sit on the scrub line like every other letter; without
@@ -669,10 +781,10 @@ fun AppListScreen(
             // broken rather than as placement, so the last letter simply lands as high as its
             // own content allows.
             contentPadding = with(density) {
-                val top = if (scrubLetter != null || !highlightRange.isEmpty()) {
-                    sectionTopPx.toDp()
-                } else {
-                    IDLE_TOP_PADDING
+                val top = when {
+                    searching -> SEARCH_EDGE_PADDING
+                    scrubLetter != null || !highlightRange.isEmpty() -> sectionTopPx.toDp()
+                    else -> restingTopPadding
                 }
                 // The strip is drawn over this list, not beside it, so the side it occupies
                 // has to be held clear. Only that side: with both edges enabled the strip is
@@ -682,7 +794,7 @@ fun AppListScreen(
                     start = if (showAlphabet && activeSide == EdgeSide.LEFT) STRIP_INSET else 0.dp,
                     end = if (showAlphabet && activeSide == EdgeSide.RIGHT) STRIP_INSET else 0.dp,
                     top = top,
-                    bottom = IDLE_BOTTOM_PADDING,
+                    bottom = if (searching) SEARCH_EDGE_PADDING else restingBottomPadding,
                 )
             },
         ) {
@@ -734,6 +846,8 @@ fun AppListScreen(
 
             // Settings shortcut, pinned after Z.
             item(key = "settings", contentType = "settings") {
+                // Set apart from the apps above it: it is the one row here that is not one.
+                Spacer(Modifier.height(SETTINGS_ROW_GAP))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -770,19 +884,6 @@ fun AppListScreen(
         }
         }
 
-        // Fade the list out as it scrolls off the top. Inside the list's own box, so it
-        // shades the rows rather than the search field pinned above them.
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .height(56.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(Color.Black.copy(alpha = 0.75f), Color.Transparent),
-                    )
-                ),
-        )
         }
         if (searchEnabled && searchAtBottom) {
             SearchField(
@@ -1046,15 +1147,29 @@ private fun SearchField(
             focusedTextColor = contentColor,
             unfocusedTextColor = contentColor,
             cursorColor = contentColor,
-            focusedBorderColor = contentColor.copy(alpha = 0.45f),
-            unfocusedBorderColor = contentColor.copy(alpha = 0.2f),
-            focusedContainerColor = Color.Black.copy(alpha = 0.25f),
-            unfocusedContainerColor = Color.Black.copy(alpha = 0.25f),
+            focusedBorderColor = contentColor.copy(alpha = 0.5f),
+            unfocusedBorderColor = contentColor.copy(alpha = 0.3f),
+            // No fill of its own. A fixed black tint read as a separate panel laid over the
+            // overlay, and how separate depended on the wallpaper dim underneath it: barely
+            // visible undimmed, a slab of black at full dim. Transparent composites to
+            // exactly the overlay's own background at every dim, so the outline and the icons
+            // are what say this is a field.
+            focusedContainerColor = Color.Transparent,
+            unfocusedContainerColor = Color.Transparent,
         ),
         modifier = modifier
             // The overlay draws under both system bars, so without this the field sits behind
             // the clock at the top, or the gesture pill at the bottom.
-            .then(if (atBottom) Modifier.navigationBarsPadding() else Modifier.statusBarsPadding())
+            .then(
+                if (atBottom) {
+                    // The column's own ime padding has already cleared the keyboard, so
+                    // adding the gesture bar on top of it would double the gap.
+                    Modifier.windowInsetsPadding(WindowInsets.navigationBars.exclude(WindowInsets.ime))
+                } else {
+                    // The status bar is the column's problem now, so that the rows clear it too.
+                    Modifier
+                }
+            )
             .fillMaxWidth()
             .padding(
                 // Lines up with the rows' own inset instead of hugging the screen edge, and

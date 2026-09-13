@@ -69,6 +69,7 @@ fun SettingsScreen(
     itemSpacingDp: Int,
     font: AppFont,
     hideStatusBar: Boolean,
+    hideStatusBarAppList: Boolean,
     dimWallpaperAlpha: Float,
     hapticsEnabled: Boolean,
     dimHomeAlpha: Float,
@@ -81,6 +82,7 @@ fun SettingsScreen(
     sortByUsage: Boolean,
     appListSearch: Boolean,
     appListSearchBottom: Boolean,
+    appListSearchHidden: Boolean,
     swipeUpOpensList: Boolean,
     alignment: HomeAlignment,
     appListAlignment: HomeAlignment,
@@ -96,6 +98,7 @@ fun SettingsScreen(
     onSetFont: (AppFont) -> Unit,
     statusBarPeekSeconds: Int,
     onSetHideStatusBar: (Boolean) -> Unit,
+    onSetHideStatusBarAppList: (Boolean) -> Unit,
     onSetStatusBarPeekSeconds: (Int) -> Unit,
     onSetDimWallpaper: (Float) -> Unit,
     onSetHaptics: (Boolean) -> Unit,
@@ -112,6 +115,7 @@ fun SettingsScreen(
     onSetSwipeUpOpensList: (Boolean) -> Unit,
     onSetAppListSearch: (Boolean) -> Unit,
     onSetAppListSearchBottom: (Boolean) -> Unit,
+    onSetAppListSearchHidden: (Boolean) -> Unit,
     quickLaunchLeftLabel: String?,
     quickLaunchRightLabel: String?,
     onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
@@ -204,6 +208,12 @@ fun SettingsScreen(
                     SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_hide_status_bar), hideStatusBar, onSetHideStatusBar)
+                    RowDivider()
+                    SwitchRow(
+                        stringResource(R.string.settings_hide_status_bar_applist),
+                        hideStatusBarAppList,
+                        onSetHideStatusBarAppList,
+                    )
                     if (hideStatusBar) {
                         RowDivider()
                         SliderRow(
@@ -314,6 +324,13 @@ fun SettingsScreen(
                             stringResource(R.string.settings_search_bar_bottom),
                             appListSearchBottom,
                             onSetAppListSearchBottom,
+                        )
+                        RowDivider()
+                        SwitchRowWithDetail(
+                            label = stringResource(R.string.settings_search_hidden),
+                            detail = stringResource(R.string.settings_search_hidden_detail),
+                            checked = appListSearchHidden,
+                            onCheckedChange = onSetAppListSearchHidden,
                         )
                     }
                     RowDivider()

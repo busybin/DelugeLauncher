@@ -74,9 +74,12 @@ fun VictoriaNavHost(
     homeIntentTick: Int,
     font: AppFont,
     hideStatusBar: Boolean,
+    hideStatusBarAppList: Boolean,
     iconPackPackage: String?,
     iconOverrides: Map<String, String>,
     onPeekStatusBar: () -> Unit,
+    /** Reported up so the status bar can stay put while the overlay is showing. */
+    onAppListVisibleChange: (Boolean) -> Unit,
 ) {
     val navController = rememberNavController()
     val context = LocalContext.current
@@ -168,6 +171,7 @@ fun VictoriaNavHost(
     val swipeUpOpensList by app.prefs.swipeUpOpensList.collectAsState(initial = false)
     val appListSearchEnabled by app.prefs.appListSearchEnabled.collectAsState(initial = false)
     val appListSearchBottom by app.prefs.appListSearchBottom.collectAsState(initial = false)
+    val appListSearchHidden by app.prefs.appListSearchHidden.collectAsState(initial = false)
     val sortByUsage by app.prefs.sortByUsage.collectAsState(initial = false)
     val launchCounts by app.prefs.launchCounts.collectAsState(initial = emptyMap())
     val edgeZoneWidthDp by app.prefs.edgeZoneWidthDp.collectAsState(initial = 56)
@@ -227,6 +231,8 @@ fun VictoriaNavHost(
         swipeUpOpensAppList = swipeUpOpensList,
         appListSearch = appListSearchEnabled,
         appListSearchBottom = appListSearchBottom,
+        appListSearchHidden = appListSearchHidden,
+        hideStatusBarAppList = hideStatusBarAppList,
         sortByUsage = sortByUsage,
         quickLaunchLeft = quickLaunchLeftKey?.let { appsByKey[it] },
         quickLaunchRight = quickLaunchRightKey?.let { appsByKey[it] },
@@ -334,6 +340,7 @@ fun VictoriaNavHost(
                 onSetScrubBand = { top, height -> scope.launch { app.prefs.setScrubBand(top, height) } },
                 onClearScrubBand = { scope.launch { app.prefs.clearScrubBand() } },
                 onPeekStatusBar = onPeekStatusBar,
+                onAppListVisibleChange = onAppListVisibleChange,
                 onNavigate = { route -> navController.navigate(route) },
             )
         }
@@ -363,6 +370,7 @@ fun VictoriaNavHost(
                 itemSpacingDp = itemSpacingDp,
                 font = font,
                 hideStatusBar = hideStatusBar,
+                hideStatusBarAppList = hideStatusBarAppList,
                 statusBarPeekSeconds = statusBarPeekSeconds,
                 dimWallpaperAlpha = dimWallpaperAlpha,
                 hapticsEnabled = hapticsEnabled,
@@ -377,6 +385,7 @@ fun VictoriaNavHost(
                 sortByUsage = sortByUsage,
                 appListSearch = appListSearchEnabled,
                 appListSearchBottom = appListSearchBottom,
+                appListSearchHidden = appListSearchHidden,
                 swipeUpOpensList = swipeUpOpensList,
                 alignment = alignment,
                 appListAlignment = appListAlignment,
@@ -390,6 +399,7 @@ fun VictoriaNavHost(
                 onSetItemSpacing = { scope.launch { app.prefs.setItemSpacingDp(it) } },
                 onSetFont = { scope.launch { app.prefs.setFont(it) } },
                 onSetHideStatusBar = { scope.launch { app.prefs.setHideStatusBar(it) } },
+                onSetHideStatusBarAppList = { scope.launch { app.prefs.setHideStatusBarAppList(it) } },
                 onSetStatusBarPeekSeconds = { scope.launch { app.prefs.setStatusBarPeekSeconds(it) } },
                 onSetDimWallpaper = { scope.launch { app.prefs.setDimWallpaperAlpha(it) } },
                 onSetHaptics = { scope.launch { app.prefs.setHapticsEnabled(it) } },
@@ -404,6 +414,7 @@ fun VictoriaNavHost(
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
                 onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
                 onSetAppListSearchBottom = { scope.launch { app.prefs.setAppListSearchBottom(it) } },
+                onSetAppListSearchHidden = { scope.launch { app.prefs.setAppListSearchHidden(it) } },
                 onSetSwipeUpOpensList = { scope.launch { app.prefs.setSwipeUpOpensList(it) } },
                 quickLaunchLeftLabel = quickLaunchLeftKey?.let { key ->
                     appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }

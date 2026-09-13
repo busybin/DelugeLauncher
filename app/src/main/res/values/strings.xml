@@ -78,7 +78,8 @@
     <string name="settings_text_color">Text color</string>
     <string name="settings_text_color_detail">Auto reads the wallpaper and picks whichever is legible</string>
     <string name="settings_show_names">Show app names beside favorite icons</string>
-    <string name="settings_hide_status_bar">Hide status bar</string>
+    <string name="settings_hide_status_bar">Hide status bar on the home screen</string>
+    <string name="settings_hide_status_bar_applist">Hide status bar in the app list</string>
     <string name="settings_status_bar_timeout">Status bar stays for</string>
     <string name="settings_dim_home">Dim wallpaper on home screen</string>
     <string name="settings_dim_applist">Dim wallpaper behind app list</string>
@@ -99,6 +100,8 @@
     <string name="settings_search_bar">Search bar in the app list</string>
     <string name="settings_search_bar_detail">A box for filtering the list by name</string>
     <string name="settings_search_bar_bottom">Search bar at the bottom</string>
+    <string name="settings_search_hidden">Search finds hidden apps</string>
+    <string name="settings_search_hidden_detail">Apps hidden from the list still turn up when you search for them by name</string>
     <string name="settings_sort_by_usage">Sort by how often you use apps</string>
     <string name="settings_sort_by_usage_detail">Within each letter, most used first</string>
     <string name="settings_alignment_favorites">Favorites alignment</string>

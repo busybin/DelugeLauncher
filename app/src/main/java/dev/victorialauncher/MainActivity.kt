@@ -33,17 +33,26 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val hideStatusBar by app.prefs.hideStatusBar.collectAsState(initial = false)
+            val hideStatusBarAppList by app.prefs.hideStatusBarAppList.collectAsState(initial = false)
             val peekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
             // A short pull-down peeks the status bar, then it slides away again.
             var statusBarPeek by remember { mutableStateOf(false) }
+            // The two surfaces choose separately, so the overlay can keep the bar the home
+            // screen hides.
+            var appListOpen by remember { mutableStateOf(false) }
             LaunchedEffect(statusBarPeek, peekSeconds) {
                 if (statusBarPeek) {
                     delay(peekSeconds * 1000L)
                     statusBarPeek = false
                 }
             }
-            LaunchedEffect(hideStatusBar, statusBarPeek) {
-                StatusBarFader.setVisible(window, visible = !hideStatusBar || statusBarPeek)
+            val hideHere = if (appListOpen) hideStatusBarAppList else hideStatusBar
+            val statusBarVisible = !hideHere || statusBarPeek
+            // Keyed on the answer, not on what went into it. Re-asking for a state the bar is
+            // already in restarts the fade, and a fade out begins by holding the bar fully
+            // shown — so opening the list with both set to hide flashed it into view.
+            LaunchedEffect(statusBarVisible) {
+                StatusBarFader.setVisible(window, visible = statusBarVisible)
             }
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
@@ -61,9 +70,11 @@ class MainActivity : ComponentActivity() {
                         homeIntentTick = homeIntentTick,
                         font = font,
                         hideStatusBar = hideStatusBar,
+                        hideStatusBarAppList = hideStatusBarAppList,
                         iconPackPackage = iconPackPackage,
                         iconOverrides = iconOverrides,
                         onPeekStatusBar = { statusBarPeek = true },
+                        onAppListVisibleChange = { appListOpen = it },
                     )
                 }
             }

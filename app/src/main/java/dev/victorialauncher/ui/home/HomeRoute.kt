@@ -125,11 +125,17 @@ fun HomeRoute(
     onSetScrubBand: (Float, Float) -> Unit,
     onClearScrubBand: () -> Unit,
     onPeekStatusBar: () -> Unit,
+    onAppListVisibleChange: (Boolean) -> Unit,
     onNavigate: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+
+    // Hidden apps are left out of the model the list draws from, so reaching them by name
+    // needs a model of its own. Only built when the setting asks for it, and it falls back to
+    // the list's own model otherwise, so nothing is grouped and sorted twice for nothing.
+    val includeHiddenInSearch = settings.appListSearchHidden && hiddenApps.isNotEmpty()
 
     // Grouping, sorting and flattening every installed app is too much to do in composition,
     // and it re-runs whenever a name override changes.
@@ -147,6 +153,25 @@ fun HomeRoute(
             buildAppListModel(apps, hiddenApps, { nameOverrides[it.key] ?: it.label }, counts)
         }
     }
+
+    val hiddenSearchModel by produceState<AppListModel?>(
+        initialValue = null,
+        appsByKey,
+        nameOverrides,
+        includeHiddenInSearch,
+        if (settings.sortByUsage) launchCounts else emptyMap(),
+    ) {
+        val apps = appsByKey.values.toList()
+        val counts = if (settings.sortByUsage) launchCounts else emptyMap()
+        value = if (!includeHiddenInSearch) {
+            null
+        } else {
+            withContext(Dispatchers.Default) {
+                buildAppListModel(apps, emptySet(), { nameOverrides[it.key] ?: it.label }, counts)
+            }
+        }
+    }
+    val searchModel = hiddenSearchModel ?: listModel
 
     var appListVisible by remember { mutableStateOf(false) }
     val scrub = remember { ScrubState() }
@@ -251,6 +276,10 @@ fun HomeRoute(
     // runs the most recently added enabled callback first, so the overlay, edit mode and the
     // band editor all still get their turn at BACK before this swallows it.
     BackHandler(enabled = true) {}
+
+    LaunchedEffect(appListVisible) { onAppListVisibleChange(appListVisible) }
+    // Leaving the home destination entirely takes the overlay with it.
+    DisposableEffect(Unit) { onDispose { onAppListVisibleChange(false) } }
 
     BackHandler(enabled = appListVisible) { closeAppList() }
 
@@ -543,6 +572,8 @@ fun HomeRoute(
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
                 edgeSide = settings.edgeSide,
+                statusBarHidden = settings.hideStatusBarAppList,
+                searchModel = searchModel,
                 searchEnabled = settings.appListSearch,
                 searchAtBottom = settings.appListSearchBottom,
                 listState = appListState,
@@ -672,6 +703,8 @@ data class HomeSettings(
     val swipeUpOpensAppList: Boolean,
     val appListSearch: Boolean,
     val appListSearchBottom: Boolean,
+    val appListSearchHidden: Boolean,
+    val hideStatusBarAppList: Boolean,
     val sortByUsage: Boolean,
     val quickLaunchLeft: AppInfo?,
     val quickLaunchRight: AppInfo?,

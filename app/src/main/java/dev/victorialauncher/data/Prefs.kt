@@ -54,6 +54,7 @@ class Prefs(private val context: Context) {
         val FAVORITES_PAD_BOTTOM = intPreferencesKey("favorites_pad_bottom")
         val FONT = stringPreferencesKey("font")
         val HIDE_STATUS_BAR = booleanPreferencesKey("hide_status_bar")
+        val HIDE_STATUS_BAR_APPLIST = booleanPreferencesKey("hide_status_bar_applist")
         val DIM_WALLPAPER_ALPHA = floatPreferencesKey("dim_wallpaper_alpha")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val DIM_HOME_ALPHA = floatPreferencesKey("dim_home_alpha")
@@ -74,6 +75,7 @@ class Prefs(private val context: Context) {
         val SWIPE_UP_OPENS_LIST = booleanPreferencesKey("swipe_up_opens_list")
         val APPLIST_SEARCH_ENABLED = booleanPreferencesKey("applist_search_enabled")
         val APPLIST_SEARCH_BOTTOM = booleanPreferencesKey("applist_search_bottom")
+        val APPLIST_SEARCH_HIDDEN = booleanPreferencesKey("applist_search_hidden")
         val SORT_BY_USAGE = booleanPreferencesKey("sort_by_usage")
         val LAUNCH_COUNTS = stringPreferencesKey("launch_counts_json")
         val EDGE_ZONE_WIDTH_DP = intPreferencesKey("edge_zone_width_dp")
@@ -172,6 +174,15 @@ class Prefs(private val context: Context) {
 
     val hideStatusBar: Flow<Boolean> = data.map { it[Keys.HIDE_STATUS_BAR] ?: false }.distinctUntilChanged()
 
+    /**
+     * The same choice for the app list, which used to follow the home screen's.
+     *
+     * Falls back to it until set, so nobody's status bar appears where it did not before.
+     */
+    val hideStatusBarAppList: Flow<Boolean> =
+        data.map { it[Keys.HIDE_STATUS_BAR_APPLIST] ?: it[Keys.HIDE_STATUS_BAR] ?: false }
+            .distinctUntilChanged()
+
     val dimWallpaperAlpha: Flow<Float> = data.map { it[Keys.DIM_WALLPAPER_ALPHA] ?: 0.35f }.distinctUntilChanged()
 
     val hapticsEnabled: Flow<Boolean> = data.map { it[Keys.HAPTICS_ENABLED] ?: true }.distinctUntilChanged()
@@ -230,6 +241,14 @@ class Prefs(private val context: Context) {
     /** Within thumb reach on a tall phone, rather than up by the status bar. */
     val appListSearchBottom: Flow<Boolean> =
         data.map { it[Keys.APPLIST_SEARCH_BOTTOM] ?: false }.distinctUntilChanged()
+
+    /**
+     * Lets a search reach apps hidden from the list.
+     *
+     * Off by default: hidden means hidden, and someone who hid an app did not ask for it back.
+     */
+    val appListSearchHidden: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_SEARCH_HIDDEN] ?: false }.distinctUntilChanged()
 
     /** Orders each letter's apps by how often they were opened from here, rather than by name. */
     val sortByUsage: Flow<Boolean> = data.map { it[Keys.SORT_BY_USAGE] ?: false }.distinctUntilChanged()
@@ -436,6 +455,10 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.FONT] = f.name }
     }
 
+    suspend fun setHideStatusBarAppList(v: Boolean) {
+        context.dataStore.edit { it[Keys.HIDE_STATUS_BAR_APPLIST] = v }
+    }
+
     suspend fun setHideStatusBar(v: Boolean) {
         context.dataStore.edit { it[Keys.HIDE_STATUS_BAR] = v }
     }
@@ -527,6 +550,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setAppListSearchBottom(v: Boolean) {
         context.dataStore.edit { it[Keys.APPLIST_SEARCH_BOTTOM] = v }
+    }
+
+    suspend fun setAppListSearchHidden(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_SEARCH_HIDDEN] = v }
     }
 
     suspend fun setSortByUsage(v: Boolean) {
