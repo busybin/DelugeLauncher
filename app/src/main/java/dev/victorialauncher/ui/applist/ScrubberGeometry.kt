@@ -18,6 +18,10 @@ object ScrubberGeometry {
         return idx.coerceIn(0, count - 1)
     }
 
+    /** True while [y] is within the band, rather than clamped to one of its ends. */
+    fun isWithin(y: Float, topPx: Float, heightPx: Float): Boolean =
+        heightPx > 0f && y >= topPx && y <= topPx + heightPx
+
     /** Screen-space center of the letter at [index]. */
     fun letterCenterY(index: Int, topPx: Float, heightPx: Float, count: Int): Float {
         if (count <= 0) return topPx

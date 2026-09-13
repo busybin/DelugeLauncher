@@ -651,7 +651,10 @@ fun HomeScreen(
                             if (dragHandle != null) {
                                 DragHandle(
                                     contentColor = contentColor,
-                                    modifier = Modifier.align(Alignment.TopEnd).then(dragHandle),
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(end = EDIT_CONTROL_END_INSET)
+                                        .then(dragHandle),
                                 )
                             }
                         }
@@ -893,13 +896,10 @@ private fun FavoriteRow(
                             )
                     }
                 )
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp), top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = alignment.arrangement(),
         ) {
-            if (dragHandle != null && iconSide == IconSide.RIGHT) {
-                DragHandle(contentColor, dragHandle)
-            }
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
@@ -915,9 +915,16 @@ private fun FavoriteRow(
                     textAlign = alignment.textAlign(),
                 )
             }
-            if (dragHandle != null && iconSide != IconSide.RIGHT) {
-                DragHandle(contentColor, dragHandle)
-            }
+        }
+
+        // Outside the row's own layout so it sits against the screen edge rather than
+        // wherever the alignment happens to leave the text, and so it never shifts the
+        // icon and label it belongs to.
+        if (dragHandle != null) {
+            DragHandle(
+                contentColor,
+                Modifier.align(Alignment.CenterEnd).padding(end = EDIT_CONTROL_END_INSET).then(dragHandle),
+            )
         }
 
         TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
@@ -1021,13 +1028,10 @@ private fun FolderRow(
                                 )
                         }
                     )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                    .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp), top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = alignment.arrangement(),
             ) {
-                if (dragHandle != null && iconSide == IconSide.RIGHT) {
-                    DragHandle(contentColor, dragHandle)
-                }
                 AlignedIconLabel(
                     alignment = alignment,
                     showLabel = showLabels,
@@ -1048,9 +1052,15 @@ private fun FolderRow(
                         fontSize = (labelSizeSp - 3).coerceAtLeast(9).sp,
                     )
                 }
-                if (dragHandle != null && iconSide != IconSide.RIGHT) {
-                    DragHandle(contentColor, dragHandle)
-                }
+            }
+
+            // Outside the row's own layout so it sits against the screen edge rather than
+            // wherever the alignment happens to leave the text.
+            if (dragHandle != null) {
+                DragHandle(
+                contentColor,
+                Modifier.align(Alignment.CenterEnd).padding(end = EDIT_CONTROL_END_INSET).then(dragHandle),
+            )
             }
 
             TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
@@ -1261,6 +1271,18 @@ private fun FolderIcon(
     }
 }
 
+/**
+ * End padding a row needs so its label cannot run under the grab handle.
+ *
+ * The handle is placed against the screen edge while this padding sits inside the row's own
+ * side padding, so the side padding has to come back out of it.
+ */
+private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
+    if (dragHandle == null) return 8.dp
+    val outerInset = (sidePaddingDp - 8).coerceAtLeast(0).dp
+    return (EDIT_CONTROL_END_INSET + EDIT_CONTROL_SIZE - outerInset).coerceAtLeast(8.dp)
+}
+
 /** The grab handle that reorders a row in edit mode. */
 @Composable
 private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
@@ -1268,7 +1290,8 @@ private fun DragHandle(contentColor: Color, modifier: Modifier = Modifier) {
         Icons.Filled.Menu,
         contentDescription = stringResource(R.string.home_drag_handle),
         tint = contentColor.copy(alpha = 0.6f),
-        modifier = modifier.size(40.dp).padding(8.dp),
+        // Same box and same glyph inset as a stepper button, so the two line up.
+        modifier = modifier.size(EDIT_CONTROL_SIZE).padding(6.dp),
     )
 }
 

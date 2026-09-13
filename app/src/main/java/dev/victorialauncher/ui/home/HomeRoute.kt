@@ -237,6 +237,21 @@ fun HomeRoute(
 
     LaunchedEffect(settings.edgeSide) { scrub.syncRestingSide(settings.edgeSide) }
 
+    // BACK on the home screen must do nothing whatsoever.
+    //
+    // Without this it reaches the activity and finishes it, which is the default. A home
+    // activity that finishes leaves the system to show whatever home-ish task is underneath
+    // — and when the default launcher was switched *to* Victoria, the previous launcher's
+    // task is still sitting there, so it comes back to the front. That looks like Victoria
+    // handing control over, but it is simply this one exiting. A reboot clears the old task,
+    // which is why it seemed to come and go, and why killing that launcher's process drops
+    // to the system one instead.
+    //
+    // Registered before the handlers below so it stays the lowest priority: the dispatcher
+    // runs the most recently added enabled callback first, so the overlay, edit mode and the
+    // band editor all still get their turn at BACK before this swallows it.
+    BackHandler(enabled = true) {}
+
     BackHandler(enabled = appListVisible) { closeAppList() }
 
     // Every stepper commits as it is tapped, so there is nothing to save on the way out —
@@ -618,6 +633,8 @@ fun HomeRoute(
                     band = band,
                     hapticsEnabled = settings.hapticsEnabled,
                     state = scrub,
+                    listOpen = appListVisible,
+                    onDismiss = { closeAppList() },
                     onOpen = {
                         appListVisible = true
                         // Opened by touching the edge, so there is nothing to animate in.

@@ -36,6 +36,7 @@
     <string name="handle_widget_height">Widget height</string>
     <string name="handle_widget_side_padding">Widget side padding</string>
     <string name="handle_az_range">A-Z strip range</string>
+    <string name="edit_value_range">%1$d to %2$d dp</string>
     <string name="handle_favorites_top">Favorites top</string>
     <string name="handle_favorites_bottom">Favorites bottom</string>
     <string name="handle_now_playing_top">Now Playing top</string>
@@ -76,7 +77,7 @@
     <string name="settings_font">Font</string>
     <string name="settings_text_color">Text color</string>
     <string name="settings_text_color_detail">Auto reads the wallpaper and picks whichever is legible</string>
-    <string name="settings_show_names">Show names under favorites</string>
+    <string name="settings_show_names">Show app names beside favorite icons</string>
     <string name="settings_hide_status_bar">Hide status bar</string>
     <string name="settings_status_bar_timeout">Status bar stays for</string>
     <string name="settings_dim_home">Dim wallpaper on home screen</string>

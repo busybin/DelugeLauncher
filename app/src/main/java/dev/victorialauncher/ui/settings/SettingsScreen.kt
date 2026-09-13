@@ -252,7 +252,6 @@ fun SettingsScreen(
                         range = 32f..96f,
                         valueLabel = "${edgeZoneWidthDp}dp",
                         onValueChange = { onSetEdgeZoneWidth(it.roundToInt()) },
-                        step = 4f,
                     )
                     RowDivider()
                     SwitchRowWithDetail(

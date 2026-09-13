@@ -41,7 +41,11 @@ fun EdgeTouchZone(
     band: ScrubBand,
     hapticsEnabled: Boolean,
     state: ScrubState,
+    /** Whether the app list is already showing, so a tap on the strip knows which it is. */
+    listOpen: Boolean,
     onOpen: () -> Unit,
+    /** Closes an already-open list, the way tapping the empty space above it does. */
+    onDismiss: () -> Unit,
     /** Null when double-tap-to-lock is off, so a second tap is simply another tap. */
     onDoubleTap: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -53,6 +57,8 @@ fun EdgeTouchZone(
     // The gesture handler outlives the composition that built it, so it must not close over
     // this frame's callbacks.
     val currentDoubleTap by rememberUpdatedState(onDoubleTap)
+    val currentDismiss by rememberUpdatedState(onDismiss)
+    val currentListOpen by rememberUpdatedState(listOpen)
 
     Box(
         modifier = modifier
@@ -62,21 +68,37 @@ fun EdgeTouchZone(
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     down.consume()
+                    // Read before onOpen changes it: a tap that opened the list must not
+                    // also be read as a tap on an open one.
+                    val openAtDown = currentListOpen
                     state.begin(side)
                     onOpen()
 
                     var lastIndex = -1
+                    // The edge strip runs the height of the screen while the letters occupy
+                    // only a band of it. Clamping a touch above the band onto A yanked the
+                    // list to A from somewhere A visibly is not — so nothing is picked until
+                    // the finger has actually been on the letters. Once it has, clamping
+                    // resumes, and A can be grabbed and dragged well above its own position.
+                    var enteredBand = false
                     fun report(x: Float, y: Float) {
+                        if (!enteredBand && ScrubberGeometry.isWithin(y, band.topPx, band.heightPx)) {
+                            enteredBand = true
+                        }
                         // Same geometry the visible strip uses, so the letter under the
                         // fingertip is the one that swells.
                         val index = ScrubberGeometry.indexForY(y, band.topPx, band.heightPx, letters.size)
-                        if (index != lastIndex) {
+                        if (enteredBand && index != lastIndex) {
                             lastIndex = index
                             HapticUtil.tick(view, hapticsEnabled)
                         }
                         // How far the finger has pulled in toward the middle of the screen.
                         val inward = if (fromLeft) x - size.width else -x
-                        state.update(y, inward.coerceIn(0f, MAX_PULL_DP * density), letters.getOrNull(index))
+                        state.update(
+                            y,
+                            inward.coerceIn(0f, MAX_PULL_DP * density),
+                            if (enteredBand) letters.getOrNull(index) else null,
+                        )
                     }
 
                     report(down.position.x, down.position.y)
@@ -111,6 +133,10 @@ fun EdgeTouchZone(
                             doubleTap()
                         } else {
                             state.lastTapUptimeMs = down.uptimeMillis
+                            // Nothing was picked, so this was a tap on bare strip. Above and
+                            // below the letters the strip is empty space like the space above
+                            // the list, and it dismisses for the same reason.
+                            if (!enteredBand && openAtDown) currentDismiss()
                         }
                     }
                 }
