@@ -3,7 +3,7 @@
 An open source alternative to [Niagara Launcher](https://niagaralauncher.app) — a
 minimal, list-based Android home screen.
 
-![Victoria Launcher](docs/banner.png)
+![Victoria Launcher](docs/banner2.png)
 
 ## Install
 
