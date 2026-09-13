@@ -8,6 +8,7 @@ import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -175,13 +176,13 @@ fun HomeScreen(
     onLaunch: (AppInfo) -> Unit,
     onRemoveFavorite: (AppInfo) -> Unit,
     onOpenFolderApp: (AppInfo) -> Unit,
+    onRemoveFromFolder: (Folder, AppInfo) -> Unit,
     onRenameFolder: (Folder, String) -> Unit,
     onChangeFolderIcon: (Folder) -> Unit,
     onResetFolderIcon: (Folder) -> Unit,
     onDeleteFolder: (Folder) -> Unit,
     onManageFolder: (Folder) -> Unit,
     onMoveToFolder: (AppInfo) -> Unit,
-    onRemoveFromFolder: (Folder, AppInfo) -> Unit,
     appsByKey: Map<String, AppInfo>,
     onReorderHome: (newFavoriteKeys: List<String>, newWidgetPosition: Int) -> Unit,
     onCommitPadding: (PaddingSlot, Int) -> Unit,
@@ -717,6 +718,9 @@ fun HomeScreen(
                             onDelete = { folderMenuFor = null; onDeleteFolder(item.folder) },
                             onOpenApp = onOpenFolderApp,
                             onRemoveApp = { member -> onRemoveFromFolder(item.folder, member) },
+                            onMemberAppInfo = onAppInfo,
+                            onMemberEditIconName = { member -> renameDialogFor = member },
+                            onOpenSettings = onOpenSettings,
                         )
 
                         is HomeItem.Favorite -> FavoriteRow(
@@ -1022,10 +1026,17 @@ private fun FolderRow(
     onDelete: () -> Unit,
     onOpenApp: (AppInfo) -> Unit,
     onRemoveApp: (AppInfo) -> Unit,
+    onMemberAppInfo: (AppInfo) -> Unit,
+    onMemberEditIconName: (AppInfo) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
+    // Which member is showing its menu, and where the press that opened it landed.
+    var memberMenuFor by remember { mutableStateOf<String?>(null) }
+    var memberMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    val memberTouch = remember { mutableStateOf(Offset.Zero) }
 
     Column {
         Box {
@@ -1121,6 +1132,7 @@ private fun FolderRow(
         AnimatedVisibility(visible = expanded && !editMode) {
             Column {
                 members.forEach { member ->
+                    Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1130,9 +1142,19 @@ private fun FolderRow(
                                 start = if (alignment == HomeAlignment.RIGHT) sidePaddingDp.dp else (sidePaddingDp + 24).dp,
                                 end = if (alignment == HomeAlignment.RIGHT) (sidePaddingDp + 24).dp else sidePaddingDp.dp,
                             )
+                            .recordTouchPosition(memberTouch)
+                            // A long press used to throw the app straight out of the folder,
+                            // with no warning and no undo, while everywhere else on this
+                            // screen it opens a menu. It opens one here too now, and removing
+                            // is an item in it.
                             .combinedClickable(
                                 onClick = { onOpenApp(member) },
-                                onLongClick = { onRemoveApp(member) },
+                                onLongClick = {
+                                    memberMenuOffset = with(density) {
+                                        DpOffset(memberTouch.value.x.toDp(), memberTouch.value.y.toDp())
+                                    }
+                                    memberMenuFor = member.key
+                                },
                             )
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -1153,6 +1175,41 @@ private fun FolderRow(
                                 textAlign = alignment.textAlign(),
                             )
                         }
+                    }
+
+                    TouchAnchoredMenu(
+                        expanded = memberMenuFor == member.key,
+                        offset = memberMenuOffset,
+                        onDismissRequest = { memberMenuFor = null },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_app_info)) },
+                            leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            onClick = { memberMenuFor = null; onMemberAppInfo(member) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
+                            leadingIcon = { Icon(Icons.Filled.Tune, contentDescription = null) },
+                            onClick = { memberMenuFor = null; onMemberEditIconName(member) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.home_folder_choose_apps)) },
+                            leadingIcon = { Icon(Icons.Filled.Checklist, contentDescription = null) },
+                            onClick = { memberMenuFor = null; onManage() },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.home_folder_remove_app)) },
+                            leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                            onClick = { memberMenuFor = null; onRemoveApp(member) },
+                        )
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_open_settings)) },
+                            leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                            onClick = { memberMenuFor = null; onOpenSettings() },
+                        )
+                    }
                     }
                 }
                 if (members.isEmpty()) {

@@ -2,7 +2,6 @@
 package dev.victorialauncher.ui.settings
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,16 +22,23 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.victorialauncher.R
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.ui.common.AppIcon
-import dev.victorialauncher.R
-import androidx.compose.ui.res.stringResource
 
-/** Tick the apps that belong in a folder. Same shape as the favorites picker. */
+/**
+ * Tick the apps that belong in a folder, and drag the ones already in it into the order they
+ * should open in.
+ *
+ * The members are listed first, in their own order, rather than left to be found among every
+ * installed app: their order is the thing being edited here, and it is not alphabetical.
+ */
 @Composable
 fun FolderAppsScreen(
     folder: Folder?,
@@ -40,10 +46,12 @@ fun FolderAppsScreen(
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
     onSetInFolder: (AppInfo, Boolean) -> Unit,
+    onReorder: (List<String>) -> Unit,
     onBack: () -> Unit,
 ) {
     val surface = MaterialTheme.colorScheme.surface
-    val members = folder?.apps?.toSet().orEmpty()
+    val members = folder?.apps.orEmpty()
+    val memberSet = members.toSet()
 
     Scaffold(
         containerColor = surface,
@@ -64,34 +72,71 @@ fun FolderAppsScreen(
             return@Scaffold
         }
 
+        val appsByKey = remember(allApps) { allApps.associateBy { it.key } }
+
         LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.padding(padding)) {
             item {
-                Text(
-                    stringResource(R.string.folder_member_count, members.size),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                )
+                ListSectionLabel(stringResource(R.string.folder_member_count, members.size))
             }
 
-            items(allApps, key = { it.key }) { app ->
-                val checked = members.contains(app.key)
+            item {
+                ReorderableRows(keys = members, onReorder = onReorder) { key ->
+                    val app = appsByKey[key]
+                    if (app != null) {
+                        AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
+                        Spacer(Modifier.width(16.dp))
+                        Text(
+                            nameOverrides[app.key] ?: app.label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Checkbox(checked = true, onCheckedChange = { onSetInFolder(app, false) })
+                    } else {
+                        // Installed when it was added, gone now. Shown rather than skipped so
+                        // the count matches what is listed.
+                        Text(
+                            stringResource(R.string.folder_member_missing),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+
+            item {
+                ListSectionLabel(stringResource(R.string.folder_add_apps))
+            }
+
+            items(allApps.filterNot { it.key in memberSet }, key = { it.key }) { app ->
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onSetInFolder(app, !checked) }
+                        .clickable { onSetInFolder(app, true) }
                         .padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
                     Spacer(Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(nameOverrides[app.key] ?: app.label, style = MaterialTheme.typography.bodyLarge)
-                    }
-                    Checkbox(checked = checked, onCheckedChange = { onSetInFolder(app, it) })
+                    Text(
+                        nameOverrides[app.key] ?: app.label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Checkbox(checked = false, onCheckedChange = { onSetInFolder(app, true) })
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
             }
         }
     }
+}
+
+@Composable
+internal fun ListSectionLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+    )
 }

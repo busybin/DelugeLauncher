@@ -22,8 +22,9 @@
     <string name="home_no_favorites_title">No favorites yet</string>
     <string name="home_no_favorites_body">Touch the screen edge to open the app list, or pick your favorites from the list below.</string>
     <string name="home_choose_favorites">Choose favorites</string>
-    <string name="home_folder_choose_apps">Choose apps…</string>
+    <string name="home_folder_choose_apps">Manage folder</string>
     <string name="home_folder_delete">Delete folder</string>
+    <string name="home_folder_remove_app">Remove from folder</string>
     <string name="home_folder_empty">Empty — long-press the folder to choose apps</string>
     <string name="home_folder_name_label">Folder name</string>
     <string name="home_folder_use_previews">Use app previews</string>
@@ -120,6 +121,8 @@
     <string name="settings_favorites">Favorites</string>
     <string name="settings_favorites_detail">Choose which apps sit on the home screen</string>
     <string name="settings_hidden_apps">Hidden apps</string>
+    <string name="hidden_count">%1$d hidden from the app list</string>
+    <string name="hidden_add_apps">Everything else</string>
     <string name="settings_hidden_none">None hidden</string>
     <string name="settings_hidden_count">%1$d hidden</string>
     <string name="settings_version">Version %1$s</string>
@@ -152,7 +155,9 @@
     <string name="favorites_count">%1$d on your home screen</string>
     <string name="folder_title_fallback">Folder</string>
     <string name="folder_gone">This folder no longer exists.</string>
-    <string name="folder_member_count">%1$d in this folder</string>
+    <string name="folder_member_count">%1$d in this folder — drag to reorder</string>
+    <string name="folder_add_apps">Add more</string>
+    <string name="folder_member_missing">App no longer installed</string>
     <string name="folder_picker_title">Move %1$s to…</string>
     <string name="folder_picker_app_count">%1$d apps</string>
     <string name="folder_picker_new">New folder</string>

@@ -195,10 +195,8 @@ fun HomeRoute(
     // Edit mode borrows the app list's dim. Its controls are small text over whatever the
     // wallpaper happens to be, and on a busy one they were barely readable — the home screen's
     // own dim is usually off, since nothing normally sits there needing to be read.
-    val backdropDim by animateFloatAsState(
-        if (homeEditMode) maxOf(settings.dimHomeAlpha, settings.dimWallpaperAlpha) else settings.dimHomeAlpha,
-        label = "backdropDim",
-    )
+    val homeDim =
+        if (homeEditMode) maxOf(settings.dimHomeAlpha, settings.dimWallpaperAlpha) else settings.dimHomeAlpha
     var liveBand by remember { mutableStateOf<ScrubBand?>(null) }
     // Clamped on the way back in as well as on the way out: a range stored from a bad
     // measurement would otherwise put the strip off screen for good, with no gesture left to
@@ -378,6 +376,34 @@ fun HomeRoute(
             },
             label = "homeAlpha",
         )
+
+        // One dim for the wallpaper, belonging to neither screen and drawn under both.
+        //
+        // Each screen used to carry its own, which meant a handover rather than a change: on
+        // the way back the list's faded out with the list while the home screen's was still
+        // faded in, so a home dim of 80% and a list dim of 25% went 25 to nothing to 80. One
+        // layer moving between the two values has nothing to hand over.
+        val wallpaperDim by animateFloatAsState(
+            targetValue = when {
+                // The range is set against the wallpaper itself.
+                bandEditMode -> 0f
+                appListVisible -> settings.dimWallpaperAlpha
+                else -> homeDim
+            },
+            animationSpec = if (appListVisible || snapHome) {
+                snap()
+            } else {
+                tween(HOME_FADE_MS, easing = LinearOutSlowInEasing)
+            },
+            label = "wallpaperDim",
+        )
+        if (wallpaperDim > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = wallpaperDim)),
+            )
+        }
         Box(
             modifier = Modifier
                 .graphicsLayer { alpha = homeAlpha }
@@ -403,13 +429,6 @@ fun HomeRoute(
                 // will sit on, not against the chrome it happens to overlap.
                 .graphicsLayer { alpha = homeContentAlpha },
         ) {
-            if (backdropDim > 0f) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = backdropDim)),
-                )
-            }
             HomeScreen(
                 favorites = favorites,
                 nameOverrides = nameOverrides,
@@ -565,7 +584,6 @@ fun HomeRoute(
                 model = listModel,
                 nameOverrides = nameOverrides,
                 scrub = scrub,
-                dimAlpha = settings.dimWallpaperAlpha,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
                 band = band,

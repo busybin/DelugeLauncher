@@ -4,8 +4,10 @@ package dev.victorialauncher.ui.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -20,21 +22,35 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import dev.victorialauncher.data.AppInfo
-import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import dev.victorialauncher.R
+import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.ui.common.AppIcon
 
+/**
+ * Hide apps from the A-Z list.
+ *
+ * Same shape as the favorites and folder screens: the ones already chosen are listed first, so
+ * what is currently hidden can be read at a glance and put back without hunting for it among
+ * everything installed. They are not reorderable — hidden is a set, and has no order to edit.
+ */
 @Composable
 fun HiddenAppsScreen(
     allApps: List<AppInfo>,
     hiddenApps: Set<String>,
+    nameOverrides: Map<String, String>,
+    iconSizeDp: Int,
     onToggleHidden: (AppInfo, Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     val surface = MaterialTheme.colorScheme.surface
+    val name = { app: AppInfo -> nameOverrides[app.key] ?: app.label }
+    val hidden = remember(allApps, hiddenApps) { allApps.filter { it.key in hiddenApps } }
+    val rest = remember(allApps, hiddenApps) { allApps.filterNot { it.key in hiddenApps } }
 
     Scaffold(
         containerColor = surface,
@@ -51,22 +67,44 @@ fun HiddenAppsScreen(
         },
     ) { padding ->
         LazyColumn(contentPadding = PaddingValues(vertical = 8.dp), modifier = Modifier.padding(padding)) {
-            items(allApps, key = { it.key }) { app ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onToggleHidden(app, !hiddenApps.contains(app.key)) }
-                        .padding(horizontal = 20.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(app.label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                    Switch(
-                        checked = hiddenApps.contains(app.key),
-                        onCheckedChange = { onToggleHidden(app, it) },
-                    )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+            item {
+                ListSectionLabel(stringResource(R.string.hidden_count, hidden.size))
+            }
+
+            items(hidden, key = { "hidden:" + it.key }) { app ->
+                HiddenAppRow(app, name(app), iconSizeDp, checked = true, onToggleHidden)
+            }
+
+            item {
+                ListSectionLabel(stringResource(R.string.hidden_add_apps))
+            }
+
+            items(rest, key = { it.key }) { app ->
+                HiddenAppRow(app, name(app), iconSizeDp, checked = false, onToggleHidden)
             }
         }
     }
+}
+
+@Composable
+private fun HiddenAppRow(
+    app: AppInfo,
+    label: String,
+    iconSizeDp: Int,
+    checked: Boolean,
+    onToggleHidden: (AppInfo, Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onToggleHidden(app, !checked) }
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
+        Spacer(Modifier.width(16.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Switch(checked = checked, onCheckedChange = { onToggleHidden(app, it) })
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 }

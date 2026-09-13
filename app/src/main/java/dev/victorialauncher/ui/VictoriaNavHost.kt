@@ -457,8 +457,10 @@ fun VictoriaNavHost(
             ManageFavoritesScreen(
                 allApps = allApps,
                 favoriteKeys = favoriteKeys,
+                folders = folders,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
+                onReorder = { keys -> scope.launch { app.prefs.setFavorites(keys) } },
                 onSetFavorite = { appInfo, add ->
                     scope.launch {
                         if (add) app.prefs.addFavorite(appInfo.key) else app.prefs.removeFavorite(appInfo.key)
@@ -484,6 +486,7 @@ fun VictoriaNavHost(
                         }
                     }
                 },
+                onReorder = { keys -> scope.launch { app.prefs.setFolderApps(id, keys) } },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -513,6 +516,8 @@ fun VictoriaNavHost(
             HiddenAppsScreen(
                 allApps = allApps,
                 hiddenApps = hiddenApps,
+                nameOverrides = nameOverrides,
+                iconSizeDp = iconSizeDp,
                 onToggleHidden = { appInfo, hidden ->
                     scope.launch { app.prefs.setHidden(appInfo.key, hidden) }
                 },

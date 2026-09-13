@@ -168,7 +168,6 @@ fun AppListScreen(
     model: AppListModel,
     nameOverrides: Map<String, String>,
     scrub: ScrubState,
-    dimAlpha: Float,
     iconSizeDp: Int,
     labelSizeSp: Int,
     band: ScrubBand,
@@ -700,8 +699,7 @@ fun AppListScreen(
                   scaleX = scale
                   scaleY = scale
                   alpha = 1f - 0.85f * progress
-              }
-              .background(Color.Black.copy(alpha = dimAlpha)),
+              },
       ) {
         // The keyboard covers the bottom of the overlay, and with a field pinned down there
         // the window used to be panned bodily up to reveal it, taking the top of the results
