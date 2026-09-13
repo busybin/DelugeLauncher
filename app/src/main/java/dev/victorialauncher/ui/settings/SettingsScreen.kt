@@ -33,6 +33,17 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -134,6 +145,26 @@ fun SettingsScreen(
 ) {
     val surface = MaterialTheme.colorScheme.surface
 
+    // A width in dp means nothing until you see it against the screen it is measured on, so
+    // adjusting it paints the zone down the edges it would actually occupy. It fades out on
+    // its own rather than needing dismissing.
+    var edgePreviewShown by remember { mutableStateOf(false) }
+    // Driven by the act of adjusting, not by the value. Keyed on the value it also fired on
+    // first composition, and again when the stored setting arrived and replaced the initial
+    // one — so opening settings flashed a preview nobody asked for.
+    var edgePreviewTick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(edgePreviewTick) {
+        if (edgePreviewTick == 0) return@LaunchedEffect
+        edgePreviewShown = true
+        delay(1400)
+        edgePreviewShown = false
+    }
+    val edgePreviewAlpha by animateFloatAsState(
+        if (edgePreviewShown) 1f else 0f,
+        label = "edgePreviewAlpha",
+    )
+
+    Box(Modifier.fillMaxSize()) {
     Scaffold(
         containerColor = surface,
         topBar = {
@@ -159,7 +190,7 @@ fun SettingsScreen(
             item {
                 Section(stringResource(R.string.settings_section_appearance)) {
                     // Live preview of exactly how a home row will render.
-                    RowPreview(previewApp, iconSizeDp, labelSizeSp, font)
+                    RowPreview(previewApp, iconSizeDp, labelSizeSp, font, itemSpacingDp)
                     RowDivider()
                     IconPackRow(iconPacks, iconPackPackage, showAppIcons, onSetIconPack, onSetShowAppIcons)
                     RowDivider()
@@ -229,18 +260,19 @@ fun SettingsScreen(
                         label = stringResource(R.string.settings_dim_home),
                         value = dimHomeAlpha,
                         range = 0f..0.85f,
-                        valueLabel = "${(dimHomeAlpha * 100).toInt()}%",
-                        onValueChange = onSetDimHome,
-                        step = 0.05f,
+                        valueLabel = "${(dimHomeAlpha * 100).roundToInt()}%",
+                        // Rounded to whole percent, so dragging lands where the buttons do.
+                        onValueChange = { onSetDimHome((it * 100).roundToInt() / 100f) },
+                        step = 0.01f,
                     )
                     RowDivider()
                     SliderRow(
                         label = stringResource(R.string.settings_dim_applist),
                         value = dimWallpaperAlpha,
                         range = 0f..0.85f,
-                        valueLabel = "${(dimWallpaperAlpha * 100).toInt()}%",
-                        onValueChange = onSetDimWallpaper,
-                        step = 0.05f,
+                        valueLabel = "${(dimWallpaperAlpha * 100).roundToInt()}%",
+                        onValueChange = { onSetDimWallpaper((it * 100).roundToInt() / 100f) },
+                        step = 0.01f,
                     )
                 }
             }
@@ -254,14 +286,14 @@ fun SettingsScreen(
                         onCheckedChange = onSetHaptics,
                     )
                     RowDivider()
-                    EdgeSideRow(edgeSide, onSetEdgeSide)
+                    EdgeSideRow(edgeSide) { edgePreviewTick++; onSetEdgeSide(it) }
                     RowDivider()
                     SliderRow(
                         label = stringResource(R.string.settings_edge_zone_width),
                         value = edgeZoneWidthDp.toFloat(),
                         range = 32f..96f,
                         valueLabel = "${edgeZoneWidthDp}dp",
-                        onValueChange = { onSetEdgeZoneWidth(it.roundToInt()) },
+                        onValueChange = { edgePreviewTick++; onSetEdgeZoneWidth(it.roundToInt()) },
                     )
                     RowDivider()
                     SwitchRowWithDetail(
@@ -468,6 +500,28 @@ fun SettingsScreen(
             }
         }
     }
+        if (edgePreviewAlpha > 0f) {
+            val stripe = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f * edgePreviewAlpha)
+            if (edgeSide != EdgeSide.RIGHT) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterStart)
+                        .width(edgeZoneWidthDp.dp)
+                        .fillMaxHeight()
+                        .background(stripe),
+                )
+            }
+            if (edgeSide != EdgeSide.LEFT) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(edgeZoneWidthDp.dp)
+                        .fillMaxHeight()
+                        .background(stripe),
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -654,25 +708,40 @@ private fun FontRow(selected: AppFont, onSelect: (AppFont) -> Unit) {
 }
 
 @Composable
-private fun RowPreview(app: AppInfo?, iconSizeDp: Int, labelSizeSp: Int, font: AppFont) {
+private fun RowPreview(
+    app: AppInfo?,
+    iconSizeDp: Int,
+    labelSizeSp: Int,
+    font: AppFont,
+    itemSpacingDp: Int,
+) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(
             stringResource(R.string.settings_preview),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (app != null) {
-                AppIcon(app = app, sizeDp = iconSizeDp)
-                Spacer(Modifier.width(16.dp))
-                Text(app.label, fontSize = labelSizeSp.sp, fontFamily = font.toFontFamily())
-            } else {
-                Text(stringResource(R.string.settings_preview_sample), fontSize = labelSizeSp.sp, fontFamily = font.toFontFamily())
+        // Two rows, because one cannot show the gap between them: spacing was the only
+        // thing on this screen with no way to see what the number meant.
+        Column(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+            repeat(2) { index ->
+                if (index > 0) Spacer(Modifier.height(itemSpacingDp.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (app != null) {
+                        AppIcon(app = app, sizeDp = iconSizeDp)
+                        Spacer(Modifier.width(16.dp))
+                        Text(app.label, fontSize = labelSizeSp.sp, fontFamily = font.toFontFamily())
+                    } else {
+                        Text(
+                            stringResource(R.string.settings_preview_sample),
+                            fontSize = labelSizeSp.sp,
+                            fontFamily = font.toFontFamily(),
+                        )
+                    }
+                }
             }
         }
     }

@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +54,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.filled.Height
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -499,11 +504,28 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = onEditScrubBand) {
+                    // Outlined rather than bare text: it opens a mode of its own, and as a
+                    // plain label beside Done it read as a caption rather than something to
+                    // press.
+                    OutlinedButton(
+                        onClick = onEditScrubBand,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor),
+                        border = BorderStroke(1.dp, contentColor.copy(alpha = 0.5f)),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                    ) {
+                        Icon(
+                            Icons.Filled.Height,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Text(stringResource(R.string.handle_az_range))
                     }
                     Spacer(Modifier.weight(1f))
-                    TextButton(onClick = { onEditModeChange(false) }) {
+                    TextButton(
+                        onClick = { onEditModeChange(false) },
+                        colors = ButtonDefaults.textButtonColors(contentColor = contentColor),
+                    ) {
                         Icon(Icons.Filled.Done, contentDescription = null)
                         Spacer(Modifier.width(4.dp))
                         Text(stringResource(R.string.action_done))
@@ -515,6 +537,7 @@ fun HomeScreen(
                     range = 0..96,
                     step = PADDING_STEP_DP,
                     onChange = onSetSidePadding,
+                    contentColor = contentColor,
                 )
                 if (showWidgetSlot) {
                     Spacer(Modifier.height(6.dp))
@@ -524,6 +547,7 @@ fun HomeScreen(
                         range = 0..96,
                         step = PADDING_STEP_DP,
                         onChange = onSetWidgetSidePadding,
+                        contentColor = contentColor,
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -606,6 +630,7 @@ fun HomeScreen(
                         label = R.string.handle_widget_top,
                         value = padOf(PaddingSlot.WIDGET_TOP),
                         onChange = { setPadding(PaddingSlot.WIDGET_TOP, it) },
+                        contentColor = contentColor,
                     )
                 } else if (index == firstRowIndex) {
                     PaddingHandle(
@@ -613,6 +638,7 @@ fun HomeScreen(
                         label = R.string.handle_favorites_top,
                         value = padOf(PaddingSlot.FAVORITES_TOP),
                         onChange = { setPadding(PaddingSlot.FAVORITES_TOP, it) },
+                        contentColor = contentColor,
                     )
                 }
 
@@ -730,6 +756,7 @@ fun HomeScreen(
                             range = 80..900,
                             step = HEIGHT_STEP_DP,
                             onChange = { widgetActions.onResize(it) },
+                            contentColor = contentColor,
                         )
                     }
                     PaddingHandle(
@@ -737,6 +764,7 @@ fun HomeScreen(
                         label = R.string.handle_widget_bottom,
                         value = padOf(PaddingSlot.WIDGET_BOTTOM),
                         onChange = { setPadding(PaddingSlot.WIDGET_BOTTOM, it) },
+                        contentColor = contentColor,
                     )
                     // Now Playing sits between the widget and the favorites.
                     if (nowPlayingHasContent) {
@@ -766,6 +794,7 @@ fun HomeScreen(
                         label = R.string.handle_favorites_bottom,
                         value = padOf(PaddingSlot.FAVORITES_BOTTOM),
                         onChange = { setPadding(PaddingSlot.FAVORITES_BOTTOM, it) },
+                        contentColor = contentColor,
                     )
                 } else {
                     Spacer(Modifier.height(itemSpacingDp.dp))
@@ -1168,6 +1197,7 @@ private fun NowPlayingBlock(
         label = R.string.handle_now_playing_top,
         value = padTop,
         onChange = { onSetPadding(PaddingSlot.NOW_PLAYING_TOP, it) },
+        contentColor = contentColor,
     )
     Box {
         NowPlayingWidget(
@@ -1221,6 +1251,7 @@ private fun NowPlayingBlock(
             range = 48..220,
             step = HEIGHT_STEP_DP,
             onChange = onResize,
+            contentColor = contentColor,
         )
     }
     PaddingHandle(
@@ -1228,6 +1259,7 @@ private fun NowPlayingBlock(
         label = R.string.handle_now_playing_bottom,
         value = padBottom,
         onChange = { onSetPadding(PaddingSlot.NOW_PLAYING_BOTTOM, it) },
+        contentColor = contentColor,
     )
 }
 @Composable

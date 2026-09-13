@@ -188,6 +188,17 @@ fun HomeRoute(
     // While the band is being edited the live value wins; otherwise a range the user set by
     // hand wins over the measured favorites, which is what makes it stop following them.
     var bandEditMode by remember { mutableStateOf(false) }
+    val homeContentAlpha by animateFloatAsState(
+        if (bandEditMode) 0f else 1f,
+        label = "homeContentAlpha",
+    )
+    // Edit mode borrows the app list's dim. Its controls are small text over whatever the
+    // wallpaper happens to be, and on a busy one they were barely readable — the home screen's
+    // own dim is usually off, since nothing normally sits there needing to be read.
+    val backdropDim by animateFloatAsState(
+        if (homeEditMode) maxOf(settings.dimHomeAlpha, settings.dimWallpaperAlpha) else settings.dimHomeAlpha,
+        label = "backdropDim",
+    )
     var liveBand by remember { mutableStateOf<ScrubBand?>(null) }
     // Clamped on the way back in as well as on the way out: a range stored from a bad
     // measurement would otherwise put the strip off screen for good, with no gesture left to
@@ -327,10 +338,17 @@ fun HomeRoute(
                 val capPx = (GESTURE_EXCLUSION_CAP_DP * density).toInt()
                 val top = band.topPx.toInt().coerceIn(0, h)
                 val bottom = band.bottomPx.toInt().coerceIn(top, h)
-                val clipped = if (bottom - top > capPx) top + capPx else bottom
+                // The band is usually taller than the cap, and whatever is left over stays
+                // the system's: a touch there waits on the back-gesture detector before it
+                // reaches us, which is the delay at the very edge. Centering what we are
+                // given splits the unprotected remainder between the two ends rather than
+                // leaving all of it below the halfway mark.
+                val height = bottom - top
+                val exTop = if (height > capPx) top + (height - capPx) / 2 else top
+                val exBottom = if (height > capPx) exTop + capPx else bottom
                 val rects = buildList {
-                    if (settings.edgeSide != EdgeSide.RIGHT) add(Rect(0, top, widthPx, clipped))
-                    if (settings.edgeSide != EdgeSide.LEFT) add(Rect(w - widthPx, top, w, clipped))
+                    if (settings.edgeSide != EdgeSide.RIGHT) add(Rect(0, exTop, widthPx, exBottom))
+                    if (settings.edgeSide != EdgeSide.LEFT) add(Rect(w - widthPx, exTop, w, exBottom))
                 }
                 ViewCompat.setSystemGestureExclusionRects(view, rects)
             }
@@ -379,13 +397,17 @@ fun HomeRoute(
                     } else {
                         Modifier
                     }
-                ),
+                )
+                // Setting the range takes the home screen out of the picture entirely, edit
+                // layout's own controls with it. The band is judged against the wallpaper it
+                // will sit on, not against the chrome it happens to overlap.
+                .graphicsLayer { alpha = homeContentAlpha },
         ) {
-            if (settings.dimHomeAlpha > 0f) {
+            if (backdropDim > 0f) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color.Black.copy(alpha = settings.dimHomeAlpha)),
+                        .background(Color.Black.copy(alpha = backdropDim)),
                 )
             }
             HomeScreen(
@@ -587,7 +609,17 @@ fun HomeRoute(
             )
         }
 
-        if (settings.alwaysShowAz && !appListVisible) {
+        // The band editor draws no letters of its own: the strip is what shows the range
+        // being dragged, so it is given whether or not the always-on setting asked for it.
+        // Edit layout is the other way round — its own controls sit where the strip does, and
+        // the two were drawn on top of each other.
+        val showIdleStrip = when {
+            appListVisible -> false
+            bandEditMode -> true
+            homeEditMode -> false
+            else -> settings.alwaysShowAz
+        }
+        if (showIdleStrip) {
             EdgeScrubber(
                 letters = listModel.letters,
                 scrubY = { null },

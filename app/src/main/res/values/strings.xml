@@ -90,7 +90,7 @@
     <string name="settings_double_tap_lock_detail">Tap the A-Z strip twice</string>
     <string name="settings_lock_needs_accessibility">Needs Victoria Launcher enabled under Accessibility. If that switch is greyed out, open App info and allow restricted settings from the ⋮ menu first.</string>
     <string name="settings_always_show_az">Always show A-Z</string>
-    <string name="settings_show_alphabet">Show letters in the app list</string>
+    <string name="settings_show_alphabet">Show A-Z in app list</string>
     <string name="settings_edge_zone_width">Edge swipe width</string>
     <string name="settings_swipe_up_list">Swipe up for the app list</string>
     <string name="settings_swipe_up_list_detail">Push up past the end of the home screen</string>

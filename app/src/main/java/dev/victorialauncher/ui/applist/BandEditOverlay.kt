@@ -41,6 +41,14 @@ import dev.victorialauncher.R
 import dev.victorialauncher.data.EdgeSide
 import kotlin.math.roundToInt
 
+/**
+ * How far the wallpaper is knocked back behind the overlay.
+ *
+ * Light, because there is nothing left to hide: the home screen is taken away while this is
+ * open, so the scrim only has to keep the hint and the buttons legible on a busy wallpaper.
+ */
+private const val SCRIM_ALPHA = 0.3f
+
 /** Small enough to be useless below this, so the two handles can never cross. */
 private val MIN_BAND_HEIGHT = 120.dp
 
@@ -97,7 +105,7 @@ fun BandEditOverlay(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.6f))
+                .background(Color.Black.copy(alpha = SCRIM_ALPHA))
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         while (true) {

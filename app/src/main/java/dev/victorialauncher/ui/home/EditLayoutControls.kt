@@ -89,6 +89,8 @@ fun StepperRow(
     range: IntRange,
     step: Int,
     onChange: (Int) -> Unit,
+    /** The text color chosen in settings, so edit mode reads like the rest of the screen. */
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     var typing by remember { mutableStateOf(false) }
@@ -101,12 +103,12 @@ fun StepperRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = STEPPER_ROW_INSET)
-            .background(Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
+            .background(contentColor.copy(alpha = 0.12f), RoundedCornerShape(8.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             label,
-            color = Color.White.copy(alpha = 0.8f),
+            color = contentColor,
             fontSize = 11.sp,
             modifier = Modifier.weight(1f).padding(start = 12.dp),
         )
@@ -114,10 +116,11 @@ fun StepperRow(
             icon = Icons.Filled.Remove,
             description = stringResource(R.string.settings_less),
             enabled = canDecrease,
+            contentColor = contentColor,
         ) { multiplier -> nudge(-step * multiplier) }
         Text(
             "${value}dp",
-            color = Color.White,
+            color = contentColor,
             fontSize = 12.sp,
             modifier = Modifier
                 .clickable { typing = true }
@@ -127,6 +130,7 @@ fun StepperRow(
             icon = Icons.Filled.Add,
             description = stringResource(R.string.settings_more),
             enabled = canIncrease,
+            contentColor = contentColor,
         ) { multiplier -> nudge(step * multiplier) }
         Spacer(Modifier.size(STEPPER_TRAILING_GAP))
     }
@@ -152,6 +156,7 @@ private fun StepButton(
     icon: ImageVector,
     description: String,
     enabled: Boolean,
+    contentColor: Color,
     onStep: (multiplier: Int) -> Unit,
 ) {
     val step by rememberUpdatedState(onStep)
@@ -187,7 +192,7 @@ private fun StepButton(
         Icon(
             icon,
             contentDescription = description,
-            tint = Color.White.copy(alpha = if (enabled) 0.9f else 0.3f),
+            tint = contentColor.copy(alpha = if (enabled) 1f else 0.3f),
         )
     }
 }
@@ -243,6 +248,7 @@ fun PaddingHandle(
     @StringRes label: Int,
     value: Int,
     onChange: (Int) -> Unit,
+    contentColor: Color,
 ) {
     if (!editMode) {
         Spacer(Modifier.height(value.dp))
@@ -258,6 +264,7 @@ fun PaddingHandle(
             range = PADDING_RANGE,
             step = PADDING_STEP_DP,
             onChange = onChange,
+            contentColor = contentColor,
         )
     }
 }
