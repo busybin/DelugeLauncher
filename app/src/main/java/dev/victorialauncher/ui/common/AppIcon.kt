@@ -8,6 +8,7 @@ import android.util.LruCache
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
@@ -15,12 +16,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.IconShape
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
@@ -68,8 +71,22 @@ private object IconCache {
 
 fun clearIconCache() = IconCache.clear()
 
-private fun iconCacheKey(app: AppInfo, iconPack: String?, override: String?, px: Int) =
-    "${app.key}|$iconPack|$override|$px"
+private fun iconCacheKey(
+    app: AppInfo,
+    iconPack: String?,
+    override: String?,
+    px: Int,
+    style: IconStyle,
+) = "${app.key}|$iconPack|$override|$px|${style.shape}|${style.themed}|${style.background}"
+
+/** Everything about how an icon is drawn that is not the icon itself. */
+@Immutable
+data class IconStyle(
+    val shape: IconShape,
+    val themed: Boolean,
+    val background: Int,
+    val foreground: Int,
+)
 
 /**
  * Decode every app's icon ahead of time, off the main thread. Without this the first open of
@@ -86,17 +103,22 @@ suspend fun warmIconCache(
     iconPack: String?,
     overrides: Map<String, String>,
     px: Int,
+    style: IconStyle,
     priorityKeys: Set<String> = emptySet(),
 ) {
     if (px <= 0 || apps.isEmpty()) return
     val victoriaApp = context.applicationContext as VictoriaApp
 
     fun warm(app: AppInfo) {
-        val key = iconCacheKey(app, iconPack, overrides[app.key], px)
+        val override = overrides[app.key]
+        val styled = override == null && iconPack == null
+        val own = if (styled) style else style.copy(shape = IconShape.SYSTEM, themed = false)
+        val key = iconCacheKey(app, iconPack, override, px, own)
         if (IconCache.get(key) != null) return
         runCatching {
-            val drawable = resolveDrawable(context, victoriaApp, app, iconPack, overrides[app.key])
-            IconCache.put(key, drawable.toBitmap(px, px).asImageBitmap())
+            val drawable = resolveDrawable(context, victoriaApp, app, iconPack, override)
+            val bitmap = renderIcon(drawable, px, own.shape, own.themed, own.background, own.foreground)
+            IconCache.put(key, bitmap.asImageBitmap())
         }
     }
 
@@ -128,6 +150,9 @@ data class IconConfig(
     val overrides: Map<String, String>,
     /** False draws no icons at all, for people who want the list to be nothing but names. */
     val showIcons: Boolean = true,
+    /** Draw the monochrome layer, tinted, instead of the app's own colors. */
+    val themed: Boolean = false,
+    val shape: IconShape = IconShape.SYSTEM,
 )
 
 val LocalIconConfig = staticCompositionLocalOf { IconConfig(null, emptyMap()) }
@@ -143,11 +168,25 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
     val overrideValue = config.overrides[app.key]
     val px = with(LocalDensity.current) { sizeDp.dp.roundToPx() }.coerceAtLeast(1)
 
-    val cacheKey = iconCacheKey(app, iconPackPackage, overrideValue, px)
+    // An override or an icon pack is a picture the user chose; neither is an adaptive icon
+    // with layers to tint or a safe zone to cut into, so styling only applies to what the app
+    // itself supplies.
+    val styled = overrideValue == null && iconPackPackage == null
+    val scheme = MaterialTheme.colorScheme
+    val style = IconStyle(
+        shape = if (styled) config.shape else IconShape.SYSTEM,
+        themed = styled && config.themed,
+        background = scheme.primaryContainer.toArgb(),
+        foreground = scheme.onPrimaryContainer.toArgb(),
+    )
+
+    val cacheKey = iconCacheKey(app, iconPackPackage, overrideValue, px, style)
     val bitmap: ImageBitmap? = remember(cacheKey) {
         IconCache.get(cacheKey) ?: runCatching {
             val drawable = resolveDrawable(context, victoriaApp, app, iconPackPackage, overrideValue)
-            drawable.toBitmap(px, px).asImageBitmap().also { IconCache.put(cacheKey, it) }
+            renderIcon(drawable, px, style.shape, style.themed, style.background, style.foreground)
+                .asImageBitmap()
+                .also { IconCache.put(cacheKey, it) }
         }.getOrNull()
     }
 

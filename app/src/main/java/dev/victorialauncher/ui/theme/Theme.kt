@@ -11,7 +11,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import android.graphics.Typeface
 import androidx.compose.ui.text.font.FontFamily
+import java.io.File
 import dev.victorialauncher.data.AppFont
 
 fun AppFont.toFontFamily(): FontFamily = when (this) {
@@ -19,7 +21,26 @@ fun AppFont.toFontFamily(): FontFamily = when (this) {
     AppFont.SANS_SERIF -> FontFamily.SansSerif
     AppFont.SERIF -> FontFamily.Serif
     AppFont.MONOSPACE -> FontFamily.Monospace
+    // Without the file this cannot be resolved here; callers that have it use fontFamilyOf.
+    AppFont.CUSTOM -> FontFamily.Default
 }
+
+/**
+ * The typeface to draw with, including one the user supplied.
+ *
+ * The file is loaded once per path rather than per text: Typeface.createFromFile parses the
+ * whole font, and the app list asks for this on every row. A file that will not parse falls
+ * back to the default rather than failing — a font picked months ago may since have gone.
+ */
+fun fontFamilyOf(font: AppFont, fontFile: String?): FontFamily {
+    if (font != AppFont.CUSTOM) return font.toFontFamily()
+    val path = fontFile ?: return FontFamily.Default
+    return customFontCache.getOrPut(path) {
+        runCatching { FontFamily(Typeface.createFromFile(File(path))) }.getOrDefault(FontFamily.Default)
+    }
+}
+
+private val customFontCache = mutableMapOf<String, FontFamily>()
 
 private val DarkColors = darkColorScheme(
     primary = Color(0xFF7FD1E0),
@@ -39,6 +60,7 @@ private val LightColors = lightColorScheme(
 @Composable
 fun VictoriaTheme(
     font: AppFont = AppFont.SYSTEM,
+    fontFile: String? = null,
     content: @Composable () -> Unit,
 ) {
     val darkTheme = isSystemInDarkTheme()
@@ -54,7 +76,7 @@ fun VictoriaTheme(
     }
     val colors = baseColors.copy(background = Color.Transparent)
     val baseTypography = MaterialTheme.typography
-    val fontFamily = font.toFontFamily()
+    val fontFamily = fontFamilyOf(font, fontFile)
     val typography = baseTypography.copy(
         bodyLarge = baseTypography.bodyLarge.copy(fontFamily = fontFamily),
         bodyMedium = baseTypography.bodyMedium.copy(fontFamily = fontFamily),

@@ -6,6 +6,7 @@ import dev.victorialauncher.R
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
+import dev.victorialauncher.data.IconShape
 import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.data.TextColorMode
 
@@ -22,6 +23,7 @@ fun AppFont.labelRes(): Int = when (this) {
     AppFont.SANS_SERIF -> R.string.font_sans_serif
     AppFont.SERIF -> R.string.font_serif
     AppFont.MONOSPACE -> R.string.font_monospace
+    AppFont.CUSTOM -> R.string.font_custom
 }
 
 @StringRes
@@ -29,6 +31,8 @@ fun TextColorMode.labelRes(): Int = when (this) {
     TextColorMode.AUTO -> R.string.text_color_auto
     TextColorMode.LIGHT -> R.string.text_color_light
     TextColorMode.DARK -> R.string.text_color_dark
+    TextColorMode.MATERIAL -> R.string.text_color_material
+    TextColorMode.CUSTOM -> R.string.text_color_custom
 }
 
 @StringRes
@@ -43,6 +47,14 @@ fun HomeAlignment.labelRes(): Int = when (this) {
     HomeAlignment.LEFT -> R.string.alignment_left
     HomeAlignment.CENTER -> R.string.alignment_center
     HomeAlignment.RIGHT -> R.string.alignment_right
+}
+
+@StringRes
+fun IconShape.labelRes(): Int = when (this) {
+    IconShape.SYSTEM -> R.string.icon_shape_system
+    IconShape.CIRCLE -> R.string.icon_shape_circle
+    IconShape.ROUNDED -> R.string.icon_shape_rounded
+    IconShape.SQUARE -> R.string.icon_shape_square
 }
 
 @StringRes

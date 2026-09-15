@@ -44,6 +44,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import dev.victorialauncher.ui.theme.fontFamilyOf
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -57,6 +68,7 @@ import kotlin.math.roundToInt
 import dev.victorialauncher.BuildConfig
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.IconShape
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconSide
@@ -86,6 +98,10 @@ fun SettingsScreen(
     dimHomeAlpha: Float,
     showFavoriteLabels: Boolean,
     textColorMode: TextColorMode,
+    textColorCustom: Int,
+    fontFile: String?,
+    iconShape: IconShape,
+    themedIcons: Boolean,
     doubleTapToLock: Boolean,
     edgeSide: EdgeSide,
     alwaysShowAz: Boolean,
@@ -116,6 +132,10 @@ fun SettingsScreen(
     onSetDimHome: (Float) -> Unit,
     onSetShowFavoriteLabels: (Boolean) -> Unit,
     onSetTextColorMode: (TextColorMode) -> Unit,
+    onSetTextColorCustom: (Int) -> Unit,
+    onPickFontFile: (Uri) -> Unit,
+    onSetIconShape: (IconShape) -> Unit,
+    onSetThemedIcons: (Boolean) -> Unit,
     onSetDoubleTapToLock: (Boolean) -> Unit,
     edgeZoneWidthDp: Int,
     onSetEdgeSide: (EdgeSide) -> Unit,
@@ -190,9 +210,17 @@ fun SettingsScreen(
             item {
                 Section(stringResource(R.string.settings_section_appearance)) {
                     // Live preview of exactly how a home row will render.
-                    RowPreview(previewApp, iconSizeDp, labelSizeSp, font, itemSpacingDp)
+                    RowPreview(previewApp, iconSizeDp, labelSizeSp, font, fontFile, itemSpacingDp)
                     RowDivider()
-                    IconPackRow(iconPacks, iconPackPackage, showAppIcons, onSetIconPack, onSetShowAppIcons)
+                    IconPackRow(
+                        iconPacks,
+                        iconPackPackage,
+                        showAppIcons,
+                        themedIcons,
+                        onSetIconPack,
+                        onSetShowAppIcons,
+                        onSetThemedIcons,
+                    )
                     RowDivider()
                     SliderRow(
                         label = stringResource(R.string.settings_icon_size),
@@ -218,9 +246,11 @@ fun SettingsScreen(
                         onValueChange = { onSetItemSpacing(it.toInt()) },
                     )
                     RowDivider()
-                    FontRow(font, onSetFont)
+                    FontRow(font, fontFile, onSetFont, onPickFontFile)
                     RowDivider()
-                    TextColorRow(textColorMode, onSetTextColorMode)
+                    TextColorRow(textColorMode, textColorCustom, onSetTextColorMode, onSetTextColorCustom)
+                    RowDivider()
+                    IconShapeRow(iconShape, onSetIconShape)
                     RowDivider()
                     AlignmentRow(
                         stringResource(R.string.settings_alignment_favorites),
@@ -652,8 +682,10 @@ private fun IconPackRow(
     packs: List<IconPackRepository.IconPackInfo>,
     selected: String?,
     showIcons: Boolean,
+    themed: Boolean,
     onSelect: (String?) -> Unit,
     onSetShowIcons: (Boolean) -> Unit,
+    onSetThemed: (Boolean) -> Unit,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_icon_pack), style = MaterialTheme.typography.bodyMedium)
@@ -662,13 +694,26 @@ private fun IconPackRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            FilledChip(stringResource(R.string.settings_icon_pack_default), showIcons && selected == null) {
+            FilledChip(
+                stringResource(R.string.settings_icon_pack_default),
+                showIcons && !themed && selected == null,
+            ) {
                 onSetShowIcons(true)
+                onSetThemed(false)
                 onSelect(null)
             }
+            // A chip rather than a switch: themed icons and an icon pack are two answers to
+            // the same question, and a switch beside the packs would let you pick both and
+            // then wonder which won.
+            FilledChip(stringResource(R.string.settings_icon_pack_themed), showIcons && themed) {
+                onSetShowIcons(true)
+                onSelect(null)
+                onSetThemed(true)
+            }
             packs.forEach { pack ->
-                FilledChip(pack.label, showIcons && selected == pack.packageName) {
+                FilledChip(pack.label, showIcons && !themed && selected == pack.packageName) {
                     onSetShowIcons(true)
+                    onSetThemed(false)
                     onSelect(pack.packageName)
                 }
             }
@@ -686,22 +731,51 @@ private fun IconPackRow(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FontRow(selected: AppFont, onSelect: (AppFont) -> Unit) {
+private fun FontRow(
+    selected: AppFont,
+    fontFile: String?,
+    onSelect: (AppFont) -> Unit,
+    onPickFile: (Uri) -> Unit,
+) {
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onPickFile(uri)
+    }
+    // Font files are served under a pile of inconsistent mime types — font/ttf, x-font-ttf,
+    // application/octet-stream, sometimes nothing at all — so the filter would hide the file
+    // as often as it helped.
+    fun open() = picker.launch(arrayOf("*/*"))
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_font), style = MaterialTheme.typography.bodyMedium)
-        Row(
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AppFont.entries.forEach { f ->
                 // Each chip is rendered in the font it selects, so the choice previews itself.
                 FilledChip(
                     label = stringResource(f.labelRes()),
                     selected = selected == f,
-                    fontFamily = f.toFontFamily(),
-                    onClick = { onSelect(f) },
+                    fontFamily = fontFamilyOf(f, fontFile),
+                    onClick = {
+                        // Nothing to select until there is a file, so the first tap asks for one.
+                        if (f == AppFont.CUSTOM && fontFile == null) open() else onSelect(f)
+                    },
                 )
+            }
+        }
+        if (selected == AppFont.CUSTOM) {
+            Text(
+                stringResource(R.string.font_custom_detail),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                modifier = Modifier.padding(top = 8.dp),
+            )
+            TextButton(onClick = { open() }, contentPadding = PaddingValues(0.dp)) {
+                Text(stringResource(R.string.font_custom_pick))
             }
         }
     }
@@ -713,6 +787,7 @@ private fun RowPreview(
     iconSizeDp: Int,
     labelSizeSp: Int,
     font: AppFont,
+    fontFile: String?,
     itemSpacingDp: Int,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -733,12 +808,12 @@ private fun RowPreview(
                     if (app != null) {
                         AppIcon(app = app, sizeDp = iconSizeDp)
                         Spacer(Modifier.width(16.dp))
-                        Text(app.label, fontSize = labelSizeSp.sp, fontFamily = font.toFontFamily())
+                        Text(app.label, fontSize = labelSizeSp.sp, fontFamily = fontFamilyOf(font, fontFile))
                     } else {
                         Text(
                             stringResource(R.string.settings_preview_sample),
                             fontSize = labelSizeSp.sp,
-                            fontFamily = font.toFontFamily(),
+                            fontFamily = fontFamilyOf(font, fontFile),
                         )
                     }
                 }
@@ -747,8 +822,37 @@ private fun RowPreview(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> Unit) {
+private fun IconShapeRow(selected: IconShape, onSelect: (IconShape) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.icon_shape), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            stringResource(R.string.icon_shape_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        )
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            IconShape.entries.forEach { shape ->
+                FilledChip(stringResource(shape.labelRes()), selected == shape) { onSelect(shape) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TextColorRow(
+    selected: TextColorMode,
+    customArgb: Int,
+    onSelect: (TextColorMode) -> Unit,
+    onSetCustom: (Int) -> Unit,
+) {
+    var picking by remember { mutableStateOf(false) }
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_text_color), style = MaterialTheme.typography.bodyMedium)
         Text(
@@ -761,11 +865,82 @@ private fun TextColorRow(selected: TextColorMode, onSelect: (TextColorMode) -> U
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TextColorMode.entries.forEach { mode ->
-                FilledChip(stringResource(mode.labelRes()), selected == mode) { onSelect(mode) }
+                FilledChip(stringResource(mode.labelRes()), selected == mode) {
+                    onSelect(mode)
+                    if (mode == TextColorMode.CUSTOM) picking = true
+                }
+            }
+        }
+        if (selected == TextColorMode.CUSTOM) {
+            TextButton(onClick = { picking = true }, contentPadding = PaddingValues(0.dp)) {
+                Text(stringResource(R.string.text_color_pick))
             }
         }
     }
+
+    if (picking) {
+        ColorPickerDialog(
+            initial = customArgb,
+            onConfirm = { onSetCustom(it); picking = false },
+            onDismiss = { picking = false },
+        )
+    }
 }
+
+/** A swatch to tap or a hex value to type; enough for picking a text color, and no library. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ColorPickerDialog(initial: Int, onConfirm: (Int) -> Unit, onDismiss: () -> Unit) {
+    var hex by remember { mutableStateOf(String.format("%06X", initial and 0xFFFFFF)) }
+    val parsed = remember(hex) { hex.toIntOrNull(16)?.let { 0xFF000000.toInt() or it } }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.text_color_pick)) },
+        text = {
+            Column {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SWATCHES.forEach { argb ->
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(argb), CircleShape)
+                                .border(
+                                    width = if (parsed == argb) 3.dp else 1.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                    shape = CircleShape,
+                                )
+                                .clickable { hex = String.format("%06X", argb and 0xFFFFFF) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                OutlinedTextField(
+                    value = hex,
+                    onValueChange = { hex = it.filter { c -> c.isDigit() || c in 'a'..'f' || c in 'A'..'F' }.take(6) },
+                    singleLine = true,
+                    label = { Text("#RRGGBB") },
+                    isError = parsed == null,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { parsed?.let(onConfirm) }, enabled = parsed != null) {
+                Text(stringResource(R.string.action_done))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}
+
+private val SWATCHES = listOf(
+    0xFFFFFFFF.toInt(), 0xFFE3E8EC.toInt(), 0xFF9AA5B1.toInt(), 0xFF10161C.toInt(),
+    0xFFEF5350.toInt(), 0xFFFFA726.toInt(), 0xFFFFEE58.toInt(), 0xFF66BB6A.toInt(),
+    0xFF26C6DA.toInt(), 0xFF42A5F5.toInt(), 0xFF7E57C2.toInt(), 0xFFEC407A.toInt(),
+)
 
 /**
  * Getting to the accessibility toggle, and to the screen that unblocks it.

@@ -56,6 +56,7 @@ class MainActivity : ComponentActivity() {
             }
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
+            val fontFile by app.prefs.fontFile.collectAsState(initial = null)
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
             val iconOverrides by app.prefs.iconOverrides.collectAsState(initial = emptyMap())
             val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
@@ -63,7 +64,7 @@ class MainActivity : ComponentActivity() {
                 IconConfig(iconPackPackage, iconOverrides, showAppIcons)
             }
 
-            VictoriaTheme(font = font) {
+            VictoriaTheme(font = font, fontFile = fontFile) {
                 CompositionLocalProvider(LocalIconConfig provides iconConfig) {
                     VictoriaNavHost(
                         app = app,

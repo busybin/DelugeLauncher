@@ -135,6 +135,20 @@
     <string name="font_sans_serif">Sans serif</string>
     <string name="font_serif">Serif</string>
     <string name="font_monospace">Monospace</string>
+    <string name="font_custom">Custom…</string>
+    <string name="font_custom_pick">Choose a font file</string>
+    <string name="font_custom_detail">A .ttf or .otf file, copied into the launcher so it survives the file moving</string>
+    <string name="font_custom_failed">That file could not be read as a font</string>
+    <string name="text_color_material">Material</string>
+    <string name="text_color_custom">Custom</string>
+    <string name="text_color_pick">Pick a color</string>
+    <string name="icon_shape">Icon shape</string>
+    <string name="icon_shape_detail">Only reshapes adaptive icons; anything older is left as it is</string>
+    <string name="icon_shape_system">System</string>
+    <string name="icon_shape_circle">Circle</string>
+    <string name="icon_shape_rounded">Rounded</string>
+    <string name="icon_shape_square">Square</string>
+    <string name="settings_icon_pack_themed">Themed</string>
 
     <!-- Text color choices -->
     <string name="text_color_auto">Auto</string>

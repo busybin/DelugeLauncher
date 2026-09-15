@@ -26,10 +26,19 @@ enum class IconSide { LEFT, RIGHT }
 
 /** The two swipe directions under the favorites that can launch an app. */
 enum class QuickLaunchSlot { LEFT, RIGHT }
-enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE }
+enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE, CUSTOM }
 
 /** AUTO picks light or dark text from the wallpaper's own colors. */
-enum class TextColorMode { AUTO, LIGHT, DARK }
+enum class TextColorMode { AUTO, LIGHT, DARK, MATERIAL, CUSTOM }
+
+/**
+ * The mask an icon is drawn through.
+ *
+ * SYSTEM leaves the drawable alone, which means whatever shape the device already applies.
+ * The rest re-mask an adaptive icon's own layers; an icon that is not adaptive has no safe
+ * zone to cut into, so it is left as it is whatever this says.
+ */
+enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 
 private val Context.dataStore by preferencesDataStore(name = "victoria_prefs")
 
@@ -53,6 +62,10 @@ class Prefs(private val context: Context) {
         val FAVORITES_PAD_TOP = intPreferencesKey("favorites_pad_top")
         val FAVORITES_PAD_BOTTOM = intPreferencesKey("favorites_pad_bottom")
         val FONT = stringPreferencesKey("font")
+        val FONT_FILE = stringPreferencesKey("font_file")
+        val TEXT_COLOR_CUSTOM = intPreferencesKey("text_color_custom")
+        val THEMED_ICONS = booleanPreferencesKey("themed_icons")
+        val ICON_SHAPE = stringPreferencesKey("icon_shape")
         val HIDE_STATUS_BAR = booleanPreferencesKey("hide_status_bar")
         val HIDE_STATUS_BAR_APPLIST = booleanPreferencesKey("hide_status_bar_applist")
         val DIM_WALLPAPER_ALPHA = floatPreferencesKey("dim_wallpaper_alpha")
@@ -167,6 +180,24 @@ class Prefs(private val context: Context) {
             favoritesTop = it[Keys.FAVORITES_PAD_TOP] ?: 8,
             favoritesBottom = it[Keys.FAVORITES_PAD_BOTTOM] ?: 24,
         )
+    }.distinctUntilChanged()
+
+    /** Absolute path of the typeface the user supplied, once it has been copied in. */
+    val fontFile: Flow<String?> = data.map { it[Keys.FONT_FILE] }.distinctUntilChanged()
+
+    /** Used when the text color mode is CUSTOM. Opaque white until the user picks something. */
+    val textColorCustom: Flow<Int> =
+        data.map { it[Keys.TEXT_COLOR_CUSTOM] ?: 0xFFFFFFFF.toInt() }.distinctUntilChanged()
+
+    /**
+     * Draws the monochrome layer Android 13 added to adaptive icons, tinted to the system
+     * palette, instead of the app's own colors. Apps that ship no such layer keep their
+     * ordinary icon — there is nothing to derive one from.
+     */
+    val themedIcons: Flow<Boolean> = data.map { it[Keys.THEMED_ICONS] ?: false }.distinctUntilChanged()
+
+    val iconShape: Flow<IconShape> = data.map { pref ->
+        pref[Keys.ICON_SHAPE]?.let { runCatching { IconShape.valueOf(it) }.getOrNull() } ?: IconShape.SYSTEM
     }.distinctUntilChanged()
 
     val font: Flow<AppFont> = data.map {
@@ -460,6 +491,24 @@ class Prefs(private val context: Context) {
             PaddingSlot.FAVORITES_BOTTOM -> Keys.FAVORITES_PAD_BOTTOM
         }
         context.dataStore.edit { it[key] = v }
+    }
+
+    suspend fun setFontFile(path: String?) {
+        context.dataStore.edit { pref ->
+            if (path == null) pref.remove(Keys.FONT_FILE) else pref[Keys.FONT_FILE] = path
+        }
+    }
+
+    suspend fun setTextColorCustom(argb: Int) {
+        context.dataStore.edit { it[Keys.TEXT_COLOR_CUSTOM] = argb }
+    }
+
+    suspend fun setThemedIcons(v: Boolean) {
+        context.dataStore.edit { it[Keys.THEMED_ICONS] = v }
+    }
+
+    suspend fun setIconShape(v: IconShape) {
+        context.dataStore.edit { it[Keys.ICON_SHAPE] = v.name }
     }
 
     suspend fun setFont(f: AppFont) {

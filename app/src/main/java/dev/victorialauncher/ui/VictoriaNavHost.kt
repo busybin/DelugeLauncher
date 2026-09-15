@@ -13,6 +13,8 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +32,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import dev.victorialauncher.VictoriaApp
+import android.widget.Toast
+import dev.victorialauncher.data.IconShape
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
@@ -44,6 +48,8 @@ import dev.victorialauncher.data.folderIdFromToken
 import dev.victorialauncher.media.isListenerEnabled
 import dev.victorialauncher.service.SystemUi
 import dev.victorialauncher.ui.common.IconPickerScreen
+import dev.victorialauncher.ui.common.IconStyle
+import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.clearIconCache
 import dev.victorialauncher.ui.common.encodePackOverride
 import dev.victorialauncher.ui.common.warmIconCache
@@ -179,6 +185,10 @@ fun VictoriaNavHost(
     val quickLaunchLeftKey by app.prefs.quickLaunchLeft.collectAsState(initial = null)
     val quickLaunchRightKey by app.prefs.quickLaunchRight.collectAsState(initial = null)
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
+    val fontFile by app.prefs.fontFile.collectAsState(initial = null)
+    val textColorCustom by app.prefs.textColorCustom.collectAsState(initial = 0xFFFFFFFF.toInt())
+    val iconShape by app.prefs.iconShape.collectAsState(initial = IconShape.SYSTEM)
+    val themedIcons by app.prefs.themedIcons.collectAsState(initial = false)
     val alignment by app.prefs.alignment.collectAsState(initial = HomeAlignment.LEFT)
     val appListAlignment by app.prefs.appListAlignment.collectAsState(initial = HomeAlignment.LEFT)
     val iconSide by app.prefs.iconSide.collectAsState(initial = IconSide.LEFT)
@@ -187,7 +197,7 @@ fun VictoriaNavHost(
     val layoutDefaultsVersion by app.prefs.layoutDefaultsVersion.collectAsState(initial = null)
     val welcomeSeen by app.prefs.welcomeSeen.collectAsState(initial = true)
     val hasCustomLayout by app.prefs.hasCustomLayout.collectAsState(initial = true)
-    val contentColor = rememberContentColor(textColorMode)
+    val contentColor = rememberContentColor(textColorMode, textColorCustom)
 
     val appsByKey = remember(allApps) { allApps.associateBy { it.key } }
     val foldersById = remember(folders) { folders.associateBy { it.id } }
@@ -210,8 +220,20 @@ fun VictoriaNavHost(
     val priorityKeys = remember(favoriteKeys, folders) {
         favoriteKeys.toSet() + folders.flatMap { it.apps }
     }
-    LaunchedEffect(allApps, iconPackPackage, iconOverrides, listIconPx, priorityKeys) {
-        warmIconCache(context, allApps, iconPackPackage, iconOverrides, listIconPx, priorityKeys)
+    // Same style the rows will ask for, or the warm pass fills the cache under keys nothing
+    // then looks up, and every icon is rasterised twice.
+    val iconCfg = LocalIconConfig.current
+    val scheme = MaterialTheme.colorScheme
+    val iconStyle = remember(iconCfg, scheme) {
+        IconStyle(
+            shape = iconCfg.shape,
+            themed = iconCfg.themed,
+            background = scheme.primaryContainer.toArgb(),
+            foreground = scheme.onPrimaryContainer.toArgb(),
+        )
+    }
+    LaunchedEffect(allApps, iconPackPackage, iconOverrides, listIconPx, priorityKeys, iconStyle) {
+        warmIconCache(context, allApps, iconPackPackage, iconOverrides, listIconPx, iconStyle, priorityKeys)
     }
 
     val settings = HomeSettings(
@@ -379,6 +401,10 @@ fun VictoriaNavHost(
                 dimHomeAlpha = dimHomeAlpha,
                 showFavoriteLabels = showFavoriteLabels,
                 textColorMode = textColorMode,
+                textColorCustom = textColorCustom,
+                fontFile = fontFile,
+                iconShape = iconShape,
+                themedIcons = themedIcons,
                 doubleTapToLock = doubleTapToLock,
                 edgeSide = edgeSide,
                 edgeZoneWidthDp = edgeZoneWidthDp,
@@ -408,6 +434,33 @@ fun VictoriaNavHost(
                 onSetDimHome = { scope.launch { app.prefs.setDimHomeAlpha(it) } },
                 onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
                 onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
+                onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
+                onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
+                onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
+                // Copied in rather than referenced: a document URI is only as durable as the
+                // file behind it, and a font picked from Downloads would break the moment it
+                // was moved or cleaned up.
+                onPickFontFile = { uri ->
+                    scope.launch {
+                        val path = withContext(Dispatchers.IO) {
+                            runCatching {
+                                val out = java.io.File(context.filesDir, "custom_font")
+                                context.contentResolver.openInputStream(uri)?.use { input ->
+                                    out.outputStream().use { input.copyTo(it) }
+                                } ?: return@runCatching null
+                                // Proves it parses before anything starts drawing with it.
+                                android.graphics.Typeface.createFromFile(out)
+                                out.absolutePath
+                            }.getOrNull()
+                        }
+                        if (path == null) {
+                            Toast.makeText(context, R.string.font_custom_failed, Toast.LENGTH_SHORT).show()
+                        } else {
+                            app.prefs.setFontFile(path)
+                            app.prefs.setFont(AppFont.CUSTOM)
+                        }
+                    }
+                },
                 onSetDoubleTapToLock = { scope.launch { app.prefs.setDoubleTapToLock(it) } },
                 onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
                 onSetEdgeZoneWidth = { scope.launch { app.prefs.setEdgeZoneWidthDp(it) } },
