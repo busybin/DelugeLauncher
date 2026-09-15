@@ -401,7 +401,7 @@ fun HomeRoute(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = wallpaperDim)),
+                    .background(Color(settings.dimColor).copy(alpha = wallpaperDim)),
             )
         }
         Box(
@@ -607,7 +607,8 @@ fun HomeRoute(
                     onNavigate(iconPickerRoute(appInfo.key))
                 },
                 onAppInfo = { app.appRepository.openAppInfo(it) },
-                onHideApp = { appInfo -> scope.launch { app.prefs.setHidden(appInfo.key, true) } },
+                onHideApp = { appInfo, hide -> scope.launch { app.prefs.setHidden(appInfo.key, hide) } },
+                hiddenApps = hiddenApps,
                 onMoveToFolder = { appInfo -> closeAppList(); folderPickerFor = appInfo },
                 onOpenSettings = { closeAppList(); onNavigate("settings") },
                 onDismiss = { closeAppList() },
@@ -765,6 +766,7 @@ data class HomeSettings(
     val centerFavorites: Boolean,
     val dimWallpaperAlpha: Float,
     val dimHomeAlpha: Float,
+    val dimColor: Int,
     val hapticsEnabled: Boolean,
     val showFavoriteLabels: Boolean,
     val doubleTapToLock: Boolean,

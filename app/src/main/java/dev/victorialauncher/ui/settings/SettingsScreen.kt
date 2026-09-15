@@ -55,6 +55,7 @@ import androidx.compose.material3.TextButton
 import dev.victorialauncher.ui.theme.fontFamilyOf
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -99,6 +100,7 @@ fun SettingsScreen(
     showFavoriteLabels: Boolean,
     textColorMode: TextColorMode,
     textColorCustom: Int,
+    dimColor: Int,
     fontFile: String?,
     iconShape: IconShape,
     themedIcons: Boolean,
@@ -133,6 +135,7 @@ fun SettingsScreen(
     onSetShowFavoriteLabels: (Boolean) -> Unit,
     onSetTextColorMode: (TextColorMode) -> Unit,
     onSetTextColorCustom: (Int) -> Unit,
+    onSetDimColor: (Int) -> Unit,
     onPickFontFile: (Uri) -> Unit,
     onSetIconShape: (IconShape) -> Unit,
     onSetThemedIcons: (Boolean) -> Unit,
@@ -304,6 +307,11 @@ fun SettingsScreen(
                         onValueChange = { onSetDimWallpaper((it * 100).roundToInt() / 100f) },
                         step = 0.01f,
                     )
+                    // Only worth offering once something is actually dimmed.
+                    if (dimHomeAlpha > 0f || dimWallpaperAlpha > 0f) {
+                        RowDivider()
+                        DimColorRow(dimColor, onSetDimColor)
+                    }
                 }
             }
 
@@ -890,6 +898,40 @@ private fun TextColorRow(
     }
 }
 
+@Composable
+private fun DimColorRow(dimColor: Int, onSetDimColor: (Int) -> Unit) {
+    var picking by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { picking = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_dim_color), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.settings_dim_color_detail),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(Color(dimColor), CircleShape)
+                .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), CircleShape)
+        )
+    }
+    if (picking) {
+        ColorPickerDialog(
+            initial = dimColor,
+            onConfirm = { onSetDimColor(it); picking = false },
+            onDismiss = { picking = false },
+        )
+    }
+}
+
 /** A swatch to tap or a hex value to type; enough for picking a text color, and no library. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -897,11 +939,45 @@ private fun ColorPickerDialog(initial: Int, onConfirm: (Int) -> Unit, onDismiss:
     var hex by remember { mutableStateOf(String.format("%06X", initial and 0xFFFFFF)) }
     val parsed = remember(hex) { hex.toIntOrNull(16)?.let { 0xFF000000.toInt() or it } }
 
+    // The palette Android derived from the wallpaper, offered first: picking a colour that
+    // already belongs to the wallpaper is most of what anyone wants here, and typing its hex
+    // is not something anyone knows off-hand.
+    val scheme = MaterialTheme.colorScheme
+    val fromWallpaper = listOf(
+        scheme.primary, scheme.secondary, scheme.tertiary,
+        scheme.primaryContainer, scheme.surfaceVariant, scheme.surface,
+    ).map { it.toArgb() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.text_color_pick)) },
         text = {
             Column {
+                Text(
+                    stringResource(R.string.color_from_wallpaper),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    fromWallpaper.forEach { argb ->
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .background(Color(argb), CircleShape)
+                                .border(
+                                    width = if (parsed == argb) 3.dp else 1.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                    shape = CircleShape,
+                                )
+                                .clickable { hex = String.format("%06X", argb and 0xFFFFFF) }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),

@@ -26,10 +26,9 @@
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:screenOrientation="portrait"
             android:theme="@style/Theme.VictoriaLauncher"
             android:windowSoftInputMode="adjustResize"
-            android:configChanges="orientation|screenSize|keyboardHidden">
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -45,7 +44,6 @@
             android:name=".widget.WidgetPickerActivity"
             android:exported="false"
             android:excludeFromRecents="true"
-            android:screenOrientation="portrait"
             android:taskAffinity=""
             android:theme="@style/Theme.VictoriaLauncher" />
 

@@ -64,6 +64,7 @@ class Prefs(private val context: Context) {
         val FONT = stringPreferencesKey("font")
         val FONT_FILE = stringPreferencesKey("font_file")
         val TEXT_COLOR_CUSTOM = intPreferencesKey("text_color_custom")
+        val DIM_COLOR = intPreferencesKey("dim_color")
         val THEMED_ICONS = booleanPreferencesKey("themed_icons")
         val ICON_SHAPE = stringPreferencesKey("icon_shape")
         val HIDE_STATUS_BAR = booleanPreferencesKey("hide_status_bar")
@@ -184,6 +185,13 @@ class Prefs(private val context: Context) {
 
     /** Absolute path of the typeface the user supplied, once it has been copied in. */
     val fontFile: Flow<String?> = data.map { it[Keys.FONT_FILE] }.distinctUntilChanged()
+
+    /**
+     * What the wallpaper is dimmed with, as an opaque RGB; the dim sliders set how much of it
+     * lands. Black until the user picks otherwise, which is what it always was.
+     */
+    val dimColor: Flow<Int> =
+        data.map { it[Keys.DIM_COLOR] ?: 0xFF000000.toInt() }.distinctUntilChanged()
 
     /** Used when the text color mode is CUSTOM. Opaque white until the user picks something. */
     val textColorCustom: Flow<Int> =
@@ -497,6 +505,10 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             if (path == null) pref.remove(Keys.FONT_FILE) else pref[Keys.FONT_FILE] = path
         }
+    }
+
+    suspend fun setDimColor(argb: Int) {
+        context.dataStore.edit { it[Keys.DIM_COLOR] = argb }
     }
 
     suspend fun setTextColorCustom(argb: Int) {

@@ -2,6 +2,7 @@
 package dev.victorialauncher
 
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,9 @@ import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.theme.VictoriaTheme
 import kotlinx.coroutines.delay
 
+/** Smallest width that counts as a tablet, which is the platform's own threshold. */
+private const val TABLET_WIDTH_DP = 600
+
 class MainActivity : ComponentActivity() {
 
     /** Bumped whenever HOME is pressed while we're already showing, so overlays can close. */
@@ -30,6 +34,16 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Rotation is a tablet feature here, not a general one. This is a list down the side
+        // of the screen: a phone on its side has about a third of the height it needs, and
+        // what is left holds two favorites and an alphabet squeezed into nothing. A tablet on
+        // its side has more height than a phone upright, so there it is simply useful.
+        requestedOrientation =
+            if (resources.configuration.smallestScreenWidthDp >= TABLET_WIDTH_DP) {
+                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            } else {
+                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            }
         val app = application as VictoriaApp
 
         setContent {

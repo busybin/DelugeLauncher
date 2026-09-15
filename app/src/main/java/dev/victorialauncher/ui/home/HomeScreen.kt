@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -275,6 +276,7 @@ fun HomeScreen(
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
     val itemHeights = remember { mutableStateMapOf<Int, Int>() }
+    val itemTops = remember { mutableStateMapOf<Int, Float>() }
 
     val homeItems = remember(favorites, widgetPosition, showWidgetSlot) {
         buildHomeItems(favorites, widgetPosition, showWidgetSlot)
@@ -326,11 +328,27 @@ fun HomeScreen(
         }
     }
 
+    // Both maps are keyed by position in the list, so an entry for a position that no longer
+    // exists is a lie about a row that is gone. Removing a widget is exactly that: every row
+    // below it shifts up a place and the list ends one place shorter.
+    LaunchedEffect(displayItems.size) {
+        itemHeights.keys.retainAll { it in displayItems.indices }
+        itemTops.keys.retainAll { it in displayItems.indices }
+    }
+
     // Measured span of the favorites list, handed up so the A-Z strip can match it.
-    var favBoundsTop by remember { mutableFloatStateOf(0f) }
-    var favBoundsBottom by remember { mutableFloatStateOf(0f) }
+    //
+    // Derived here rather than assigned from inside onGloballyPositioned. Assigning meant each
+    // row deciding whether it was the first or last against the indices of the composition
+    // that built its callback — so after a removal shifted everything, a row could still be
+    // reporting itself as the bottom of a list it was no longer the bottom of, and the
+    // favorites kept the span of the layout they had before.
+    val favBoundsTop = itemTops[firstRowIndex]
+    val favBoundsBottom = itemTops[lastRowIndex]?.let { it + (itemHeights[lastRowIndex] ?: 0) }
     LaunchedEffect(favBoundsTop, favBoundsBottom) {
-        if (favBoundsBottom > favBoundsTop) onFavoritesBoundsChanged(favBoundsTop, favBoundsBottom)
+        val top = favBoundsTop ?: return@LaunchedEffect
+        val bottom = favBoundsBottom ?: return@LaunchedEffect
+        if (bottom > top) onFavoritesBoundsChanged(top, bottom)
     }
 
     val peekPullPx = with(density) { 30.dp.toPx() }
@@ -352,14 +370,16 @@ fun HomeScreen(
     val editScrollState = rememberScrollState()
 
     LaunchedEffect(centerFavorites, favBoundsTop, favBoundsBottom, viewportHeight, rootY) {
-        if (!centerFavorites || viewportHeight <= 0 || favBoundsBottom <= favBoundsTop) {
+        val top = favBoundsTop ?: return@LaunchedEffect
+        val bottom = favBoundsBottom ?: return@LaunchedEffect
+        if (!centerFavorites || viewportHeight <= 0 || bottom <= top) {
             return@LaunchedEffect
         }
-        val blockHeight = favBoundsBottom - favBoundsTop
+        val blockHeight = bottom - top
         val appliedTopPx = with(density) { padOf(PaddingSlot.FAVORITES_TOP).dp.toPx() }
         // Everything stacked above the favorites' own gap — a widget, Now Playing, their
         // paddings — measured rather than assumed, so this works whatever is up there.
-        val above = (favBoundsTop - rootY - offsetY.value) - appliedTopPx
+        val above = (top - rootY - offsetY.value) - appliedTopPx
         val desiredPx = ((viewportHeight - blockHeight) / 2f - above).coerceAtLeast(0f)
         val desiredDp = with(density) { desiredPx.toDp().value.roundToInt() }
         // Subtracting the applied gap makes this idempotent, so it settles in one pass; the
@@ -479,6 +499,12 @@ fun HomeScreen(
     ) {
         Column(
             modifier = Modifier
+                // A row of one short name stretched over a tablet is mostly empty space, and
+                // the A-Z strip ends up a hand's width from the names it is scrubbing. The cap
+                // only bites on a screen wider than a phone held upright, so nothing moves on
+                // one that is not.
+                .widthIn(max = MAX_CONTENT_WIDTH)
+                .align(alignment.wideScreenAlignment())
                 .fillMaxWidth()
                 .then(
                     // Edit mode roughly doubles the stack's height and its handles are
@@ -659,11 +685,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .onGloballyPositioned { coords ->
                             itemHeights[index] = coords.size.height
-                            if (item !is HomeItem.Widget) {
-                                val top = coords.positionInWindow().y
-                                if (index == firstRowIndex) favBoundsTop = top
-                                if (index == lastRowIndex) favBoundsBottom = top + coords.size.height
-                            }
+                            itemTops[index] = coords.positionInWindow().y
                         }
                         .zIndex(if (draggingIndex == index) 1f else 0f)
                         .graphicsLayer {
@@ -1387,6 +1409,22 @@ private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
     if (dragHandle == null) return 8.dp
     val outerInset = (sidePaddingDp - 8).coerceAtLeast(0).dp
     return (EDIT_CONTROL_END_INSET + EDIT_CONTROL_SIZE - outerInset).coerceAtLeast(8.dp)
+}
+
+/**
+ * Widest the home stack is allowed to get.
+ *
+ * Roughly a large phone held upright, so a phone in portrait never reaches it and a tablet or
+ * a phone on its side keeps rows that are readable rather than a name at one edge and its icon
+ * at the other.
+ */
+private val MAX_CONTENT_WIDTH = 600.dp
+
+/** Which side a capped stack sits against, so it stays where the rows are aligned. */
+private fun HomeAlignment.wideScreenAlignment(): Alignment = when (this) {
+    HomeAlignment.LEFT -> Alignment.TopStart
+    HomeAlignment.CENTER -> Alignment.TopCenter
+    HomeAlignment.RIGHT -> Alignment.TopEnd
 }
 
 /** The grab handle that reorders a row in edit mode. */

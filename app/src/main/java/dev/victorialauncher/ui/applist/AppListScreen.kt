@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
@@ -56,6 +57,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -136,6 +138,14 @@ private val STRIP_INSET = 56.dp
 /** Sets the settings shortcut apart from the last app above it. */
 private val SETTINGS_ROW_GAP = 20.dp
 
+/**
+ * Widest the list is allowed to get.
+ *
+ * A name is a short thing; stretched over a tablet it leaves the row mostly empty and puts the
+ * A-Z strip a hand's width from what it is scrubbing. A phone held upright never reaches this.
+ */
+private val MAX_LIST_WIDTH = 600.dp
+
 /** How far the list dissolves at each end. */
 private val FADE_HEIGHT = 56.dp
 
@@ -179,7 +189,9 @@ fun AppListScreen(
     onSetName: (AppInfo, String?) -> Unit,
     onChangeIcon: (AppInfo) -> Unit,
     onAppInfo: (AppInfo) -> Unit,
-    onHideApp: (AppInfo) -> Unit,
+    onHideApp: (AppInfo, Boolean) -> Unit,
+    /** Which apps are hidden, so a search that turns one up can say so and put it back. */
+    hiddenApps: Set<String>,
     onMoveToFolder: (AppInfo) -> Unit,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
@@ -719,6 +731,10 @@ fun AppListScreen(
         // does not change while the list is open.
         Column(
             modifier = Modifier
+                // Capped and held against the strip's own side, so on a wide screen the names
+                // stay next to the letters being scrubbed instead of a screen away from them.
+                .widthIn(max = MAX_LIST_WIDTH)
+                .align(if (activeSide == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
                 .fillMaxSize()
                 .then(
                     if (statusBarHidden) {
@@ -843,7 +859,8 @@ fun AppListScreen(
                         onSetFavorite = { onSetFavorite(row.app, it) },
                         onEdit = { editDialogFor = row.app },
                         onAppInfo = { onAppInfo(row.app) },
-                        onHide = { onHideApp(row.app) },
+                        onHide = { onHideApp(row.app, row.app.key !in hiddenApps) },
+                        isHidden = row.app.key in hiddenApps,
                         onMoveToFolder = { onMoveToFolder(row.app) },
                     )
                 }
@@ -1003,6 +1020,8 @@ private fun AppRow(
     onAppInfo: () -> Unit,
     onHide: () -> Unit,
     onMoveToFolder: () -> Unit,
+    /** Hidden apps only ever reach this list through a search. */
+    isHidden: Boolean,
 ) {
     // Same press treatment as the home screen: the stock ripple all but vanishes against a
     // wallpaper, and without any feedback a tap that did register reads as one that didn't.
@@ -1052,7 +1071,9 @@ private fun AppRow(
             val text: @Composable () -> Unit = {
                 Text(
                     label,
-                    color = contentColor,
+                    // Dimmed, because a hidden app only ever turns up here through a search
+                    // and nothing else on the row says it is one.
+                    color = if (isHidden) contentColor.copy(alpha = 0.5f) else contentColor,
                     fontSize = labelSizeSp.sp,
                     modifier = labelModifier,
                     textAlign = when (alignment) {
@@ -1110,8 +1131,19 @@ private fun AppRow(
                 onClick = { onDismissMenu(); onMoveToFolder() },
             )
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.applist_hide)) },
-                leadingIcon = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+                text = {
+                    Text(
+                        stringResource(
+                            if (isHidden) R.string.applist_unhide else R.string.applist_hide
+                        )
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        if (isHidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                        contentDescription = null,
+                    )
+                },
                 onClick = { onDismissMenu(); onHide() },
             )
         }

@@ -49,6 +49,7 @@
     <string name="applist_add_favorite">Add to favorites</string>
     <string name="applist_remove_favorite">Remove from favorites</string>
     <string name="applist_hide">Hide from list</string>
+    <string name="applist_unhide">Show in list</string>
 
     <string name="applist_band_hint">Drag the band to move it, or either handle to resize it</string>
     <string name="applist_band_top">Top of the A-Z strip</string>
@@ -142,6 +143,9 @@
     <string name="text_color_material">Material</string>
     <string name="text_color_custom">Custom</string>
     <string name="text_color_pick">Pick a color</string>
+    <string name="settings_dim_color">Dim color</string>
+    <string name="settings_dim_color_detail">What the wallpaper is dimmed with; the sliders above set how much</string>
+    <string name="color_from_wallpaper">From your wallpaper</string>
     <string name="icon_shape">Icon shape</string>
     <string name="icon_shape_detail">Only reshapes adaptive icons; anything older is left as it is</string>
     <string name="icon_shape_system">System</string>

@@ -187,6 +187,7 @@ fun VictoriaNavHost(
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val fontFile by app.prefs.fontFile.collectAsState(initial = null)
     val textColorCustom by app.prefs.textColorCustom.collectAsState(initial = 0xFFFFFFFF.toInt())
+    val dimColor by app.prefs.dimColor.collectAsState(initial = 0xFF000000.toInt())
     val iconShape by app.prefs.iconShape.collectAsState(initial = IconShape.SYSTEM)
     val themedIcons by app.prefs.themedIcons.collectAsState(initial = false)
     val alignment by app.prefs.alignment.collectAsState(initial = HomeAlignment.LEFT)
@@ -265,6 +266,7 @@ fun VictoriaNavHost(
         centerFavorites = layoutDefaultsVersion == 1 && !hasCustomLayout,
         dimWallpaperAlpha = dimWallpaperAlpha,
         dimHomeAlpha = dimHomeAlpha,
+        dimColor = dimColor,
         hapticsEnabled = hapticsEnabled,
         showFavoriteLabels = showFavoriteLabels,
         doubleTapToLock = doubleTapToLock,
@@ -402,6 +404,7 @@ fun VictoriaNavHost(
                 showFavoriteLabels = showFavoriteLabels,
                 textColorMode = textColorMode,
                 textColorCustom = textColorCustom,
+                dimColor = dimColor,
                 fontFile = fontFile,
                 iconShape = iconShape,
                 themedIcons = themedIcons,
@@ -435,6 +438,7 @@ fun VictoriaNavHost(
                 onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
                 onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
                 onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
+                onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
                 onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
                 onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
                 // Copied in rather than referenced: a document URI is only as durable as the
