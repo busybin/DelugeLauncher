@@ -18,12 +18,19 @@ android {
     namespace = "dev.victorialauncher"
     compileSdk = 35
 
+    lint {
+        // Translations are contributed, so they arrive behind the strings they translate, and
+        // Android falls back to English for anything a locale is missing. A volunteer being a
+        // release behind is not a defect and must not be what stops a build.
+        warning += "MissingTranslation"
+    }
+
     defaultConfig {
         applicationId = "dev.victorialauncher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 57
-        versionName = "0.54.0"
+        versionCode = 58
+        versionName = "0.55.0"
     }
 
     signingConfigs {
