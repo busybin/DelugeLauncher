@@ -224,7 +224,15 @@ fun AppListScreen(
         if (!searching) {
             model
         } else {
-            searchModel.filtered { displayName(it).contains(query.trim(), ignoreCase = true) }
+            val term = query.trim()
+            searchModel.filtered { app ->
+                displayName(app).contains(term, ignoreCase = true) ||
+                    // An app names itself in the language of the device, so on a Japanese
+                    // phone Settings calls itself 設定 and no amount of typing "settings"
+                    // reaches it. Package names are ASCII almost without exception, so the
+                    // English word is usually sitting right there in com.android.settings.
+                    app.componentName.packageName.contains(term, ignoreCase = true)
+            }
         }
     }
     // Animated rather than switched, so an end does not snap from crisp to faded the moment
