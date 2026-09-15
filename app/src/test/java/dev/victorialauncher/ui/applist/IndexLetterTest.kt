@@ -33,11 +33,33 @@ class IndexLetterTest {
 
     @Test
     fun `scripts with no place on an A-Z strip go to hash`() {
-        // The report that prompted this: one strip entry per kanji is not an index.
+        // The report that prompted this: one strip entry per kanji is not an index. These
+        // cannot be romanized a letter at a time either — it takes the whole word, and the
+        // same character reads differently in Japanese and Chinese.
         assertEquals('#', indexLetter("設定"))
+        assertEquals('#', indexLetter("カメラ"))
         assertEquals('#', indexLetter("카카오톡"))
-        assertEquals('#', indexLetter("Телеграм"))
-        assertEquals('#', indexLetter("Ελλάδα"))
+    }
+
+    @Test
+    fun `alphabets that romanize land on their own letter`() {
+        // The examples from the report, checked against where Niagara files them.
+        assertEquals('K', indexLetter("Калькулятор"))
+        assertEquals('K', indexLetter("Календарь"))
+        assertEquals('G', indexLetter("Галерея"))
+        assertEquals('B', indexLetter("Браузер"))
+        assertEquals('B', indexLetter("Билайн"))
+        assertEquals('A', indexLetter("Аптечка"))
+        assertEquals('T', indexLetter("Телефон"))
+        assertEquals('T', indexLetter("Транзистор"))
+        assertEquals('E', indexLetter("Ελλάδα"))
+        assertEquals('D', indexLetter("Δελτίο"))
+    }
+
+    @Test
+    fun `lower case romanizes the same as upper`() {
+        assertEquals('K', indexLetter("калькулятор"))
+        assertEquals('T', indexLetter("телефон"))
     }
 
     @Test

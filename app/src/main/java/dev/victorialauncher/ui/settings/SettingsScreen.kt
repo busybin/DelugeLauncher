@@ -860,9 +860,12 @@ private fun TextColorRow(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
-        Row(
+        // Wraps: five chips no longer fit on one line where three did, and a plain Row
+        // answered that by breaking the last label down the screen a letter at a time.
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TextColorMode.entries.forEach { mode ->
                 FilledChip(stringResource(mode.labelRes()), selected == mode) {

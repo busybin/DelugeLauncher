@@ -3,6 +3,9 @@ package dev.victorialauncher.ui.applist
 
 import androidx.compose.runtime.Immutable
 import dev.victorialauncher.data.AppInfo
+import android.icu.text.Transliterator
+import android.os.Build
+import androidx.annotation.RequiresApi
 import java.text.Normalizer
 
 @Immutable
@@ -29,9 +32,13 @@ data class AppListModel(
 /**
  * The letter a name is filed under, or '#'.
  *
- * Only A-Z get one of their own. Char.isLetter is true of every kanji, every hangul syllable
- * and every Cyrillic letter, so filing by it gave a strip of thousands of entries on a device
- * with CJK app names — one per character, which is no index at all.
+ * Only A-Z get one of their own. Char.isLetter is true of every kanji and every hangul
+ * syllable, so filing by it gave a strip of thousands of entries on a device with CJK app
+ * names — one per character, which is no index at all.
+ *
+ * An alphabet that can be carried over letter for letter is, so Калькулятор files under K
+ * rather than joining everything else in '#'. That keeps one strip for a phone whose app
+ * names are half Latin, which is the usual case.
  *
  * Accents and ligatures are folded first, so Ärger files under A and Œuvre under O, rather to '#'
  * than falling to '#' with the scripts that have no place on an A-Z strip. '#' sorts above A,
@@ -43,11 +50,72 @@ internal fun indexLetter(name: String): Char {
         .firstOrNull()
         ?.uppercaseChar()
         ?: return '#'
-    return when {
-        folded in 'A'..'Z' -> folded
-        else -> LATIN_STANDALONE[folded] ?: '#'
+    if (folded in 'A'..'Z') return folded
+    LATIN_STANDALONE[folded]?.let { return it }
+    return romanize(folded) ?: '#'
+}
+
+/**
+ * Scripts an alphabet can be carried over to A-Z without inventing anything.
+ *
+ * Each of these has a letter-for-letter romanization, so К lands on K the way a reader of the
+ * script would expect. Han and kana do not: romanizing those needs to know the word, and the
+ * same character reads differently in Japanese and Chinese — so they keep '#'.
+ */
+private val ROMANIZABLE = setOf(
+    Character.UnicodeScript.CYRILLIC,
+    Character.UnicodeScript.GREEK,
+    Character.UnicodeScript.ARMENIAN,
+    Character.UnicodeScript.GEORGIAN,
+)
+
+/**
+ * ICU does this properly and ships with the platform, so the table below is only what stands
+ * in for it on Android 9 and older, where the transliterator is not public API. The two agree
+ * on Cyrillic and Greek; Armenian and Georgian fall back to '#' there rather than carry a
+ * third alphabet by hand.
+ */
+private val romanizer: Transliterator? by lazy {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+        null
+    } else {
+        runCatching { Transliterator.getInstance("Any-Latin; Latin-ASCII") }.getOrNull()
     }
 }
+
+private fun romanize(upper: Char): Char? {
+    val script = runCatching { Character.UnicodeScript.of(upper.code) }.getOrNull()
+    if (script !in ROMANIZABLE) return null
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        icuRomanize(upper)?.let { return it }
+    }
+    return FALLBACK_ROMAN[upper]
+}
+
+@RequiresApi(Build.VERSION_CODES.Q)
+private fun icuRomanize(upper: Char): Char? =
+    romanizer?.transliterate(upper.toString())
+        ?.firstOrNull()
+        ?.uppercaseChar()
+        ?.takeIf { it in 'A'..'Z' }
+
+/** Matched to what ICU's Any-Latin produces, so both paths file a name the same way. */
+private val FALLBACK_ROMAN = mapOf(
+    // Cyrillic
+    'А' to 'A', 'Б' to 'B', 'В' to 'V', 'Г' to 'G', 'Д' to 'D', 'Е' to 'E', 'Ё' to 'E',
+    'Ж' to 'Z', 'З' to 'Z', 'И' to 'I', 'Й' to 'J', 'К' to 'K', 'Л' to 'L', 'М' to 'M',
+    'Н' to 'N', 'О' to 'O', 'П' to 'P', 'Р' to 'R', 'С' to 'S', 'Т' to 'T', 'У' to 'U',
+    'Ф' to 'F', 'Х' to 'H', 'Ц' to 'C', 'Ч' to 'C', 'Ш' to 'S', 'Щ' to 'S', 'Ы' to 'Y',
+    'Э' to 'E', 'Ю' to 'U', 'Я' to 'A',
+    // Ukrainian, Belarusian, Serbian and Macedonian letters Russian does not use
+    'Ґ' to 'G', 'Є' to 'E', 'І' to 'I', 'Ї' to 'I', 'Ў' to 'U',
+    'Ђ' to 'D', 'Ј' to 'J', 'Љ' to 'L', 'Њ' to 'N', 'Ћ' to 'C', 'Џ' to 'D',
+    // Greek
+    'Α' to 'A', 'Β' to 'B', 'Γ' to 'G', 'Δ' to 'D', 'Ε' to 'E', 'Ζ' to 'Z', 'Η' to 'E',
+    'Θ' to 'T', 'Ι' to 'I', 'Κ' to 'K', 'Λ' to 'L', 'Μ' to 'M', 'Ν' to 'N', 'Ξ' to 'X',
+    'Ο' to 'O', 'Π' to 'P', 'Ρ' to 'R', 'Σ' to 'S', 'Τ' to 'T', 'Υ' to 'Y', 'Φ' to 'P',
+    'Χ' to 'C', 'Ψ' to 'P', 'Ω' to 'O',
+)
 
 /**
  * Latin letters Unicode holds as characters in their own right rather than as an accented A-Z

@@ -40,6 +40,7 @@ fun renderIcon(
 ): Bitmap {
     val adaptive = drawable as? AdaptiveIconDrawable
 
+
     val mono = if (themed && adaptive != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         adaptive.monochrome?.mutate()
     } else {

@@ -149,13 +149,15 @@ data class IconConfig(
     val pack: String?,
     val overrides: Map<String, String>,
     /** False draws no icons at all, for people who want the list to be nothing but names. */
-    val showIcons: Boolean = true,
+    val showIcons: Boolean,
     /** Draw the monochrome layer, tinted, instead of the app's own colors. */
-    val themed: Boolean = false,
-    val shape: IconShape = IconShape.SYSTEM,
+    val themed: Boolean,
+    val shape: IconShape,
 )
 
-val LocalIconConfig = staticCompositionLocalOf { IconConfig(null, emptyMap()) }
+val LocalIconConfig = staticCompositionLocalOf {
+    IconConfig(pack = null, overrides = emptyMap(), showIcons = true, themed = false, shape = IconShape.SYSTEM)
+}
 
 @Composable
 fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
