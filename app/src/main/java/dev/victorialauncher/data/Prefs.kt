@@ -72,6 +72,7 @@ class Prefs(private val context: Context) {
         val WIDGET_HEIGHT_DP = intPreferencesKey("widget_height_dp")
         val WIDGET_IDS = stringPreferencesKey("widget_ids")
         val WIDGET_SIDE_PADDING_DP = intPreferencesKey("widget_side_padding_dp")
+        val WIDGET_OFFSET_X_DP = intPreferencesKey("widget_offset_x_dp")
         val SWIPE_UP_OPENS_LIST = booleanPreferencesKey("swipe_up_opens_list")
         val APPLIST_SEARCH_ENABLED = booleanPreferencesKey("applist_search_enabled")
         val APPLIST_SEARCH_BOTTOM = booleanPreferencesKey("applist_search_bottom")
@@ -230,6 +231,16 @@ class Prefs(private val context: Context) {
      */
     val widgetSidePaddingDp: Flow<Int> =
         data.map { it[Keys.WIDGET_SIDE_PADDING_DP] ?: it[Keys.SIDE_PADDING_DP] ?: 20 }.distinctUntilChanged()
+
+    /**
+     * How far the widget is shifted sideways, negative left and positive right.
+     *
+     * A third-party widget lays out its own contents and most clocks centre theirs, which
+     * nothing out here can reach inside. Moving the whole widget is what moves them. Side
+     * padding already sets how wide it is; this is only where that width sits.
+     */
+    val widgetOffsetXDp: Flow<Int> =
+        data.map { (it[Keys.WIDGET_OFFSET_X_DP] ?: 0).coerceIn(-200, 200) }.distinctUntilChanged()
 
     /** Opening the app list by swiping up from the home screen. */
     val swipeUpOpensList: Flow<Boolean> =
@@ -538,6 +549,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setWidgetSidePaddingDp(v: Int) {
         context.dataStore.edit { it[Keys.WIDGET_SIDE_PADDING_DP] = v }
+    }
+
+    suspend fun setWidgetOffsetXDp(v: Int) {
+        context.dataStore.edit { it[Keys.WIDGET_OFFSET_X_DP] = v.coerceIn(-200, 200) }
     }
 
     suspend fun setSwipeUpOpensList(v: Boolean) {

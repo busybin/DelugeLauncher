@@ -3,6 +3,7 @@ package dev.victorialauncher.ui.applist
 
 import androidx.compose.runtime.Immutable
 import dev.victorialauncher.data.AppInfo
+import java.text.Normalizer
 
 @Immutable
 sealed interface AppListRow {
@@ -26,6 +27,40 @@ data class AppListModel(
 }
 
 /**
+ * The letter a name is filed under, or '#'.
+ *
+ * Only A-Z get one of their own. Char.isLetter is true of every kanji, every hangul syllable
+ * and every Cyrillic letter, so filing by it gave a strip of thousands of entries on a device
+ * with CJK app names — one per character, which is no index at all.
+ *
+ * Accents and ligatures are folded first, so Ärger files under A and Œuvre under O, rather to '#'
+ * than falling to '#' with the scripts that have no place on an A-Z strip. '#' sorts above A,
+ * being the lower codepoint.
+ */
+internal fun indexLetter(name: String): Char {
+    val first = name.firstOrNull() ?: return '#'
+    val folded = Normalizer.normalize(first.toString(), Normalizer.Form.NFKD)
+        .firstOrNull()
+        ?.uppercaseChar()
+        ?: return '#'
+    return when {
+        folded in 'A'..'Z' -> folded
+        else -> LATIN_STANDALONE[folded] ?: '#'
+    }
+}
+
+/**
+ * Latin letters Unicode holds as characters in their own right rather than as an accented A-Z
+ * one, so no amount of normalizing reaches the letter underneath. Without these, names in
+ * Danish, Norwegian, Polish or Icelandic fall to '#' the same as a script that genuinely has
+ * no A-Z letter to file under.
+ */
+private val LATIN_STANDALONE = mapOf(
+    'Æ' to 'A', 'Ø' to 'O', 'Œ' to 'O', 'Ł' to 'L', 'Đ' to 'D', 'Ð' to 'D',
+    'Þ' to 'T', 'Ħ' to 'H', 'Ŧ' to 'T', 'Ŋ' to 'N', 'Ə' to 'E', 'ẞ' to 'S', 'ß' to 'S',
+)
+
+/**
  * [launchCounts] empty keeps every section alphabetical; otherwise the apps inside each letter
  * are ordered by how often they were opened from here. The letters themselves never move —
  * an app is still filed under its own name, or the scrubber would be pointing at nothing.
@@ -39,10 +74,7 @@ fun buildAppListModel(
     val visible = apps.filter { it.key !in hidden }
     val rows = mutableListOf<AppListRow>()
 
-    val byLetter = visible.groupBy { app ->
-        val c = displayName(app).firstOrNull()?.uppercaseChar()
-        if (c != null && c.isLetter()) c else '#'
-    }
+    val byLetter = visible.groupBy { indexLetter(displayName(it)) }
 
     val letterIndex = mutableListOf<Pair<Char, Int>>()
     byLetter.toSortedMap().forEach { (letter, list) ->

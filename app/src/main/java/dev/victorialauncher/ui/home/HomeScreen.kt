@@ -162,8 +162,10 @@ fun HomeScreen(
     itemSpacingDp: Int,
     sidePaddingDp: Int,
     widgetSidePaddingDp: Int,
+    widgetOffsetXDp: Int,
     onSetSidePadding: (Int) -> Unit,
     onSetWidgetSidePadding: (Int) -> Unit,
+    onSetWidgetOffsetX: (Int) -> Unit,
     paddings: HomePaddings,
     widgetIds: List<Int>,
     widgetPosition: Int,
@@ -550,6 +552,15 @@ fun HomeScreen(
                         onChange = onSetWidgetSidePadding,
                         contentColor = contentColor,
                     )
+                    Spacer(Modifier.height(6.dp))
+                    StepperRow(
+                        label = stringResource(R.string.handle_widget_offset_x),
+                        value = widgetOffsetXDp,
+                        range = -200..200,
+                        step = PADDING_STEP_DP,
+                        onChange = onSetWidgetOffsetX,
+                        contentColor = contentColor,
+                    )
                 }
                 Spacer(Modifier.height(6.dp))
             }
@@ -666,12 +677,18 @@ fun HomeScreen(
                 ) {
                     when (item) {
                         HomeItem.Widget -> Box {
+                            // A widget lays out its own contents and most clocks centre
+                            // theirs, which nothing out here can reach inside. Narrowing the
+                            // slot and putting it against a side moves what it draws with it.
                             WidgetSlot(
                                 widgetIds = widgetIds,
                                 heightDp = widgetHeightDp,
                                 onEditLayout = { onEditModeChange(true) },
                                 actions = widgetActions,
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = widgetSidePaddingDp.dp),
+                                modifier = Modifier
+                                    .offset(x = widgetOffsetXDp.dp)
+                                    .fillMaxWidth()
+                                    .padding(horizontal = widgetSidePaddingDp.dp),
                             )
                             // The widget is a row in the order like any other, so it needs a
                             // handle of its own to be moved among them.

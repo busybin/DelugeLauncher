@@ -168,6 +168,7 @@ fun VictoriaNavHost(
     val folders by app.prefs.folders.collectAsState(initial = emptyList())
     val widgetIds by app.prefs.widgetIds.collectAsState(initial = emptyList())
     val widgetSidePaddingDp by app.prefs.widgetSidePaddingDp.collectAsState(initial = sidePaddingDp)
+    val widgetOffsetXDp by app.prefs.widgetOffsetXDp.collectAsState(initial = 0)
     val swipeUpOpensList by app.prefs.swipeUpOpensList.collectAsState(initial = false)
     val appListSearchEnabled by app.prefs.appListSearchEnabled.collectAsState(initial = false)
     val appListSearchBottom by app.prefs.appListSearchBottom.collectAsState(initial = false)
@@ -227,6 +228,7 @@ fun VictoriaNavHost(
         appListAlignment = appListAlignment,
         iconSide = iconSide,
         widgetSidePaddingDp = widgetSidePaddingDp,
+        widgetOffsetXDp = widgetOffsetXDp,
         edgeZoneWidthDp = edgeZoneWidthDp,
         swipeUpOpensAppList = swipeUpOpensList,
         appListSearch = appListSearchEnabled,
