@@ -29,8 +29,8 @@ android {
         applicationId = "dev.victorialauncher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 60
-        versionName = "0.56.0"
+        versionCode = 61
+        versionName = "0.56.1"
     }
 
     signingConfigs {
