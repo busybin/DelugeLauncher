@@ -4,6 +4,7 @@ package dev.victorialauncher
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
@@ -31,19 +32,17 @@ class MainActivity : ComponentActivity() {
     /** Bumped whenever HOME is pressed while we're already showing, so overlays can close. */
     private var homeIntentTick by mutableStateOf(0)
 
+    /** A letter typed on a hardware keyboard while the home screen had nothing else to do. */
+    private var typedToSearch by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        // Rotation is a tablet feature here, not a general one. This is a list down the side
-        // of the screen: a phone on its side has about a third of the height it needs, and
-        // what is left holds two favorites and an alphabet squeezed into nothing. A tablet on
-        // its side has more height than a phone upright, so there it is simply useful.
-        requestedOrientation =
-            if (resources.configuration.smallestScreenWidthDp >= TABLET_WIDTH_DP) {
-                ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-            } else {
-                ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            }
+        // Portrait until told otherwise on a phone, free on a tablet: this is a list down the
+        // side of the screen, and a phone sideways has about a third of the height it needs.
+        // The setting exists because that is a judgement about a screen rather than about a
+        // person — a phone in a car mount wants it anyway.
+        val rotatesByDefault = resources.configuration.smallestScreenWidthDp >= TABLET_WIDTH_DP
         val app = application as VictoriaApp
 
         setContent {
@@ -72,6 +71,14 @@ class MainActivity : ComponentActivity() {
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
             val fontFile by app.prefs.fontFile.collectAsState(initial = null)
+            val allowRotation by app.prefs.allowRotation.collectAsState(initial = null)
+            LaunchedEffect(allowRotation, rotatesByDefault) {
+                requestedOrientation = if (allowRotation ?: rotatesByDefault) {
+                    ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                } else {
+                    ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                }
+            }
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
             val iconOverrides by app.prefs.iconOverrides.collectAsState(initial = emptyMap())
             val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
@@ -92,6 +99,8 @@ class MainActivity : ComponentActivity() {
                     VictoriaNavHost(
                         app = app,
                         homeIntentTick = homeIntentTick,
+                        typedToSearch = typedToSearch,
+                        onTypedToSearchHandled = { typedToSearch = null },
                         font = font,
                         hideStatusBar = hideStatusBar,
                         hideStatusBarAppList = hideStatusBarAppList,
@@ -103,6 +112,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    /**
+     * Typing on a hardware keyboard opens the app list and starts searching.
+     *
+     * A phone with keys has nowhere else for a keystroke to go on a home screen, and reaching
+     * for the search field first is the long way round to the thing you already started
+     * spelling. Only printable characters count: the volume keys, the arrows and everything
+     * else keep doing their own jobs.
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) {
+            return super.onKeyDown(keyCode, event)
+        }
+        val typed = event.unicodeChar.takeIf { it != 0 }?.toChar()
+        if (typed == null || typed.isISOControl() || typed == ' ') {
+            return super.onKeyDown(keyCode, event)
+        }
+        typedToSearch = typed.toString()
+        return true
     }
 
     override fun onNewIntent(intent: Intent) {

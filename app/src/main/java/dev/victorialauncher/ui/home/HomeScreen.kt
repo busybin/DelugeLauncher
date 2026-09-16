@@ -275,8 +275,12 @@ fun HomeScreen(
     var dragOrder by remember { mutableStateOf<List<HomeItem>?>(null) }
     var draggingIndex by remember { mutableStateOf<Int?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
-    val itemHeights = remember { mutableStateMapOf<Int, Int>() }
-    val itemTops = remember { mutableStateMapOf<Int, Float>() }
+    // Plain maps, deliberately. Every row writes its size and position here on every layout
+    // pass; as snapshot state, read back during composition, each of those writes asked for a
+    // recomposition that laid the rows out again and wrote again — which never settles, and
+    // showed up as the favorites shivering in place.
+    val itemHeights = remember { HashMap<Int, Int>() }
+    val itemTops = remember { HashMap<Int, Float>() }
 
     val homeItems = remember(favorites, widgetPosition, showWidgetSlot) {
         buildHomeItems(favorites, widgetPosition, showWidgetSlot)
@@ -336,19 +340,29 @@ fun HomeScreen(
         itemTops.keys.retainAll { it in displayItems.indices }
     }
 
-    // Measured span of the favorites list, handed up so the A-Z strip can match it.
+    // Measured span of the favorites, handed up so the A-Z strip can match it.
     //
-    // Derived here rather than assigned from inside onGloballyPositioned. Assigning meant each
-    // row deciding whether it was the first or last against the indices of the composition
-    // that built its callback — so after a removal shifted everything, a row could still be
-    // reporting itself as the bottom of a list it was no longer the bottom of, and the
-    // favorites kept the span of the layout they had before.
-    val favBoundsTop = itemTops[firstRowIndex]
-    val favBoundsBottom = itemTops[lastRowIndex]?.let { it + (itemHeights[lastRowIndex] ?: 0) }
-    LaunchedEffect(favBoundsTop, favBoundsBottom) {
-        val top = favBoundsTop ?: return@LaunchedEffect
-        val bottom = favBoundsBottom ?: return@LaunchedEffect
-        if (bottom > top) onFavoritesBoundsChanged(top, bottom)
+    // The only piece of the measurements that reaches composition, and only when it has really
+    // moved — so a layout pass that lands everything where it already was ends there instead
+    // of asking for another one.
+    var favBounds by remember { mutableStateOf<Pair<Float, Float>?>(null) }
+
+    /** Recomputed after each row reports, against the list as it is now rather than as it was. */
+    fun refreshFavBounds() {
+        val first = displayItems.indexOfFirst { it !is HomeItem.Widget }
+        val last = displayItems.indexOfLast { it !is HomeItem.Widget }
+        val top = itemTops[first] ?: return
+        val bottom = (itemTops[last] ?: return) + (itemHeights[last] ?: return)
+        if (bottom <= top) return
+        val current = favBounds
+        if (current == null || abs(current.first - top) > 0.5f || abs(current.second - bottom) > 0.5f) {
+            favBounds = top to bottom
+        }
+    }
+
+    LaunchedEffect(favBounds) {
+        val (top, bottom) = favBounds ?: return@LaunchedEffect
+        onFavoritesBoundsChanged(top, bottom)
     }
 
     val peekPullPx = with(density) { 30.dp.toPx() }
@@ -369,9 +383,8 @@ fun HomeScreen(
     }
     val editScrollState = rememberScrollState()
 
-    LaunchedEffect(centerFavorites, favBoundsTop, favBoundsBottom, viewportHeight, rootY) {
-        val top = favBoundsTop ?: return@LaunchedEffect
-        val bottom = favBoundsBottom ?: return@LaunchedEffect
+    LaunchedEffect(centerFavorites, favBounds, viewportHeight, rootY) {
+        val (top, bottom) = favBounds ?: return@LaunchedEffect
         if (!centerFavorites || viewportHeight <= 0 || bottom <= top) {
             return@LaunchedEffect
         }
@@ -686,6 +699,7 @@ fun HomeScreen(
                         .onGloballyPositioned { coords ->
                             itemHeights[index] = coords.size.height
                             itemTops[index] = coords.positionInWindow().y
+                            refreshFavBounds()
                         }
                         .zIndex(if (draggingIndex == index) 1f else 0f)
                         .graphicsLayer {

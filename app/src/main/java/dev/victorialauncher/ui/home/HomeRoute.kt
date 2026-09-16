@@ -106,6 +106,8 @@ private val SWIPE_OPEN_DISTANCE = 150.dp
 fun HomeRoute(
     app: VictoriaApp,
     homeIntentTick: Int,
+    typedToSearch: String?,
+    onTypedToSearchHandled: () -> Unit,
     settings: HomeSettings,
     homePaddings: HomePaddings,
     favorites: List<FavoriteEntry>,
@@ -255,6 +257,20 @@ fun HomeRoute(
     // Hoisted so closing the list clears it; the overlay stays composed while hidden, so a
     // query left behind would still be filtering the next time it opened.
     var appListQuery by remember { mutableStateOf("") }
+
+    // A keystroke on the home screen opens the list already searching for it. Only when there
+    // is a search field to type into: without one the query filters a list showing no sign of
+    // why, and there would be nothing on screen to clear it with.
+    LaunchedEffect(typedToSearch) {
+        val typed = typedToSearch ?: return@LaunchedEffect
+        onTypedToSearchHandled()
+        if (!settings.appListSearch || homeEditMode || bandEditMode) return@LaunchedEffect
+        if (!appListVisible) {
+            appListVisible = true
+            openAnim.snapTo(openDistancePx)
+        }
+        appListQuery += typed
+    }
 
     fun closeAppList(snap: Boolean = false) {
         appListQuery = ""

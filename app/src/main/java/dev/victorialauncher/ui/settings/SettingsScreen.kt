@@ -102,6 +102,7 @@ fun SettingsScreen(
     textColorMode: TextColorMode,
     textColorCustom: Int,
     dimColor: Int,
+    allowRotation: Boolean,
     fontFile: String?,
     iconShape: IconShape,
     themedIcons: Boolean,
@@ -137,6 +138,7 @@ fun SettingsScreen(
     onSetTextColorMode: (TextColorMode) -> Unit,
     onSetTextColorCustom: (Int) -> Unit,
     onSetDimColor: (Int) -> Unit,
+    onSetAllowRotation: (Boolean) -> Unit,
     onPickFontFile: (Uri) -> Unit,
     onSetIconShape: (IconShape) -> Unit,
     onSetThemedIcons: (Boolean) -> Unit,
@@ -381,6 +383,13 @@ fun SettingsScreen(
                         detail = stringResource(R.string.settings_swipe_up_list_detail),
                         checked = swipeUpOpensList,
                         onCheckedChange = onSetSwipeUpOpensList,
+                    )
+                    RowDivider()
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_allow_rotation),
+                        detail = stringResource(R.string.settings_allow_rotation_detail),
+                        checked = allowRotation,
+                        onCheckedChange = onSetAllowRotation,
                     )
                     RowDivider()
                     SwitchRowWithDetail(

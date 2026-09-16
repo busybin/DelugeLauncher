@@ -15,6 +15,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +79,8 @@ import kotlinx.coroutines.withContext
 fun VictoriaNavHost(
     app: VictoriaApp,
     homeIntentTick: Int,
+    typedToSearch: String?,
+    onTypedToSearchHandled: () -> Unit,
     font: AppFont,
     hideStatusBar: Boolean,
     hideStatusBarAppList: Boolean,
@@ -188,6 +191,9 @@ fun VictoriaNavHost(
     val fontFile by app.prefs.fontFile.collectAsState(initial = null)
     val textColorCustom by app.prefs.textColorCustom.collectAsState(initial = 0xFFFFFFFF.toInt())
     val dimColor by app.prefs.dimColor.collectAsState(initial = 0xFF000000.toInt())
+    val rotatesByDefault = LocalConfiguration.current.smallestScreenWidthDp >= 600
+    val allowRotationPref by app.prefs.allowRotation.collectAsState(initial = null)
+    val allowRotation = allowRotationPref ?: rotatesByDefault
     val iconShape by app.prefs.iconShape.collectAsState(initial = IconShape.SYSTEM)
     val themedIcons by app.prefs.themedIcons.collectAsState(initial = false)
     val alignment by app.prefs.alignment.collectAsState(initial = HomeAlignment.LEFT)
@@ -344,6 +350,8 @@ fun VictoriaNavHost(
             HomeRoute(
                 app = app,
                 homeIntentTick = homeIntentTick,
+                typedToSearch = typedToSearch,
+                onTypedToSearchHandled = onTypedToSearchHandled,
                 settings = settings,
                 homePaddings = homePaddings,
                 favorites = favoriteEntries,
@@ -405,6 +413,7 @@ fun VictoriaNavHost(
                 textColorMode = textColorMode,
                 textColorCustom = textColorCustom,
                 dimColor = dimColor,
+                allowRotation = allowRotation,
                 fontFile = fontFile,
                 iconShape = iconShape,
                 themedIcons = themedIcons,
@@ -439,6 +448,7 @@ fun VictoriaNavHost(
                 onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
                 onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
                 onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
+                onSetAllowRotation = { scope.launch { app.prefs.setAllowRotation(it) } },
                 onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
                 onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
                 // Copied in rather than referenced: a document URI is only as durable as the

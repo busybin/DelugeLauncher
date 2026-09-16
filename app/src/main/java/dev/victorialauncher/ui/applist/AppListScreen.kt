@@ -950,7 +950,7 @@ fun AppListScreen(
         if (scrubLetter != null) {
             val bubble = 72.dp
             val halfPx = with(density) { (bubble / 2).toPx() }
-            val insetPx = with(density) { 122.dp.toPx() }
+            val insetPx = with(density) { SCRUB_BUBBLE_INSET_DP.dp.toPx() }
             Surface(
                 color = Color.Black.copy(alpha = 0.6f),
                 shape = RoundedCornerShape(22.dp),

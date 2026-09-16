@@ -23,8 +23,27 @@ import kotlin.math.roundToInt
 /** Letters sit this far in from the screen edge so they aren't crowding it. */
 private const val EDGE_INSET_DP = 28f
 
-/** How far the bulge pushes the column away from the edge at its peak. */
-private const val BELL_AMPLITUDE_DP = 75f
+/**
+ * How far the bulge pushes the column away from the edge at its peak.
+ *
+ * Has to clear the fingertip without reaching the bubble. The thumb is already an edge-zone in
+ * from the screen edge, so at 75dp the peak landed about 7dp from it — underneath, hidden by
+ * the hand pointing at it — while the bubble beginning at 122dp left only about 19dp of room
+ * to move into. The two only go further out together, which is what [SCRUB_BUBBLE_INSET_DP]
+ * is for.
+ */
+private const val BELL_AMPLITUDE_DP = 112f
+
+/** Half the letter cell, so the peak is measured by its edge rather than its middle. */
+private const val LETTER_HALF_DP = 10f
+
+/**
+ * Where the letter bubble starts, kept a fixed gap beyond the peak of the bell.
+ *
+ * Derived rather than written down twice: the bubble sat at a number of its own, so growing
+ * the bulge to clear a fingertip walked the strip straight into it.
+ */
+const val SCRUB_BUBBLE_INSET_DP = EDGE_INSET_DP + BELL_AMPLITUDE_DP + LETTER_HALF_DP + 18f
 
 /**
  * The A-Z strip. The letters never change size — the *column* bows outward around the
@@ -53,9 +72,10 @@ fun EdgeScrubber(
 
     Box(
         modifier = modifier
-            // Wide enough for the inset, the letter cell and the outward bulge — at 56dp the
-            // horizontal padding ate the entire width and the curve had nowhere to go.
-            .width(132.dp)
+            // Wide enough for the inset, the letter cell and the whole outward bulge — at
+            // 56dp the horizontal padding ate the entire width and the curve had nowhere to
+            // go, and the bulge has since grown enough to clear a fingertip.
+            .width(210.dp)
             .fillMaxHeight()
             .padding(horizontal = EDGE_INSET_DP.dp),
     ) {

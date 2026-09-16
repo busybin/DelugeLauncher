@@ -65,6 +65,7 @@ class Prefs(private val context: Context) {
         val FONT_FILE = stringPreferencesKey("font_file")
         val TEXT_COLOR_CUSTOM = intPreferencesKey("text_color_custom")
         val DIM_COLOR = intPreferencesKey("dim_color")
+        val ALLOW_ROTATION = booleanPreferencesKey("allow_rotation")
         val THEMED_ICONS = booleanPreferencesKey("themed_icons")
         val ICON_SHAPE = stringPreferencesKey("icon_shape")
         val HIDE_STATUS_BAR = booleanPreferencesKey("hide_status_bar")
@@ -185,6 +186,15 @@ class Prefs(private val context: Context) {
 
     /** Absolute path of the typeface the user supplied, once it has been copied in. */
     val fontFile: Flow<String?> = data.map { it[Keys.FONT_FILE] }.distinctUntilChanged()
+
+    /**
+     * Whether the launcher turns with the device.
+     *
+     * Null until it is set, which leaves the decision to the screen: a tablet has the height
+     * for this sideways and a phone does not. Someone who wants it anyway — a phone in a car
+     * mount is the case that came up — can say so.
+     */
+    val allowRotation: Flow<Boolean?> = data.map { it[Keys.ALLOW_ROTATION] }.distinctUntilChanged()
 
     /**
      * What the wallpaper is dimmed with, as an opaque RGB; the dim sliders set how much of it
@@ -505,6 +515,10 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             if (path == null) pref.remove(Keys.FONT_FILE) else pref[Keys.FONT_FILE] = path
         }
+    }
+
+    suspend fun setAllowRotation(v: Boolean) {
+        context.dataStore.edit { it[Keys.ALLOW_ROTATION] = v }
     }
 
     suspend fun setDimColor(argb: Int) {

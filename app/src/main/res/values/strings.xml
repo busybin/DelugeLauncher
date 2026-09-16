@@ -143,6 +143,8 @@
     <string name="text_color_material">Material</string>
     <string name="text_color_custom">Custom</string>
     <string name="text_color_pick">Pick a color</string>
+    <string name="settings_allow_rotation">Rotate with the device</string>
+    <string name="settings_allow_rotation_detail">Off on phones: sideways there is about a third of the height this layout needs. On by default on tablets</string>
     <string name="settings_dim_color">Dim color</string>
     <string name="settings_dim_color_detail">What the wallpaper is dimmed with; the sliders above set how much</string>
     <string name="color_from_wallpaper">From your wallpaper</string>
