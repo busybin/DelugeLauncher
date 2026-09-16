@@ -138,11 +138,21 @@ fun buildAppListModel(
     hidden: Set<String>,
     displayName: (AppInfo) -> String,
     launchCounts: Map<String, Int> = emptyMap(),
+    /**
+     * The app's name in English, asked for only when its own name has no letter to file under.
+     *
+     * A Japanese phone calls an app ブルー, which lands in '#' along with everything else that
+     * is not A-Z — so scrubbing to B, where its English name Blue would put it, finds nothing.
+     */
+    englishName: (AppInfo) -> String? = { null },
 ): AppListModel {
     val visible = apps.filter { it.key !in hidden }
     val rows = mutableListOf<AppListRow>()
 
-    val byLetter = visible.groupBy { indexLetter(displayName(it)) }
+    val byLetter = visible.groupBy { app ->
+        val own = indexLetter(displayName(app))
+        if (own != '#') own else englishName(app)?.let { indexLetter(it) } ?: '#'
+    }
 
     val letterIndex = mutableListOf<Pair<Char, Int>>()
     byLetter.toSortedMap().forEach { (letter, list) ->

@@ -6,6 +6,9 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
+import android.content.res.Configuration
+import android.content.res.Resources
+import java.util.Locale
 import android.os.Process
 import android.os.UserManager
 import android.graphics.drawable.Drawable
@@ -86,6 +89,29 @@ class AppRepository(
                 pm.defaultActivityIcon
             }
         }
+    }
+
+    // An app's label comes back in the device's language, so on a Japanese phone the English
+    // name is nowhere in the list. Loading it means asking the app's own resources for the
+    // label a second time through an English configuration, which is a whole resource table
+    // per app — so it is only ever asked for a name that has no A-Z letter of its own, and the
+    // answer is kept.
+    private val englishLabels = mutableMapOf<String, String?>()
+
+    /** The app's name in English, or null if it has none or it is the name we already have. */
+    fun englishLabel(app: AppInfo): String? = englishLabels.getOrPut(app.key) {
+        runCatching {
+            val info = pm.getActivityInfo(app.componentName, 0)
+            val labelRes = if (info.labelRes != 0) info.labelRes else info.applicationInfo.labelRes
+            if (labelRes == 0) return@runCatching null
+            val res = pm.getResourcesForApplication(info.applicationInfo)
+            val config = Configuration(res.configuration).apply { setLocale(Locale.ENGLISH) }
+            res.getString(labelRes).takeIf { it.isNotBlank() }?.let { english ->
+                // The context-adjusted resources fall back to the default language when an app
+                // ships no English, which just hands the same name back.
+                Resources(res.assets, res.displayMetrics, config).getString(labelRes)
+            }
+        }.getOrNull()
     }
 
     /** Returns false if the app could not be started, so callers can undo whatever they hid. */

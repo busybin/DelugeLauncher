@@ -150,7 +150,13 @@ fun HomeRoute(
         val apps = appsByKey.values.toList()
         val counts = if (settings.sortByUsage) launchCounts else emptyMap()
         value = withContext(Dispatchers.Default) {
-            buildAppListModel(apps, hiddenApps, { nameOverrides[it.key] ?: it.label }, counts)
+            buildAppListModel(
+                apps,
+                hiddenApps,
+                { nameOverrides[it.key] ?: it.label },
+                counts,
+                englishName = { app.appRepository.englishLabel(it) },
+            )
         }
     }
 
@@ -167,7 +173,13 @@ fun HomeRoute(
             null
         } else {
             withContext(Dispatchers.Default) {
-                buildAppListModel(apps, emptySet(), { nameOverrides[it.key] ?: it.label }, counts)
+                buildAppListModel(
+                    apps,
+                    emptySet(),
+                    { nameOverrides[it.key] ?: it.label },
+                    counts,
+                    englishName = { app.appRepository.englishLabel(it) },
+                )
             }
         }
     }

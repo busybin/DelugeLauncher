@@ -699,7 +699,7 @@ fun HomeScreen(
                 ) {
                     when (item) {
                         HomeItem.Widget -> Box {
-                            // A widget lays out its own contents and most clocks centre
+                            // A widget lays out its own contents and most clocks center
                             // theirs, which nothing out here can reach inside. Narrowing the
                             // slot and putting it against a side moves what it draws with it.
                             WidgetSlot(
@@ -1468,7 +1468,7 @@ private fun RowScope.AlignedIconLabel(
     // and the Row's arrangement moves icon and label together as one.
     val labelModifier = Modifier.weight(1f, fill = false)
     // Centering measures the pair, so the text would sit off the middle by half an icon;
-    // balancing the icon on the label's far side puts the text itself on the centre line.
+    // balancing the icon on the label's far side puts the text itself on the center line.
     val balance: @Composable () -> Unit = {
         if (centered && showLabel && showIcons) Spacer(Modifier.width(iconWidth + gap))
     }

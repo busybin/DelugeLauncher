@@ -53,6 +53,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import dev.victorialauncher.ui.theme.fontFamilyOf
+import dev.victorialauncher.ui.theme.rememberWallpaperPalette
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -939,10 +940,14 @@ private fun ColorPickerDialog(initial: Int, onConfirm: (Int) -> Unit, onDismiss:
     var hex by remember { mutableStateOf(String.format("%06X", initial and 0xFFFFFF)) }
     val parsed = remember(hex) { hex.toIntOrNull(16)?.let { 0xFF000000.toInt() or it } }
 
-    // The palette Android derived from the wallpaper, offered first: picking a colour that
+    // The palette Android derived from the wallpaper, offered first: picking a color that
     // already belongs to the wallpaper is most of what anyone wants here, and typing its hex
     // is not something anyone knows off-hand.
-    val scheme = MaterialTheme.colorScheme
+    // The same palette the Material text color comes from, so the swatch you pick here and
+    // the color that option gives you are drawn from one scheme. MaterialTheme's own follows
+    // the system dark mode instead, which disagrees the moment a light wallpaper meets a dark
+    // system theme.
+    val scheme = rememberWallpaperPalette() ?: MaterialTheme.colorScheme
     val fromWallpaper = listOf(
         scheme.primary, scheme.secondary, scheme.tertiary,
         scheme.primaryContainer, scheme.surfaceVariant, scheme.surface,

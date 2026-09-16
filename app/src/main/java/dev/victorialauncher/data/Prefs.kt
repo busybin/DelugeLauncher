@@ -274,7 +274,7 @@ class Prefs(private val context: Context) {
     /**
      * How far the widget is shifted sideways, negative left and positive right.
      *
-     * A third-party widget lays out its own contents and most clocks centre theirs, which
+     * A third-party widget lays out its own contents and most clocks center theirs, which
      * nothing out here can reach inside. Moving the whole widget is what moves them. Side
      * padding already sets how wide it is; this is only where that width sits.
      */

@@ -1083,8 +1083,8 @@ private fun AppRow(
                     },
                 )
             }
-            // Centred rows balance the icon with a spacer on the label's far side, so the
-            // text lands on the screen's centre line rather than the pair straddling it.
+            // Centerd rows balance the icon with a spacer on the label's far side, so the
+            // text lands on the screen's center line rather than the pair straddling it.
             val showIcons = LocalIconConfig.current.showIcons
             val balance: @Composable () -> Unit = {
                 if (alignment == HomeAlignment.CENTER && showIcons) {
