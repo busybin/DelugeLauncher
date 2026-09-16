@@ -1,0 +1,10 @@
+[weblate]
+url = https://hosted.weblate.org/api/
+
+[component "victoria-launcher/strings"]
+slug = strings
+name = Strings
+filemask = app/src/main/res/values-*/strings.xml
+template = app/src/main/res/values/strings.xml
+file_format = aresource
+license = GPL-3.0-or-later

@@ -145,6 +145,14 @@
     <string name="text_color_pick">Pick a color</string>
     <string name="settings_allow_rotation">Rotate with the device</string>
     <string name="settings_allow_rotation_detail">Off on phones: sideways there is about a third of the height this layout needs. On by default on tablets</string>
+    <string name="settings_section_backup">Backup</string>
+    <string name="settings_export">Export settings</string>
+    <string name="settings_export_detail">Save favorites, folders, layout and everything else to a file</string>
+    <string name="settings_import">Import settings</string>
+    <string name="settings_import_detail">Replace everything with a file saved earlier</string>
+    <string name="settings_export_done">Settings saved</string>
+    <string name="settings_import_done">Settings restored</string>
+    <string name="settings_backup_failed">That file could not be read</string>
     <string name="settings_dim_color">Dim color</string>
     <string name="settings_dim_color_detail">What the wallpaper is dimmed with; the sliders above set how much</string>
     <string name="color_from_wallpaper">From your wallpaper</string>
@@ -187,6 +195,7 @@
     <!-- Icon picker -->
     <string name="icon_picker_title">Icon for %1$s</string>
     <string name="icon_picker_gallery">Gallery…</string>
+    <string name="icon_picker_all">All</string>
     <string name="icon_picker_reset">Reset to default</string>
     <string name="icon_picker_no_packs">No icon packs installed. Install an icon pack from the Play Store, or pick an image from your gallery.</string>
     <string name="icon_picker_search">Search icons</string>

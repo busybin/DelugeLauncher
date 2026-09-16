@@ -61,6 +61,8 @@ You need JDK 17 and an Android SDK with platform 35.
 ./gradlew assembleDebug
 ```
 
+Translations are very welcome — see [TRANSLATING.md](docs/TRANSLATING.md).
+
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for the full build and contribution
 notes, and [ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code fits together.
 

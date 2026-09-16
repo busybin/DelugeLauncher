@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import dev.victorialauncher.TypedKey
 import dev.victorialauncher.VictoriaApp
 import android.widget.Toast
 import dev.victorialauncher.data.IconShape
@@ -79,8 +80,8 @@ import kotlinx.coroutines.withContext
 fun VictoriaNavHost(
     app: VictoriaApp,
     homeIntentTick: Int,
-    typedToSearch: String?,
-    onTypedToSearchHandled: () -> Unit,
+    typedToSearch: List<TypedKey>,
+    onTypedToSearchHandled: (List<TypedKey>) -> Unit,
     font: AppFont,
     hideStatusBar: Boolean,
     hideStatusBarAppList: Boolean,
@@ -241,6 +242,46 @@ fun VictoriaNavHost(
     }
     LaunchedEffect(allApps, iconPackPackage, iconOverrides, listIconPx, priorityKeys, iconStyle) {
         warmIconCache(context, allApps, iconPackPackage, iconOverrides, listIconPx, iconStyle, priorityKeys)
+    }
+
+    // Written through the document picker rather than to a path of our own: the file is the
+    // user's to keep, and this way it lands wherever they keep things without the app asking
+    // for storage it otherwise never needs.
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                runCatching {
+                    val json = app.prefs.exportJson()
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(json.toByteArray()) }
+                        ?: return@runCatching false
+                    true
+                }.getOrDefault(false)
+            }
+            Toast.makeText(
+                context,
+                if (ok) R.string.settings_export_done else R.string.settings_backup_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val text = withContext(Dispatchers.IO) {
+                runCatching {
+                    context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                }.getOrNull()
+            }
+            val ok = text != null && app.prefs.importJson(text)
+            Toast.makeText(
+                context,
+                if (ok) R.string.settings_import_done else R.string.settings_backup_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
     }
 
     val settings = HomeSettings(
@@ -449,6 +490,8 @@ fun VictoriaNavHost(
                 onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
                 onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
                 onSetAllowRotation = { scope.launch { app.prefs.setAllowRotation(it) } },
+                onExportSettings = { exportLauncher.launch("victoria-launcher-settings.json") },
+                onImportSettings = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
                 onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
                 onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
                 // Copied in rather than referenced: a document URI is only as durable as the

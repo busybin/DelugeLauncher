@@ -7,6 +7,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -43,6 +45,10 @@ import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
 
+/** Most a single pack contributes to a search, so one huge pack cannot bury the others. */
+private const val PER_PACK_MATCH_LIMIT = 60
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun IconPickerScreen(
     appLabel: String,
@@ -54,16 +60,31 @@ fun IconPickerScreen(
     val context = LocalContext.current
     val app = context.applicationContext as VictoriaApp
     val packs = remember { app.iconPackRepository.getInstalledIconPacks() }
-    var selectedPack by remember { mutableStateOf(packs.firstOrNull()?.packageName) }
-    var query by remember { mutableStateOf("") }
+    // Null means All: browse or search every pack at once. Picking a pack narrows both.
+    var selectedPack by remember { mutableStateOf<String?>(null) }
+    // Seeded with the app's own name, because that is what you came here to find. It also
+    // means the screen opens on a handful of matches rather than on every drawable a pack
+    // ships, which is thousands and took a visible moment to lay out.
+    var query by remember { mutableStateOf(appLabel) }
     val surface = MaterialTheme.colorScheme.surface
 
-    val allIcons = remember(selectedPack) {
-        selectedPack?.let { app.iconPackRepository.getPackIcons(it) } ?: emptyList()
+    // Whichever packs the chips have narrowed us to — all of them, or the one picked.
+    val searched = remember(packs, selectedPack) {
+        selectedPack?.let { chosen -> packs.filter { it.packageName == chosen } } ?: packs
     }
-    val icons = remember(allIcons, query) {
-        if (query.isBlank()) allIcons
-        else allIcons.filter { it.contains(query.trim(), ignoreCase = true) }
+
+    val matches: List<Pair<String, String>> = remember(searched, query) {
+        val term = query.trim()
+        searched.flatMap { pack ->
+            val names = app.iconPackRepository.getPackIcons(pack.packageName)
+            val hits = if (term.isBlank()) names else names.filter { it.contains(term, ignoreCase = true) }
+            // Capped per pack rather than overall, so one enormous pack cannot fill the grid
+            // and leave the others with nothing to show for themselves.
+            hits.take(PER_PACK_MATCH_LIMIT).map { pack.packageName to it }
+        }
+    }
+    val anyIcons = remember(searched) {
+        searched.any { app.iconPackRepository.getPackIcons(it.packageName).isNotEmpty() }
     }
 
     Scaffold(
@@ -100,12 +121,18 @@ fun IconPickerScreen(
                 return@Column
             }
 
-            Row(
+            // Wraps: All plus a few packs is more chips than a line holds, and a Row answers
+            // that by breaking the last label down the screen a letter at a time.
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                Chip(stringResource(R.string.icon_picker_all), selected = selectedPack == null) {
+                    selectedPack = null
+                }
                 packs.forEach { pack ->
                     Chip(pack.label, selected = selectedPack == pack.packageName) {
                         selectedPack = pack.packageName
@@ -131,10 +158,9 @@ fun IconPickerScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp),
             )
 
-            val pack = selectedPack
-            if (pack == null || icons.isEmpty()) {
+            if (matches.isEmpty()) {
                 Text(
-                    if (allIcons.isEmpty()) stringResource(R.string.icon_picker_not_browsable)
+                    if (!anyIcons) stringResource(R.string.icon_picker_not_browsable)
                     else stringResource(R.string.icon_picker_no_matches, query),
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(16.dp),
@@ -146,7 +172,7 @@ fun IconPickerScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(icons) { drawableName ->
+                    items(matches, key = { it.first + "/" + it.second }) { (pack, drawableName) ->
                         PackIconCell(pack, drawableName) { onPickPackIcon(pack, drawableName) }
                     }
                 }

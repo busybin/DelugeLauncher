@@ -139,6 +139,8 @@ fun SettingsScreen(
     onSetTextColorCustom: (Int) -> Unit,
     onSetDimColor: (Int) -> Unit,
     onSetAllowRotation: (Boolean) -> Unit,
+    onExportSettings: () -> Unit,
+    onImportSettings: () -> Unit,
     onPickFontFile: (Uri) -> Unit,
     onSetIconShape: (IconShape) -> Unit,
     onSetThemedIcons: (Boolean) -> Unit,
@@ -535,6 +537,22 @@ fun SettingsScreen(
             }
 
             item {
+                Section(stringResource(R.string.settings_section_backup)) {
+                    BackupRow(
+                        label = stringResource(R.string.settings_export),
+                        detail = stringResource(R.string.settings_export_detail),
+                        onClick = onExportSettings,
+                    )
+                    RowDivider()
+                    BackupRow(
+                        label = stringResource(R.string.settings_import),
+                        detail = stringResource(R.string.settings_import_detail),
+                        onClick = onImportSettings,
+                    )
+                }
+            }
+
+            item {
                 Section(stringResource(R.string.settings_section_about)) {
                     Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                         Text(stringResource(R.string.app_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
@@ -904,6 +922,32 @@ private fun TextColorRow(
             initial = customArgb,
             onConfirm = { onSetCustom(it); picking = false },
             onDismiss = { picking = false },
+        )
+    }
+}
+
+@Composable
+private fun BackupRow(label: String, detail: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            modifier = Modifier.padding(4.dp),
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
         )
     }
 }

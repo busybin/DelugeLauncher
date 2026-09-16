@@ -88,8 +88,17 @@ class IconPackRepository(private val context: Context) {
      * Every drawable the pack offers, for the manual "pick an icon" grid. Packs list these in
      * `drawable.xml`; when that's missing we fall back to the distinct drawables named by
      * `appfilter.xml`.
+     *
+     * Parsed once per pack and kept: a pack ships thousands of names and reading the index is
+     * long enough to stall a frame every time the grid was reopened.
      */
-    fun getPackIcons(packPackage: String): List<String> {
+    private val packIconNames = mutableMapOf<String, List<String>>()
+
+    fun getPackIcons(packPackage: String): List<String> = packIconNames.getOrPut(packPackage) {
+        readPackIcons(packPackage)
+    }
+
+    private fun readPackIcons(packPackage: String): List<String> {
         val names = LinkedHashSet<String>()
         try {
             val res = context.packageManager.getResourcesForApplication(packPackage)

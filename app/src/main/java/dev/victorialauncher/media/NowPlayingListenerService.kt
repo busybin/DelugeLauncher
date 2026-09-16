@@ -2,6 +2,8 @@
 package dev.victorialauncher.media
 
 import android.content.ComponentName
+import android.content.Context
+import android.provider.Settings
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -10,6 +12,33 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 
 class NowPlayingListenerService : NotificationListenerService() {
+
+    companion object {
+        /**
+         * Asks the system to bind us again, when it is willing to and has not.
+         *
+         * Replacing the app kills the binding but leaves the permission switched on, so the
+         * Now Playing card quietly stops updating and the setting still reads as granted —
+         * there is nothing to turn back on, which makes it look like the feature broke. That
+         * happens on every update, not only a sideload. requestRebind is the sanctioned way
+         * back and does nothing if the permission was never given.
+         */
+        fun rebindIfPermitted(context: Context) {
+            val component = ComponentName(context, NowPlayingListenerService::class.java)
+            val enabled = runCatching {
+                Settings.Secure.getString(
+                    context.contentResolver,
+                    "enabled_notification_listeners",
+                )
+            }.getOrNull().orEmpty()
+            if (!enabled.contains(component.flattenToString()) &&
+                !enabled.contains(component.packageName + "/" + component.className)
+            ) {
+                return
+            }
+            runCatching { requestRebind(component) }
+        }
+    }
 
     private lateinit var sessionManager: MediaSessionManager
     private lateinit var componentName: ComponentName

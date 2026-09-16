@@ -17,12 +17,16 @@ import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.IconShape
+import dev.victorialauncher.media.NowPlayingListenerService
 import dev.victorialauncher.service.StatusBarFader
 import dev.victorialauncher.ui.VictoriaNavHost
 import dev.victorialauncher.ui.common.IconConfig
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.theme.VictoriaTheme
 import kotlinx.coroutines.delay
+
+/** One keystroke taken on the home screen; a null character is a backspace. */
+data class TypedKey(val seq: Long, val char: Char?)
 
 /** Smallest width that counts as a tablet, which is the platform's own threshold. */
 private const val TABLET_WIDTH_DP = 600
@@ -32,8 +36,14 @@ class MainActivity : ComponentActivity() {
     /** Bumped whenever HOME is pressed while we're already showing, so overlays can close. */
     private var homeIntentTick by mutableStateOf(0)
 
-    /** A letter typed on a hardware keyboard while the home screen had nothing else to do. */
-    private var typedToSearch by mutableStateOf<String?>(null)
+    /**
+     * Keystrokes taken on the home screen, as a growing list so none is dropped.
+     *
+     * Each is stamped with a count rather than replacing the last: typing quickly produced two
+     * characters before the first had been read, and the second overwrote it.
+     */
+    private var typedToSearch by mutableStateOf<List<TypedKey>>(emptyList())
+    private var nextTypedSeq = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,7 +110,7 @@ class MainActivity : ComponentActivity() {
                         app = app,
                         homeIntentTick = homeIntentTick,
                         typedToSearch = typedToSearch,
-                        onTypedToSearchHandled = { typedToSearch = null },
+                        onTypedToSearchHandled = { handled -> typedToSearch = typedToSearch - handled.toSet() },
                         font = font,
                         hideStatusBar = hideStatusBar,
                         hideStatusBarAppList = hideStatusBarAppList,
@@ -126,11 +136,18 @@ class MainActivity : ComponentActivity() {
         if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) {
             return super.onKeyDown(keyCode, event)
         }
-        val typed = event.unicodeChar.takeIf { it != 0 }?.toChar()
-        if (typed == null || typed.isISOControl() || typed == ' ') {
-            return super.onKeyDown(keyCode, event)
+        // Backspace once something has been typed, or the only way to fix a typo is to throw
+        // the whole search away and start it again.
+        if (keyCode == KeyEvent.KEYCODE_DEL) {
+            typedToSearch = typedToSearch + TypedKey(nextTypedSeq++, null)
+            return true
         }
-        typedToSearch = typed.toString()
+        val typed = event.unicodeChar.takeIf { it != 0 }?.toChar()
+        if (typed == null || typed.isISOControl()) return super.onKeyDown(keyCode, event)
+        // A space is a character in half the app names there are, but it is not something to
+        // open a search with — on its own it would start a query that looks like nothing.
+        if (typed == ' ' && typedToSearch.isEmpty()) return super.onKeyDown(keyCode, event)
+        typedToSearch = typedToSearch + TypedKey(nextTypedSeq++, typed)
         return true
     }
 
@@ -143,6 +160,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         (application as VictoriaApp).widgetHost.startListening()
+        NowPlayingListenerService.rebindIfPermitted(this)
     }
 
     override fun onStop() {

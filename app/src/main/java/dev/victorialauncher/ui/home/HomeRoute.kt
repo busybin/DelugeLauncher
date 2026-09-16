@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import dev.victorialauncher.TypedKey
 import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.data.AppInfo
 import dev.victorialauncher.data.EdgeSide
@@ -106,8 +107,8 @@ private val SWIPE_OPEN_DISTANCE = 150.dp
 fun HomeRoute(
     app: VictoriaApp,
     homeIntentTick: Int,
-    typedToSearch: String?,
-    onTypedToSearchHandled: () -> Unit,
+    typedToSearch: List<TypedKey>,
+    onTypedToSearchHandled: (List<TypedKey>) -> Unit,
     settings: HomeSettings,
     homePaddings: HomePaddings,
     favorites: List<FavoriteEntry>,
@@ -262,14 +263,17 @@ fun HomeRoute(
     // is a search field to type into: without one the query filters a list showing no sign of
     // why, and there would be nothing on screen to clear it with.
     LaunchedEffect(typedToSearch) {
-        val typed = typedToSearch ?: return@LaunchedEffect
-        onTypedToSearchHandled()
+        if (typedToSearch.isEmpty()) return@LaunchedEffect
+        val taken = typedToSearch
+        onTypedToSearchHandled(taken)
         if (!settings.appListSearch || homeEditMode || bandEditMode) return@LaunchedEffect
         if (!appListVisible) {
             appListVisible = true
             openAnim.snapTo(openDistancePx)
         }
-        appListQuery += typed
+        appListQuery = taken.fold(appListQuery) { text, key ->
+            if (key.char == null) text.dropLast(1) else text + key.char
+        }
     }
 
     fun closeAppList(snap: Boolean = false) {

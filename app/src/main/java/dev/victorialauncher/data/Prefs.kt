@@ -14,6 +14,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import androidx.datastore.preferences.core.longPreferencesKey
+import kotlinx.coroutines.flow.first
+import org.json.JSONArray
 import org.json.JSONObject
 
 enum class EdgeSide { LEFT, RIGHT, BOTH }
@@ -41,6 +44,9 @@ enum class TextColorMode { AUTO, LIGHT, DARK, MATERIAL, CUSTOM }
 enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 
 private val Context.dataStore by preferencesDataStore(name = "victoria_prefs")
+
+/** Bumped only if the shape of an exported file changes, so an old one can be refused. */
+private const val EXPORT_FORMAT = 1
 
 class Prefs(private val context: Context) {
 
@@ -119,6 +125,87 @@ class Prefs(private val context: Context) {
     )
 
     private val data get() = context.dataStore.data
+
+    /**
+     * Every stored setting as JSON, for moving a set-up to another phone or keeping it.
+     *
+     * Written from the store itself rather than a list of keys kept alongside it, because a
+     * list like that is only right until the next setting is added and nobody remembers it.
+     * The type travels with each value, since JSON cannot tell 1 from 1L from 1.0f and the
+     * store very much can.
+     *
+     * A custom font is a path into this app's own storage, so it points at nothing on another
+     * phone; the font falls back to the default there until one is picked again.
+     */
+    suspend fun exportJson(): String {
+        val stored = data.first()
+        val values = JSONObject()
+        stored.asMap().forEach { (key, value) ->
+            val entry = JSONObject()
+            when (value) {
+                is Boolean -> entry.put("type", "boolean").put("value", value)
+                is Int -> entry.put("type", "int").put("value", value)
+                is Long -> entry.put("type", "long").put("value", value)
+                is Float -> entry.put("type", "float").put("value", value.toDouble())
+                is String -> entry.put("type", "string").put("value", value)
+                is Set<*> -> entry.put("type", "stringSet")
+                    .put("value", JSONArray().apply { value.forEach { put(it.toString()) } })
+                else -> return@forEach
+            }
+            values.put(key.name, entry)
+        }
+        return JSONObject()
+            .put("format", EXPORT_FORMAT)
+            .put("app", "Victoria Launcher")
+            .put("values", values)
+            .toString(2)
+    }
+
+    /**
+     * Replaces every setting with the ones in [text]. Returns false if it is not ours.
+     *
+     * Parsed fully before anything is written: a half-read file that had already cleared the
+     * store would leave someone with neither their old set-up nor the one they were restoring.
+     */
+    suspend fun importJson(text: String): Boolean {
+        val parsed = runCatching {
+            val root = JSONObject(text)
+            if (root.optInt("format") != EXPORT_FORMAT) return false
+            val values = root.getJSONObject("values")
+            buildList {
+                values.keys().forEach { name ->
+                    val entry = values.getJSONObject(name)
+                    // Pair(...) rather than `to`: DataStore has an infix `to` of its own on
+                    // Key, which builds a Preferences.Pair and not the one wanted here.
+                    val pair: Pair<Preferences.Key<*>, Any> = when (entry.getString("type")) {
+                        "boolean" -> Pair(booleanPreferencesKey(name), entry.getBoolean("value"))
+                        "int" -> Pair(intPreferencesKey(name), entry.getInt("value"))
+                        "long" -> Pair(longPreferencesKey(name), entry.getLong("value"))
+                        "float" -> Pair(floatPreferencesKey(name), entry.getDouble("value").toFloat())
+                        "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
+                        "stringSet" -> {
+                            val array = entry.getJSONArray("value")
+                            Pair(
+                                stringSetPreferencesKey(name),
+                                (0 until array.length()).map { array.getString(it) }.toSet(),
+                            )
+                        }
+                        else -> return@forEach
+                    }
+                    add(pair)
+                }
+            }
+        }.getOrNull() ?: return false
+
+        context.dataStore.edit { store ->
+            store.clear()
+            parsed.forEach { (key, value) ->
+                @Suppress("UNCHECKED_CAST")
+                store[key as Preferences.Key<Any>] = value
+            }
+        }
+        return true
+    }
 
     /** Favorites are stored as one newline-joined string; these are the only two readers. */
     private fun readFavorites(pref: Preferences): List<String> =
