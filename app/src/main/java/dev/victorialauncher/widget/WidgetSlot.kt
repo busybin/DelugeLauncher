@@ -264,17 +264,23 @@ private fun WidgetPage(widgetId: Int, onPressAndHold: (x: Float, y: Float) -> Un
                 slotSizeDp = with(density) { size.width.toDp().value.toInt() to size.height.toDp().value.toInt() }
             },
         factory = { ctx ->
-            val hostView = app.widgetHost.createView(ctx, widgetId, providerInfo).apply {
-                setAppWidget(widgetId, providerInfo)
-            }
+            // A widget draws with code from the app that provides it, and one that throws on
+            // the way up would otherwise take the launcher down with it — leaving a home
+            // screen that crashes on sight and no obvious way back. An empty slot is a poor
+            // widget but it is still a home screen.
+            val hostView = runCatching {
+                app.widgetHost.createView(ctx, widgetId, providerInfo).apply {
+                    setAppWidget(widgetId, providerInfo)
+                }
+            }.getOrNull()
             LongPressFrameLayout(ctx).apply {
-                addView(hostView)
+                hostView?.let { addView(it) }
                 onLongPress = { x, y -> onPressAndHold(x, y) }
             }
         },
         update = { container ->
             val hostView = container.getChildAt(0) as? AppWidgetHostView
-            hostView?.setAppWidget(widgetId, providerInfo)
+            runCatching { hostView?.setAppWidget(widgetId, providerInfo) }
             // Widgets lay themselves out for the size they were *told*, not the size of the
             // view; without this they render for some other size and get clipped.
             //

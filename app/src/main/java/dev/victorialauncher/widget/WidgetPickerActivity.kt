@@ -3,9 +3,9 @@ package dev.victorialauncher.widget
 
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
-import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
 import android.widget.ImageView
 import androidx.activity.ComponentActivity
@@ -35,16 +35,13 @@ import dev.victorialauncher.ui.theme.VictoriaTheme
 import dev.victorialauncher.R
 import androidx.compose.ui.res.stringResource
 
+private const val REQUEST_CONFIGURE = 1
+
 class WidgetPickerActivity : ComponentActivity() {
 
     private lateinit var appWidgetManager: AppWidgetManager
     private lateinit var widgetHost: VictoriaAppWidgetHost
     private var pendingWidgetId: Int = -1
-
-    private val configureLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == RESULT_OK) finishWithWidgetId(pendingWidgetId) else cancel()
-        }
 
     private val bindLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -144,20 +141,34 @@ class WidgetPickerActivity : ComponentActivity() {
 
     private fun proceedAfterBind(id: Int) {
         val info = appWidgetManager.getAppWidgetInfo(id)
-        val configure = info?.configure
-        if (configure != null) {
-            val intent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
-                component = configure
-                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id)
-            }
-            try {
-                configureLauncher.launch(intent)
-            } catch (e: ActivityNotFoundException) {
-                finishWithWidgetId(id)
-            }
-        } else {
+        if (info?.configure == null || configurationIsOptional(info)) {
             finishWithWidgetId(id)
+            return
         }
+        // Through the host rather than as a plain Intent of our own. A widget's configure
+        // screen usually is not exported — it expects to be started by whoever holds the
+        // widget id — so starting it directly is refused, and that refusal is a crash rather
+        // than a missed widget. This is the call that carries the host's standing to open it.
+        val started = runCatching {
+            widgetHost.startAppWidgetConfigureActivityForResult(this, id, 0, REQUEST_CONFIGURE, null)
+            true
+        }.getOrDefault(false)
+        // A widget whose configure screen will not open is still a widget; it gets added with
+        // whatever it defaults to rather than being dropped on the floor.
+        if (!started) finishWithWidgetId(id)
+    }
+
+    /** Android 12 let a widget say its configure screen is optional; those can skip it. */
+    private fun configurationIsOptional(info: AppWidgetProviderInfo): Boolean =
+        Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            (info.widgetFeatures and AppWidgetProviderInfo.WIDGET_FEATURE_CONFIGURATION_OPTIONAL) != 0
+
+    @Deprecated("Required by startAppWidgetConfigureActivityForResult, which is requestCode-based")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != REQUEST_CONFIGURE) return
+        if (resultCode == RESULT_OK) finishWithWidgetId(pendingWidgetId) else cancel()
     }
 
     private fun finishWithWidgetId(id: Int) {
