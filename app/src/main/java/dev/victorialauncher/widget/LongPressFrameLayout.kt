@@ -36,8 +36,21 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
             longPressFired = false
+            // A widget that scrolls has to receive the drag itself. Without this the home
+            // screen's own vertical drag takes the gesture as soon as it passes touch slop,
+            // so a list inside a widget shows its scrollbar on the press and then the shade
+            // comes down instead of the list moving.
+            //
+            // The cost is that a pull-down started on top of a widget no longer opens
+            // notifications — the widget is what is under the finger, so the widget gets it.
+            // Everywhere else on the home screen still pulls down.
+            parent?.requestDisallowInterceptTouchEvent(true)
         }
         gestureDetector.onTouchEvent(ev)
+        if (longPressFired) {
+            // Our own menu is taking over, so the hold on the parent is no longer wanted.
+            parent?.requestDisallowInterceptTouchEvent(false)
+        }
         return longPressFired
     }
 
@@ -45,6 +58,7 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         gestureDetector.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             longPressFired = false
+            parent?.requestDisallowInterceptTouchEvent(false)
         }
         return true
     }
