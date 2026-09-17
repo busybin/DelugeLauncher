@@ -28,7 +28,7 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
     /** Where the current gesture began, so its direction can be judged as it moves. */
     private var downX = 0f
     private var downY = 0f
-    private var claimedVertical = false
+    private var releasedSideways = false
     private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     private val gestureDetector = GestureDetector(
@@ -45,25 +45,25 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
                 longPressFired = false
-                claimedVertical = false
+                releasedSideways = false
                 downX = ev.x
                 downY = ev.y
+                // Claimed on the press, not once a direction is clear. Waiting was too late:
+                // the home screen's own drag begins at the same touch slop this would have
+                // measured against, and whichever ran first took the gesture — so a list
+                // inside a widget still lost every scroll to the notification shade.
+                parent?.requestDisallowInterceptTouchEvent(true)
             }
 
-            MotionEvent.ACTION_MOVE -> if (!claimedVertical) {
+            MotionEvent.ACTION_MOVE -> if (!releasedSideways) {
                 val dx = abs(ev.x - downX)
                 val dy = abs(ev.y - downY)
-                // Only a drag that is clearly up or down is taken, and only once it is clearly
-                // a drag at all. A widget that scrolls has to receive those itself, or the home
-                // screen's own vertical drag takes them and the notification shade comes down
-                // instead of the list moving.
-                //
-                // Sideways is deliberately left alone: that is how the pager moves between
-                // widgets, and claiming everything on the press meant a stack of them could no
-                // longer be swiped through.
-                if (dy > touchSlop && dy > dx) {
-                    claimedVertical = true
-                    parent?.requestDisallowInterceptTouchEvent(true)
+                // Handed back as soon as the drag reads as sideways, which is how the pager
+                // moves between widgets. It costs the pager the few pixels before that is
+                // apparent, and it costs a widget nothing: nothing scrolls sideways here.
+                if (dx > touchSlop && dx > dy) {
+                    releasedSideways = true
+                    parent?.requestDisallowInterceptTouchEvent(false)
                 }
             }
         }
@@ -79,7 +79,7 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         gestureDetector.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             longPressFired = false
-            claimedVertical = false
+            releasedSideways = false
             parent?.requestDisallowInterceptTouchEvent(false)
         }
         return true
