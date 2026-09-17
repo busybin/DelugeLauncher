@@ -4,7 +4,9 @@ package dev.victorialauncher.widget
 import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.ViewConfiguration
 import android.widget.FrameLayout
+import kotlin.math.abs
 
 /**
  * Wraps an embedded AppWidgetHostView so a genuine long-press (finger held still) opens our
@@ -23,6 +25,12 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
 
     private var longPressFired = false
 
+    /** Where the current gesture began, so its direction can be judged as it moves. */
+    private var downX = 0f
+    private var downY = 0f
+    private var claimedVertical = false
+    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+
     private val gestureDetector = GestureDetector(
         context,
         object : GestureDetector.SimpleOnGestureListener() {
@@ -34,17 +42,30 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
     )
 
     override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
-            longPressFired = false
-            // A widget that scrolls has to receive the drag itself. Without this the home
-            // screen's own vertical drag takes the gesture as soon as it passes touch slop,
-            // so a list inside a widget shows its scrollbar on the press and then the shade
-            // comes down instead of the list moving.
-            //
-            // The cost is that a pull-down started on top of a widget no longer opens
-            // notifications — the widget is what is under the finger, so the widget gets it.
-            // Everywhere else on the home screen still pulls down.
-            parent?.requestDisallowInterceptTouchEvent(true)
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                longPressFired = false
+                claimedVertical = false
+                downX = ev.x
+                downY = ev.y
+            }
+
+            MotionEvent.ACTION_MOVE -> if (!claimedVertical) {
+                val dx = abs(ev.x - downX)
+                val dy = abs(ev.y - downY)
+                // Only a drag that is clearly up or down is taken, and only once it is clearly
+                // a drag at all. A widget that scrolls has to receive those itself, or the home
+                // screen's own vertical drag takes them and the notification shade comes down
+                // instead of the list moving.
+                //
+                // Sideways is deliberately left alone: that is how the pager moves between
+                // widgets, and claiming everything on the press meant a stack of them could no
+                // longer be swiped through.
+                if (dy > touchSlop && dy > dx) {
+                    claimedVertical = true
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+            }
         }
         gestureDetector.onTouchEvent(ev)
         if (longPressFired) {
@@ -58,6 +79,7 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         gestureDetector.onTouchEvent(event)
         if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
             longPressFired = false
+            claimedVertical = false
             parent?.requestDisallowInterceptTouchEvent(false)
         }
         return true
