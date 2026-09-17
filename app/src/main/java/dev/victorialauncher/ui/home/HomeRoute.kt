@@ -39,6 +39,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
@@ -49,6 +50,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import dev.victorialauncher.TypedKey
 import dev.victorialauncher.VictoriaApp
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.AzStripVisibility
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconSide
@@ -77,6 +79,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Immutable
+import android.content.res.Configuration
 import android.net.Uri
 import dev.victorialauncher.R
 
@@ -666,11 +669,18 @@ fun HomeRoute(
         // being dragged, so it is given whether or not the always-on setting asked for it.
         // Edit layout is the other way round — its own controls sit where the strip does, and
         // the two were drawn on top of each other.
+        // Sideways the strip is worth the room it takes; upright the same setting can be too
+        // much, so a phone in a car mount can have it there without carrying it everywhere.
+        val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
         val showIdleStrip = when {
             appListVisible -> false
             bandEditMode -> true
             homeEditMode -> false
-            else -> settings.alwaysShowAz
+            else -> when (settings.azStripVisibility) {
+                AzStripVisibility.NEVER -> false
+                AzStripVisibility.ALWAYS -> true
+                AzStripVisibility.LANDSCAPE -> landscape
+            }
         }
         if (showIdleStrip) {
             EdgeScrubber(
@@ -778,7 +788,7 @@ data class HomeSettings(
     val nowPlayingHeightDp: Int,
     val nowPlayingEnabled: Boolean,
     val edgeSide: EdgeSide,
-    val alwaysShowAz: Boolean,
+    val azStripVisibility: AzStripVisibility,
     val showAlphabet: Boolean,
     val alignment: HomeAlignment,
     val appListAlignment: HomeAlignment,

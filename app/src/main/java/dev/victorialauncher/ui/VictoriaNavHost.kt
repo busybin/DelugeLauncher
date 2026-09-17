@@ -38,6 +38,7 @@ import android.widget.Toast
 import dev.victorialauncher.data.IconShape
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.AzStripVisibility
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconSide
@@ -162,7 +163,7 @@ fun VictoriaNavHost(
     val nowPlayingHeightDp by app.prefs.nowPlayingHeightDp.collectAsState(initial = 64)
     val homePaddings by app.prefs.homePaddings.collectAsState(initial = HomePaddings.Default)
     val edgeSide by app.prefs.edgeSide.collectAsState(initial = EdgeSide.RIGHT)
-    val alwaysShowAz by app.prefs.alwaysShowAz.collectAsState(initial = false)
+    val azStripVisibility by app.prefs.azStripVisibility.collectAsState(initial = AzStripVisibility.NEVER)
     val showAlphabet by app.prefs.showAlphabet.collectAsState(initial = true)
     val alignRight by app.prefs.alignRight.collectAsState(initial = false)
     val dimWallpaperAlpha by app.prefs.dimWallpaperAlpha.collectAsState(initial = 0.35f)
@@ -292,7 +293,7 @@ fun VictoriaNavHost(
         nowPlayingHeightDp = nowPlayingHeightDp,
         nowPlayingEnabled = nowPlayingEnabled,
         edgeSide = edgeSide,
-        alwaysShowAz = alwaysShowAz,
+        azStripVisibility = azStripVisibility,
         showAlphabet = showAlphabet,
         alignment = alignment,
         appListAlignment = appListAlignment,
@@ -461,7 +462,7 @@ fun VictoriaNavHost(
                 doubleTapToLock = doubleTapToLock,
                 edgeSide = edgeSide,
                 edgeZoneWidthDp = edgeZoneWidthDp,
-                alwaysShowAz = alwaysShowAz,
+                azStripVisibility = azStripVisibility,
                 showAlphabet = showAlphabet,
                 sortByUsage = sortByUsage,
                 appListSearch = appListSearchEnabled,
@@ -521,7 +522,7 @@ fun VictoriaNavHost(
                 onSetDoubleTapToLock = { scope.launch { app.prefs.setDoubleTapToLock(it) } },
                 onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
                 onSetEdgeZoneWidth = { scope.launch { app.prefs.setEdgeZoneWidthDp(it) } },
-                onSetAlwaysShowAz = { scope.launch { app.prefs.setAlwaysShowAz(it) } },
+                onSetAzStripVisibility = { scope.launch { app.prefs.setAzStripVisibility(it) } },
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
                 onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },

@@ -4,6 +4,7 @@ package dev.victorialauncher.ui.settings
 import androidx.annotation.StringRes
 import dev.victorialauncher.R
 import dev.victorialauncher.data.AppFont
+import dev.victorialauncher.data.AzStripVisibility
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconShape
@@ -33,6 +34,13 @@ fun TextColorMode.labelRes(): Int = when (this) {
     TextColorMode.DARK -> R.string.text_color_dark
     TextColorMode.MATERIAL -> R.string.text_color_material
     TextColorMode.CUSTOM -> R.string.text_color_custom
+}
+
+@StringRes
+fun AzStripVisibility.labelRes(): Int = when (this) {
+    AzStripVisibility.NEVER -> R.string.az_visibility_never
+    AzStripVisibility.LANDSCAPE -> R.string.az_visibility_landscape
+    AzStripVisibility.ALWAYS -> R.string.az_visibility_always
 }
 
 @StringRes

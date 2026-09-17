@@ -42,6 +42,9 @@ import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
@@ -731,6 +734,9 @@ fun AppListScreen(
         // does not change while the list is open.
         Column(
             modifier = Modifier
+                // Sideways the camera cutout runs down an edge rather than along the top, and
+                // the list ran under it. Horizontal sides only, so upright is unchanged.
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 // Capped and held against the strip's own side, so on a wide screen the names
                 // stay next to the letters being scrubbed instead of a screen away from them.
                 .widthIn(max = MAX_LIST_WIDTH)

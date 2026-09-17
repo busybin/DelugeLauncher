@@ -43,6 +43,9 @@ enum class TextColorMode { AUTO, LIGHT, DARK, MATERIAL, CUSTOM }
  */
 enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 
+/** When the A-Z strip shows on the home screen itself. */
+enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
+
 private val Context.dataStore by preferencesDataStore(name = "victoria_prefs")
 
 /** Bumped only if the shape of an exported file changes, so an old one can be refused. */
@@ -84,6 +87,7 @@ class Prefs(private val context: Context) {
         val DOUBLE_TAP_TO_LOCK = booleanPreferencesKey("double_tap_to_lock")
         val EDGE_SIDE = stringPreferencesKey("edge_side")
         val ALWAYS_SHOW_AZ = booleanPreferencesKey("always_show_az")
+        val AZ_STRIP_VISIBILITY = stringPreferencesKey("az_strip_visibility")
         val SHOW_ALPHABET = booleanPreferencesKey("show_alphabet")
         val ALIGN_RIGHT = booleanPreferencesKey("align_right")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
@@ -342,7 +346,17 @@ class Prefs(private val context: Context) {
     }.distinctUntilChanged()
 
     /** Keep the A-Z strip on screen even when the app list is closed. */
-    val alwaysShowAz: Flow<Boolean> = data.map { it[Keys.ALWAYS_SHOW_AZ] ?: false }.distinctUntilChanged()
+    /**
+     * When the strip sits on the home screen with no app list open.
+     *
+     * Reads the old on/off answer when this has not been set, so nobody's strip appears or
+     * disappears on update. LANDSCAPE is for a phone in a car mount, where the strip earns
+     * the room it takes and upright it does not.
+     */
+    val azStripVisibility: Flow<AzStripVisibility> = data.map { pref ->
+        pref[Keys.AZ_STRIP_VISIBILITY]?.let { runCatching { AzStripVisibility.valueOf(it) }.getOrNull() }
+            ?: if (pref[Keys.ALWAYS_SHOW_AZ] == true) AzStripVisibility.ALWAYS else AzStripVisibility.NEVER
+    }.distinctUntilChanged()
 
     /** The A-Z strip inside the app list; the edge gesture still works without it. */
     val showAlphabet: Flow<Boolean> = data.map { it[Keys.SHOW_ALPHABET] ?: true }.distinctUntilChanged()
@@ -668,8 +682,12 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.ALIGN_RIGHT] = v }
     }
 
-    suspend fun setAlwaysShowAz(v: Boolean) {
-        context.dataStore.edit { it[Keys.ALWAYS_SHOW_AZ] = v }
+    suspend fun setAzStripVisibility(v: AzStripVisibility) {
+        context.dataStore.edit {
+            it[Keys.AZ_STRIP_VISIBILITY] = v.name
+            // Kept in step so an older build reads something sensible if one is installed.
+            it[Keys.ALWAYS_SHOW_AZ] = v == AzStripVisibility.ALWAYS
+        }
     }
 
     suspend fun setEdgeSide(v: EdgeSide) {

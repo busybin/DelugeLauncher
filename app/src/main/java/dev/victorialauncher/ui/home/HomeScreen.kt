@@ -35,6 +35,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentHeight
@@ -381,6 +386,13 @@ fun HomeScreen(
     val minOffset = remember(viewportHeight, contentHeight) {
         minOf(0f, (viewportHeight - contentHeight).toFloat())
     }
+    // Turning the phone changes how much there is to scroll through. A stack dragged up in
+    // landscape kept that offset when the screen went tall again, which left it sitting above
+    // the top of the display with nothing on screen to drag it back down by.
+    LaunchedEffect(minOffset) {
+        val settled = offsetY.value.coerceIn(minOffset, 0f)
+        if (settled != offsetY.value) offsetY.snapTo(settled)
+    }
     val editScrollState = rememberScrollState()
 
     LaunchedEffect(centerFavorites, favBounds, viewportHeight, rootY) {
@@ -512,6 +524,10 @@ fun HomeScreen(
     ) {
         Column(
             modifier = Modifier
+                // Sideways the camera cutout is down one edge rather than along the top, and
+                // it sat over the favorites. Only the horizontal sides are taken, so a phone
+                // held upright — where the cutout is above everything anyway — is unchanged.
+                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 // A row of one short name stretched over a tablet is mostly empty space, and
                 // the A-Z strip ends up a hand's width from the names it is scrubbing. The cap
                 // only bites on a screen wider than a phone held upright, so nothing moves on

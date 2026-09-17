@@ -70,6 +70,7 @@ import kotlin.math.roundToInt
 import dev.victorialauncher.BuildConfig
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.AzStripVisibility
 import dev.victorialauncher.data.IconShape
 import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.HomeAlignment
@@ -108,7 +109,7 @@ fun SettingsScreen(
     themedIcons: Boolean,
     doubleTapToLock: Boolean,
     edgeSide: EdgeSide,
-    alwaysShowAz: Boolean,
+    azStripVisibility: AzStripVisibility,
     showAlphabet: Boolean,
     sortByUsage: Boolean,
     appListSearch: Boolean,
@@ -148,7 +149,7 @@ fun SettingsScreen(
     edgeZoneWidthDp: Int,
     onSetEdgeSide: (EdgeSide) -> Unit,
     onSetEdgeZoneWidth: (Int) -> Unit,
-    onSetAlwaysShowAz: (Boolean) -> Unit,
+    onSetAzStripVisibility: (AzStripVisibility) -> Unit,
     onSetShowAlphabet: (Boolean) -> Unit,
     onSetSortByUsage: (Boolean) -> Unit,
     onSetSwipeUpOpensList: (Boolean) -> Unit,
@@ -364,7 +365,22 @@ fun SettingsScreen(
                         }
                     }
                     RowDivider()
-                    SwitchRow(stringResource(R.string.settings_always_show_az), alwaysShowAz, onSetAlwaysShowAz)
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text(
+                            stringResource(R.string.settings_az_visibility),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            AzStripVisibility.entries.forEach { option ->
+                                FilledChip(stringResource(option.labelRes()), azStripVisibility == option) {
+                                    onSetAzStripVisibility(option)
+                                }
+                            }
+                        }
+                    }
                     RowDivider()
                     SwitchRow(stringResource(R.string.settings_show_alphabet), showAlphabet, onSetShowAlphabet)
                     RowDivider()
