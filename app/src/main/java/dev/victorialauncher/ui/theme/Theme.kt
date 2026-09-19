@@ -3,6 +3,9 @@ package dev.victorialauncher.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -57,6 +60,19 @@ private val LightColors = lightColorScheme(
     onSurface = Color(0xFF1B2733),
 )
 
+/**
+ * Corners, so a menu is as round as the things it opens over.
+ *
+ * Material gives a menu its extraSmall shape, which is 4dp — against rows and cards drawn here
+ * at 18 to 22dp it read as a different app's menu. Everything the app draws by hand sits in
+ * that range, so the scale is set to meet it rather than each menu being told separately.
+ */
+private val VictoriaShapes = Shapes(
+    extraSmall = RoundedCornerShape(16.dp),
+    small = RoundedCornerShape(18.dp),
+    medium = RoundedCornerShape(20.dp),
+)
+
 @Composable
 fun VictoriaTheme(
     font: AppFont = AppFont.SYSTEM,
@@ -86,5 +102,10 @@ fun VictoriaTheme(
         titleSmall = baseTypography.titleSmall.copy(fontFamily = fontFamily),
         labelLarge = baseTypography.labelLarge.copy(fontFamily = fontFamily),
     )
-    MaterialTheme(colorScheme = colors, typography = typography, content = content)
+    MaterialTheme(
+        colorScheme = colors,
+        typography = typography,
+        shapes = VictoriaShapes,
+        content = content,
+    )
 }

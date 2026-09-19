@@ -14,6 +14,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowCompat
 import dev.victorialauncher.data.AppFont
 import dev.victorialauncher.data.IconShape
@@ -35,6 +37,16 @@ class MainActivity : ComponentActivity() {
 
     /** Bumped whenever HOME is pressed while we're already showing, so overlays can close. */
     private var homeIntentTick by mutableStateOf(0)
+
+    /**
+     * What the status bar was last asked to be, so it can be asked again if it stopped obeying.
+     *
+     * Fully expanding the notification shade hands the system bars to the system, which cancels
+     * the control this app holds over them. Collapsing the shade does not hand them back, and
+     * nothing here had changed its mind — so the bar stayed up with the app still believing it
+     * was hidden, until some setting changed and the request was made afresh.
+     */
+    private var desiredStatusBarVisible: Boolean? = null
 
     /**
      * Keystrokes taken on the home screen, as a growing list so none is dropped.
@@ -76,6 +88,7 @@ class MainActivity : ComponentActivity() {
             // already in restarts the fade, and a fade out begins by holding the bar fully
             // shown — so opening the list with both set to hide flashed it into view.
             LaunchedEffect(statusBarVisible) {
+                desiredStatusBarVisible = statusBarVisible
                 StatusBarFader.setVisible(window, visible = statusBarVisible)
             }
 
@@ -149,6 +162,18 @@ class MainActivity : ComponentActivity() {
         if (typed == ' ' && typedToSearch.isEmpty()) return super.onKeyDown(keyCode, event)
         typedToSearch = typedToSearch + TypedKey(nextTypedSeq++, typed)
         return true
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // Focus comes back when the shade closes, which is exactly when the bar may have been
+        // left behind. Asked again only when it is actually wrong: asking for the state it is
+        // already in restarts the fade, and a fade out begins by showing the bar in full.
+        if (!hasFocus) return
+        val want = desiredStatusBarVisible ?: return
+        val actual = ViewCompat.getRootWindowInsets(window.decorView)
+            ?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: return
+        if (actual != want) StatusBarFader.setVisible(window, visible = want)
     }
 
     override fun onNewIntent(intent: Intent) {
