@@ -63,7 +63,7 @@
     <string name="toast_enable_accessibility_lock">Enable Victoria Launcher in Settings → Accessibility to lock the screen</string>
 
     <!-- Settings -->
-    <string name="settings_title">Victoria Launcher settings</string>
+    <string name="settings_title">Victoria settings</string>
     <string name="settings_section_appearance">Appearance</string>
     <string name="settings_section_behavior">Behavior</string>
     <string name="settings_section_now_playing">Now Playing</string>
