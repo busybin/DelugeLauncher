@@ -500,6 +500,49 @@ class Prefs(private val context: Context) {
         }
     }
 
+    /**
+     * Everything stored about one row, dropped in a single write. Only for a row that is gone
+     * for good — a shortcut its publisher withdrew, which [AppRepository.unpin] calls once the
+     * system itself has unpinned it. Never for a row that might merely be unreachable right
+     * now: an app in a locked private space or a paused work profile also drops out of the
+     * list, but its name, icon and place are still waiting when the profile comes back, so
+     * unticking it in Manage Favorites only removes the favorite ([removeFavorite]), not this.
+     *
+     * A shortcut that has been unpinned does not come back, so what is kept under its key is
+     * only clutter nothing can reach, and it would be restored onto a new phone by the settings
+     * backup as well.
+     *
+     * One transaction rather than seven, so a row cannot end up half forgotten.
+     */
+    suspend fun forgetEntry(componentKey: String) {
+        context.dataStore.edit { pref ->
+            val favorites = readFavorites(pref)
+            if (componentKey in favorites) pref.writeFavorites(favorites - componentKey)
+
+            val folders = foldersFromJson(pref[Keys.FOLDERS])
+            if (folders.any { componentKey in it.apps }) {
+                pref[Keys.FOLDERS] = foldersToJson(folders.map { it.copy(apps = it.apps - componentKey) })
+            }
+
+            val names = jsonToMap(pref[Keys.NAME_OVERRIDES])
+            if (componentKey in names) pref[Keys.NAME_OVERRIDES] = mapToJson(names - componentKey)
+
+            val icons = jsonToMap(pref[Keys.ICON_OVERRIDES])
+            if (componentKey in icons) pref[Keys.ICON_OVERRIDES] = mapToJson(icons - componentKey)
+
+            val hidden = pref[Keys.HIDDEN_APPS] ?: emptySet()
+            if (componentKey in hidden) pref[Keys.HIDDEN_APPS] = hidden - componentKey
+
+            val counts = jsonToMap(pref[Keys.LAUNCH_COUNTS])
+            if (componentKey in counts) pref[Keys.LAUNCH_COUNTS] = mapToJson(counts - componentKey)
+
+            // A quick-launch slot that still points at this key would otherwise swipe to
+            // nothing once the row is gone for good.
+            if (pref[Keys.QUICK_LAUNCH_LEFT] == componentKey) pref.remove(Keys.QUICK_LAUNCH_LEFT)
+            if (pref[Keys.QUICK_LAUNCH_RIGHT] == componentKey) pref.remove(Keys.QUICK_LAUNCH_RIGHT)
+        }
+    }
+
     /** Creates the folder if [id] is new, otherwise replaces it. */
     suspend fun upsertFolder(folder: Folder) {
         context.dataStore.edit { pref ->

@@ -51,6 +51,13 @@ fun ManageFavoritesScreen(
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
     onSetFavorite: (AppInfo, Boolean) -> Unit,
+    /**
+     * Unticks a key nothing can resolve right now; see the row that offers it. Only ever drops
+     * the favorite, not the row's rename/icon/folder/hidden/launch-count — a locked private
+     * space or a paused work profile can make a real app or shortcut "missing" temporarily,
+     * and those come back.
+     */
+    onForget: (String) -> Unit,
     onReorder: (List<String>) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -114,12 +121,19 @@ fun ManageFavoritesScreen(
                             Checkbox(checked = true, onCheckedChange = { onSetFavorite(app, false) })
                         }
 
-                        else -> Text(
-                            stringResource(R.string.folder_member_missing),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            modifier = Modifier.weight(1f),
-                        )
+                        // Whatever this key was is gone: an app uninstalled, or a shortcut
+                        // its publisher withdrew. Shown rather than skipped so the count
+                        // matches what is listed, and with the same untick as everything
+                        // else, because otherwise it is a row that can never be got rid of.
+                        else -> {
+                            Text(
+                                stringResource(R.string.folder_member_missing),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.weight(1f),
+                            )
+                            Checkbox(checked = true, onCheckedChange = { onForget(key) })
+                        }
                     }
                 }
             }
