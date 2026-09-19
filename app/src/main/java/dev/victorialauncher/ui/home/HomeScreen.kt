@@ -112,6 +112,7 @@ import dev.victorialauncher.media.NowPlayingWidget
 import dev.victorialauncher.media.openNowPlayingApp
 import dev.victorialauncher.service.HapticUtil
 import dev.victorialauncher.ui.common.AppIcon
+import dev.victorialauncher.ui.common.AppShortcutItems
 import dev.victorialauncher.ui.common.TouchAnchoredMenu
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.EditAppDialog
@@ -1042,6 +1043,7 @@ private fun FavoriteRow(
         }
 
         TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
+            AppShortcutItems(app, menuExpanded) { onDismissMenu() }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_move_to_folder)) },
                 leadingIcon = { Icon(Icons.Filled.Folder, contentDescription = null) },

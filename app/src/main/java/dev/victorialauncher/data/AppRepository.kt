@@ -152,6 +152,44 @@ class AppRepository(
             )
         }
 
+    /**
+     * The shortcuts an app publishes about itself — what a long press on it offers.
+     *
+     * Both the ones declared in its manifest and the ones it adds as it runs, ordered the way
+     * the app ranked them. Asked of the activity first, since an app with more than one
+     * launcher icon ranks them per icon; a package that answers nothing that way is asked as a
+     * whole rather than left looking as though it publishes none.
+     */
+    fun appShortcuts(app: AppInfo): List<ShortcutInfo> {
+        if (app.kind != EntryKind.APP) return emptyList()
+        val user = app.user ?: Process.myUserHandle()
+        val flags = LauncherApps.ShortcutQuery.FLAG_MATCH_MANIFEST or
+            LauncherApps.ShortcutQuery.FLAG_MATCH_DYNAMIC
+
+        fun query(withActivity: Boolean): List<ShortcutInfo> {
+            val q = LauncherApps.ShortcutQuery()
+                .setPackage(app.componentName.packageName)
+                .setQueryFlags(flags)
+            if (withActivity) q.setActivity(app.componentName)
+            // Throws rather than returning nothing when this launcher does not hold the home
+            // role, which is a state it can be in for a moment after being switched to.
+            return runCatching { launcherApps.getShortcuts(q, user) }.getOrNull().orEmpty()
+        }
+
+        val found = query(withActivity = true).ifEmpty { query(withActivity = false) }
+        return found.filter { it.isEnabled }.sortedBy { it.rank }
+    }
+
+    /** Starts one of [appShortcuts]; the publisher's own Intent is never touched. */
+    fun startAppShortcut(shortcut: ShortcutInfo): Boolean = runCatching {
+        launcherApps.startShortcut(shortcut, null, null)
+        true
+    }.getOrDefault(false)
+
+    /** The icon for a shortcut offered in a menu. */
+    fun shortcutIcon(shortcut: ShortcutInfo, densityDpi: Int): Drawable? =
+        runCatching { launcherApps.getShortcutIconDrawable(shortcut, densityDpi) }.getOrNull()
+
     /** The live ShortcutInfo behind a row, for its icon, its reason for being off, or a pin. */
     private fun findShortcut(app: AppInfo): ShortcutInfo? {
         val id = app.shortcutId ?: return null

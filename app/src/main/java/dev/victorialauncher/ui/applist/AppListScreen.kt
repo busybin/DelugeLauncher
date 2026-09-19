@@ -110,6 +110,7 @@ import dev.victorialauncher.data.EntryKind
 import dev.victorialauncher.data.HomeAlignment
 import dev.victorialauncher.data.IconSide
 import dev.victorialauncher.ui.common.AppIcon
+import dev.victorialauncher.ui.common.AppShortcutItems
 import dev.victorialauncher.ui.common.LocalIconConfig
 import dev.victorialauncher.ui.common.recordTouchPosition
 import dev.victorialauncher.ui.common.EditAppDialog
@@ -1118,6 +1119,7 @@ private fun AppRow(
         }
 
         DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
+            AppShortcutItems(app, menuExpanded) { onDismissMenu() }
             DropdownMenuItem(
                 text = { Text(stringResource(if (isFavorite) R.string.applist_remove_favorite else R.string.applist_add_favorite)) },
                 leadingIcon = {
