@@ -99,6 +99,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.victorialauncher.data.AppInfo
+import dev.victorialauncher.data.EdgeSide
 import dev.victorialauncher.data.EntryKind
 import dev.victorialauncher.data.Folder
 import dev.victorialauncher.data.QuickLaunchSlot
@@ -163,6 +164,8 @@ private fun buildHomeItems(
 
 @Composable
 fun HomeScreen(
+    /** The side an always-present A-Z strip occupies, so content can keep out from under it. */
+    stripInsetSide: EdgeSide?,
     favorites: List<FavoriteEntry>,
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,

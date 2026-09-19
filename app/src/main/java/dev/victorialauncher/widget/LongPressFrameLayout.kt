@@ -4,6 +4,8 @@ package dev.victorialauncher.widget
 import android.content.Context
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.View
+import android.view.ViewGroup
 import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import kotlin.math.abs
@@ -52,7 +54,12 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
                 // the home screen's own drag begins at the same touch slop this would have
                 // measured against, and whichever ran first took the gesture — so a list
                 // inside a widget still lost every scroll to the notification shade.
-                parent?.requestDisallowInterceptTouchEvent(true)
+                //
+                // Only for a widget with something to scroll, though. Claiming for every one
+                // of them took the pull-down with it across the whole slot, including the
+                // bare space around a widget that does not fill it — which is a large part of
+                // the home screen to lose for a gesture most widgets have no use for.
+                if (hasScrollableContent()) parent?.requestDisallowInterceptTouchEvent(true)
             }
 
             MotionEvent.ACTION_MOVE -> if (!releasedSideways) {
@@ -73,6 +80,27 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
             parent?.requestDisallowInterceptTouchEvent(false)
         }
         return longPressFired
+    }
+
+    /**
+     * Whether anything inside the widget can actually be scrolled right now.
+     *
+     * Asked of the view tree rather than the widget's declaration: a list that is too short to
+     * scroll answers no, which is the right answer — there is nothing to take the gesture for.
+     */
+    private fun hasScrollableContent(): Boolean {
+        fun scrollable(view: View): Boolean {
+            if (view.canScrollVertically(1) || view.canScrollVertically(-1)) return true
+            if (view !is ViewGroup) return false
+            for (i in 0 until view.childCount) {
+                if (scrollable(view.getChildAt(i))) return true
+            }
+            return false
+        }
+        for (i in 0 until childCount) {
+            if (scrollable(getChildAt(i))) return true
+        }
+        return false
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
