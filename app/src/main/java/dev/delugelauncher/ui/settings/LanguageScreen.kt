@@ -37,9 +37,9 @@ import dev.delugelauncher.data.LanguagePrefs
 /**
  * One selectable language.
  *
- * [tag] is the BCP-47 tag stored in the preference, and [label] is the language's own name
- * — deliberately not translated: a list of languages is the one screen where reading the
- * name in the language you do not speak yet is the point.
+ * [tag] is the BCP-47 tag stored in the preference; [label] is the language's own name, not
+ * translated, since a list of languages is the one screen where the name in the language you
+ * cannot read yet is the point.
  */
 private data class LanguageOption(val tag: String?, val label: String)
 
@@ -65,9 +65,9 @@ fun currentLanguageTag(context: Context): String? = LanguagePrefs.read(context)
  * Picks the launcher's own language.
  *
  * Choosing one recreates the Activity: the language is applied by wrapping every Context,
- * which happens before the first composition, so a running screen has to be built again to
- * change what it says. That is the same restart Android's own per-app language does, and it
- * is why the choice is written before the call rather than after it.
+ * which happens before the first composition, so a screen already built has to be built
+ * again to change what it says. That is the same restart Android's own per-app language
+ * does, and why the choice is written before the call rather than after it.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

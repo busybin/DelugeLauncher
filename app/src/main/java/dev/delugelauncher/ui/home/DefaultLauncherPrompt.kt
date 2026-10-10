@@ -29,13 +29,12 @@ import dev.delugelauncher.R
 /**
  * The card that says this is not the home screen yet.
  *
- * Shown on the home screen itself, once, when the launcher is running without the home
- * role — which is the state it is in on the very first launch, and the one where a
- * launcher that never says anything looks like it simply does not work.
+ * Shown once, on the home screen, when the launcher is running without the home role — where
+ * it is on a first launch, and where a launcher that says nothing looks broken.
  *
- * Both actions are real choices: Android will not let an app take the home role silently,
- * so the button opens the system's own picker, and "Not now" is remembered for good rather
- * than asked again on the next launch.
+ * Both buttons are real choices. Android will not let an app take the home role silently, so
+ * the confirmation opens the system's own picker; "Not now" is remembered for good, because
+ * someone who has said skip knows.
  */
 @Composable
 fun DefaultLauncherPrompt(

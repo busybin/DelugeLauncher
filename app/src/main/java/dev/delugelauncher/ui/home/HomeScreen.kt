@@ -695,11 +695,10 @@ fun HomeScreen(
                 // held upright — where the cutout is above everything anyway — is unchanged.
                 .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 .then(
-                    // With the status bar visible, the first row sat under the clock: this
-                    // screen draws edge to edge on purpose, and edge to edge means the top
-                    // of the content is where the system bar is until it is told otherwise.
-                    // Hidden, there is nothing to clear and the content keeps the whole
-                    // screen. Edit mode is left alone — it already pads its own header.
+                    // With the status bar showing, the first row sat under the clock. The
+                    // window draws edge to edge on purpose, so edge to edge includes the
+                    // system bar until something says otherwise. Hidden, there is nothing to
+                    // clear. Edit mode pads its own header and is left alone.
                     if (avoidStatusBar && !editMode) Modifier.statusBarsPadding() else Modifier
                 )
                 // A row of one short name stretched over a tablet is mostly empty space, and

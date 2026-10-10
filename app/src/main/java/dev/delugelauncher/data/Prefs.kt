@@ -1137,9 +1137,9 @@ class Prefs(private val context: Context) {
     /**
      * Keeps only the widget ids [keep] accepts, for the ids whose provider has gone.
      *
-     * A widget whose app was uninstalled leaves a dead page on the home screen that says so
-     * and has to be removed by hand, and an id restored from a backup onto a device that
-     * never had that widget is the same page on first sight. Both are answered here.
+     * A widget whose app was uninstalled leaves a dead page that says so and has to be
+     * removed by hand; an id restored from a backup onto a device that never had that widget
+     * is the same page on first sight. Both are answered here.
      */
     suspend fun keepWidgetIds(keep: (Int) -> Boolean) {
         context.dataStore.edit { pref ->

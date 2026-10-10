@@ -8,17 +8,15 @@ import java.util.Locale
 /**
  * The launcher's own language, and how it is put into force.
  *
- * Held in a plain SharedPreferences file rather than in the settings store, and
- * deliberately: the choice has to be readable from `attachBaseContext`, before anything
- * asynchronous can run, so that the very first inflation of the home screen is already in
- * the chosen language. DataStore cannot be read without suspending, and suspending is not
- * something a base-context wrapper can do.
+ * Kept in a plain SharedPreferences file rather than in the settings store because it has to
+ * be readable from `attachBaseContext`, before anything asynchronous can run — the first
+ * inflation of the home screen should already be in the chosen language, and DataStore
+ * cannot be read without suspending.
  *
- * This is the platform's own mechanism — a Configuration with a different locale handed to
- * every Context the app builds — rather than AppCompat's per-app locales. AppCompat applies
- * a stored language from the delegate of an `AppCompatActivity`, and this launcher is a
- * plain `ComponentActivity` over a wallpaper-showing theme of its own; adopting AppCompat's
- * theme to get the feature would trade the window setup for the translation.
+ * This is the platform's own mechanism: a Configuration with a different locale, handed to
+ * every Context the app builds. AppCompat's per-app locales would mean becoming an
+ * AppCompatActivity, and this launcher is a plain ComponentActivity over a wallpaper-showing
+ * theme of its own; swapping the theme for the feature is a bad trade.
  */
 object LanguagePrefs {
 
@@ -40,10 +38,10 @@ object LanguagePrefs {
     /**
      * [base] with the chosen language, for use from `attachBaseContext`.
      *
-     * The process default is set as well as the context's configuration: the two are read
-     * by different things — resources from the context, `String.format`, date patterns and
-     * `Locale.getDefault()` from the process — and a half-applied language shows up as one
-     * screen disagreeing with the next.
+     * The process default is set along with the context's configuration because different
+     * things read the two: resources from the context, and String.format, date patterns and
+     * Locale.getDefault() from the process. Set only one and a screen disagrees with the
+     * next.
      */
     fun wrap(base: Context): Context {
         val tag = read(base) ?: return base

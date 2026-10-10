@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Deluge Launcher</string>
-    <string name="accessibility_description">让向下滑动的手势打开通知栏。Deluge Launcher 不会读取或操作屏幕内容。</string>
+    <string name="accessibility_description">向下滑动即可打开通知栏。Deluge Launcher 不会读取或操作屏幕内容。</string>
 
     <!-- Shared actions -->
     <string name="action_back">返回</string>
@@ -59,8 +59,8 @@
     <string name="applist_search">搜索应用</string>
 
     <!-- Toasts -->
-    <string name="toast_enable_accessibility_shade">在 设置 → 无障碍 中启用 Deluge Launcher 即可打开通知栏</string>
-    <string name="toast_enable_accessibility_lock">在 设置 → 无障碍 中启用 Deluge Launcher 即可锁屏</string>
+    <string name="toast_enable_accessibility_shade">在“设置 → 无障碍”中启用 Deluge Launcher 即可打开通知栏</string>
+    <string name="toast_enable_accessibility_lock">在“设置 → 无障碍”中启用 Deluge Launcher 即可锁屏</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge 设置</string>
@@ -79,7 +79,7 @@
     <string name="settings_auto_keyboard">打开列表时弹出键盘</string>
     <string name="settings_auto_keyboard_detail">应用列表一打开就能直接输入。关闭时，需点按搜索框后键盘才会弹出</string>
     <string name="settings_settings_row">应用列表中的设置入口</string>
-    <string name="settings_settings_row_detail">Z 之后那一行可打开这些设置。长按壁纸同样可以进入</string>
+    <string name="settings_settings_row_detail">Z 之后的那一行可打开这些设置，长按壁纸也一样</string>
     <string name="settings_search_none">没有匹配项</string>
     <string name="settings_section_appearance">外观</string>
     <string name="settings_section_apps">应用</string>
@@ -93,10 +93,10 @@
     <string name="settings_list_headers_detail">关闭后列表连续排布，字母条仍可跳到对应字母</string>
     <string name="settings_notification_badges">在图标上显示通知数</string>
     <string name="settings_notification_badges_detail">需要与“正在播放”相同的通知使用权。只显示数量，不会读取通知内容</string>
-    <string name="settings_section_top">滚动停靠位置</string>
+    <string name="settings_section_top">字母停靠位置</string>
     <string name="settings_close_folder">打开应用后关闭文件夹</string>
     <string name="settings_close_folder_detail">关闭时文件夹会保持打开，直到你手动关闭</string>
-    <string name="settings_favorites_source">收藏内容</string>
+    <string name="settings_favorites_source">收藏来源</string>
     <string name="settings_frequent_count">显示数量</string>
     <string name="favorites_source_manual">你手动保留的列表</string>
     <string name="favorites_source_frequent">最常用</string>
@@ -107,7 +107,7 @@
     <string name="settings_favorite_spacing">收藏间距</string>
     <string name="settings_font">字体</string>
     <string name="settings_text_color">文字颜色</string>
-    <string name="settings_text_color_detail">自动会读取壁纸，选择其中更清晰的配色</string>
+    <string name="settings_text_color_detail">自动会根据壁纸选择更清晰的配色</string>
     <string name="settings_show_names">在收藏图标旁显示应用名称</string>
     <string name="settings_hide_status_bar">在主屏幕上隐藏状态栏</string>
     <string name="settings_hide_status_bar_applist">在应用列表中隐藏状态栏</string>
@@ -133,17 +133,17 @@
     <string name="settings_swipe_up_search_detail">上滑打开应用列表，光标已在搜索框中</string>
     <string name="app_work_suffix">（工作）</string>
     <string name="settings_edge_inset_auto">自动为返回手势留出空间</string>
-    <string name="settings_edge_inset_auto_detail">让字母条避开 Android 用于返回滑动的那条边缘。使用按钮导航时不作任何改变</string>
+    <string name="settings_edge_inset_auto_detail">让字母条避开 Android 返回手势所用的边缘。使用按钮导航时不作任何改变</string>
     <string name="settings_edge_inset">为返回手势留出空间</string>
     <string name="settings_mark_work_apps">标记工作应用</string>
     <string name="settings_mark_work_apps_detail">来自工作资料的应用会在名称后标明，以便区分同一个应用的两个副本</string>
     <string name="settings_dim_others">滑动字母条时调暗其余应用</string>
-    <string name="settings_dim_others_detail">当前字母之外的应用会淡出，使它更突出。关闭时整个列表保持可见</string>
+    <string name="settings_dim_others_detail">当前字母之外的应用会淡出，让该字母更突出。关闭时整个列表保持可见</string>
     <string name="settings_hold_scroll">按住字母持续滚动</string>
-    <string name="settings_hold_scroll_detail">手指停在某个字母上，列表就会继续往下翻过该字母下的应用，适合应用较多的字母</string>
+    <string name="settings_hold_scroll_detail">手指停在某个字母上，列表就会继续滚过该字母下的应用，适合应用较多的字母</string>
     <string name="settings_hold_scroll_speed">滚动速度</string>
     <string name="settings_edge_band_only">仅在字母旁可滑动</string>
-    <string name="settings_edge_band_only_detail">屏幕边缘只在字母条所在处能打开应用列表，而不是贯穿整条边缘，免得妨碍小部件</string>
+    <string name="settings_edge_band_only_detail">屏幕边缘只在字母条所在处能打开应用列表，而不是整条边缘，以免妨碍小部件</string>
     <string name="settings_edge_zone_width">边缘滑动宽度</string>
     <string name="settings_swipe_up_list">上滑打开应用列表</string>
     <string name="settings_swipe_up_list_detail">从主屏幕底部继续上推</string>
@@ -177,15 +177,15 @@
     <string name="settings_stay_private_unlock">解锁后留在列表</string>
     <string name="settings_stay_private_unlock_detail">解锁私密空间后仍停留在应用列表，而不是回到主屏幕</string>
     <string name="settings_private_space_section">私密空间分组</string>
-    <string name="settings_private_space_section_detail">把私密空间的应用归到字母表之后，而不是混在其中，以便区分同一应用的两个副本</string>
+    <string name="settings_private_space_section_detail">把私密空间的应用归到字母条之后，而不是混在其中，以便区分同一应用的两个副本</string>
     <string name="settings_recent_section">最近安装分组</string>
     <string name="settings_recent_section_detail">在应用列表末尾放上最新安装的应用</string>
     <string name="settings_recent_section_count">最近应用数量</string>
     <string name="settings_compact_tap">只点按图标和名称</string>
-    <string name="settings_compact_tap_detail">只有点按收藏的图标或名称才会打开，点按整行其他位置无效</string>
+    <string name="settings_compact_tap_detail">只有点按收藏项的图标或名称才会打开，点按整行的其他位置无效</string>
     <string name="settings_text_shadow_strength">阴影强度</string>
     <string name="settings_text_shadow">文字投影</string>
-    <string name="settings_text_shadow_detail">让应用名称在花哨的壁纸上更清晰。只加在浅色文字后面，增加对比度而不会显得浑浊</string>
+    <string name="settings_text_shadow_detail">让应用名称在图案复杂的壁纸上更清晰。只加在浅色文字后面，增加对比度而不会显得浑浊</string>
     <string name="settings_default_launcher">默认启动器</string>
     <string name="settings_default_launcher_yes">Deluge Launcher</string>
     <string name="settings_default_launcher_no">未设置 — 点按选择</string>
@@ -237,7 +237,7 @@
     <string name="settings_dim_color_detail">壁纸变暗时叠加的颜色；上面的滑块决定深浅</string>
     <string name="color_from_wallpaper">取自壁纸</string>
     <string name="icon_shape">图标形状</string>
-    <string name="icon_shape_detail">只改变自适应图标的形状，更早的图标保持原样</string>
+    <string name="icon_shape_detail">只改变自适应图标的形状，较旧的图标保持原样</string>
     <string name="icon_shape_system">系统</string>
     <string name="icon_shape_circle">圆形</string>
     <string name="icon_shape_rounded">圆角矩形</string>
@@ -296,10 +296,10 @@
     <!-- Widgets -->
     <string name="widget_add">添加小部件</string>
     <string name="widget_clock_label">时钟和日期</string>
-    <string name="widget_clock_description">启动器自带风格的时间和日期</string>
+    <string name="widget_clock_description">启动器自有风格的时间和日期</string>
     <string name="widget_clock_time">时间</string>
     <string name="widget_clock_date">日期</string>
-    <string name="widget_clock_hour">时钟制式</string>
+    <string name="widget_clock_hour">时间格式</string>
     <string name="widget_clock_hour_system">跟随系统</string>
     <string name="widget_clock_hour_12">12 小时制</string>
     <string name="widget_clock_hour_24">24 小时制</string>
@@ -333,7 +333,7 @@
     <string name="widget_clock_event_now">%1$s  此刻</string>
     <string name="widget_clock_alarm_at">闹钟 %1$s</string>
     <string name="widget_clock_agenda_show">日程</string>
-    <string name="widget_clock_agenda_hide">不显示</string>
+    <string name="widget_clock_agenda_hide">不显示日程</string>
     <string name="widget_clock_agenda_size">日程字号</string>
     <string name="widget_clock_agenda_opacity">日程不透明度</string>
     <string name="widget_clock_agenda_count">日程数量</string>
@@ -347,7 +347,7 @@
     <string name="widget_clock_agenda_hint">读取日历需要权限。不会有任何数据离开手机：本启动器没有网络权限。</string>
     <string name="widget_clock_weather_opens">点按天气时打开的内容</string>
     <string name="widget_clock_weather_waiting">等待天气应用</string>
-    <string name="widget_clock_weather_hint">天气来自已有数据的天气应用，因此本启动器无需网络权限，也不会询问你的位置。在 Breezy Weather 中，请打开 设置 → 小部件与动态壁纸 → 数据共享。</string>
+    <string name="widget_clock_weather_hint">天气来自已有数据的天气应用，因此本启动器无需网络权限，也不会询问你的位置。在 Breezy Weather 中，请打开“设置 → 小部件与动态壁纸 → 数据共享”。</string>
     <string name="widget_clock_notifications_show">通知数</string>
     <string name="widget_clock_notifications_hide">不显示通知数</string>
     <string name="widget_clock_notifications_size">通知数字号</string>
@@ -400,7 +400,7 @@
         <item quantity="other">已排除 %1$d 个应用</item>
     </plurals>
     <string name="prompt_default_title">将 Deluge 设为桌面</string>
-    <string name="prompt_default_body">Deluge 已安装，但 Android 还没有启用它。设为默认桌面即可看到收藏和应用列表。</string>
+    <string name="prompt_default_body">Deluge 已安装，但 Android 还没有把它设为默认。设为默认桌面即可看到收藏和应用列表。</string>
     <string name="prompt_default_set">设为默认</string>
     <string name="prompt_default_skip">稍后</string>
     <string name="settings_changelog">更新日志</string>

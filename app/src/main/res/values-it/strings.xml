@@ -21,7 +21,7 @@
     <!-- Home screen -->
     <string name="home_drag_handle">Riordina</string>
     <string name="home_no_favorites_title">Ancora nessun preferito</string>
-    <string name="home_no_favorites_body">Tocca il bordo dello schermo per aprire l\'elenco delle app, oppure scegli i preferiti dall\'elenco qui sotto.</string>
+    <string name="home_no_favorites_body">Tocca il bordo dello schermo per aprire l\'elenco app, oppure scegli i preferiti dall\'elenco qui sotto.</string>
     <string name="home_choose_favorites">Scegli i preferiti</string>
     <string name="home_folder_choose_apps">Gestisci cartella</string>
     <string name="home_folder_delete">Elimina cartella</string>
@@ -37,8 +37,8 @@
     <string name="handle_widget_bottom">Basso widget</string>
     <string name="handle_widget_height">Altezza widget</string>
     <string name="handle_widget_side_padding">Margine laterale widget</string>
-    <string name="handle_widget_offset_x">Widget sinistra / destra</string>
-    <string name="handle_az_range">Intervallo striscia A-Z</string>
+    <string name="handle_widget_offset_x">Widget a sinistra / a destra</string>
+    <string name="handle_az_range">Intervallo barra A-Z</string>
     <string name="edit_value_range">%1$d a %2$d dp</string>
     <string name="handle_favorites_top">Alto preferiti</string>
     <string name="handle_favorites_bottom">Basso preferiti</string>
@@ -53,8 +53,8 @@
     <string name="applist_unhide">Mostra nell\'elenco</string>
 
     <string name="applist_band_hint">Trascina la banda per spostarla, o una delle maniglie per ridimensionarla</string>
-    <string name="applist_band_top">Parte superiore della striscia A-Z</string>
-    <string name="applist_band_bottom">Parte inferiore della striscia A-Z</string>
+    <string name="applist_band_top">Parte superiore della barra A-Z</string>
+    <string name="applist_band_bottom">Parte inferiore della barra A-Z</string>
 
     <string name="applist_search">Cerca app</string>
 
@@ -75,9 +75,9 @@
     <string name="settings_corner_search">Apri la ricerca</string>
     <string name="settings_corner_button">Pulsante nell\'angolo in basso</string>
     <string name="settings_last_letter">Ogni lettera sulla stessa riga</string>
-    <string name="settings_last_letter_detail">Le lettere alla fine dell\'elenco raggiungono la stessa riga delle altre. Costa uno schermo di spazio vuoto sotto l\'ultima app</string>
+    <string name="settings_last_letter_detail">Le lettere alla fine dell\'elenco raggiungono la stessa riga delle altre. Ruba uno schermo intero di spazio vuoto sotto l\'ultima app</string>
     <string name="settings_auto_keyboard">Apri la tastiera con l\'elenco</string>
-    <string name="settings_auto_keyboard_detail">Inizia a digitare appena si apre l\'elenco delle app. Se disattivato, la tastiera aspetta che tu tocchi la casella di ricerca</string>
+    <string name="settings_auto_keyboard_detail">Inizia a digitare appena si apre l\'elenco app. Se disattivato, la tastiera aspetta che tu tocchi la casella di ricerca</string>
     <string name="settings_settings_row">Riga Impostazioni nell\'elenco app</string>
     <string name="settings_settings_row_detail">La riga dopo la Z che apre queste impostazioni. Una pressione prolungata sullo sfondo le raggiunge comunque</string>
     <string name="settings_search_none">Nessun risultato</string>
@@ -90,7 +90,7 @@
     <string name="settings_icons_favorites">Icone sui preferiti</string>
     <string name="settings_icons_app_list">Icone nell\'elenco app</string>
     <string name="settings_list_headers">Intestazioni lettere</string>
-    <string name="settings_list_headers_detail">Disattivato crea un unico elenco continuo. La striscia A-Z salta comunque alla lettera</string>
+    <string name="settings_list_headers_detail">Disattivato crea un unico elenco continuo. La barra A-Z salta comunque alla lettera</string>
     <string name="settings_notification_badges">Numero di notifiche sulle icone</string>
     <string name="settings_notification_badges_detail">Richiede lo stesso accesso alle notifiche di In riproduzione. Solo conteggi, mai il contenuto di una notifica</string>
     <string name="settings_section_top">Dove arriva una lettera</string>
@@ -101,16 +101,16 @@
     <string name="favorites_source_manual">L\'elenco che tieni</string>
     <string name="favorites_source_frequent">Più usate</string>
     <string name="settings_icon_pack_no_icons">Nessuno</string>
-    <string name="settings_icon_pack_none">Nessuna app per pacchetti icone trovata su questo dispositivo.</string>
+    <string name="settings_icon_pack_none">Nessuna app di pacchetti icone trovata su questo dispositivo.</string>
     <string name="settings_icon_size">Dimensione icona</string>
     <string name="settings_text_size">Dimensione testo</string>
     <string name="settings_favorite_spacing">Spaziatura tra i preferiti</string>
     <string name="settings_font">Carattere</string>
     <string name="settings_text_color">Colore del testo</string>
-    <string name="settings_text_color_detail">Auto legge lo sfondo e sceglie quello leggibile</string>
+    <string name="settings_text_color_detail">Auto legge lo sfondo e sceglie il più leggibile</string>
     <string name="settings_show_names">Mostra i nomi delle app accanto alle icone dei preferiti</string>
-    <string name="settings_hide_status_bar">Nascondi la barra di stato nella schermata iniziale</string>
-    <string name="settings_hide_status_bar_applist">Nascondi la barra di stato nell\'elenco app</string>
+    <string name="settings_hide_status_bar">Nascondi barra di stato nella schermata iniziale</string>
+    <string name="settings_hide_status_bar_applist">Nascondi barra di stato nell\'elenco app</string>
     <string name="settings_status_bar_timeout">La barra di stato resta per</string>
     <string name="settings_dim_home">Attenua lo sfondo nella schermata iniziale</string>
     <string name="settings_dim_applist">Attenua lo sfondo dietro l\'elenco app</string>
@@ -118,7 +118,7 @@
     <string name="settings_haptics_detail">Segue l\'impostazione di feedback tattile del tuo sistema</string>
     <string name="settings_edge_side">Quale bordo apre l\'elenco app</string>
     <string name="settings_double_tap_lock">Doppio tocco per bloccare lo schermo</string>
-    <string name="settings_double_tap_lock_detail">Tocca due volte la striscia A-Z</string>
+    <string name="settings_double_tap_lock_detail">Tocca due volte la barra A-Z</string>
     <string name="settings_lock_needs_accessibility">Richiede Deluge Launcher abilitato in Accessibilità. Se l\'interruttore è disattivato (grigio), apri Info app e consenti prima le impostazioni limitate dal menu ⋮.</string>
     <string name="settings_az_visibility">Mostra A-Z nella schermata iniziale</string>
     <string name="az_visibility_never">Mai</string>
@@ -133,7 +133,7 @@
     <string name="settings_swipe_up_search_detail">Scorrendo verso l\'alto si apre l\'elenco app con il cursore già nella casella di ricerca</string>
     <string name="app_work_suffix"> (Lavoro)</string>
     <string name="settings_edge_inset_auto">Fai spazio automaticamente per il gesto Indietro</string>
-    <string name="settings_edge_inset_auto_detail">Mantiene la striscia A-Z lontana dal bordo che Android usa per lo scorrimento Indietro. Non cambia nulla con la navigazione a pulsanti</string>
+    <string name="settings_edge_inset_auto_detail">Mantiene la barra A-Z lontana dal bordo che Android usa per lo scorrimento Indietro. Non cambia nulla con la navigazione a pulsanti</string>
     <string name="settings_edge_inset">Lascia spazio per il gesto Indietro</string>
     <string name="settings_mark_work_apps">Contrassegna le app di lavoro</string>
     <string name="settings_mark_work_apps_detail">Le app di un profilo di lavoro lo indicano dopo il loro nome, così due copie della stessa app si distinguono</string>
@@ -143,8 +143,8 @@
     <string name="settings_hold_scroll_detail">Appoggia il dito su una lettera e l\'elenco scorre tra le sue app, per le lettere che ne hanno molte</string>
     <string name="settings_hold_scroll_speed">Velocità di scorrimento</string>
     <string name="settings_edge_band_only">Bordo solo accanto alle lettere</string>
-    <string name="settings_edge_band_only_detail">Il lato dello schermo apre l\'elenco app solo dove si trova la striscia A-Z, anziché lungo tutta l\'altezza. Lo tiene lontano da un widget</string>
-    <string name="settings_edge_zone_width">Larghezza scorrimento dal bordo</string>
+    <string name="settings_edge_band_only_detail">Il lato dello schermo apre l\'elenco app solo dove si trova la barra A-Z, anziché lungo tutta l\'altezza. Lo tiene lontano da un widget</string>
+    <string name="settings_edge_zone_width">Larghezza dello scorrimento dal bordo</string>
     <string name="settings_swipe_up_list">Scorri verso l\'alto per l\'elenco app</string>
     <string name="settings_swipe_up_list_detail">Spingi verso l\'alto oltre la fine della schermata iniziale</string>
     <string name="settings_quick_launch_left">Scorri a sinistra sotto i preferiti</string>
@@ -155,7 +155,7 @@
     <string name="settings_search_bar_bottom">Barra di ricerca in basso</string>
     <string name="settings_search_hidden">La ricerca trova le app nascoste</string>
     <string name="settings_search_hidden_detail">Le app nascoste dall\'elenco compaiono comunque quando le cerchi per nome</string>
-    <string name="settings_sort_by_usage">Ordina in base a quanto usi le app</string>
+    <string name="settings_sort_by_usage">Ordina per utilizzo</string>
     <string name="settings_sort_by_usage_detail">All\'interno di ogni lettera, prima le più usate</string>
     <string name="settings_alignment_favorites">Allineamento preferiti</string>
     <string name="settings_alignment_applist">Allineamento elenco app</string>
@@ -171,7 +171,7 @@
     <string name="settings_notification_access_detail">Necessario per mostrare il brano in riproduzione</string>
     <string name="settings_open_settings">Apri impostazioni</string>
     <string name="settings_favorites">Preferiti</string>
-    <string name="settings_favorites_detail">Scegli quali app stanno nella schermata iniziale</string>
+    <string name="settings_favorites_detail">Scegli quali app mettere nella schermata iniziale</string>
     <string name="applist_private_space_section">Spazio privato</string>
     <string name="applist_recent_section">Installate di recente</string>
     <string name="settings_stay_private_unlock">Resta nell\'elenco dopo lo sblocco</string>
@@ -182,10 +182,10 @@
     <string name="settings_recent_section_detail">Chiude l\'elenco app con ciò che è arrivato più di recente</string>
     <string name="settings_recent_section_count">Quante app recenti</string>
     <string name="settings_compact_tap">Tocca solo l\'icona e il nome</string>
-    <string name="settings_compact_tap_detail">Un preferito si apre solo quando tocchi la sua icona o il nome, non lungo tutta la sua riga</string>
+    <string name="settings_compact_tap_detail">Un preferito si apre solo quando tocchi la sua icona o il nome, non in qualsiasi punto della sua riga</string>
     <string name="settings_text_shadow_strength">Intensità ombra</string>
     <string name="settings_text_shadow">Ombra dietro il testo</string>
-    <string name="settings_text_shadow_detail">Aiuta i nomi delle app a risaltare su uno sfondo vivace. Applicata solo dietro il testo chiaro, dove aggiunge contrasto invece di confonderlo</string>
+    <string name="settings_text_shadow_detail">Aiuta i nomi delle app a risaltare su uno sfondo vivace. Applicata solo dietro il testo chiaro, dove aggiunge contrasto invece di annebbiarlo</string>
     <string name="settings_default_launcher">Launcher predefinito</string>
     <string name="settings_default_launcher_yes">Deluge Launcher</string>
     <string name="settings_default_launcher_no">Non impostato — tocca per scegliere</string>
@@ -234,7 +234,7 @@
     <string name="settings_import_done">Impostazioni ripristinate</string>
     <string name="settings_backup_failed">Impossibile leggere il file</string>
     <string name="settings_dim_color">Colore di attenuazione</string>
-    <string name="settings_dim_color_detail">Ciò con cui viene attenuato lo sfondo; i cursori sopra impostano quanto</string>
+    <string name="settings_dim_color_detail">Il colore con cui si attenua lo sfondo; i cursori sopra impostano quanto</string>
     <string name="color_from_wallpaper">Dal tuo sfondo</string>
     <string name="icon_shape">Forma icona</string>
     <string name="icon_shape_detail">Ridisegna solo le icone adattive; quelle più vecchie restano come sono</string>
@@ -289,7 +289,7 @@
     <!-- Welcome -->
     <string name="welcome_title">Benvenuto in Deluge</string>
     <string name="welcome_favorites">Tieni premuto lo sfondo per aggiungere preferiti, un widget o aprire le impostazioni.</string>
-    <string name="welcome_widget">Scorri dal bordo dello schermo per vedere tutte le tue app, e scorri lungo la striscia A-Z per saltare a una lettera.</string>
+    <string name="welcome_widget">Scorri dal bordo dello schermo per vedere tutte le tue app, e scorri lungo la barra A-Z per saltare a una lettera.</string>
     <string name="welcome_layout">Modifica layout ti permette di spostare le cose e impostare la spaziatura.</string>
     <string name="welcome_got_it">Ho capito</string>
 
@@ -321,7 +321,7 @@
     <string name="widget_clock_date_custom_chip">Personalizzato</string>
     <string name="widget_clock_date_custom">Formato data personalizzato</string>
     <string name="widget_clock_date_custom_label">Schema</string>
-    <string name="widget_clock_date_custom_invalid">Questo non è uno schema che può essere disegnato</string>
+    <string name="widget_clock_date_custom_invalid">Non è uno schema che si possa disegnare</string>
     <string name="widget_clock_date_custom_hint">d giorno, M mese, y anno, E giorno della settimana. Ripeti una lettera per una forma più lunga: d, dd, EEE, EEEE.</string>
     <string name="widget_clock_agenda">In arrivo</string>
     <string name="widget_clock_event_untitled">(Senza titolo)</string>
@@ -345,7 +345,7 @@
     <string name="widget_clock_agenda_permission">Consenti l\'accesso al calendario</string>
     <string name="widget_clock_agenda_empty">Niente in arrivo</string>
     <string name="widget_clock_agenda_hint">Leggere il calendario richiede il permesso. Nulla lascia il telefono: Deluge non ha accesso alla rete.</string>
-    <string name="widget_clock_weather_opens">Cosa apre il tocco sul meteo</string>
+    <string name="widget_clock_weather_opens">Cosa si apre toccando il meteo</string>
     <string name="widget_clock_weather_waiting">In attesa di un\'app meteo</string>
     <string name="widget_clock_weather_hint">Il meteo proviene da un\'app meteo che lo ha già, così Deluge non richiede accesso alla rete e non chiede mai dove ti trovi. In Breezy Weather, attiva Impostazioni → Widget &amp; sfondo animato → Condivisione dati.</string>
     <string name="widget_clock_notifications_show">Numero di notifiche</string>
@@ -399,8 +399,8 @@
         <item quantity="one">%1$d app esclusa</item>
         <item quantity="other">%1$d app escluse</item>
     </plurals>
-    <string name="prompt_default_title">Imposta Deluge come schermata Home</string>
-    <string name="prompt_default_body">Deluge è installato, ma Android non lo sta ancora usando. Impostalo come schermata Home predefinita per vedere i preferiti e l\'elenco delle app.</string>
+    <string name="prompt_default_title">Imposta Deluge come schermata iniziale</string>
+    <string name="prompt_default_body">Deluge è installato, ma Android non lo sta ancora usando. Impostalo come schermata iniziale predefinita per vedere i preferiti e l\'elenco app.</string>
     <string name="prompt_default_set">Imposta come predefinita</string>
     <string name="prompt_default_skip">Non ora</string>
     <string name="settings_changelog">Novità</string>

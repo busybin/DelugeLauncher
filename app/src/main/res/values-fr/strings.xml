@@ -10,7 +10,7 @@
     <string name="action_create">Créer</string>
     <string name="action_done">Terminé</string>
     <string name="action_remove">Supprimer</string>
-    <string name="action_app_info">Infos sur l\'appli</string>
+    <string name="action_app_info">Infos sur l\'application</string>
     <string name="action_edit_layout">Modifier la disposition</string>
     <string name="action_edit_icon_and_name">Modifier l\'icône &amp; le nom</string>
     <string name="action_move_to_folder">Déplacer vers un dossier…</string>
@@ -65,7 +65,7 @@
     <!-- Settings -->
     <string name="settings_title">Paramètres Deluge</string>
     <string name="settings_language">Langue</string>
-    <string name="settings_language_system">Valeur par défaut du système</string>
+    <string name="settings_language_system">Par défaut du système</string>
     <string name="settings_section_home">Écran d\'accueil</string>
     <string name="settings_section_app_list">Liste des applications</string>
     <string name="settings_section_gestures">Gestes</string>
@@ -74,8 +74,8 @@
     <string name="settings_search">Rechercher dans les paramètres</string>
     <string name="settings_corner_search">Ouvrir la recherche</string>
     <string name="settings_corner_button">Bouton dans le coin inférieur</string>
-    <string name="settings_last_letter">Chaque lettre sur la même ligne</string>
-    <string name="settings_last_letter_detail">Les lettres de fin de liste atteignent la même ligne que les autres. Coûte un écran d\'espace vide sous la dernière application</string>
+    <string name="settings_last_letter">Toutes les lettres sur la même ligne</string>
+    <string name="settings_last_letter_detail">Les lettres de fin de liste atteignent la même ligne que les autres. Laisse un écran vide sous la dernière application</string>
     <string name="settings_auto_keyboard">Ouvrir le clavier avec la liste</string>
     <string name="settings_auto_keyboard_detail">Commencez à taper dès l\'ouverture de la liste des applications. Sinon, le clavier attend que vous touchiez le champ de recherche</string>
     <string name="settings_settings_row">Ligne des paramètres dans la liste des applications</string>
@@ -93,7 +93,7 @@
     <string name="settings_list_headers_detail">Désactivé donne une liste continue. La barre A-Z permet toujours d\'accéder à une lettre</string>
     <string name="settings_notification_badges">Nombre de notifications sur les icônes</string>
     <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, jamais le contenu d\'une notification</string>
-    <string name="settings_section_top">Où atterrit une lettre</string>
+    <string name="settings_section_top">Où arrive une lettre</string>
     <string name="settings_close_folder">Fermer un dossier après l\'ouverture d\'une application</string>
     <string name="settings_close_folder_detail">Désactivé le laisse ouvert jusqu\'à ce que vous le fermiez vous-même</string>
     <string name="settings_favorites_source">Favoris</string>
@@ -117,9 +117,9 @@
     <string name="settings_haptics">Retour haptique</string>
     <string name="settings_haptics_detail">Suit le réglage de retour tactile de votre système</string>
     <string name="settings_edge_side">Quel bord ouvre la liste des applications</string>
-    <string name="settings_double_tap_lock">Appui double pour verrouiller l\'écran</string>
+    <string name="settings_double_tap_lock">Double appui pour verrouiller l\'écran</string>
     <string name="settings_double_tap_lock_detail">Touchez deux fois la barre A-Z</string>
-    <string name="settings_lock_needs_accessibility">Nécessite que Deluge Launcher soit activé dans Accessibilité. Si ce commutateur est grisé, ouvrez Infos sur l\'appli et autorisez d\'abord les paramètres restreints depuis le menu ⋮.</string>
+    <string name="settings_lock_needs_accessibility">Nécessite que Deluge Launcher soit activé dans Accessibilité. Si ce commutateur est grisé, ouvrez Infos sur l\'application et autorisez d\'abord les paramètres restreints depuis le menu ⋮.</string>
     <string name="settings_az_visibility">Afficher A-Z sur l\'écran d\'accueil</string>
     <string name="az_visibility_never">Jamais</string>
     <string name="az_visibility_landscape">Paysage</string>
@@ -128,7 +128,7 @@
     <string name="settings_show_alphabet">Afficher A-Z dans la liste des applications</string>
     <string name="applist_search_web">Rechercher \"%1$s\" sur le Web</string>
     <string name="settings_web_search">Proposer une recherche Web</string>
-    <string name="settings_web_search_detail">Lorsque rien dans la liste ne correspond à ce que vous avez tapé, une ligne propose les mots à votre navigateur. Rien n\'est envoyé ailleurs sans que vous la touchiez</string>
+    <string name="settings_web_search_detail">Lorsque rien dans la liste ne correspond à ce que vous avez tapé, une ligne propose les mots à votre navigateur. Rien n\'est envoyé ailleurs tant que vous ne touchez pas cette ligne</string>
     <string name="settings_swipe_up_search">Balayer vers le haut ouvre la recherche</string>
     <string name="settings_swipe_up_search_detail">Balayer vers le haut ouvre la liste des applications avec le curseur déjà dans le champ de recherche</string>
     <string name="app_work_suffix"> (Pro)</string>
@@ -140,10 +140,10 @@
     <string name="settings_dim_others">Assombrir le reste pendant le défilement A-Z</string>
     <string name="settings_dim_others_detail">Les applications en dehors de la lettre où vous vous trouvez s\'estompent, ce qui la fait ressortir. Désactivé garde toute la liste visible</string>
     <string name="settings_hold_scroll">Maintenez une lettre pour continuer à défiler</string>
-    <string name="settings_hold_scroll_detail">Laissez votre doigt sur une lettre et la liste défile à travers ses applications, pour les lettres qui en ont beaucoup</string>
+    <string name="settings_hold_scroll_detail">Laissez votre doigt sur une lettre et la liste parcourt ses applications, utile pour les lettres qui en comptent beaucoup</string>
     <string name="settings_hold_scroll_speed">Vitesse de défilement</string>
-    <string name="settings_edge_band_only">Bord uniquement à côté des lettres</string>
-    <string name="settings_edge_band_only_detail">Le côté de l\'écran ouvre la liste des applications uniquement là où se trouve la barre A-Z, au lieu de sur toute la hauteur. Évite de gêner un widget</string>
+    <string name="settings_edge_band_only">Bord actif uniquement le long des lettres</string>
+    <string name="settings_edge_band_only_detail">Le côté de l\'écran ouvre la liste des applications uniquement là où se trouve la barre A-Z, au lieu de toute la hauteur. Évite de gêner un widget</string>
     <string name="settings_edge_zone_width">Largeur du balayage sur le bord</string>
     <string name="settings_swipe_up_list">Balayer vers le haut pour la liste des applications</string>
     <string name="settings_swipe_up_list_detail">Poussez vers le haut au-delà de la fin de l\'écran d\'accueil</string>
@@ -155,16 +155,16 @@
     <string name="settings_search_bar_bottom">Barre de recherche en bas</string>
     <string name="settings_search_hidden">La recherche trouve les applications masquées</string>
     <string name="settings_search_hidden_detail">Les applications masquées de la liste apparaissent toujours lorsque vous les recherchez par leur nom</string>
-    <string name="settings_sort_by_usage">Trier selon la fréquence d\'utilisation des applications</string>
+    <string name="settings_sort_by_usage">Trier par fréquence d\'utilisation</string>
     <string name="settings_sort_by_usage_detail">Dans chaque lettre, les plus utilisées d\'abord</string>
     <string name="settings_alignment_favorites">Alignement des favoris</string>
     <string name="settings_alignment_applist">Alignement de la liste des applications</string>
     <string name="settings_icon_side">Côté de l\'icône</string>
     <string name="settings_shade_gesture">Balayer vers le bas pour les notifications</string>
     <string name="settings_shade_ready">Prêt — balayez vers le bas sur l\'écran d\'accueil</string>
-    <string name="settings_shade_not_ready">Balayez vers le bas sur l\'écran d\'accueil. Si rien ne se produit, activez Deluge Launcher dans Accessibilité — et si ce commutateur est grisé, autorisez d\'abord les paramètres restreints depuis Infos sur l\'appli.</string>
+    <string name="settings_shade_not_ready">Balayez vers le bas sur l\'écran d\'accueil. Si rien ne se produit, activez Deluge Launcher dans Accessibilité — et si ce commutateur est grisé, autorisez d\'abord les paramètres restreints depuis Infos sur l\'application.</string>
     <string name="settings_enable">Activer</string>
-    <string name="settings_app_info">Infos sur l\'appli</string>
+    <string name="settings_app_info">Infos sur l\'application</string>
     <string name="settings_now_playing_show">Afficher le widget Now Playing</string>
     <string name="settings_notification_access_granted">Accès aux notifications accordé</string>
     <string name="settings_notification_access_missing">Accès aux notifications non accordé</string>
@@ -177,7 +177,7 @@
     <string name="settings_stay_private_unlock">Rester dans la liste après le déverrouillage</string>
     <string name="settings_stay_private_unlock_detail">Le déverrouillage de l\'espace privé garde la liste des applications ouverte au lieu de revenir à l\'écran d\'accueil</string>
     <string name="settings_private_space_section">Section Espace privé</string>
-    <string name="settings_private_space_section_detail">Regroupe les applications de l\'espace privé sous l\'alphabet au lieu de les mêler aux autres, afin de distinguer deux copies d\'une même application</string>
+    <string name="settings_private_space_section_detail">Regroupe les applications de l\'espace privé sous la liste alphabétique au lieu de les mêler aux autres, afin de distinguer deux copies d\'une même application</string>
     <string name="settings_recent_section">Section Installées récemment</string>
     <string name="settings_recent_section_detail">Termine la liste des applications avec ce qui est arrivé le plus récemment</string>
     <string name="settings_recent_section_count">Nombre d\'applications récentes</string>
@@ -215,7 +215,7 @@
     <string name="text_color_custom">Personnalisée</string>
     <string name="text_color_pick">Choisir une couleur</string>
     <string name="settings_swipe_shortcuts">Balayer une application pour ses raccourcis</string>
-    <string name="settings_swipe_shortcuts_detail">Balayez un favori ou une ligne de la liste des applications. Les applications qui n\'en proposent pas ne font rien</string>
+    <string name="settings_swipe_shortcuts_detail">Balayez un favori ou une ligne de la liste des applications. Les applications qui n\'en proposent pas restent sans effet</string>
     <string name="shortcut_swipe_off">Désactivé</string>
     <string name="shortcut_swipe_right">Balayer vers la droite</string>
     <string name="shortcut_swipe_left">Balayer vers la gauche</string>
@@ -269,7 +269,7 @@
     <string name="folder_gone">Ce dossier n\'existe plus.</string>
     <string name="folder_member_count">%1$d dans ce dossier — faites glisser pour réorganiser</string>
     <string name="folder_add_apps">Ajouter d\'autres applications</string>
-    <string name="folder_member_missing">Application plus installée</string>
+    <string name="folder_member_missing">Application désinstallée</string>
     <string name="folder_picker_title">Déplacer %1$s vers…</string>
     <string name="folder_picker_app_count">%1$d applications</string>
     <string name="folder_picker_new">Nouveau dossier</string>
@@ -345,7 +345,7 @@
     <string name="widget_clock_agenda_permission">Autoriser l\'accès à votre calendrier</string>
     <string name="widget_clock_agenda_empty">Rien à venir</string>
     <string name="widget_clock_agenda_hint">La lecture de votre calendrier nécessite une autorisation. Rien ne quitte le téléphone : Deluge n\'a aucun accès réseau.</string>
-    <string name="widget_clock_weather_opens">Ce que l\'appui sur la météo ouvre</string>
+    <string name="widget_clock_weather_opens">Ce qu\'ouvre un appui sur la météo</string>
     <string name="widget_clock_weather_waiting">En attente d\'une application météo</string>
     <string name="widget_clock_weather_hint">La météo provient d\'une application météo qui la détient déjà, si bien que Deluge n\'a besoin d\'aucun accès réseau et ne demande jamais votre position. Dans Breezy Weather, activez Paramètres → Widgets &amp; Live Wallpaper → Partage de données.</string>
     <string name="widget_clock_notifications_show">Nombre de notifications</string>

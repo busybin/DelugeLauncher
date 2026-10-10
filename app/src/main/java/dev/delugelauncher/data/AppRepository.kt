@@ -490,20 +490,20 @@ class AppRepository(
      * only clutter nothing can reach.
      */
     /**
-     * Re-pins the shortcuts named by [keys], for a settings file restored onto this device.
+     * Re-pins the shortcuts named by [keys], for a settings file restored onto another
+     * device.
      *
-     * A shortcut is not something this app owns: it is an entry the publishing app offered
-     * and the system keeps on the launcher's behalf, and it is nowhere in the file that
-     * carries a backup. What the file does carry is the favorite's key, which names the
-     * package and the shortcut's id — enough to ask the system for it again, and only where
-     * the publishing app still offers it.
+     * A shortcut is not this app's to carry: it is an entry the publishing app offered and
+     * the system keeps for the launcher, and it is nowhere in the file. What the file has is
+     * the favorite's key, which names the package and the shortcut id — enough to ask the
+     * system for it again, where the publisher still offers it.
      *
-     * pinShortcuts replaces the whole pinned set for one package in one profile, so the ids
-     * already pinned there are handed back in the same call rather than left out of it,
-     * which would unpin them. Everything is best-effort: a shortcut whose app is gone, or
-     * whose publisher no longer offers it, is simply not restored.
+     * pinShortcuts replaces the whole pinned set for a package in a profile, so ids already
+     * pinned there go back in the same call; leaving them out would unpin them. Best effort
+     * throughout: an app that is gone, or no longer offers the shortcut, is simply not
+     * restored.
      *
-     * Returns how many package/profile pairs were asked about, so the caller can say so.
+     * Returns how many package/profile pairs were asked about.
      */
     fun repinShortcuts(keys: Collection<String>): Int {
         val wanted = keys.mapNotNull { EntryKeys.parseShortcut(it) }

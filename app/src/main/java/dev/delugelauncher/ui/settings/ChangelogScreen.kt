@@ -29,14 +29,14 @@ import dev.delugelauncher.R
 /**
  * One release's notes.
  *
- * Written here rather than read from a file so that a release's notes travel with the code
- * that made them, and so nothing has to parse anything at run time. Kept in English: it is a
- * developer's log of what changed, and a translated changelog drifts from the code it is
- * describing. Everything the user actually reads on screen is translated.
+ * Here rather than in a file so a release's notes travel with the code that made them, and
+ * nothing has to be parsed at run time. English only: it is a developer's log, and a
+ * translated changelog drifts from the code it describes. Everything on screen is
+ * translated.
  */
 data class Release(val version: String, val notes: List<String>)
 
-/** Newest first. Add an entry here only when a version is actually being cut. */
+/** Newest first. Add an entry only when a version is actually being cut. */
 val CHANGELOG: List<Release> = listOf(
     Release(
         "V19",

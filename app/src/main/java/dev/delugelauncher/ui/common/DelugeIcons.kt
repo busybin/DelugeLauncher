@@ -10,21 +10,17 @@ import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.unit.dp
 
 /**
- * The handful of icons this app draws that `material-icons-core` does not carry, as plain
- * path data — no `material-icons-extended` on the classpath.
+ * The icons this app draws that `material-icons-core` does not carry.
  *
- * Why they are here and not handed to a library: that library ships several thousand
- * icons to deliver the ~15 used here, and the whole lot lands in the APK and in every
- * build's resource pass. It costs the release build nothing, since R8 strips what is
- * unreachable, but the debug build carries all of it and every build pays the merge.
+ * They are here because the library that had them ships several thousand to deliver about
+ * fifteen: all of it lands in the APK and in every build's resource pass. R8 hides that in a
+ * release build, but the debug build carries the lot and every build pays the merge.
  *
  * The paths are written out rather than borrowed, and each is simple geometry on the
- * Material 24dp grid with a 2-unit stroke where the original is a line: they are meant
- * to be obvious to read and to change, not to be exact copies. Nothing here is drawn
- * with anything fancier than a line, a circle and a polygon.
+ * Material 24dp grid with a 2-unit stroke where the original is a line. Nothing fancier than
+ * a line, a circle and a polygon, so they are easy to read and easy to change.
  *
- * Tint works on both fill and stroke, so an [androidx.compose.material3.Icon] wrapping
- * one of these tints like any other.
+ * Tint reaches both fill and stroke, so a Material `Icon` wrapping one tints like any other.
  */
 object DelugeIcons {
 
@@ -108,10 +104,10 @@ object DelugeIcons {
     }
 }
 
-/** The Material icon size, so an icon dropped in among `material-icons-core` ones matches. */
+/** The Material icon size, so one of these sits right beside a `material-icons-core` icon. */
 private const val GRID = 24f
 
-/** One path of one icon, and whether it is a line (stroked) or a shape (filled). */
+/** One path of an icon: path data, and a stroke width for a line or null to fill it. */
 private class IconPath(val data: String, val strokeWidth: Float?)
 
 private fun vector(name: String, build: MutableList<IconPath>.() -> Unit): ImageVector {

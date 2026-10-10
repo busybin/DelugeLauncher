@@ -41,12 +41,10 @@ class DelugeApp : Application() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /**
-     * Runs [block] off the main thread, for work that must not hold up the first frame
-     * after a resume.
-     *
-     * The clock widget's refresh is the case for this: it is binder round trips into the
-     * system server on a process that has just been sitting in the background, and nothing
-     * it produces feeds the screen the user is waiting for.
+     * Runs [block] off the main thread, for work that must not hold up the first frame after
+     * a resume. The clock widget's refresh is the case for this: binder round trips into the
+     * system server on a process that has been sitting in the background, producing nothing
+     * the waiting screen shows.
      */
     fun offMain(block: () -> Unit) {
         appScope.launch { block() }

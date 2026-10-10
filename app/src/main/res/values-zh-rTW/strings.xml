@@ -21,12 +21,12 @@
     <!-- Home screen -->
     <string name="home_drag_handle">重新排序</string>
     <string name="home_no_favorites_title">尚無我的最愛</string>
-    <string name="home_no_favorites_body">觸碰螢幕邊緣開啟應用程式列表，或從下方列表挑選我的最愛。</string>
+    <string name="home_no_favorites_body">輕觸螢幕邊緣即可開啟應用程式列表，或從下方列表挑選我的最愛。</string>
     <string name="home_choose_favorites">選擇我的最愛</string>
     <string name="home_folder_choose_apps">管理資料夾</string>
     <string name="home_folder_delete">刪除資料夾</string>
     <string name="home_folder_remove_app">從資料夾移除</string>
-    <string name="home_folder_empty">空白 — 長按資料夾選擇應用程式</string>
+    <string name="home_folder_empty">空白 — 長按資料夾即可選擇應用程式</string>
     <string name="home_folder_name_label">資料夾名稱</string>
     <string name="home_folder_use_previews">使用應用程式預覽</string>
     <string name="home_display_name_label">顯示名稱</string>
@@ -52,7 +52,7 @@
     <string name="applist_hide">從列表隱藏</string>
     <string name="applist_unhide">在列表中顯示</string>
 
-    <string name="applist_band_hint">拖曳字母列可移動位置，拖曳任一手把可調整大小</string>
+    <string name="applist_band_hint">拖曳字母列可移動位置，拖曳任一控制點可調整大小</string>
     <string name="applist_band_top">字母列頂端</string>
     <string name="applist_band_bottom">字母列底部</string>
 
@@ -75,11 +75,11 @@
     <string name="settings_corner_search">開啟搜尋</string>
     <string name="settings_corner_button">底部角落的按鈕</string>
     <string name="settings_last_letter">所有字母都在同一行</string>
-    <string name="settings_last_letter_detail">列表結尾的字母會與其他字母排在同一行。代價是最後一個應用程式下方會留下一整片空白</string>
+    <string name="settings_last_letter_detail">列表結尾的字母會與其他字母排在同一行。但最後一個應用程式下方會空出一大片空間</string>
     <string name="settings_auto_keyboard">開啟列表時一併開啟鍵盤</string>
     <string name="settings_auto_keyboard_detail">應用程式列表一開啟就能開始輸入。關閉時，鍵盤會等到你輕點搜尋框才出現</string>
     <string name="settings_settings_row">應用程式列表中的設定列</string>
-    <string name="settings_settings_row_detail">Z 之後那一列會開啟這些設定。長按桌布同樣可以開啟</string>
+    <string name="settings_settings_row_detail">Z 之後那一列會開啟這些設定；長按桌布也同樣能開啟</string>
     <string name="settings_search_none">沒有相符的項目</string>
     <string name="settings_section_appearance">外觀</string>
     <string name="settings_section_apps">應用程式</string>
@@ -90,12 +90,12 @@
     <string name="settings_icons_favorites">我的最愛上的圖示</string>
     <string name="settings_icons_app_list">應用程式列表中的圖示</string>
     <string name="settings_list_headers">字母標題</string>
-    <string name="settings_list_headers_detail">關閉時為一份連續列表。字母列仍可跳到該字母</string>
+    <string name="settings_list_headers_detail">關閉時會顯示成一份連續列表。字母列仍可跳到該字母</string>
     <string name="settings_notification_badges">圖示上的通知數量</string>
     <string name="settings_notification_badges_detail">需要與 Now Playing 相同的通知存取權限。只計算數量，絕不讀取通知內容</string>
     <string name="settings_section_top">字母落點</string>
     <string name="settings_close_folder">開啟應用程式後關閉資料夾</string>
-    <string name="settings_close_folder_detail">關閉時會保持開啟，直到你自己關閉它</string>
+    <string name="settings_close_folder_detail">關閉時，資料夾會保持開啟，直到你自行關閉它</string>
     <string name="settings_favorites_source">我的最愛</string>
     <string name="settings_frequent_count">數量</string>
     <string name="favorites_source_manual">你保留的列表</string>
@@ -128,7 +128,7 @@
     <string name="settings_show_alphabet">在應用程式列表中顯示字母列</string>
     <string name="applist_search_web">在網路上搜尋 \"%1$s\"</string>
     <string name="settings_web_search">提供網路搜尋</string>
-    <string name="settings_web_search_detail">當列表中沒有任何項目符合你輸入的內容時，會出現一列將這些字詞送到你的瀏覽器。除非你輕點它，否則不會傳送任何資料</string>
+    <string name="settings_web_search_detail">當列表中沒有任何項目符合你輸入的內容時，會出現一列，將你輸入的字詞送到瀏覽器。除非你輕點它，否則不會傳送任何資料</string>
     <string name="settings_swipe_up_search">向上滑動開啟搜尋</string>
     <string name="settings_swipe_up_search_detail">向上滑動會開啟應用程式列表，並將游標放在搜尋框中</string>
     <string name="app_work_suffix"> (工作)</string>
@@ -138,12 +138,12 @@
     <string name="settings_mark_work_apps">標記工作應用程式</string>
     <string name="settings_mark_work_apps_detail">來自工作設定檔的應用程式會在其名稱後標示，以便區分同一個應用程式的兩個副本</string>
     <string name="settings_dim_others">滑動字母列時將其餘部分變暗</string>
-    <string name="settings_dim_others_detail">目前字母以外的應用程式會淡出，使它更突出。關閉時整個列表保持可見</string>
+    <string name="settings_dim_others_detail">目前所在字母以外的應用程式會淡出，讓該字母更醒目。關閉時整個列表保持可見</string>
     <string name="settings_hold_scroll">長按字母持續捲動</string>
     <string name="settings_hold_scroll_detail">手指停在某個字母上，列表會繼續捲動瀏覽其中的應用程式，適合應用程式較多的字母</string>
     <string name="settings_hold_scroll_speed">捲動速度</string>
     <string name="settings_edge_band_only">僅在字母列旁使用邊緣</string>
-    <string name="settings_edge_band_only_detail">只有在字母列所在的位置，從螢幕側邊才能開啟應用程式列表，而非整段側邊緣。這樣也不會妨礙小工具</string>
+    <string name="settings_edge_band_only_detail">只有在字母列所在的位置，從螢幕側邊才能開啟應用程式列表，而非整段側邊緣。這樣也不會擋到小工具</string>
     <string name="settings_edge_zone_width">邊緣滑動寬度</string>
     <string name="settings_swipe_up_list">向上滑動開啟應用程式列表</string>
     <string name="settings_swipe_up_list_detail">從主畫面底部往上推</string>
@@ -215,7 +215,7 @@
     <string name="text_color_custom">自訂</string>
     <string name="text_color_pick">選擇顏色</string>
     <string name="settings_swipe_shortcuts">滑動應用程式顯示其捷徑</string>
-    <string name="settings_swipe_shortcuts_detail">滑動我的最愛或應用程式列表中的任一列。未發布捷徑的應用程式不會有任何反應</string>
+    <string name="settings_swipe_shortcuts_detail">滑動我的最愛或應用程式列表中的任一列。未提供捷徑的應用程式不會有任何反應</string>
     <string name="shortcut_swipe_off">關閉</string>
     <string name="shortcut_swipe_right">向右滑動</string>
     <string name="shortcut_swipe_left">向左滑動</string>
@@ -237,7 +237,7 @@
     <string name="settings_dim_color_detail">桌布變暗所使用的顏色；上方滑桿可設定程度</string>
     <string name="color_from_wallpaper">來自你的桌布</string>
     <string name="icon_shape">圖示形狀</string>
-    <string name="icon_shape_detail">僅重新塑形延伸圖示；較舊的圖示保持原狀</string>
+    <string name="icon_shape_detail">僅重新塑形自適應圖示；較舊的圖示保持原狀</string>
     <string name="icon_shape_system">系統</string>
     <string name="icon_shape_circle">圓形</string>
     <string name="icon_shape_rounded">圓角</string>
@@ -283,7 +283,7 @@
     <string name="icon_picker_no_packs">尚未安裝圖示套件。請從 Play 商店安裝圖示套件，或從你的圖庫選擇圖片。</string>
     <string name="icon_picker_search">搜尋圖示</string>
     <string name="icon_picker_clear_search">清除搜尋</string>
-    <string name="icon_picker_not_browsable">這個套件並未\'開放可供瀏覽的圖示列表。</string>
+    <string name="icon_picker_not_browsable">這個套件並未\'提供可瀏覽的圖示列表。</string>
     <string name="icon_picker_no_matches">沒有圖示符合「%1$s」。</string>
 
     <!-- Welcome -->
@@ -296,7 +296,7 @@
     <!-- Widgets -->
     <string name="widget_add">新增小工具</string>
     <string name="widget_clock_label">時鐘和日期</string>
-    <string name="widget_clock_description">以啟動器\'的風格呈現的時間和日期</string>
+    <string name="widget_clock_description">以啟動器\'風格顯示的時間和日期</string>
     <string name="widget_clock_time">時間</string>
     <string name="widget_clock_date">日期</string>
     <string name="widget_clock_hour">時鐘</string>
@@ -321,7 +321,7 @@
     <string name="widget_clock_date_custom_chip">自訂</string>
     <string name="widget_clock_date_custom">自訂日期格式</string>
     <string name="widget_clock_date_custom_label">樣式</string>
-    <string name="widget_clock_date_custom_invalid">這不是本功能可繪製的樣式</string>
+    <string name="widget_clock_date_custom_invalid">這不是可繪製的樣式</string>
     <string name="widget_clock_date_custom_hint">d 日、M 月、y 年、E 星期。重複字母可取得更長的形式：d、dd、EEE、EEEE。</string>
     <string name="widget_clock_agenda">即將到來</string>
     <string name="widget_clock_event_untitled">(無標題)</string>
@@ -399,8 +399,8 @@
         <item quantity="one">已排除 %1$d 個應用程式</item>
         <item quantity="other">已排除 %1$d 個應用程式</item>
     </plurals>
-    <string name="prompt_default_title">將 Deluge 設為桌面</string>
-    <string name="prompt_default_body">Deluge 已安裝，但 Android 尚未啟用它。設為預設桌面即可看到我的最愛與應用程式清單。</string>
+    <string name="prompt_default_title">將 Deluge 設為主畫面</string>
+    <string name="prompt_default_body">Deluge 已安裝，但 Android 尚未啟用它。設為預設主畫面即可看到我的最愛與應用程式列表。</string>
     <string name="prompt_default_set">設為預設</string>
     <string name="prompt_default_skip">稍後</string>
     <string name="settings_changelog">更新記錄</string>
