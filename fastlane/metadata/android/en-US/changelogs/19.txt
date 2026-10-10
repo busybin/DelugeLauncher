@@ -1,0 +1,16 @@
+First release of Deluge Launcher, a fork of Victoria Launcher.
+
+New:
+* Blue Material 3 theme and a new app icon.
+* The app can be given its own language, with ten translations plus Traditional Chinese.
+* The A-Z strip follows the list while scrolling and lights up every letter on screen.
+* Folder rows show how many apps they hold and whether they are open.
+* A changelog in Settings, and a card offering to set Deluge as the home app.
+
+Fixed and tuned:
+* Opening the launcher is much faster: icons are cached on disk.
+* Scrolling the app list is never stolen by a slightly-angled swipe.
+* Returning to the home screen no longer takes seconds to draw, or goes blank.
+* Widget height follows the widget; dead widgets from a backup are cleaned up.
+* The status bar no longer sits on top of the first row when it is shown.
+* Restoring a settings file re-pins the shortcuts it names.

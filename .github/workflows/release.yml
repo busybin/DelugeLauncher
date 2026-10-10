@@ -51,7 +51,11 @@ jobs:
         if: always()
         run: rm -f release.keystore keystore.properties
 
+      # Only when this repository has a keystore to sign with. An unsigned APK is not
+      # something to hand anyone, so without one there is no release to publish — the run
+      # still builds and tests, which is what a tag on an unsigned fork is worth.
       - name: Publish release
+        if: env.KEYSTORE_BASE64 != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
