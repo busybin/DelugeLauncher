@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Deluge Launcher</string>
-    <string name="accessibility_description">Ermöglicht der Wischgeste nach unten, die Benachrichtigungsleiste zu öffnen. Deluge Launcher liest keine Bildschirminhalte und reagiert nicht auf sie.</string>
+    <string name="accessibility_description">Ermöglicht das Öffnen der Benachrichtigungsleiste durch Wischen nach unten. Deluge Launcher liest keine Bildschirminhalte und reagiert nicht auf sie.</string>
 
     <!-- Shared actions -->
     <string name="action_back">Zurück</string>
@@ -21,7 +21,7 @@
     <!-- Home screen -->
     <string name="home_drag_handle">Neu anordnen</string>
     <string name="home_no_favorites_title">Noch keine Favoriten</string>
-    <string name="home_no_favorites_body">Tippen Sie an den Bildschirmrand, um die App-Liste zu öffnen, oder wählen Sie Ihre Favoriten aus der Liste unten.</string>
+    <string name="home_no_favorites_body">Tippen Sie auf den Bildschirmrand, um die App-Liste zu öffnen, oder wählen Sie Ihre Favoriten aus der Liste unten.</string>
     <string name="home_choose_favorites">Favoriten wählen</string>
     <string name="home_folder_choose_apps">Ordner verwalten</string>
     <string name="home_folder_delete">Ordner löschen</string>
@@ -52,15 +52,15 @@
     <string name="applist_hide">Aus Liste ausblenden</string>
     <string name="applist_unhide">In Liste anzeigen</string>
 
-    <string name="applist_band_hint">Ziehen Sie das Band, um es zu verschieben, oder einen der Griffe, um seine Größe zu ändern</string>
-    <string name="applist_band_top">Oben der A-Z-Leiste</string>
-    <string name="applist_band_bottom">Unten der A-Z-Leiste</string>
+    <string name="applist_band_hint">Ziehen Sie das Band, um es zu verschieben, oder einen Griff, um die Größe zu ändern</string>
+    <string name="applist_band_top">A-Z-Leiste oben</string>
+    <string name="applist_band_bottom">A-Z-Leiste unten</string>
 
     <string name="applist_search">Apps suchen</string>
 
     <!-- Toasts -->
-    <string name="toast_enable_accessibility_shade">Aktivieren Sie Deluge Launcher in Einstellungen → Bedienungshilfen, um Benachrichtigungen zu öffnen</string>
-    <string name="toast_enable_accessibility_lock">Aktivieren Sie Deluge Launcher in Einstellungen → Bedienungshilfen, um den Bildschirm zu sperren</string>
+    <string name="toast_enable_accessibility_shade">Aktivieren Sie Deluge Launcher in den Einstellungen → Bedienungshilfen, um Benachrichtigungen zu öffnen</string>
+    <string name="toast_enable_accessibility_lock">Aktivieren Sie Deluge Launcher in den Einstellungen → Bedienungshilfen, um den Bildschirm zu sperren</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge-Einstellungen</string>
@@ -75,7 +75,7 @@
     <string name="settings_corner_search">Suche öffnen</string>
     <string name="settings_corner_button">Schaltfläche in der unteren Ecke</string>
     <string name="settings_last_letter">Jeder Buchstabe auf derselben Linie</string>
-    <string name="settings_last_letter_detail">Buchstaben am Ende der Liste erreichen dieselbe Linie wie die übrigen. Kostet einen Bildschirm voller leerem Platz unter der letzten App</string>
+    <string name="settings_last_letter_detail">Buchstaben am Ende der Liste erreichen dieselbe Linie wie die übrigen. Kostet unter der letzten App einen Bildschirm voller Leerraum</string>
     <string name="settings_auto_keyboard">Tastatur mit der Liste öffnen</string>
     <string name="settings_auto_keyboard_detail">Tippen Sie sofort los, wenn die App-Liste geöffnet wird. Aus: Die Tastatur wartet, bis Sie das Suchfeld antippen</string>
     <string name="settings_settings_row">Einstellungszeile in der App-Liste</string>
@@ -87,7 +87,7 @@
     <string name="settings_preview_sample">Beispiel-App</string>
     <string name="settings_icon_pack">Symbolpaket</string>
     <string name="settings_icon_pack_default">Standard</string>
-    <string name="settings_icons_favorites">Symbole bei Favoriten</string>
+    <string name="settings_icons_favorites">Symbole auf Favoriten</string>
     <string name="settings_icons_app_list">Symbole in der App-Liste</string>
     <string name="settings_list_headers">Buchstabenüberschriften</string>
     <string name="settings_list_headers_detail">Aus ergibt eine durchgehende Liste. Die A-Z-Leiste springt trotzdem zum Buchstaben</string>
@@ -128,19 +128,19 @@
     <string name="settings_show_alphabet">A-Z in der App-Liste anzeigen</string>
     <string name="applist_search_web">Im Web nach \"%1$s\" suchen</string>
     <string name="settings_web_search">Websuche anbieten</string>
-    <string name="settings_web_search_detail">Wenn nichts in der Liste zu Ihrer Eingabe passt, bietet eine Zeile die Wörter im Browser an. Nichts wird irgendwohin gesendet, außer Sie tippen darauf</string>
+    <string name="settings_web_search_detail">Wenn nichts in der Liste zu Ihrer Eingabe passt, bietet eine Zeile die Wörter Ihrem Browser an. Nichts wird irgendwohin gesendet, solange Sie nicht darauf tippen</string>
     <string name="settings_swipe_up_search">Nach oben wischen öffnet die Suche</string>
     <string name="settings_swipe_up_search_detail">Nach oben wischen öffnet die App-Liste, wobei der Cursor bereits im Suchfeld steht</string>
     <string name="app_work_suffix"> (Arbeit)</string>
     <string name="settings_edge_inset_auto">Automatisch Platz für die Zurück-Geste schaffen</string>
-    <string name="settings_edge_inset_auto_detail">Hält die A-Z-Leiste vom Rand frei, den Android für seine Zurück-Wischgeste nutzt. Ändert nichts bei der Navigationsleiste</string>
+    <string name="settings_edge_inset_auto_detail">Hält die A-Z-Leiste vom Rand frei, den Android für seine Zurück-Wischgeste nutzt. Ändert nichts bei der Navigation mit Tasten</string>
     <string name="settings_edge_inset">Platz für die Zurück-Geste lassen</string>
     <string name="settings_mark_work_apps">Arbeits-Apps markieren</string>
-    <string name="settings_mark_work_apps_detail">Apps aus einem Arbeitsprofil geben dies nach ihrem Namen an, sodass zwei Kopien derselben App unterschieden werden können</string>
+    <string name="settings_mark_work_apps_detail">Bei Apps aus einem Arbeitsprofil steht dies hinter dem Namen, sodass zwei Kopien derselben App unterschieden werden können</string>
     <string name="settings_dim_others">Den Rest beim Durchfahren von A-Z abdunkeln</string>
-    <string name="settings_dim_others_detail">Die Apps außerhalb des Buchstabens, auf dem Sie sich befinden, verblassen, was ihn hervorhebt. Aus lässt die ganze Liste sichtbar</string>
+    <string name="settings_dim_others_detail">Die Apps neben dem Buchstaben, auf dem Sie stehen, verblassen und heben ihn so hervor. Aus: Die ganze Liste bleibt sichtbar</string>
     <string name="settings_hold_scroll">Buchstaben halten, um weiterzuscrollen</string>
-    <string name="settings_hold_scroll_detail">Lassen Sie den Finger auf einem Buchstaben ruhen, und die Liste wandert durch seine Apps – für Buchstaben mit vielen davon</string>
+    <string name="settings_hold_scroll_detail">Halten Sie den Finger auf einem Buchstaben, und die Liste läuft durch dessen Apps – für Buchstaben mit vielen Apps</string>
     <string name="settings_hold_scroll_speed">Scrollgeschwindigkeit</string>
     <string name="settings_edge_band_only">Rand nur neben den Buchstaben</string>
     <string name="settings_edge_band_only_detail">Die Bildschirmseite öffnet die App-Liste nur dort, wo die A-Z-Leiste ist, statt ganz nach unten. Hält sie von einem Widget fern</string>
@@ -177,7 +177,7 @@
     <string name="settings_stay_private_unlock">Nach dem Entsperren in der Liste bleiben</string>
     <string name="settings_stay_private_unlock_detail">Beim Entsperren des Privaten Bereichs bleibt die App-Liste geöffnet, anstatt zum Startbildschirm zurückzukehren</string>
     <string name="settings_private_space_section">Abschnitt „Privater Bereich“</string>
-    <string name="settings_private_space_section_detail">Gruppiert die Apps des Privaten Bereichs unterhalb des Alphabets, statt sie einzumischen, sodass zwei Kopien einer App unterschieden werden können</string>
+    <string name="settings_private_space_section_detail">Gruppiert die Apps des Privaten Bereichs unterhalb des Alphabets, statt sie dazwischenzumischen, sodass zwei Kopien einer App unterschieden werden können</string>
     <string name="settings_recent_section">Abschnitt „Kürzlich installiert“</string>
     <string name="settings_recent_section_detail">Beendet die App-Liste mit dem, was zuletzt hinzukam</string>
     <string name="settings_recent_section_count">Wie viele kürzliche Apps</string>
@@ -185,7 +185,7 @@
     <string name="settings_compact_tap_detail">Ein Favorit öffnet sich nur, wenn Sie sein Symbol oder seinen Namen antippen, nicht überall entlang seiner Zeile</string>
     <string name="settings_text_shadow_strength">Schattenstärke</string>
     <string name="settings_text_shadow">Schatten hinter Text</string>
-    <string name="settings_text_shadow_detail">Hilft App-Namen, sich von einem unruhigen Hintergrundbild abzuheben. Wird nur hinter hellem Text angewendet, wo er Kontrast statt Trübung schafft</string>
+    <string name="settings_text_shadow_detail">Hilft App-Namen, sich von einem unruhigen Hintergrundbild abzuheben. Wird nur hinter hellem Text angewendet, wo er Kontrast schafft, statt den Text zu verwischen</string>
     <string name="settings_default_launcher">Standard-Launcher</string>
     <string name="settings_default_launcher_yes">Deluge Launcher</string>
     <string name="settings_default_launcher_no">Nicht festgelegt – zum Auswählen antippen</string>
@@ -215,7 +215,7 @@
     <string name="text_color_custom">Benutzerdefiniert</string>
     <string name="text_color_pick">Farbe wählen</string>
     <string name="settings_swipe_shortcuts">App für ihre Verknüpfungen wischen</string>
-    <string name="settings_swipe_shortcuts_detail">Wischen Sie einen Favoriten oder eine Zeile in der App-Liste. Apps, die keine veröffentlichen, tun nichts</string>
+    <string name="settings_swipe_shortcuts_detail">Wischen Sie einen Favoriten oder eine Zeile in der App-Liste. Apps ohne Verknüpfungen tun nichts</string>
     <string name="shortcut_swipe_off">Aus</string>
     <string name="shortcut_swipe_right">Nach rechts wischen</string>
     <string name="shortcut_swipe_left">Nach links wischen</string>
@@ -267,7 +267,7 @@
     <string name="favorites_count">%1$d auf Ihrem Startbildschirm</string>
     <string name="folder_title_fallback">Ordner</string>
     <string name="folder_gone">Dieser Ordner existiert nicht mehr.</string>
-    <string name="folder_member_count">%1$d in diesem Ordner – zum Neu anordnen ziehen</string>
+    <string name="folder_member_count">%1$d in diesem Ordner – ziehen, um neu anzuordnen</string>
     <string name="folder_add_apps">Mehr hinzufügen</string>
     <string name="folder_member_missing">App nicht mehr installiert</string>
     <string name="folder_picker_title">%1$s verschieben nach…</string>
@@ -321,7 +321,7 @@
     <string name="widget_clock_date_custom_chip">Benutzerdefiniert</string>
     <string name="widget_clock_date_custom">Benutzerdefiniertes Datumsformat</string>
     <string name="widget_clock_date_custom_label">Muster</string>
-    <string name="widget_clock_date_custom_invalid">Das ist kein Muster, das dies darstellen kann</string>
+    <string name="widget_clock_date_custom_invalid">Das ist kein Muster, das gezeichnet werden kann</string>
     <string name="widget_clock_date_custom_hint">d Tag, M Monat, y Jahr, E Wochentag. Wiederholen Sie einen Buchstaben für eine längere Form: d, dd, EEE, EEEE.</string>
     <string name="widget_clock_agenda">Demnächst</string>
     <string name="widget_clock_event_untitled">(Kein Titel)</string>
@@ -346,7 +346,7 @@
     <string name="widget_clock_agenda_empty">Nichts geplant</string>
     <string name="widget_clock_agenda_hint">Das Lesen Ihres Kalenders erfordert eine Berechtigung. Nichts verlässt das Telefon: Deluge hat keinen Netzwerkzugriff.</string>
     <string name="widget_clock_weather_opens">Was das Antippen des Wetters öffnet</string>
-    <string name="widget_clock_weather_waiting">Warte auf eine Wetter-App</string>
+    <string name="widget_clock_weather_waiting">Warten auf eine Wetter-App</string>
     <string name="widget_clock_weather_hint">Das Wetter stammt aus einer Wetter-App, die es bereits hat, sodass Deluge keinen Netzwerkzugriff benötigt und nie nach Ihrem Standort fragt. Aktivieren Sie in Breezy Weather Einstellungen → Widgets &amp; Live Wallpaper → Datenfreigabe.</string>
     <string name="widget_clock_notifications_show">Benachrichtigungsanzahl</string>
     <string name="widget_clock_notifications_hide">Kein Zähler</string>
@@ -378,7 +378,7 @@
     <!-- Now Playing -->
     <string name="now_playing_placeholder">Now Playing</string>
     <string name="now_playing_enable_access">Now Playing-Zugriff aktivieren</string>
-    <string name="now_playing_open_failed">Die App, die gerade abspielt, kann nicht geöffnet werden</string>
+    <string name="now_playing_open_failed">Die gerade abspielende App kann nicht geöffnet werden</string>
     <string name="now_playing_unknown_title">Unbekannter Titel</string>
     <string name="now_playing_previous">Zurück</string>
     <string name="now_playing_play_pause">Wiedergabe/Pause</string>
@@ -400,8 +400,8 @@
         <item quantity="other">%1$d Apps ausgeschlossen</item>
     </plurals>
     <string name="prompt_default_title">Deluge als Startbildschirm festlegen</string>
-    <string name="prompt_default_body">Deluge ist installiert, aber Android verwendet es noch nicht. Lege es als Standard-Startbildschirm fest, um deine Favoriten und die App-Liste zu sehen.</string>
-    <string name="prompt_default_set">Als Standard</string>
+    <string name="prompt_default_body">Deluge ist installiert, aber Android verwendet es noch nicht. Legen Sie es als Standard-Startbildschirm fest, um Ihre Favoriten und die App-Liste zu sehen.</string>
+    <string name="prompt_default_set">Als Standard festlegen</string>
     <string name="prompt_default_skip">Später</string>
     <string name="settings_changelog">Änderungen</string>
     <string name="settings_changelog_detail">Was sich in jeder Version geändert hat</string>

@@ -84,20 +84,19 @@ private object IconCache {
 fun clearIconCache() = IconCache.clear()
 
 /**
- * The same icons on disk, so a dead process does not mean re-rasterising every app.
+ * The icons on disk, so a dead process does not mean redrawing every app.
  *
- * The memory cache above is per process: once the system reclaims it, the next cold
- * start decodes and draws a few hundred drawables before the first icon can show.
- * These files survive that — same key, PNG next to it — so the second cold start reads
- * bytes instead of drawing pictures.
+ * The memory cache is per process: once the system reclaims it, the next cold start decodes
+ * and draws a few hundred drawables before the first icon can show. These files survive
+ * that — same key, PNG beside it — so the second cold start reads bytes instead of drawing
+ * pictures.
  *
- * Bounded like the memory one, by last use: every hit touches its file, and the sweep
- * drops the stalest until the directory fits again. Wiped wholesale beside the memory
- * cache whenever packages change, for the same reason — an app that ships a new icon
- * in an update keeps none of the key's components. That over-invalidates on any single
- * install or uninstall, and the next cold start pays to rebuild what did not change;
- * doing it per package would mean threading the package name through every refresh,
- * which is a bigger change than the files it would save.
+ * Bounded by last use: every hit touches its file, and the sweep drops the stalest until the
+ * directory fits. Cleared wholesale beside the memory cache whenever packages change, for
+ * the same reason — an app that ships a new icon in an update keeps none of the key's
+ * components. That over-invalidates on any single install or uninstall; doing it per package
+ * would mean threading the package name through every refresh, which is a bigger change than
+ * the files it would save.
  */
 private object IconDiskCache {
     private const val DIR = "icon_cache_v1"
@@ -184,9 +183,9 @@ data class IconStyle(
 )
 
 /**
- * Memory, then disk, then the drawable — in that order, and the last two beside the
- * main thread. A decode is an order of magnitude cheaper than a rasterise, and this
- * ordering is what makes the second cold start fast instead of merely warm.
+ * Memory, then disk, then the drawable, with the last two off the main thread. A decode costs
+ * an order of magnitude less than a rasterise, and the order is what makes the second cold
+ * start fast rather than merely warm.
  */
 private suspend fun loadIconBitmap(
     context: Context,

@@ -1,6 +1,6 @@
 <resources>
     <string name="app_name">Deluge Launcher</string>
-    <string name="accessibility_description">아래로 스와이프하는 동작으로 알림 창을 열 수 있습니다. Deluge Launcher는 화면 내용을 읽거나 동작하지 않습니다.</string>
+    <string name="accessibility_description">아래로 스와이프하면 알림창을 열 수 있습니다. Deluge Launcher는 화면 내용을 읽거나 조작하지 않습니다.</string>
 
     <!-- Shared actions -->
     <string name="action_back">뒤로</string>
@@ -42,9 +42,9 @@
     <string name="edit_value_range">%1$d ~ %2$d dp</string>
     <string name="handle_favorites_top">즐겨찾기 상단</string>
     <string name="handle_favorites_bottom">즐겨찾기 하단</string>
-    <string name="handle_now_playing_top">Now Playing 상단</string>
-    <string name="handle_now_playing_bottom">Now Playing 하단</string>
-    <string name="handle_now_playing_height">Now Playing 높이</string>
+    <string name="handle_now_playing_top">재생 중 상단</string>
+    <string name="handle_now_playing_bottom">재생 중 하단</string>
+    <string name="handle_now_playing_height">재생 중 높이</string>
 
     <!-- App list -->
     <string name="applist_add_favorite">즐겨찾기에 추가</string>
@@ -52,15 +52,15 @@
     <string name="applist_hide">목록에서 숨기기</string>
     <string name="applist_unhide">목록에 표시</string>
 
-    <string name="applist_band_hint">띠를 드래그하여 이동하거나, 양쪽 손잡이로 크기를 조절하세요</string>
+    <string name="applist_band_hint">A-Z 바를 드래그하여 이동하거나, 양쪽 끝 손잡이로 크기를 조절하세요</string>
     <string name="applist_band_top">A-Z 바 상단</string>
     <string name="applist_band_bottom">A-Z 바 하단</string>
 
     <string name="applist_search">앱 검색</string>
 
     <!-- Toasts -->
-    <string name="toast_enable_accessibility_shade">알림을 열려면 설정 → 접근성에서 Deluge Launcher를 사용하세요</string>
-    <string name="toast_enable_accessibility_lock">화면을 잠그려면 설정 → 접근성에서 Deluge Launcher를 사용하세요</string>
+    <string name="toast_enable_accessibility_shade">알림을 열려면 설정 → 접근성에서 Deluge Launcher를 사용 설정하세요</string>
+    <string name="toast_enable_accessibility_lock">화면을 잠그려면 설정 → 접근성에서 Deluge Launcher를 사용 설정하세요</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge 설정</string>
@@ -92,7 +92,7 @@
     <string name="settings_list_headers">문자 제목</string>
     <string name="settings_list_headers_detail">끄면 하나의 연속된 목록이 됩니다. A-Z 바로 문자로 이동하는 기능은 그대로입니다</string>
     <string name="settings_notification_badges">아이콘의 알림 개수</string>
-    <string name="settings_notification_badges_detail">Now Playing과 같은 알림 접근 권한이 필요합니다. 알림 내용이 아닌 개수만 사용합니다</string>
+    <string name="settings_notification_badges_detail">재생 중과 같은 알림 접근 권한이 필요합니다. 알림 내용은 보지 않고 개수만 셉니다</string>
     <string name="settings_section_top">문자가 멈추는 위치</string>
     <string name="settings_close_folder">앱을 연 후 폴더 닫기</string>
     <string name="settings_close_folder_detail">끄면 직접 닫을 때까지 열려 있습니다</string>
@@ -120,12 +120,12 @@
     <string name="settings_double_tap_lock">두 번 탭하여 화면 잠금</string>
     <string name="settings_double_tap_lock_detail">A-Z 바를 두 번 탭하세요</string>
     <string name="settings_lock_needs_accessibility">접근성에서 Deluge Launcher를 사용하도록 설정해야 합니다. 스위치가 비활성화된 경우 앱 정보를 열고 ⋮ 메뉴에서 제한된 설정 허용을 먼저 켜세요.</string>
-    <string name="settings_az_visibility">홈 화면에 A-Z 표시</string>
+    <string name="settings_az_visibility">홈 화면에 A-Z 바 표시</string>
     <string name="az_visibility_never">표시 안 함</string>
     <string name="az_visibility_landscape">가로 모드</string>
     <string name="az_visibility_always">항상</string>
-    <string name="settings_always_show_az">A-Z 항상 표시</string>
-    <string name="settings_show_alphabet">앱 목록에 A-Z 표시</string>
+    <string name="settings_always_show_az">A-Z 바 항상 표시</string>
+    <string name="settings_show_alphabet">앱 목록에 A-Z 바 표시</string>
     <string name="applist_search_web">웹에서 \"%1$s\" 검색</string>
     <string name="settings_web_search">웹 검색 제공</string>
     <string name="settings_web_search_detail">목록에서 입력한 내용과 일치하는 항목이 없으면, 입력한 단어를 브라우저로 보내는 행이 나타납니다. 누르지 않는 한 아무것도 전송되지 않습니다</string>
@@ -136,8 +136,8 @@
     <string name="settings_edge_inset_auto_detail">Android가 뒤로 스와이프에 사용하는 가장자리에서 A-Z 바를 떨어지게 유지합니다. 버튼 탐색에서는 변하지 않습니다</string>
     <string name="settings_edge_inset">뒤로 가기 제스처를 위한 공간 확보</string>
     <string name="settings_mark_work_apps">업무 앱 표시</string>
-    <string name="settings_mark_work_apps_detail">업무 프로필의 앱은 이름 뒤에 그렇게 표시되어, 같은 앱의 두 복사본을 구별할 수 있습니다</string>
-    <string name="settings_dim_others">A-Z를 넘기는 동안 나머지 어둡게</string>
+    <string name="settings_mark_work_apps_detail">업무 프로필의 앱은 이름 뒤에 표시가 붙어 같은 앱의 두 복사본을 구별할 수 있습니다</string>
+    <string name="settings_dim_others">A-Z 바를 넘기는 동안 나머지 어둡게</string>
     <string name="settings_dim_others_detail">현재 문자 밖의 앱이 희미해져 선택한 문자가 돋보입니다. 끄면 전체 목록이 보입니다</string>
     <string name="settings_hold_scroll">문자를 길게 눌러 계속 스크롤</string>
     <string name="settings_hold_scroll_detail">문자 위에 손을 올려두면 앱이 많은 문자에서도 목록이 계속 흘러갑니다</string>
@@ -151,7 +151,7 @@
     <string name="settings_quick_launch_right">즐겨찾기 아래에서 오른쪽으로 스와이프</string>
     <string name="settings_quick_launch_none">없음</string>
     <string name="settings_search_bar">앱 목록의 검색창</string>
-    <string name="settings_search_bar_detail">이름으로 목록을 걸러내는 상자</string>
+    <string name="settings_search_bar_detail">이름으로 목록을 걸러내는 입력창</string>
     <string name="settings_search_bar_bottom">하단의 검색창</string>
     <string name="settings_search_hidden">검색으로 숨겨진 앱 찾기</string>
     <string name="settings_search_hidden_detail">목록에서 숨겨진 앱도 이름으로 검색하면 나타납니다</string>
@@ -165,7 +165,7 @@
     <string name="settings_shade_not_ready">홈 화면에서 아래로 당기세요. 아무 일도 일어나지 않으면 접근성에서 Deluge Launcher를 사용하도록 설정하세요. 스위치가 비활성화된 경우 먼저 앱 정보에서 제한된 설정을 허용하세요.</string>
     <string name="settings_enable">사용</string>
     <string name="settings_app_info">앱 정보</string>
-    <string name="settings_now_playing_show">Now Playing 위젯 표시</string>
+    <string name="settings_now_playing_show">재생 중 위젯 표시</string>
     <string name="settings_notification_access_granted">알림 접근 허용됨</string>
     <string name="settings_notification_access_missing">알림 접근이 허용되지 않음</string>
     <string name="settings_notification_access_detail">현재 재생 중인 곡을 표시하는 데 필요합니다</string>
@@ -220,7 +220,7 @@
     <string name="shortcut_swipe_right">오른쪽으로 스와이프</string>
     <string name="shortcut_swipe_left">왼쪽으로 스와이프</string>
     <string name="settings_allow_rotation">기기와 함께 회전</string>
-    <string name="settings_allow_rotation_detail">휴대폰에서 끄면: 가로 방향에 이 레이아웃에 필요한 높이의 약 3분의 1만 확보됩니다. 태블릿에서는 기본으로 켜져 있습니다</string>
+    <string name="settings_allow_rotation_detail">휴대폰에서 끄면: 가로 방향에서는 이 레이아웃에 필요한 높이의 약 3분의 1밖에 나오지 않습니다. 태블릿에서는 기본으로 켜져 있습니다</string>
     <string name="settings_section_backup">백업</string>
     <string name="settings_crash_copy">마지막 충돌 복사</string>
     <string name="settings_crash_detail">런처가 예기치 않게 중단되었습니다. 버그 리포트에 포함할 세부 정보를 복사하세요</string>
@@ -321,7 +321,7 @@
     <string name="widget_clock_date_custom_chip">사용자 지정</string>
     <string name="widget_clock_date_custom">사용자 지정 날짜 형식</string>
     <string name="widget_clock_date_custom_label">패턴</string>
-    <string name="widget_clock_date_custom_invalid">이것은 표시할 수 있는 패턴이 아닙니다</string>
+    <string name="widget_clock_date_custom_invalid">표시할 수 없는 패턴입니다</string>
     <string name="widget_clock_date_custom_hint">d 날짜, M 월, y 연도, E 요일. 문자를 반복하면 더 긴 형식이 됩니다: d, dd, EEE, EEEE.</string>
     <string name="widget_clock_agenda">다가오는 일정</string>
     <string name="widget_clock_event_untitled">(제목 없음)</string>
@@ -345,7 +345,7 @@
     <string name="widget_clock_agenda_permission">캘린더 접근을 허용하세요</string>
     <string name="widget_clock_agenda_empty">다가오는 일정이 없습니다</string>
     <string name="widget_clock_agenda_hint">캘린더를 읽으려면 권한이 필요합니다. Deluge에는 네트워크 접근 권한이 없어 아무것도 외부로 전송되지 않습니다.</string>
-    <string name="widget_clock_weather_opens">날씨를 탭하면 열리는 것</string>
+    <string name="widget_clock_weather_opens">날씨를 탭하면 열리는 앱</string>
     <string name="widget_clock_weather_waiting">날씨 앱을 기다리는 중</string>
     <string name="widget_clock_weather_hint">날씨는 이미 날씨 정보를 가진 날씨 앱에서 가져오므로, Deluge는 네트워크 접근이 필요 없고 위치를 묻지 않습니다. Breezy Weather에서는 설정 → 위젯 및 라이브 배경화면 → 데이터 공유를 켜세요.</string>
     <string name="widget_clock_notifications_show">알림 개수</string>
@@ -376,8 +376,8 @@
     <string name="shortcut_unpin_failed">바로가기를 삭제할 수 없습니다</string>
 
     <!-- Now Playing -->
-    <string name="now_playing_placeholder">Now Playing</string>
-    <string name="now_playing_enable_access">Now Playing 접근 사용</string>
+    <string name="now_playing_placeholder">재생 중</string>
+    <string name="now_playing_enable_access">재생 중 접근 사용</string>
     <string name="now_playing_open_failed">재생 중인 앱을 열 수 없습니다</string>
     <string name="now_playing_unknown_title">제목 알 수 없음</string>
     <string name="now_playing_previous">이전</string>

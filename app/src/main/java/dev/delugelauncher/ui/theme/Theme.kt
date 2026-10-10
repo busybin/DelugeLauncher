@@ -100,9 +100,9 @@ fun DelugeTheme(
     content: @Composable () -> Unit,
 ) {
     val darkTheme = isSystemInDarkTheme()
-    // Deluge blue, always, on every Android version: the identity of this launcher is its
-    // colour, and the wallpaper-derived palette would put somebody else's in its place.
-    // The two hand-written schemes above are the whole palette.
+    // Deluge blue on every Android version. The wallpaper-derived palette would put somebody
+    // else's colours where this launcher's identity is, so the two schemes above are the
+    // whole palette.
     val colors = (if (darkTheme) DarkColors else LightColors).copy(background = Color.Transparent)
     val baseTypography = MaterialTheme.typography
     val fontFamily = fontFamilyOf(font, fontFile)

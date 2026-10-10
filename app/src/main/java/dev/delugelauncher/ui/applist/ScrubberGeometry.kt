@@ -9,24 +9,21 @@ package dev.delugelauncher.ui.applist
 object ScrubberGeometry {
 
     /**
-     * How much of the screen the strip may take, as a fraction.
+     * How much of the screen the strip may take.
      *
-     * Half the screen, and half it stays: that is where a thumb rests and where 26
-     * letters are still worth aiming at. A strip the height of the whole viewport asks
-     * the hand to move instead of the finger, which is the slower way round.
+     * Half. That is where a thumb rests and where 26 letters are still worth aiming at; a
+     * strip the height of the viewport asks the hand to move rather than the finger.
      *
-     * Everything that computes a band — the span of the favorites, a range stored by
-     * hand, the fallback — is clamped through here, so no arrangement can quietly make
-     * it taller than this again.
+     * Every band goes through here — the favorites' span, a range set by hand, the fallback
+     * — so no arrangement can quietly make it taller again.
      */
     const val MAX_HEIGHT_FRACTION = 0.5f
 
     /**
-     * Where the fallback band starts, as a fraction of the screen.
+     * Where the fallback band starts.
      *
-     * Low rather than high: the strip is a thumb control, and a thumb lives at the
-     * bottom of a phone-held tall screen. Starting at the top left it in the part of
-     * the screen the hand has to travel to reach.
+     * Low rather than high: the strip is a thumb control, and a thumb lives at the bottom of
+     * a tall screen. At the top it sat in the part of the screen the hand travels to reach.
      */
     const val FALLBACK_TOP_FRACTION = 0.42f
     const val FALLBACK_HEIGHT_FRACTION = MAX_HEIGHT_FRACTION

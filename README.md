@@ -11,21 +11,20 @@ edge, with an A-Z strip that highlights every letter currently on screen.
 
 ## What this fork changes
 
-- Rebranded as Deluge Launcher, with a blue Material 3 theme and its own icon.
-- Ten translations plus Traditional Chinese, and a language picker in settings.
-- The A-Z strip tracks the list while scrolling, and sits on the side the list is not
-  aligned to.
-- Faster cold start: icons are cached on disk, the icon set is hand-drawn rather than
-  pulled from a library of thousands, and the navigation library is gone.
-- Folder rows show how many apps they hold and whether they are open.
-- Widget height follows the widget itself unless it is set by hand; dead widgets left
-  over from a backup are cleaned up.
-- Swipe-for-shortcuts only fires on a sideways swipe, so scrolling is never stolen.
-- Set as default: the home screen offers to make Deluge your home app, dismissibly.
-- Restoring a settings file re-pins the shortcuts it named.
+A few things differ from upstream, mostly where the original got in the way:
 
-See the in-app changelog (Settings → About → Changelog) for the release-by-release
-list.
+- A blue Material 3 theme and its own icon, instead of the original look.
+- Faster cold starts: icons are cached on disk, and the icons library and the
+  navigation library are both gone.
+- The A-Z strip follows the list as you scroll, and sits on the side the list is
+  not aligned to.
+- Folder rows say how many apps they hold and whether they are open.
+- Widget height follows the widget itself, unless you set it by hand.
+- Swiping a row for its shortcuts only fires sideways, so scrolling is never
+  stolen by a drag that started at an angle.
+- Settings has a changelog, and a restored backup re-pins the shortcuts it names.
+
+The in-app changelog (Settings → About → Changelog) has the release-by-release list.
 
 ## Install
 

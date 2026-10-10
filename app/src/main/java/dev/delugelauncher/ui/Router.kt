@@ -9,17 +9,16 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.setValue
 
 /**
- * The launcher's own navigation, in place of `navigation-compose`.
+ * The launcher's own navigation.
  *
- * What this app needs of a navigator is a stack of at most a few screens, one of which is
- * always "home", and string routes so a call site can say where it wants to go. The
- * navigation library brings a graph, deep links, a type-safe argument system and an
- * activity integration for exactly that: it is a few thousand classes on the classpath
- * and a slice of every cold start, for a back stack that is a list.
+ * What this app needs of a navigator is a stack of a few screens, one of which is always
+ * home, plus string routes so a call site can say where it wants to go. navigation-compose
+ * brings a graph, deep links, type-safe arguments and an Activity integration for that: a
+ * few thousand classes and a slice of every cold start, for a back stack that is a list.
  *
- * Used through the same shape the library was, on purpose: `composable("route") { … }`,
- * `navigate("route")`, `popBackStack()`. The screens were written against that shape, and
- * a hand-rolled navigator is not a reason to rewrite them.
+ * It wears the library's shape on purpose (composable/navigate/popBackStack), because the
+ * screens were written against it and a hand-rolled navigator is not a reason to rewrite
+ * them.
  */
 @Stable
 class Router(startRoute: String = "home") {
@@ -30,9 +29,9 @@ class Router(startRoute: String = "home") {
     /**
      * Replaces the stack wholesale, for restoring it after the Activity is rebuilt.
      *
-     * The language picker is the reason this exists: applying a language wraps every
-     * Context, so the Activity has to be recreated, and a stack kept only in composition
-     * would drop whoever was three screens deep back onto the home screen.
+     * The language picker is the reason this exists: it wraps every Context, so the
+     * Activity is recreated, and a stack kept only in composition would drop whoever was
+     * three screens deep back onto the home screen.
      */
     fun restore(routes: List<String>) {
         stack = routes.ifEmpty { listOf("home") }
@@ -50,8 +49,8 @@ class Router(startRoute: String = "home") {
     val currentDestination: Destination get() = Destination(top)
 
     fun navigate(route: String) {
-        // Going where we already are is a no-op rather than a second copy on the stack, which
-        // is what the library did with launchMode single-top and what a double tap expects.
+        // Going where we already are is a no-op rather than a second copy on the stack:
+        // that is what launchMode single-top did, and what a double tap expects.
         if (top == route) return
         stack = stack + route
     }
@@ -92,10 +91,10 @@ class NavArguments(private val values: Map<String, String>) {
 }
 
 /**
- * The routes a [RouterHost] knows, registered afresh on each composition.
+ * The routes a [RouterHost] knows, registered again on each composition.
  *
- * Registration is a handful of lambdas, so rebuilding it is cheaper than remembering it and
- * working out when it is stale.
+ * Registration is a few lambdas, so rebuilding it is cheaper than remembering it and working
+ * out when it went stale.
  */
 class RouterScope {
     private val routes = mutableMapOf<String, @Composable (NavBackStackEntry) -> Unit>()
