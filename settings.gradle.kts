@@ -13,5 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Victoria Launcher"
+rootProject.name = "Deluge Launcher"
 include(":app")
+include(":baselineprofile")

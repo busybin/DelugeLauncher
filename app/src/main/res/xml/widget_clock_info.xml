@@ -9,6 +9,6 @@
     android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_clock"
     android:previewLayout="@layout/widget_clock"
-    android:configure="dev.victorialauncher.widget.ClockWidgetConfigActivity"
+    android:configure="dev.delugelauncher.widget.ClockWidgetConfigActivity"
     android:widgetFeatures="reconfigurable|configuration_optional"
     android:description="@string/widget_clock_description" />

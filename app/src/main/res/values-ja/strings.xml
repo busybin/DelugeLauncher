@@ -1,0 +1,408 @@
+<resources>
+    <string name="app_name">Deluge Launcher</string>
+    <string name="accessibility_description">下スワイプで通知シェードを開けるようにします。Deluge Launcherは画面の内容を読み取ったり操作したりしません。</string>
+
+    <!-- Shared actions -->
+    <string name="action_back">戻る</string>
+    <string name="action_save">保存</string>
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_reset">リセット</string>
+    <string name="action_create">作成</string>
+    <string name="action_done">完了</string>
+    <string name="action_remove">削除</string>
+    <string name="action_app_info">アプリ情報</string>
+    <string name="action_edit_layout">レイアウトを編集</string>
+    <string name="action_edit_icon_and_name">アイコン &amp; 名前を編集</string>
+    <string name="action_move_to_folder">フォルダへ移動…</string>
+    <string name="action_change_icon">アイコンを変更…</string>
+    <string name="action_open_settings">Deluge Launcherの設定</string>
+    <string name="action_remove_shortcut">ショートカットを削除</string>
+
+    <!-- Home screen -->
+    <string name="home_drag_handle">並べ替え</string>
+    <string name="home_no_favorites_title">お気に入りはまだありません</string>
+    <string name="home_no_favorites_body">画面の端に触れてアプリ一覧を開くか、下の一覧からお気に入りを選んでください。</string>
+    <string name="home_choose_favorites">お気に入りを選択</string>
+    <string name="home_folder_choose_apps">フォルダを管理</string>
+    <string name="home_folder_delete">フォルダを削除</string>
+    <string name="home_folder_remove_app">フォルダから削除</string>
+    <string name="home_folder_empty">空です。フォルダを長押ししてアプリを選択してください</string>
+    <string name="home_folder_name_label">フォルダ名</string>
+    <string name="home_folder_use_previews">アプリのプレビューを使用</string>
+    <string name="home_display_name_label">表示名</string>
+
+    <!-- Edit-mode drag handles -->
+    <string name="handle_side_padding">左右の余白</string>
+    <string name="handle_widget_top">ウィジェットの上端</string>
+    <string name="handle_widget_bottom">ウィジェットの下端</string>
+    <string name="handle_widget_height">ウィジェットの高さ</string>
+    <string name="handle_widget_side_padding">ウィジェットの左右の余白</string>
+    <string name="handle_widget_offset_x">ウィジェットの左右位置</string>
+    <string name="handle_az_range">A-Zバーの範囲</string>
+    <string name="edit_value_range">%1$d～%2$d dp</string>
+    <string name="handle_favorites_top">お気に入りの上端</string>
+    <string name="handle_favorites_bottom">お気に入りの下端</string>
+    <string name="handle_now_playing_top">再生中の上端</string>
+    <string name="handle_now_playing_bottom">再生中の下端</string>
+    <string name="handle_now_playing_height">再生中の高さ</string>
+
+    <!-- App list -->
+    <string name="applist_add_favorite">お気に入りに追加</string>
+    <string name="applist_remove_favorite">お気に入りから削除</string>
+    <string name="applist_hide">一覧で非表示</string>
+    <string name="applist_unhide">一覧に表示</string>
+
+    <string name="applist_band_hint">バーをドラッグして移動、またはどちらかのハンドルでサイズを変更</string>
+    <string name="applist_band_top">A-Zバーの上端</string>
+    <string name="applist_band_bottom">A-Zバーの下端</string>
+
+    <string name="applist_search">アプリを検索</string>
+
+    <!-- Toasts -->
+    <string name="toast_enable_accessibility_shade">通知を開くには、設定 → ユーザー補助でDeluge Launcherを有効にします</string>
+    <string name="toast_enable_accessibility_lock">画面をロックするには、設定 → ユーザー補助でDeluge Launcherを有効にします</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Delugeの設定</string>
+    <string name="settings_language">言語</string>
+    <string name="settings_language_system">システムのデフォルト</string>
+    <string name="settings_section_home">ホーム画面</string>
+    <string name="settings_section_app_list">アプリ一覧</string>
+    <string name="settings_section_gestures">ジェスチャー</string>
+    <string name="settings_section_notifications">通知</string>
+    <string name="settings_preview">プレビュー</string>
+    <string name="settings_search">設定を検索</string>
+    <string name="settings_corner_search">検索を開く</string>
+    <string name="settings_corner_button">下部隅のボタン</string>
+    <string name="settings_last_letter">すべての文字を同じ行に</string>
+    <string name="settings_last_letter_detail">一覧の最後の文字も他と同じ行に並びます。最後のアプリの下に1画面分の空白ができます</string>
+    <string name="settings_auto_keyboard">一覧と同時にキーボードを開く</string>
+    <string name="settings_auto_keyboard_detail">アプリ一覧が開くとすぐに入力できます。オフでは、検索ボックスをタップするまでキーボードは表示されません</string>
+    <string name="settings_settings_row">アプリ一覧の設定行</string>
+    <string name="settings_settings_row_detail">Zの後に表示され、この設定を開く行です。どちらでも壁紙を長押しすれば設定にアクセスできます</string>
+    <string name="settings_search_none">一致するものがありません</string>
+    <string name="settings_section_appearance">外観</string>
+    <string name="settings_section_apps">アプリ</string>
+    <string name="settings_section_about">情報</string>
+    <string name="settings_preview_sample">サンプルアプリ</string>
+    <string name="settings_icon_pack">アイコンパック</string>
+    <string name="settings_icon_pack_default">デフォルト</string>
+    <string name="settings_icons_favorites">お気に入りのアイコン</string>
+    <string name="settings_icons_app_list">アプリ一覧のアイコン</string>
+    <string name="settings_list_headers">文字の見出し</string>
+    <string name="settings_list_headers_detail">オフにすると1つの連続した一覧になります。A-Zバーは引き続きその文字にジャンプします</string>
+    <string name="settings_notification_badges">アイコンの通知数</string>
+    <string name="settings_notification_badges_detail">再生中と同じ通知アクセスが必要です。数だけを表示し、通知の内容は表示しません</string>
+    <string name="settings_section_top">文字を表示する位置</string>
+    <string name="settings_close_folder">アプリを開いた後にフォルダを閉じる</string>
+    <string name="settings_close_folder_detail">オフでは、自分で閉じるまでフォルダは開いたままです</string>
+    <string name="settings_favorites_source">お気に入り</string>
+    <string name="settings_frequent_count">表示数</string>
+    <string name="favorites_source_manual">自分で選んだ一覧</string>
+    <string name="favorites_source_frequent">よく使うアプリ</string>
+    <string name="settings_icon_pack_no_icons">なし</string>
+    <string name="settings_icon_pack_none">この端末にアイコンパックアプリが見つかりません。</string>
+    <string name="settings_icon_size">アイコンのサイズ</string>
+    <string name="settings_text_size">文字サイズ</string>
+    <string name="settings_favorite_spacing">お気に入り間の間隔</string>
+    <string name="settings_font">フォント</string>
+    <string name="settings_text_color">文字色</string>
+    <string name="settings_text_color_detail">自動では壁紙を読み取り、読みやすい方を選びます</string>
+    <string name="settings_show_names">お気に入りアイコンの横にアプリ名を表示</string>
+    <string name="settings_hide_status_bar">ホーム画面でステータスバーを隠す</string>
+    <string name="settings_hide_status_bar_applist">アプリ一覧でステータスバーを隠す</string>
+    <string name="settings_status_bar_timeout">ステータスバーの表示時間</string>
+    <string name="settings_dim_home">ホーム画面で壁紙を暗くする</string>
+    <string name="settings_dim_applist">アプリ一覧の後ろの壁紙を暗くする</string>
+    <string name="settings_haptics">触覚フィードバック</string>
+    <string name="settings_haptics_detail">システムのタッチフィードバック設定に従います</string>
+    <string name="settings_edge_side">アプリ一覧を開く画面の端</string>
+    <string name="settings_double_tap_lock">ダブルタップで画面をロック</string>
+    <string name="settings_double_tap_lock_detail">A-Zバーを2回タップします</string>
+    <string name="settings_lock_needs_accessibility">ユーザー補助でDeluge Launcherを有効にする必要があります。スイッチがグレーアウトしている場合は、アプリ情報を開き、⋮メニューから制限付き設定を許可してください。</string>
+    <string name="settings_az_visibility">ホーム画面にA-Zを表示</string>
+    <string name="az_visibility_never">しない</string>
+    <string name="az_visibility_landscape">横向き</string>
+    <string name="az_visibility_always">常に</string>
+    <string name="settings_always_show_az">A-Zを常に表示</string>
+    <string name="settings_show_alphabet">アプリ一覧にA-Zを表示</string>
+    <string name="applist_search_web">\"%1$s\"をウェブで検索</string>
+    <string name="settings_web_search">ウェブ検索を提案</string>
+    <string name="settings_web_search_detail">一覧に入力した内容と一致するものがない場合、その語をブラウザで検索する行を表示します。タップしない限りどこにも送信されません</string>
+    <string name="settings_swipe_up_search">上スワイプで検索を開く</string>
+    <string name="settings_swipe_up_search_detail">上にスワイプすると、カーソルが検索ボックスにある状態でアプリ一覧が開きます</string>
+    <string name="app_work_suffix"> (仕事)</string>
+    <string name="settings_edge_inset_auto">戻るジェスチャー用のスペースを自動で確保</string>
+    <string name="settings_edge_inset_auto_detail">Androidが戻るスワイプに使う端からA-Zバーを離します。ボタンナビゲーションでは何も変わりません</string>
+    <string name="settings_edge_inset">戻るジェスチャー用のスペースを空ける</string>
+    <string name="settings_mark_work_apps">仕事用アプリを区別</string>
+    <string name="settings_mark_work_apps_detail">仕事用プロファイルのアプリは名前に表示が付くので、同じアプリの2つのコピーを見分けられます</string>
+    <string name="settings_dim_others">A-Zをスライド中は他を暗くする</string>
+    <string name="settings_dim_others_detail">現在の文字以外のアプリが薄くなり、その文字が目立ちます。オフでは一覧全体が表示されたままです</string>
+    <string name="settings_hold_scroll">文字を長押ししてスクロールを継続</string>
+    <string name="settings_hold_scroll_detail">文字に指を置くと、その文字のアプリを順にスクロールします。アプリが多い文字に便利です</string>
+    <string name="settings_hold_scroll_speed">スクロール速度</string>
+    <string name="settings_edge_band_only">文字の横だけをエッジに</string>
+    <string name="settings_edge_band_only_detail">画面の端はA-Zバーがある場所だけがアプリ一覧を開き、下まで全体では反応しません。ウィジェットの邪魔になりません</string>
+    <string name="settings_edge_zone_width">エッジスワイプの幅</string>
+    <string name="settings_swipe_up_list">上スワイプでアプリ一覧</string>
+    <string name="settings_swipe_up_list_detail">ホーム画面の端を越えて上に押し上げます</string>
+    <string name="settings_quick_launch_left">お気に入りの下で左スワイプ</string>
+    <string name="settings_quick_launch_right">お気に入りの下で右スワイプ</string>
+    <string name="settings_quick_launch_none">なし</string>
+    <string name="settings_search_bar">アプリ一覧の検索バー</string>
+    <string name="settings_search_bar_detail">名前で一覧を絞り込むボックス</string>
+    <string name="settings_search_bar_bottom">検索バーを下部に表示</string>
+    <string name="settings_search_hidden">検索で非表示アプリを表示</string>
+    <string name="settings_search_hidden_detail">一覧から非表示にしたアプリも、名前で検索すると表示されます</string>
+    <string name="settings_sort_by_usage">アプリの使用頻度で並べ替え</string>
+    <string name="settings_sort_by_usage_detail">各文字内で、よく使う順に表示</string>
+    <string name="settings_alignment_favorites">お気に入りの配置</string>
+    <string name="settings_alignment_applist">アプリ一覧の配置</string>
+    <string name="settings_icon_side">アイコンの位置</string>
+    <string name="settings_shade_gesture">下スワイプで通知</string>
+    <string name="settings_shade_ready">準備完了。ホーム画面で下に引いてください</string>
+    <string name="settings_shade_not_ready">ホーム画面で下に引いてください。何も起こらない場合は、ユーザー補助でDeluge Launcherを有効にしてください。スイッチがグレーアウトしている場合は、先にアプリ情報から制限付き設定を許可してください。</string>
+    <string name="settings_enable">有効にする</string>
+    <string name="settings_app_info">アプリ情報</string>
+    <string name="settings_now_playing_show">再生中ウィジェットを表示</string>
+    <string name="settings_notification_access_granted">通知アクセスが許可されています</string>
+    <string name="settings_notification_access_missing">通知アクセスが許可されていません</string>
+    <string name="settings_notification_access_detail">再生中の曲を表示するために必要です</string>
+    <string name="settings_open_settings">設定を開く</string>
+    <string name="settings_favorites">お気に入り</string>
+    <string name="settings_favorites_detail">ホーム画面に置くアプリを選択</string>
+    <string name="applist_private_space_section">プライベートスペース</string>
+    <string name="applist_recent_section">最近インストールしたアプリ</string>
+    <string name="settings_stay_private_unlock">ロック解除後も一覧に留まる</string>
+    <string name="settings_stay_private_unlock_detail">プライベートスペースをロック解除してもホーム画面に戻らず、アプリ一覧を開いたままにします</string>
+    <string name="settings_private_space_section">プライベートスペースのセクション</string>
+    <string name="settings_private_space_section_detail">プライベートスペースのアプリをアルファベットに混ぜず下にまとめ、同じアプリの2つのコピーを見分けられるようにします</string>
+    <string name="settings_recent_section">最近インストールしたアプリのセクション</string>
+    <string name="settings_recent_section_detail">アプリ一覧の最後に、最近インストールしたアプリを表示します</string>
+    <string name="settings_recent_section_count">最近のアプリの表示数</string>
+    <string name="settings_compact_tap">アイコンと名前だけをタップ</string>
+    <string name="settings_compact_tap_detail">お気に入りは、その行のどこかではなくアイコンか名前をタップしたときだけ開きます</string>
+    <string name="settings_text_shadow_strength">影の強さ</string>
+    <string name="settings_text_shadow">文字の後ろに影</string>
+    <string name="settings_text_shadow_detail">派手な壁紙でもアプリ名が目立つようになります。明るい文字の後ろにだけ適用され、にじまずコントラストを高めます</string>
+    <string name="settings_default_launcher">デフォルトのランチャー</string>
+    <string name="settings_default_launcher_yes">Deluge Launcher</string>
+    <string name="settings_default_launcher_no">未設定。タップして選択</string>
+    <string name="settings_frequent_excluded">よく使うアプリから除外</string>
+    <string name="settings_frequent_excluded_none">除外したアプリはありません</string>
+    <string name="frequent_excluded_count">除外 (%1$d)</string>
+    <string name="frequent_excluded_add">アプリを除外</string>
+    <string name="settings_hidden_apps">非表示のアプリ</string>
+    <string name="hidden_count">アプリ一覧で%1$d件を非表示</string>
+    <string name="hidden_add_apps">その他のすべて</string>
+    <string name="settings_hidden_none">非表示はありません</string>
+    <string name="settings_hidden_count">%1$d件を非表示</string>
+    <string name="settings_version">バージョン %1$s</string>
+    <string name="settings_less">少なく</string>
+    <string name="settings_more">多く</string>
+
+    <!-- Font choices -->
+    <string name="font_system">システム</string>
+    <string name="font_sans_serif">サンセリフ</string>
+    <string name="font_serif">セリフ</string>
+    <string name="font_monospace">等幅</string>
+    <string name="font_custom">カスタム…</string>
+    <string name="font_custom_pick">フォントファイルを選択</string>
+    <string name="font_custom_detail">.ttfまたは.otfファイル。ランチャー内にコピーされるので、元のファイルを移動しても使えます</string>
+    <string name="font_custom_failed">そのファイルはフォントとして読み込めませんでした</string>
+    <string name="text_color_material">マテリアル</string>
+    <string name="text_color_custom">カスタム</string>
+    <string name="text_color_pick">色を選択</string>
+    <string name="settings_swipe_shortcuts">アプリをスワイプしてショートカットを表示</string>
+    <string name="settings_swipe_shortcuts_detail">お気に入りまたはアプリ一覧の行をスワイプします。ショートカットを提供していないアプリでは何も起こりません</string>
+    <string name="shortcut_swipe_off">オフ</string>
+    <string name="shortcut_swipe_right">右スワイプ</string>
+    <string name="shortcut_swipe_left">左スワイプ</string>
+    <string name="settings_allow_rotation">端末の回転に合わせる</string>
+    <string name="settings_allow_rotation_detail">スマートフォンではオフ: 横向きではこのレイアウトに必要な高さの約3分の1しかありません。タブレットではデフォルトでオン</string>
+    <string name="settings_section_backup">バックアップ</string>
+    <string name="settings_crash_copy">最後のクラッシュをコピー</string>
+    <string name="settings_crash_detail">ランチャーが予期せず停止しました。バグ報告に含めるため詳細をコピーしてください</string>
+    <string name="settings_crash_copied">クラッシュの詳細をコピーしました</string>
+    <string name="settings_export">設定をエクスポート</string>
+    <string name="settings_export_detail">お気に入り、フォルダ、レイアウトなどをファイルに保存します</string>
+    <string name="settings_import">設定をインポート</string>
+    <string name="settings_import_detail">以前保存したファイルですべてを置き換えます</string>
+    <string name="settings_export_done">設定を保存しました</string>
+    <string name="settings_export_done_private_omitted">設定を保存しました。プライベートスペースのアプリは除外されました。</string>
+    <string name="settings_import_done">設定を復元しました</string>
+    <string name="settings_backup_failed">そのファイルを読み込めませんでした</string>
+    <string name="settings_dim_color">暗くする色</string>
+    <string name="settings_dim_color_detail">壁紙を暗くする際の色です。上のスライダーで暗さを調整します</string>
+    <string name="color_from_wallpaper">壁紙から</string>
+    <string name="icon_shape">アイコンの形</string>
+    <string name="icon_shape_detail">アダプティブアイコンだけを変形します。それ以外はそのままです</string>
+    <string name="icon_shape_system">システム</string>
+    <string name="icon_shape_circle">円</string>
+    <string name="icon_shape_rounded">角丸</string>
+    <string name="icon_shape_square">四角</string>
+    <string name="settings_icon_pack_themed">テーマ</string>
+
+    <!-- Text color choices -->
+    <string name="text_color_auto">自動</string>
+    <string name="text_color_light">明るい</string>
+    <string name="text_color_dark">暗い</string>
+
+    <!-- Alignment choices -->
+    <string name="alignment_left">左</string>
+    <string name="alignment_center">中央</string>
+    <string name="alignment_right">右</string>
+
+    <!-- Edge choices -->
+    <string name="edge_left">左</string>
+    <string name="edge_right">右</string>
+    <string name="edge_both">両方</string>
+
+    <!-- Private space -->
+    <string name="private_space">プライベートスペース</string>
+
+    <!-- Favorites / hidden / folder pickers -->
+    <string name="favorites_title">お気に入り</string>
+    <string name="favorites_count">ホーム画面に%1$d件</string>
+    <string name="folder_title_fallback">フォルダ</string>
+    <string name="folder_gone">このフォルダはもう存在しません。</string>
+    <string name="folder_member_count">このフォルダに%1$d件。ドラッグして並べ替え</string>
+    <string name="folder_add_apps">さらに追加</string>
+    <string name="folder_member_missing">アプリはインストールされていません</string>
+    <string name="folder_picker_title">%1$sを移動…</string>
+    <string name="folder_picker_app_count">%1$d個のアプリ</string>
+    <string name="folder_picker_new">新しいフォルダ</string>
+    <string name="folder_picker_new_detail">アプリはホーム画面の新しいフォルダに移動します。</string>
+
+    <!-- Icon picker -->
+    <string name="icon_picker_title">%1$sのアイコン</string>
+    <string name="icon_picker_gallery">ギャラリー…</string>
+    <string name="icon_picker_all">すべて</string>
+    <string name="icon_picker_reset">デフォルトにリセット</string>
+    <string name="icon_picker_no_packs">アイコンパックがインストールされていません。Play ストアからアイコンパックをインストールするか、ギャラリーから画像を選択してください。</string>
+    <string name="icon_picker_search">アイコンを検索</string>
+    <string name="icon_picker_clear_search">検索をクリア</string>
+    <string name="icon_picker_not_browsable">このパックは閲覧可能なアイコン一覧を提供していません。</string>
+    <string name="icon_picker_no_matches">“%1$s”に一致するアイコンはありません。</string>
+
+    <!-- Welcome -->
+    <string name="welcome_title">Delugeへようこそ</string>
+    <string name="welcome_favorites">壁紙を長押ししてお気に入りやウィジェットを追加したり、設定を開いたりできます。</string>
+    <string name="welcome_widget">画面のどちらかの端から内側にスワイプするとすべてのアプリが表示され、A-Zバーをスライドするとその文字にジャンプします。</string>
+    <string name="welcome_layout">レイアウトを編集すると、配置を移動したり間隔を設定したりできます。</string>
+    <string name="welcome_got_it">わかりました</string>
+
+    <!-- Widgets -->
+    <string name="widget_add">ウィジェットを追加</string>
+    <string name="widget_clock_label">時計と日付</string>
+    <string name="widget_clock_description">ランチャー独自のスタイルの時刻と日付</string>
+    <string name="widget_clock_time">時刻</string>
+    <string name="widget_clock_date">日付</string>
+    <string name="widget_clock_hour">時計</string>
+    <string name="widget_clock_hour_system">システム</string>
+    <string name="widget_clock_hour_12">12時間</string>
+    <string name="widget_clock_hour_24">24時間</string>
+    <string name="widget_clock_date_format">日付</string>
+    <string name="widget_clock_date_none">日付なし</string>
+    <string name="widget_clock_size">時刻のサイズ</string>
+    <string name="widget_clock_date_size">日付のサイズ</string>
+    <string name="widget_clock_color">色</string>
+    <string name="widget_clock_color_pick">選択</string>
+    <string name="widget_clock_size_preview">12:34</string>
+    <string name="widget_clock_weather">天気</string>
+    <string name="widget_clock_notifications">通知</string>
+    <string name="widget_clock_weather_show">天気</string>
+    <string name="widget_clock_weather_hide">天気なし</string>
+    <string name="widget_clock_weather_celsius">°C</string>
+    <string name="widget_clock_weather_fahrenheit">°F</string>
+    <string name="widget_clock_weather_size">天気のサイズ</string>
+    <string name="widget_clock_weather_opacity">天気の不透明度</string>
+    <string name="widget_clock_date_custom_chip">カスタム</string>
+    <string name="widget_clock_date_custom">カスタム日付形式</string>
+    <string name="widget_clock_date_custom_label">パターン</string>
+    <string name="widget_clock_date_custom_invalid">これは表示できるパターンではありません</string>
+    <string name="widget_clock_date_custom_hint">d 日, M 月, y 年, E 曜日。文字を繰り返すと長い形式になります: d, dd, EEE, EEEE。</string>
+    <string name="widget_clock_agenda">今後の予定</string>
+    <string name="widget_clock_event_untitled">(タイトルなし)</string>
+    <string name="widget_clock_event_at">%1$s  %2$s</string>
+    <string name="widget_clock_event_tomorrow">明日</string>
+    <string name="widget_clock_event_day_at">%1$s %2$s</string>
+    <string name="widget_clock_event_day_only">%1$s  %2$s</string>
+    <string name="widget_clock_event_all_day">%1$s  今日</string>
+    <string name="widget_clock_event_now">%1$s  今</string>
+    <string name="widget_clock_alarm_at">アラーム %1$s</string>
+    <string name="widget_clock_agenda_show">今後の予定</string>
+    <string name="widget_clock_agenda_hide">なし</string>
+    <string name="widget_clock_agenda_size">今後の予定のサイズ</string>
+    <string name="widget_clock_agenda_opacity">今後の予定の不透明度</string>
+    <string name="widget_clock_agenda_count">予定の表示数</string>
+    <string name="widget_clock_agenda_hours">先読みする時間数</string>
+    <string name="widget_clock_agenda_relative">20分後</string>
+    <string name="widget_clock_agenda_absolute">12:30に</string>
+    <string name="widget_clock_alarm_show">次のアラーム</string>
+    <string name="widget_clock_alarm_hide">アラームなし</string>
+    <string name="widget_clock_agenda_permission">カレンダーへのアクセスを許可</string>
+    <string name="widget_clock_agenda_empty">今後の予定はありません</string>
+    <string name="widget_clock_agenda_hint">カレンダーの読み取りには許可が必要です。データは端末外に送信されません: Delugeはネットワークにアクセスしません。</string>
+    <string name="widget_clock_weather_opens">天気をタップしたときに開くもの</string>
+    <string name="widget_clock_weather_waiting">天気アプリを待機中</string>
+    <string name="widget_clock_weather_hint">天気は天気情報を取得済みの天気アプリから取得するため、Delugeはネットワークにアクセスする必要がなく、現在地を尋ねることもありません。Breezy Weatherでは、設定 → ウィジェット &amp; ライブ壁紙 → データ共有をオンにしてください。</string>
+    <string name="widget_clock_notifications_show">通知数</string>
+    <string name="widget_clock_notifications_hide">カウントなし</string>
+    <string name="widget_clock_notifications_size">カウントのサイズ</string>
+    <string name="widget_clock_notifications_opacity">カウントの不透明度</string>
+    <string name="widget_clock_battery">バッテリー</string>
+    <string name="widget_clock_battery_show">表示</string>
+    <string name="widget_clock_battery_hide">非表示</string>
+    <string name="widget_clock_battery_size">バッテリーのサイズ</string>
+    <string name="widget_clock_battery_percent">%1$d%%</string>
+    <string name="widget_clock_time_opacity">時刻の不透明度</string>
+    <string name="widget_clock_date_opacity">日付の不透明度</string>
+    <string name="widget_clock_battery_opacity">バッテリーの不透明度</string>
+    <string name="widget_add_another">別のウィジェットを追加</string>
+    <string name="widget_remove_this">このウィジェットを削除</string>
+    <string name="widget_unavailable">このウィジェットはもう利用できません</string>
+    <string name="widget_change_settings">ウィジェット設定を変更</string>
+    <string name="widget_reset_height">高さを自動にリセット</string>
+    <string name="widget_none_found">この端末にウィジェットが見つかりません。</string>
+
+    <!-- Pinned shortcuts -->
+    <string name="shortcut_unavailable">このショートカットはもう利用できません</string>
+    <string name="shortcut_pin_title">ホーム画面に追加しますか？</string>
+    <string name="shortcut_pin_from">%1$sより</string>
+    <string name="shortcut_pin_add">追加</string>
+    <string name="shortcut_pin_failed">ショートカットが固定されたことを確認できませんでした</string>
+    <string name="shortcut_unpin_failed">ショートカットを削除できませんでした</string>
+
+    <!-- Now Playing -->
+    <string name="now_playing_placeholder">再生中</string>
+    <string name="now_playing_enable_access">再生中へのアクセスを有効にする</string>
+    <string name="now_playing_open_failed">再生中のアプリを開けません</string>
+    <string name="now_playing_unknown_title">不明なタイトル</string>
+    <string name="now_playing_previous">前へ</string>
+    <string name="now_playing_play_pause">再生/一時停止</string>
+    <string name="now_playing_next">次へ</string>
+    <plurals name="widget_clock_notification_count">
+        <item quantity="one">%1$d件の通知</item>
+        <item quantity="other">%1$d件の通知</item>
+    </plurals>
+    <plurals name="widget_clock_event_in_minutes">
+        <item quantity="one">%1$s  %2$d分後</item>
+        <item quantity="other">%1$s  %2$d分後</item>
+    </plurals>
+    <plurals name="widget_clock_event_in_hours">
+        <item quantity="one">%1$s  %2$d時間後</item>
+        <item quantity="other">%1$s  %2$d時間後</item>
+    </plurals>
+    <plurals name="settings_frequent_excluded_count">
+        <item quantity="one">%1$d件のアプリを除外</item>
+        <item quantity="other">%1$d件のアプリを除外</item>
+    </plurals>
+    <string name="prompt_default_title">Deluge をホーム画面に設定</string>
+    <string name="prompt_default_body">Deluge はインストール済みですが、Android がまだ使用していません。デフォルトのホームアプリに設定すると、お気に入りとアプリ一覧が表示されます。</string>
+    <string name="prompt_default_set">デフォルトに設定</string>
+    <string name="prompt_default_skip">後で</string>
+    <string name="settings_changelog">変更履歴</string>
+    <string name="settings_changelog_detail">各バージョンの変更点</string>
+</resources>

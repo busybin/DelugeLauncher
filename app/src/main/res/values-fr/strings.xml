@@ -1,0 +1,408 @@
+<resources>
+    <string name="app_name">Deluge Launcher</string>
+    <string name="accessibility_description">Permet au geste de balayage vers le bas d\'ouvrir le panneau des notifications. Deluge Launcher ne lit pas le contenu de l\'écran et n\'agit pas dessus.</string>
+
+    <!-- Shared actions -->
+    <string name="action_back">Retour</string>
+    <string name="action_save">Enregistrer</string>
+    <string name="action_cancel">Annuler</string>
+    <string name="action_reset">Réinitialiser</string>
+    <string name="action_create">Créer</string>
+    <string name="action_done">Terminé</string>
+    <string name="action_remove">Supprimer</string>
+    <string name="action_app_info">Infos sur l\'appli</string>
+    <string name="action_edit_layout">Modifier la disposition</string>
+    <string name="action_edit_icon_and_name">Modifier l\'icône &amp; le nom</string>
+    <string name="action_move_to_folder">Déplacer vers un dossier…</string>
+    <string name="action_change_icon">Changer d\'icône…</string>
+    <string name="action_open_settings">Paramètres de Deluge Launcher</string>
+    <string name="action_remove_shortcut">Supprimer le raccourci</string>
+
+    <!-- Home screen -->
+    <string name="home_drag_handle">Réorganiser</string>
+    <string name="home_no_favorites_title">Aucun favori pour l\'instant</string>
+    <string name="home_no_favorites_body">Touchez le bord de l\'écran pour ouvrir la liste des applications, ou choisissez vos favoris dans la liste ci-dessous.</string>
+    <string name="home_choose_favorites">Choisir les favoris</string>
+    <string name="home_folder_choose_apps">Gérer le dossier</string>
+    <string name="home_folder_delete">Supprimer le dossier</string>
+    <string name="home_folder_remove_app">Retirer du dossier</string>
+    <string name="home_folder_empty">Vide — appuyez longuement sur le dossier pour choisir des applications</string>
+    <string name="home_folder_name_label">Nom du dossier</string>
+    <string name="home_folder_use_previews">Utiliser les aperçus d\'applications</string>
+    <string name="home_display_name_label">Nom affiché</string>
+
+    <!-- Edit-mode drag handles -->
+    <string name="handle_side_padding">Marge latérale</string>
+    <string name="handle_widget_top">Haut du widget</string>
+    <string name="handle_widget_bottom">Bas du widget</string>
+    <string name="handle_widget_height">Hauteur du widget</string>
+    <string name="handle_widget_side_padding">Marge latérale du widget</string>
+    <string name="handle_widget_offset_x">Widget gauche / droite</string>
+    <string name="handle_az_range">Plage de la barre A-Z</string>
+    <string name="edit_value_range">%1$d à %2$d dp</string>
+    <string name="handle_favorites_top">Haut des favoris</string>
+    <string name="handle_favorites_bottom">Bas des favoris</string>
+    <string name="handle_now_playing_top">Haut de Now Playing</string>
+    <string name="handle_now_playing_bottom">Bas de Now Playing</string>
+    <string name="handle_now_playing_height">Hauteur de Now Playing</string>
+
+    <!-- App list -->
+    <string name="applist_add_favorite">Ajouter aux favoris</string>
+    <string name="applist_remove_favorite">Retirer des favoris</string>
+    <string name="applist_hide">Masquer de la liste</string>
+    <string name="applist_unhide">Afficher dans la liste</string>
+
+    <string name="applist_band_hint">Faites glisser la bande pour la déplacer, ou l\'une des poignées pour la redimensionner</string>
+    <string name="applist_band_top">Haut de la barre A-Z</string>
+    <string name="applist_band_bottom">Bas de la barre A-Z</string>
+
+    <string name="applist_search">Rechercher des applications</string>
+
+    <!-- Toasts -->
+    <string name="toast_enable_accessibility_shade">Activez Deluge Launcher dans Paramètres → Accessibilité pour ouvrir les notifications</string>
+    <string name="toast_enable_accessibility_lock">Activez Deluge Launcher dans Paramètres → Accessibilité pour verrouiller l\'écran</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Paramètres Deluge</string>
+    <string name="settings_language">Langue</string>
+    <string name="settings_language_system">Valeur par défaut du système</string>
+    <string name="settings_section_home">Écran d\'accueil</string>
+    <string name="settings_section_app_list">Liste des applications</string>
+    <string name="settings_section_gestures">Gestes</string>
+    <string name="settings_section_notifications">Notifications</string>
+    <string name="settings_preview">Aperçu</string>
+    <string name="settings_search">Rechercher dans les paramètres</string>
+    <string name="settings_corner_search">Ouvrir la recherche</string>
+    <string name="settings_corner_button">Bouton dans le coin inférieur</string>
+    <string name="settings_last_letter">Chaque lettre sur la même ligne</string>
+    <string name="settings_last_letter_detail">Les lettres de fin de liste atteignent la même ligne que les autres. Coûte un écran d\'espace vide sous la dernière application</string>
+    <string name="settings_auto_keyboard">Ouvrir le clavier avec la liste</string>
+    <string name="settings_auto_keyboard_detail">Commencez à taper dès l\'ouverture de la liste des applications. Sinon, le clavier attend que vous touchiez le champ de recherche</string>
+    <string name="settings_settings_row">Ligne des paramètres dans la liste des applications</string>
+    <string name="settings_settings_row_detail">La ligne après Z qui ouvre ces paramètres. Un appui long sur le fond d\'écran y mène aussi</string>
+    <string name="settings_search_none">Aucun résultat</string>
+    <string name="settings_section_appearance">Apparence</string>
+    <string name="settings_section_apps">Applications</string>
+    <string name="settings_section_about">À propos</string>
+    <string name="settings_preview_sample">Application d\'exemple</string>
+    <string name="settings_icon_pack">Pack d\'icônes</string>
+    <string name="settings_icon_pack_default">Par défaut</string>
+    <string name="settings_icons_favorites">Icônes des favoris</string>
+    <string name="settings_icons_app_list">Icônes dans la liste des applications</string>
+    <string name="settings_list_headers">En-têtes de lettres</string>
+    <string name="settings_list_headers_detail">Désactivé donne une liste continue. La barre A-Z permet toujours d\'accéder à une lettre</string>
+    <string name="settings_notification_badges">Nombre de notifications sur les icônes</string>
+    <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, jamais le contenu d\'une notification</string>
+    <string name="settings_section_top">Où atterrit une lettre</string>
+    <string name="settings_close_folder">Fermer un dossier après l\'ouverture d\'une application</string>
+    <string name="settings_close_folder_detail">Désactivé le laisse ouvert jusqu\'à ce que vous le fermiez vous-même</string>
+    <string name="settings_favorites_source">Favoris</string>
+    <string name="settings_frequent_count">Nombre</string>
+    <string name="favorites_source_manual">La liste que vous conservez</string>
+    <string name="favorites_source_frequent">Les plus utilisées</string>
+    <string name="settings_icon_pack_no_icons">Aucun</string>
+    <string name="settings_icon_pack_none">Aucune application de pack d\'icônes trouvée sur cet appareil.</string>
+    <string name="settings_icon_size">Taille des icônes</string>
+    <string name="settings_text_size">Taille du texte</string>
+    <string name="settings_favorite_spacing">Espacement entre les favoris</string>
+    <string name="settings_font">Police</string>
+    <string name="settings_text_color">Couleur du texte</string>
+    <string name="settings_text_color_detail">Auto lit le fond d\'écran et choisit la teinte la plus lisible</string>
+    <string name="settings_show_names">Afficher les noms des applications à côté des icônes favorites</string>
+    <string name="settings_hide_status_bar">Masquer la barre d\'état sur l\'écran d\'accueil</string>
+    <string name="settings_hide_status_bar_applist">Masquer la barre d\'état dans la liste des applications</string>
+    <string name="settings_status_bar_timeout">La barre d\'état reste affichée pendant</string>
+    <string name="settings_dim_home">Assombrir le fond d\'écran sur l\'écran d\'accueil</string>
+    <string name="settings_dim_applist">Assombrir le fond d\'écran derrière la liste des applications</string>
+    <string name="settings_haptics">Retour haptique</string>
+    <string name="settings_haptics_detail">Suit le réglage de retour tactile de votre système</string>
+    <string name="settings_edge_side">Quel bord ouvre la liste des applications</string>
+    <string name="settings_double_tap_lock">Appui double pour verrouiller l\'écran</string>
+    <string name="settings_double_tap_lock_detail">Touchez deux fois la barre A-Z</string>
+    <string name="settings_lock_needs_accessibility">Nécessite que Deluge Launcher soit activé dans Accessibilité. Si ce commutateur est grisé, ouvrez Infos sur l\'appli et autorisez d\'abord les paramètres restreints depuis le menu ⋮.</string>
+    <string name="settings_az_visibility">Afficher A-Z sur l\'écran d\'accueil</string>
+    <string name="az_visibility_never">Jamais</string>
+    <string name="az_visibility_landscape">Paysage</string>
+    <string name="az_visibility_always">Toujours</string>
+    <string name="settings_always_show_az">Toujours afficher A-Z</string>
+    <string name="settings_show_alphabet">Afficher A-Z dans la liste des applications</string>
+    <string name="applist_search_web">Rechercher \"%1$s\" sur le Web</string>
+    <string name="settings_web_search">Proposer une recherche Web</string>
+    <string name="settings_web_search_detail">Lorsque rien dans la liste ne correspond à ce que vous avez tapé, une ligne propose les mots à votre navigateur. Rien n\'est envoyé ailleurs sans que vous la touchiez</string>
+    <string name="settings_swipe_up_search">Balayer vers le haut ouvre la recherche</string>
+    <string name="settings_swipe_up_search_detail">Balayer vers le haut ouvre la liste des applications avec le curseur déjà dans le champ de recherche</string>
+    <string name="app_work_suffix"> (Pro)</string>
+    <string name="settings_edge_inset_auto">Réserver automatiquement de la place pour le geste de retour</string>
+    <string name="settings_edge_inset_auto_detail">Garde la barre A-Z à l\'écart du bord qu\'Android utilise pour son geste de retour. Ne change rien avec la navigation à boutons</string>
+    <string name="settings_edge_inset">Laisser de la place pour le geste de retour</string>
+    <string name="settings_mark_work_apps">Marquer les applications professionnelles</string>
+    <string name="settings_mark_work_apps_detail">Les applications d\'un profil professionnel l\'indiquent après leur nom, afin de distinguer deux copies de la même application</string>
+    <string name="settings_dim_others">Assombrir le reste pendant le défilement A-Z</string>
+    <string name="settings_dim_others_detail">Les applications en dehors de la lettre où vous vous trouvez s\'estompent, ce qui la fait ressortir. Désactivé garde toute la liste visible</string>
+    <string name="settings_hold_scroll">Maintenez une lettre pour continuer à défiler</string>
+    <string name="settings_hold_scroll_detail">Laissez votre doigt sur une lettre et la liste défile à travers ses applications, pour les lettres qui en ont beaucoup</string>
+    <string name="settings_hold_scroll_speed">Vitesse de défilement</string>
+    <string name="settings_edge_band_only">Bord uniquement à côté des lettres</string>
+    <string name="settings_edge_band_only_detail">Le côté de l\'écran ouvre la liste des applications uniquement là où se trouve la barre A-Z, au lieu de sur toute la hauteur. Évite de gêner un widget</string>
+    <string name="settings_edge_zone_width">Largeur du balayage sur le bord</string>
+    <string name="settings_swipe_up_list">Balayer vers le haut pour la liste des applications</string>
+    <string name="settings_swipe_up_list_detail">Poussez vers le haut au-delà de la fin de l\'écran d\'accueil</string>
+    <string name="settings_quick_launch_left">Balayer vers la gauche sous les favoris</string>
+    <string name="settings_quick_launch_right">Balayer vers la droite sous les favoris</string>
+    <string name="settings_quick_launch_none">Aucun</string>
+    <string name="settings_search_bar">Barre de recherche dans la liste des applications</string>
+    <string name="settings_search_bar_detail">Un champ pour filtrer la liste par nom</string>
+    <string name="settings_search_bar_bottom">Barre de recherche en bas</string>
+    <string name="settings_search_hidden">La recherche trouve les applications masquées</string>
+    <string name="settings_search_hidden_detail">Les applications masquées de la liste apparaissent toujours lorsque vous les recherchez par leur nom</string>
+    <string name="settings_sort_by_usage">Trier selon la fréquence d\'utilisation des applications</string>
+    <string name="settings_sort_by_usage_detail">Dans chaque lettre, les plus utilisées d\'abord</string>
+    <string name="settings_alignment_favorites">Alignement des favoris</string>
+    <string name="settings_alignment_applist">Alignement de la liste des applications</string>
+    <string name="settings_icon_side">Côté de l\'icône</string>
+    <string name="settings_shade_gesture">Balayer vers le bas pour les notifications</string>
+    <string name="settings_shade_ready">Prêt — balayez vers le bas sur l\'écran d\'accueil</string>
+    <string name="settings_shade_not_ready">Balayez vers le bas sur l\'écran d\'accueil. Si rien ne se produit, activez Deluge Launcher dans Accessibilité — et si ce commutateur est grisé, autorisez d\'abord les paramètres restreints depuis Infos sur l\'appli.</string>
+    <string name="settings_enable">Activer</string>
+    <string name="settings_app_info">Infos sur l\'appli</string>
+    <string name="settings_now_playing_show">Afficher le widget Now Playing</string>
+    <string name="settings_notification_access_granted">Accès aux notifications accordé</string>
+    <string name="settings_notification_access_missing">Accès aux notifications non accordé</string>
+    <string name="settings_notification_access_detail">Nécessaire pour afficher le morceau en cours de lecture</string>
+    <string name="settings_open_settings">Ouvrir les paramètres</string>
+    <string name="settings_favorites">Favoris</string>
+    <string name="settings_favorites_detail">Choisissez les applications présentes sur l\'écran d\'accueil</string>
+    <string name="applist_private_space_section">Espace privé</string>
+    <string name="applist_recent_section">Installées récemment</string>
+    <string name="settings_stay_private_unlock">Rester dans la liste après le déverrouillage</string>
+    <string name="settings_stay_private_unlock_detail">Le déverrouillage de l\'espace privé garde la liste des applications ouverte au lieu de revenir à l\'écran d\'accueil</string>
+    <string name="settings_private_space_section">Section Espace privé</string>
+    <string name="settings_private_space_section_detail">Regroupe les applications de l\'espace privé sous l\'alphabet au lieu de les mêler aux autres, afin de distinguer deux copies d\'une même application</string>
+    <string name="settings_recent_section">Section Installées récemment</string>
+    <string name="settings_recent_section_detail">Termine la liste des applications avec ce qui est arrivé le plus récemment</string>
+    <string name="settings_recent_section_count">Nombre d\'applications récentes</string>
+    <string name="settings_compact_tap">Touchez uniquement l\'icône et le nom</string>
+    <string name="settings_compact_tap_detail">Un favori s\'ouvre uniquement lorsque vous touchez son icône ou son nom, pas n\'importe où sur sa ligne</string>
+    <string name="settings_text_shadow_strength">Intensité de l\'ombre</string>
+    <string name="settings_text_shadow">Ombre derrière le texte</string>
+    <string name="settings_text_shadow_detail">Aide les noms d\'applications à ressortir sur un fond d\'écran chargé. Appliquée uniquement derrière un texte clair, où elle ajoute du contraste au lieu de le brouiller</string>
+    <string name="settings_default_launcher">Lanceur par défaut</string>
+    <string name="settings_default_launcher_yes">Deluge Launcher</string>
+    <string name="settings_default_launcher_no">Non défini — touchez pour choisir</string>
+    <string name="settings_frequent_excluded">Exclus des plus utilisées</string>
+    <string name="settings_frequent_excluded_none">Aucune application exclue</string>
+    <string name="frequent_excluded_count">Exclus (%1$d)</string>
+    <string name="frequent_excluded_add">Exclure une application</string>
+    <string name="settings_hidden_apps">Applications masquées</string>
+    <string name="hidden_count">%1$d masquées dans la liste des applications</string>
+    <string name="hidden_add_apps">Toutes les autres</string>
+    <string name="settings_hidden_none">Aucune masquée</string>
+    <string name="settings_hidden_count">%1$d masquées</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_less">Moins</string>
+    <string name="settings_more">Plus</string>
+
+    <!-- Font choices -->
+    <string name="font_system">Système</string>
+    <string name="font_sans_serif">Sans serif</string>
+    <string name="font_serif">Serif</string>
+    <string name="font_monospace">Monospace</string>
+    <string name="font_custom">Personnalisée…</string>
+    <string name="font_custom_pick">Choisir un fichier de police</string>
+    <string name="font_custom_detail">Un fichier .ttf ou .otf, copié dans le lanceur pour qu\'il survive au déplacement du fichier</string>
+    <string name="font_custom_failed">Ce fichier n\'a pas pu être lu comme une police</string>
+    <string name="text_color_material">Material</string>
+    <string name="text_color_custom">Personnalisée</string>
+    <string name="text_color_pick">Choisir une couleur</string>
+    <string name="settings_swipe_shortcuts">Balayer une application pour ses raccourcis</string>
+    <string name="settings_swipe_shortcuts_detail">Balayez un favori ou une ligne de la liste des applications. Les applications qui n\'en proposent pas ne font rien</string>
+    <string name="shortcut_swipe_off">Désactivé</string>
+    <string name="shortcut_swipe_right">Balayer vers la droite</string>
+    <string name="shortcut_swipe_left">Balayer vers la gauche</string>
+    <string name="settings_allow_rotation">Tourner avec l\'appareil</string>
+    <string name="settings_allow_rotation_detail">Désactivé sur les téléphones : en paysage, il reste environ un tiers de la hauteur nécessaire à cette disposition. Activé par défaut sur les tablettes</string>
+    <string name="settings_section_backup">Sauvegarde</string>
+    <string name="settings_crash_copy">Copier le dernier plantage</string>
+    <string name="settings_crash_detail">Le lanceur s\'est arrêté de façon inattendue. Copiez les détails à joindre à un rapport de bug</string>
+    <string name="settings_crash_copied">Détails du plantage copiés</string>
+    <string name="settings_export">Exporter les paramètres</string>
+    <string name="settings_export_detail">Enregistre les favoris, les dossiers, la disposition et tout le reste dans un fichier</string>
+    <string name="settings_import">Importer les paramètres</string>
+    <string name="settings_import_detail">Remplace tout par un fichier enregistré précédemment</string>
+    <string name="settings_export_done">Paramètres enregistrés</string>
+    <string name="settings_export_done_private_omitted">Paramètres enregistrés. Les applications de votre espace privé ont été omises.</string>
+    <string name="settings_import_done">Paramètres restaurés</string>
+    <string name="settings_backup_failed">Ce fichier n\'a pas pu être lu</string>
+    <string name="settings_dim_color">Couleur d\'assombrissement</string>
+    <string name="settings_dim_color_detail">La couleur avec laquelle le fond d\'écran est assombri ; les curseurs ci-dessus règlent l\'intensité</string>
+    <string name="color_from_wallpaper">Depuis votre fond d\'écran</string>
+    <string name="icon_shape">Forme des icônes</string>
+    <string name="icon_shape_detail">Ne remodèle que les icônes adaptatives ; les plus anciennes restent telles quelles</string>
+    <string name="icon_shape_system">Système</string>
+    <string name="icon_shape_circle">Cercle</string>
+    <string name="icon_shape_rounded">Arrondie</string>
+    <string name="icon_shape_square">Carré</string>
+    <string name="settings_icon_pack_themed">Thématique</string>
+
+    <!-- Text color choices -->
+    <string name="text_color_auto">Auto</string>
+    <string name="text_color_light">Clair</string>
+    <string name="text_color_dark">Sombre</string>
+
+    <!-- Alignment choices -->
+    <string name="alignment_left">Gauche</string>
+    <string name="alignment_center">Centré</string>
+    <string name="alignment_right">Droite</string>
+
+    <!-- Edge choices -->
+    <string name="edge_left">Gauche</string>
+    <string name="edge_right">Droite</string>
+    <string name="edge_both">Les deux</string>
+
+    <!-- Private space -->
+    <string name="private_space">Espace privé</string>
+
+    <!-- Favorites / hidden / folder pickers -->
+    <string name="favorites_title">Favoris</string>
+    <string name="favorites_count">%1$d sur votre écran d\'accueil</string>
+    <string name="folder_title_fallback">Dossier</string>
+    <string name="folder_gone">Ce dossier n\'existe plus.</string>
+    <string name="folder_member_count">%1$d dans ce dossier — faites glisser pour réorganiser</string>
+    <string name="folder_add_apps">Ajouter d\'autres applications</string>
+    <string name="folder_member_missing">Application plus installée</string>
+    <string name="folder_picker_title">Déplacer %1$s vers…</string>
+    <string name="folder_picker_app_count">%1$d applications</string>
+    <string name="folder_picker_new">Nouveau dossier</string>
+    <string name="folder_picker_new_detail">L\'application se déplace dans le nouveau dossier de votre écran d\'accueil.</string>
+
+    <!-- Icon picker -->
+    <string name="icon_picker_title">Icône pour %1$s</string>
+    <string name="icon_picker_gallery">Galerie…</string>
+    <string name="icon_picker_all">Toutes</string>
+    <string name="icon_picker_reset">Rétablir par défaut</string>
+    <string name="icon_picker_no_packs">Aucun pack d\'icônes installé. Installez un pack d\'icônes depuis le Play Store, ou choisissez une image dans votre galerie.</string>
+    <string name="icon_picker_search">Rechercher des icônes</string>
+    <string name="icon_picker_clear_search">Effacer la recherche</string>
+    <string name="icon_picker_not_browsable">Ce pack n\'a pas exposé de liste d\'icônes consultable.</string>
+    <string name="icon_picker_no_matches">Aucune icône ne correspond à « %1$s ».</string>
+
+    <!-- Welcome -->
+    <string name="welcome_title">Bienvenue dans Deluge</string>
+    <string name="welcome_favorites">Appuyez longuement sur le fond d\'écran pour ajouter des favoris, un widget, ou ouvrir les paramètres.</string>
+    <string name="welcome_widget">Balayez depuis l\'un ou l\'autre bord de l\'écran pour voir toutes vos applications, et glissez le long de la barre A-Z pour atteindre une lettre.</string>
+    <string name="welcome_layout">Modifier la disposition permet de déplacer les éléments et de régler les espacements.</string>
+    <string name="welcome_got_it">Compris</string>
+
+    <!-- Widgets -->
+    <string name="widget_add">Ajouter un widget</string>
+    <string name="widget_clock_label">Horloge et date</string>
+    <string name="widget_clock_description">L\'heure et la date, dans le style propre du lanceur</string>
+    <string name="widget_clock_time">Heure</string>
+    <string name="widget_clock_date">Date</string>
+    <string name="widget_clock_hour">Horloge</string>
+    <string name="widget_clock_hour_system">Système</string>
+    <string name="widget_clock_hour_12">12 heures</string>
+    <string name="widget_clock_hour_24">24 heures</string>
+    <string name="widget_clock_date_format">Date</string>
+    <string name="widget_clock_date_none">Aucune date</string>
+    <string name="widget_clock_size">Taille de l\'heure</string>
+    <string name="widget_clock_date_size">Taille de la date</string>
+    <string name="widget_clock_color">Couleur</string>
+    <string name="widget_clock_color_pick">Choisir</string>
+    <string name="widget_clock_size_preview">12:34</string>
+    <string name="widget_clock_weather">Météo</string>
+    <string name="widget_clock_notifications">Notifications</string>
+    <string name="widget_clock_weather_show">Météo</string>
+    <string name="widget_clock_weather_hide">Aucune météo</string>
+    <string name="widget_clock_weather_celsius">°C</string>
+    <string name="widget_clock_weather_fahrenheit">°F</string>
+    <string name="widget_clock_weather_size">Taille de la météo</string>
+    <string name="widget_clock_weather_opacity">Opacité de la météo</string>
+    <string name="widget_clock_date_custom_chip">Personnalisé</string>
+    <string name="widget_clock_date_custom">Format de date personnalisé</string>
+    <string name="widget_clock_date_custom_label">Motif</string>
+    <string name="widget_clock_date_custom_invalid">Ce n\'est pas un motif qui peut être affiché</string>
+    <string name="widget_clock_date_custom_hint">d jour, M mois, y année, E jour de la semaine. Répétez une lettre pour une forme plus longue : d, dd, EEE, EEEE.</string>
+    <string name="widget_clock_agenda">À venir</string>
+    <string name="widget_clock_event_untitled">(Sans titre)</string>
+    <string name="widget_clock_event_at">%1$s  %2$s</string>
+    <string name="widget_clock_event_tomorrow">Demain</string>
+    <string name="widget_clock_event_day_at">%1$s %2$s</string>
+    <string name="widget_clock_event_day_only">%1$s  %2$s</string>
+    <string name="widget_clock_event_all_day">%1$s  aujourd\'hui</string>
+    <string name="widget_clock_event_now">%1$s  maintenant</string>
+    <string name="widget_clock_alarm_at">Alarme %1$s</string>
+    <string name="widget_clock_agenda_show">À venir</string>
+    <string name="widget_clock_agenda_hide">Rien</string>
+    <string name="widget_clock_agenda_size">Taille du bloc À venir</string>
+    <string name="widget_clock_agenda_opacity">Opacité du bloc À venir</string>
+    <string name="widget_clock_agenda_count">Nombre d\'événements</string>
+    <string name="widget_clock_agenda_hours">Nombre d\'heures à l\'avance</string>
+    <string name="widget_clock_agenda_relative">Dans 20 minutes</string>
+    <string name="widget_clock_agenda_absolute">À 12:30</string>
+    <string name="widget_clock_alarm_show">Prochaine alarme</string>
+    <string name="widget_clock_alarm_hide">Aucune alarme</string>
+    <string name="widget_clock_agenda_permission">Autoriser l\'accès à votre calendrier</string>
+    <string name="widget_clock_agenda_empty">Rien à venir</string>
+    <string name="widget_clock_agenda_hint">La lecture de votre calendrier nécessite une autorisation. Rien ne quitte le téléphone : Deluge n\'a aucun accès réseau.</string>
+    <string name="widget_clock_weather_opens">Ce que l\'appui sur la météo ouvre</string>
+    <string name="widget_clock_weather_waiting">En attente d\'une application météo</string>
+    <string name="widget_clock_weather_hint">La météo provient d\'une application météo qui la détient déjà, si bien que Deluge n\'a besoin d\'aucun accès réseau et ne demande jamais votre position. Dans Breezy Weather, activez Paramètres → Widgets &amp; Live Wallpaper → Partage de données.</string>
+    <string name="widget_clock_notifications_show">Nombre de notifications</string>
+    <string name="widget_clock_notifications_hide">Aucun nombre</string>
+    <string name="widget_clock_notifications_size">Taille du compteur</string>
+    <string name="widget_clock_notifications_opacity">Opacité du compteur</string>
+    <string name="widget_clock_battery">Batterie</string>
+    <string name="widget_clock_battery_show">Afficher</string>
+    <string name="widget_clock_battery_hide">Masquer</string>
+    <string name="widget_clock_battery_size">Taille de la batterie</string>
+    <string name="widget_clock_battery_percent">%1$d%%</string>
+    <string name="widget_clock_time_opacity">Opacité de l\'heure</string>
+    <string name="widget_clock_date_opacity">Opacité de la date</string>
+    <string name="widget_clock_battery_opacity">Opacité de la batterie</string>
+    <string name="widget_add_another">Ajouter un autre widget</string>
+    <string name="widget_remove_this">Supprimer ce widget</string>
+    <string name="widget_unavailable">Ce widget n\'est plus disponible</string>
+    <string name="widget_change_settings">Modifier les paramètres du widget</string>
+    <string name="widget_reset_height">Rétablir la hauteur automatique</string>
+    <string name="widget_none_found">Aucun widget trouvé sur cet appareil.</string>
+
+    <!-- Pinned shortcuts -->
+    <string name="shortcut_unavailable">Ce raccourci n\'est plus disponible</string>
+    <string name="shortcut_pin_title">Ajouter à l\'écran d\'accueil ?</string>
+    <string name="shortcut_pin_from">Depuis %1$s</string>
+    <string name="shortcut_pin_add">Ajouter</string>
+    <string name="shortcut_pin_failed">Impossible de confirmer l\'ajout du raccourci</string>
+    <string name="shortcut_unpin_failed">Impossible de supprimer le raccourci</string>
+
+    <!-- Now Playing -->
+    <string name="now_playing_placeholder">Now Playing</string>
+    <string name="now_playing_enable_access">Activer l\'accès Now Playing</string>
+    <string name="now_playing_open_failed">Impossible d\'ouvrir l\'application en cours de lecture</string>
+    <string name="now_playing_unknown_title">Titre inconnu</string>
+    <string name="now_playing_previous">Précédent</string>
+    <string name="now_playing_play_pause">Lecture/pause</string>
+    <string name="now_playing_next">Suivant</string>
+    <plurals name="widget_clock_notification_count">
+        <item quantity="one">%1$d notification</item>
+        <item quantity="other">%1$d notifications</item>
+    </plurals>
+    <plurals name="widget_clock_event_in_minutes">
+        <item quantity="one">%1$s  dans %2$d minute</item>
+        <item quantity="other">%1$s  dans %2$d minutes</item>
+    </plurals>
+    <plurals name="widget_clock_event_in_hours">
+        <item quantity="one">%1$s  dans %2$d heure</item>
+        <item quantity="other">%1$s  dans %2$d heures</item>
+    </plurals>
+    <plurals name="settings_frequent_excluded_count">
+        <item quantity="one">%1$d application exclue</item>
+        <item quantity="other">%1$d applications exclues</item>
+    </plurals>
+    <string name="prompt_default_title">Faire de Deluge votre écran d\'accueil</string>
+    <string name="prompt_default_body">Deluge est installé, mais Android ne l\'utilise pas encore. Définissez-le comme écran d\'accueil par défaut pour voir vos favoris et la liste des applications.</string>
+    <string name="prompt_default_set">Définir par défaut</string>
+    <string name="prompt_default_skip">Plus tard</string>
+    <string name="settings_changelog">Nouveautés</string>
+    <string name="settings_changelog_detail">Ce qui a changé à chaque version</string>
+</resources>

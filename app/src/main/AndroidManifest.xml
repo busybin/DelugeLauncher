@@ -24,14 +24,15 @@
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <application
-        android:name=".VictoriaApp"
+        android:name=".DelugeApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher"
-        android:theme="@style/Theme.VictoriaLauncher"
+        android:theme="@style/Theme.DelugeLauncher"
         android:supportsRtl="true">
 
         <activity
@@ -41,7 +42,7 @@
             android:stateNotNeeded="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.VictoriaLauncher"
+            android:theme="@style/Theme.DelugeLauncher"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden">
             <intent-filter>
@@ -60,7 +61,7 @@
             android:exported="false"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.VictoriaLauncher" />
+            android:theme="@style/Theme.DelugeLauncher" />
 
         <!-- The one component another app can reach, and the only way in is the system
              raising it on behalf of an app that asked for a shortcut to be pinned. It is
@@ -72,7 +73,7 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.VictoriaLauncher.PinShortcut">
+            android:theme="@style/Theme.DelugeLauncher.PinShortcut">
             <intent-filter>
                 <action android:name="android.content.pm.action.CONFIRM_PIN_SHORTCUT" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -80,9 +81,9 @@
         </activity>
 
         <service
-            android:name=".service.VictoriaAccessibilityService"
+            android:name=".service.DelugeAccessibilityService"
             android:exported="true"
-            android:label="Victoria Launcher gestures"
+            android:label="Deluge Launcher gestures"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
             <intent-filter>
                 <action android:name="android.accessibilityservice.AccessibilityService" />
@@ -99,7 +100,7 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.VictoriaLauncher">
+            android:theme="@style/Theme.DelugeLauncher">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -135,7 +136,7 @@
         <service
             android:name=".media.NowPlayingListenerService"
             android:exported="true"
-            android:label="Victoria Launcher Now Playing"
+            android:label="Deluge Launcher Now Playing"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

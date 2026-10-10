@@ -29,5 +29,5 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: victoria-launcher-debug
+          name: deluge-launcher-debug
           path: app/build/outputs/apk/debug/*.apk
