@@ -1,30 +1,31 @@
 # Deluge Launcher
 
-A minimal, list-based Android home screen — a hard fork of
+A minimal, list-based Android home screen, and a hard fork of
 [Victoria Launcher](https://github.com/adelmonte/victoria-launcher) by
-[adelmonte](https://github.com/adelmonte), itself an open source alternative to
+[adelmonte](https://github.com/adelmonte) — itself an open source alternative to
 [Niagara Launcher](https://niagaralauncher.app).
 
-The home screen holds a short list of favorites and nothing you did not put there.
-Everything else lives in an alphabetical app list you reach by swiping in from either
-edge, with an A-Z strip that highlights every letter currently on screen.
+**What this fork is for: speed and feel.** It is tuned for a fast cold start and for
+reaching the app list and a letter with one thumb — icons cached on disk, unneeded
+dependencies dropped, and the A-Z strip, edge gestures and row swipes made to behave
+under a real finger. Everything else is upstream's design, kept as it was.
 
 ## What this fork changes
 
-A few things differ from upstream, mostly where the original got in the way:
-
-- A blue Material 3 theme and its own icon, instead of the original look.
-- Faster cold starts: icons are cached on disk, and the icons library and the
-  navigation library are both gone.
-- The A-Z strip follows the list as you scroll, and sits on the side the list is
-  not aligned to.
+- **Faster to open.** Icons are cached on disk, so the second launch reads bytes instead
+  of drawing pictures, and two large libraries are gone: the icons pack and the
+  navigation library.
+- **The A-Z strip is a thumb control.** It follows the list as you scroll, highlights
+  every letter on screen, sits on the side the list is not aligned to, and stops at half
+  the screen so reaching a letter never means moving the whole hand.
+- **Scrolling is never stolen.** A row only answers a sideways swipe, so a drag that
+  started at an angle scrolls the list instead of opening a shortcut menu.
 - Folder rows say how many apps they hold and whether they are open.
 - Widget height follows the widget itself, unless you set it by hand.
-- Swiping a row for its shortcuts only fires sideways, so scrolling is never
-  stolen by a drag that started at an angle.
 - Settings has a changelog, and a restored backup re-pins the shortcuts it names.
 
-The in-app changelog (Settings → About → Changelog) has the release-by-release list.
+Plus a number of smaller fixes and additions along the way. The in-app changelog
+(Settings → About → Changelog) has the release-by-release list.
 
 ## Install
 
