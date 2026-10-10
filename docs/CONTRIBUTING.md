@@ -23,7 +23,7 @@ keyPassword=…
 
 That file and any keystore are gitignored — never commit them.
 
-To use the launcher, install the APK and pick Victoria Launcher under
+To use the launcher, install the APK and pick Deluge Launcher under
 Settings → Apps → Default apps → Home app.
 
 ## Code style

@@ -1,14 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The mark: a "D" drawn as one unbroken stroke, at the weight and corner rounding the
+     rest of the launcher uses for its own icons. It sits inside the 72dp safe zone so no
+     mask clips it. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Stem and bowl, one path: down the left, out along the top, around the right, back. -->
     <path
-        android:pathData="M32,30 L54,76 L76,30"
-        android:strokeColor="@color/launcher_fg"
-        android:strokeWidth="11"
+        android:pathData="M40,32 L40,76"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="13"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M40,32 L53,32 A22,22 0 0 1 53,76 L40,76"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="13"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+    <!-- A quieter inner arc, so the letter reads as drawn rather than as a font. -->
+    <path
+        android:pathData="M52,45 A9,9 0 0 1 52,63"
+        android:strokeColor="#66FFFFFF"
+        android:strokeWidth="5"
+        android:strokeLineCap="round"
         android:fillColor="#00000000" />
 </vector>

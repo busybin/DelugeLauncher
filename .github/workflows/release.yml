@@ -54,7 +54,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          asset="victoria-launcher-${GITHUB_REF_NAME}.apk"
+          asset="deluge-launcher-${GITHUB_REF_NAME}.apk"
           cp app/build/outputs/apk/release/app-release.apk "$asset"
 
           version_code=$(grep -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts)

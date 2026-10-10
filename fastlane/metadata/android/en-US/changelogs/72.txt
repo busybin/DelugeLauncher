@@ -1,5 +1,5 @@
 New:
-* Shortcuts pinned from a browser's "Add to Home screen" now land in Victoria. They can be renamed, given an icon, hidden, foldered or used for a quick launch, contributed by lennygatorsandghosts.
+* Shortcuts pinned from a browser's "Add to Home screen" now land in Deluge. They can be renamed, given an icon, hidden, foldered or used for a quick launch, contributed by lennygatorsandghosts.
 * Settings open on a list of sections instead of one long page.
 
 Fixed:

@@ -4,4 +4,4 @@ New:
 * Work profile apps say so after their name, so two copies of the same app can be told apart.
 * The A-Z strip can leave the outermost edge of the screen to the system back gesture.
 
-Reading your calendar asks permission the moment you switch it on, never at install, and nothing read can leave the phone: Victoria still has no network access.
+Reading your calendar asks permission the moment you switch it on, never at install, and nothing read can leave the phone: Deluge still has no network access.

@@ -15,7 +15,7 @@ val keystoreProperties = Properties().apply {
 val hasSigningConfig = keystoreProperties.getProperty("storeFile") != null
 
 android {
-    namespace = "dev.victorialauncher"
+    namespace = "dev.delugelauncher"
     compileSdk = 35
 
     lint {
@@ -26,11 +26,15 @@ android {
     }
 
     defaultConfig {
-        applicationId = "dev.victorialauncher"
+        applicationId = "dev.delugelauncher"
         minSdk = 26
         targetSdk = 35
-        versionCode = 107
-        versionName = "0.84.1"
+        // One integer, shown as V<n>: V19, then V20, and only when a release is cut.
+        // versionCode carries the same number and is what the system compares, so both move
+        // together. A build with a lower number than the installed one is refused as a
+        // downgrade, which is why this pair is only ever raised.
+        versionCode = 19
+        versionName = "V19"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -48,8 +52,8 @@ android {
 
     buildTypes {
         release {
-            // R8 does the heavy lifting on size and startup: material-icons-extended
-            // alone ships thousands of vector icons, of which this app uses ~20.
+            // R8 does the heavy lifting on size and startup: Compose ships several
+            // thousand vector icons and this app draws a few dozen.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -101,9 +105,7 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
 
-    implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
     testImplementation("junit:junit:4.13.2")

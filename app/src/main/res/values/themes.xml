@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.VictoriaLauncher" parent="android:Theme.DeviceDefault.NoActionBar">
+    <style name="Theme.DelugeLauncher" parent="android:Theme.DeviceDefault.NoActionBar">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:colorBackgroundCacheHint">@null</item>
         <item name="android:windowBackground">@android:color/transparent</item>
@@ -11,7 +11,7 @@
 
     <!-- The pin-confirm screen is one dialog over whatever was already on screen, so its
          window shows none of its own and no wallpaper: the dialog draws its own scrim. -->
-    <style name="Theme.VictoriaLauncher.PinShortcut" parent="Theme.VictoriaLauncher">
+    <style name="Theme.DelugeLauncher.PinShortcut" parent="Theme.DelugeLauncher">
         <item name="android:windowShowWallpaper">false</item>
         <item name="android:windowIsTranslucent">true</item>
         <item name="android:windowAnimationStyle">@android:style/Animation.Dialog</item>

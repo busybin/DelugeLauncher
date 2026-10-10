@@ -12,6 +12,9 @@ keystore.properties
 *.keystore
 *.jks
 
+# Session notes — working memory for whoever is developing this, not part of the project
+MEMORY.md
+
 # IDE
 .idea/
 *.iml

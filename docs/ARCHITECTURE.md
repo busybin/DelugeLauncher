@@ -1,14 +1,14 @@
 # Architecture
 
-Victoria Launcher is a single-module Android home-screen launcher: Kotlin, Jetpack
+Deluge Launcher is a single-module Android home-screen launcher: Kotlin, Jetpack
 Compose, `minSdk 26`, `compileSdk`/`targetSdk 35`. No network permission, no
 analytics, no ads, no accounts.
 
-## Package layout (`dev.victorialauncher`)
+## Package layout (`dev.delugelauncher`)
 
 ```
 MainActivity.kt                 Activity, window setup, status-bar peek
-VictoriaApp.kt                  Application; owns Prefs, repositories, widget host
+DelugeApp.kt                  Application; owns Prefs, repositories, widget host
 data/
   AppInfo.kt                    component + label; `key` is the flattened component name
   AppRepository.kt              PackageManager queries, launch, app-info intents
@@ -17,7 +17,7 @@ data/
   Folder.kt                     folder model + JSON persistence + favorites token encoding
   HomePaddings.kt               per-block top/bottom spacing set in edit mode
 ui/
-  VictoriaNavHost.kt            collects settings once, hosts the navigation graph
+  DelugeNavHost.kt            collects settings once, hosts the navigation graph
   home/HomeRoute.kt             home destination: home screen, app-list overlay, edge zones
   home/HomeScreen.kt            widget slot + favorites/folders column + edit mode
   applist/AppListScreen.kt      A-Z list, pull-to-collapse, per-app menus
@@ -37,7 +37,7 @@ widget/                         AppWidgetHost, widget slot, widget picker
 
 ## Things that look wrong until you know why
 
-**The launcher does not draw the wallpaper.** `Theme.VictoriaLauncher` sets
+**The launcher does not draw the wallpaper.** `Theme.DelugeLauncher` sets
 `android:windowShowWallpaper`, so the real system wallpaper shows through a
 transparent window. "Dim wallpaper" is therefore just a scrim `Box`, not image
 processing.
