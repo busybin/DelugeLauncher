@@ -76,5 +76,9 @@ without. The original architecture, most of the code and much of the explanatory
 commentary are theirs.
 
 Licensed under the **GNU General Public License v3.0 or later** — see [LICENSE](LICENSE).
-As a fork, the same license applies to this work, and the original copyright notices are
-kept.
+As a modified version of the original work, the same license applies to it: the source is
+here, complete, and the changes are recorded in the git history and in [NOTICE](NOTICE).
+
+This project is **not affiliated with Victoria Launcher, Niagara Launcher, or their
+authors**. "Victoria Launcher" and "Niagara Launcher" are named only to say where this
+came from and what it is an alternative to.

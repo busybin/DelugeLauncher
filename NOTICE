@@ -1,0 +1,76 @@
+Deluge Launcher
+Copyright (C) 2026 busybin
+
+Based on Victoria Launcher, Copyright (C) adelmonte
+    https://github.com/adelmonte/victoria-launcher
+
+This program is free software: you can redistribute it and/or modify it under the terms
+of the GNU General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along with this
+program. If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+NOTICE OF MODIFICATION
+================================================================================
+
+This is a modified version of Victoria Launcher, not the original work. It is a fork,
+and files here have been changed from the original.
+
+Changes began in October 2026 and consist of:
+
+  * Renaming the project to Deluge Launcher, with the application id changed from
+    dev.victorialauncher to dev.delugelauncher, and the corresponding Kotlin packages,
+    class names and resources renamed.
+  * A new visual identity: a blue Material 3 colour scheme and a new adaptive launcher
+    icon, replacing the original theme and icon.
+  * Translations: ten languages plus Traditional Chinese, and an in-app language picker.
+  * The navigation library was removed and replaced with an in-app router; the
+    material-icons-extended dependency was removed and the handful of icons it
+    provided are now drawn in this project.
+  * Behaviour and performance changes to the home screen, app list, widgets, folders
+    and settings, as described in the "What this fork changes" section of README.md.
+
+The modifications are recorded in full in this repository's git history. A
+user-facing summary is kept in the in-app changelog (Settings, About, Changelog).
+
+No files carry an individual "modified" header. The notice above, together with the
+commit history, is the record of modification for the project as a whole.
+
+================================================================================
+THIRD-PARTY COMPONENTS
+================================================================================
+
+The application bundles only the following libraries, all under the Apache License,
+Version 2.0:
+
+  * AndroidX libraries (androidx.core, androidx.lifecycle, androidx.activity,
+    androidx.compose.*, androidx.datastore, androidx.annotation, androidx.collection,
+    androidx.emoji2, androidx.autofill, androidx.customview, androidx.profileinstaller,
+    androidx.savedstate, androidx.tracing, androidx.graphics, androidx.window)
+  * Kotlin standard library and kotlinx-coroutines
+
+The Apache License 2.0 is compatible with the GNU GPL version 3, and the full text of
+both licences is available from the Free Software Foundation and the Apache Software
+Foundation respectively.
+
+Development and test-only dependencies, which are not part of any distributed
+application, include JUnit (Eclipse Public License 1.0), org.json (the JSON licence),
+and the AndroidX Test and Benchmark libraries (Apache License 2.0).
+
+The icon paths drawn in app/src/main/java/dev/delugelauncher/ui/common/DelugeIcons.kt
+are original simple geometry written for this project.
+
+================================================================================
+TRADEMARKS
+================================================================================
+
+"Deluge Launcher" refers to this fork. "Victoria Launcher" refers to the original
+project by adelmonte, and "Niagara Launcher" to a separate commercial product by
+Niagara Launcher. This project is not affiliated with, endorsed by, or sponsored by
+either of them, and neither name is used here as a trademark of this project.
