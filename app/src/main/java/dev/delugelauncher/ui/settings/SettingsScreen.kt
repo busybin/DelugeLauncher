@@ -125,6 +125,8 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.TextColorMode
+import dev.delugelauncher.data.HapticFeedback
+import dev.delugelauncher.data.TwoColumnSlot
 import android.content.Intent
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.theme.toFontFamily
@@ -147,7 +149,7 @@ fun SettingsScreen(
     hideStatusBar: Boolean,
     hideStatusBarAppList: Boolean,
     dimWallpaperAlpha: Float,
-    hapticsEnabled: Boolean,
+    hapticFeedback: HapticFeedback,
     dimHomeAlpha: Float,
     showFavoriteLabels: Boolean,
     screenshotMode: Boolean,
@@ -167,6 +169,11 @@ fun SettingsScreen(
     sortByUsage: Boolean,
     autoFrequentTag: Boolean,
     onSetAutoFrequentTag: (Boolean) -> Unit,
+    homeTwoColumnPortrait: Boolean,
+    homeTwoColumnLandscape: Boolean,
+    listTwoColumnPortrait: Boolean,
+    listTwoColumnLandscape: Boolean,
+    onSetTwoColumn: (TwoColumnSlot, Boolean) -> Unit,
     appListSearch: Boolean,
     appListSearchBottom: Boolean,
     appListSearchHidden: Boolean,
@@ -248,7 +255,7 @@ fun SettingsScreen(
     onSetDimWallpaper: (Float) -> Unit,
     wallpaperBlurDp: Int,
     onSetWallpaperBlur: (Int) -> Unit,
-    onSetHaptics: (Boolean) -> Unit,
+    onSetHapticFeedback: (HapticFeedback) -> Unit,
     onSetDimHome: (Float) -> Unit,
     onSetShowFavoriteLabels: (Boolean) -> Unit,
     onSetTextColorMode: (TextColorMode) -> Unit,
@@ -613,6 +620,22 @@ fun SettingsScreen(
                 checked = autoFrequentTag, onCheckedChange = onSetAutoFrequentTag,
             )
         },
+        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_two_column_list_portrait), "two columns portrait") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_two_column_list_portrait),
+                detail = stringResource(R.string.settings_two_column_list_portrait_detail),
+                checked = listTwoColumnPortrait,
+                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_PORTRAIT, it) },
+            )
+        },
+        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_two_column_list_landscape), "two columns landscape sideways") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_two_column_list_landscape),
+                detail = stringResource(R.string.settings_two_column_list_landscape_detail),
+                checked = listTwoColumnLandscape,
+                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_LANDSCAPE, it) },
+            )
+        },
         SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_az_visibility), "alphabet strip a-z") {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(stringResource(R.string.settings_az_visibility), style = MaterialTheme.typography.bodyMedium)
@@ -797,11 +820,24 @@ fun SettingsScreen(
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_haptics), "vibrate") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_haptics),
-                detail = stringResource(R.string.settings_haptics_detail),
-                checked = hapticsEnabled, onCheckedChange = onSetHaptics,
-            )
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                Text(stringResource(R.string.settings_haptics), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.settings_haptics_detail),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    HapticFeedback.entries.forEach { option ->
+                        FilledChip(stringResource(option.labelRes()), hapticFeedback == option) {
+                            onSetHapticFeedback(option)
+                        }
+                    }
+                }
+            }
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_swipe_up_list), "swipe up") {
             SwitchRowWithDetail(
@@ -951,6 +987,22 @@ fun SettingsScreen(
                 leading = Icons.Filled.Favorite,
             )
         },
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_portrait), "two columns favorites portrait") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_two_column_home_portrait),
+                detail = stringResource(R.string.settings_two_column_home_portrait_detail),
+                checked = homeTwoColumnPortrait,
+                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_PORTRAIT, it) },
+            )
+        },
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_landscape), "two columns favorites landscape sideways") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_two_column_home_landscape),
+                detail = stringResource(R.string.settings_two_column_home_landscape_detail),
+                checked = homeTwoColumnLandscape,
+                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_LANDSCAPE, it) },
+            )
+        },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_compact_tap),
@@ -1030,7 +1082,7 @@ fun SettingsScreen(
                 Modifier
                     .fillMaxWidth()
                     .developerUnlock(
-                        hapticsEnabled = hapticsEnabled,
+                        hapticFeedback = hapticFeedback,
                         onTap = { openProjectPage() },
                         onUnlock = {
                             developerUnlocked = true
@@ -1948,7 +2000,7 @@ private const val DEVELOPER_HOLD_MS = 5000L
  */
 @Composable
 private fun Modifier.developerUnlock(
-    hapticsEnabled: Boolean,
+    hapticFeedback: HapticFeedback,
     onTap: () -> Unit,
     onUnlock: () -> Unit,
 ): Modifier {
@@ -1964,7 +2016,7 @@ private fun Modifier.developerUnlock(
         fun fire() {
             if (unlocked) return
             unlocked = true
-            HapticUtil.tick(view, hapticsEnabled)
+            HapticUtil.tick(view, hapticFeedback)
             currentUnlock()
         }
         detectTapGestures(

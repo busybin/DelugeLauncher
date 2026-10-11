@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Home und Liste je mit Hoch-/Quer-Zweispalternschalter; Paare bleiben bündig.</item>
+        <item>Vibrationsstärke: aus/leise/mittel/stark.</item>
+        <item>Pinch-Zoom an; Bandvorschau-Buchstaben skalieren mit.</item>
+        <item>Startbildschirm-Langdruck wechselt das Hintergrundbild.</item>
+        <item>Bei Sprachwechsel läuft „Häufig“ zusammen; Tag-Menüs nicht mehr doppelt; Auswahlleiste weicht der Statusleiste.</item>
+        <item>Protokoll folgt der Sprache; Tippen auf den Namen öffnet die Projektseite.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>Suche findet Apps per Pinyin — Initialen wie volle Schreibweise — mit markiertem Treffer.</item>
         <item>Tags sammeln Apps über das Alphabet hinweg: Abschnitte oben, drei Zeichen in der Leiste, Mehrfachvergabe aus vorhandenen Tags.</item>

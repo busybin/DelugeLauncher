@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>主畫面和清單各有直式/橫式雙欄開關，配對列保持齊平。</item>
+        <item>震動強度：關/輕/中/重。</item>
+        <item>雙指縮放圖示預設開啟；範圍預覽字母動態縮放。</item>
+        <item>收藏頁長按可換桌布。</item>
+        <item>切換語言時常用標籤自動收斂；標籤選單不再重疊；多選列避開狀態列。</item>
+        <item>更新日誌跟隨語言；點應用程式名稱開啟專案頁。</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>搜尋支援拼音——聲母縮寫和全拼都能搜，命中處反白。</item>
         <item>應用程式標籤可跨字母表分組：頂部獨立分組、字母條顯示三字，多選打標籤並提供已有標籤。</item>

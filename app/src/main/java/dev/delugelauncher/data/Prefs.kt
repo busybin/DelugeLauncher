@@ -97,8 +97,14 @@ enum class TextColorMode { AUTO, LIGHT, DARK, MATERIAL, CUSTOM }
  */
 enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 
+/** Which of the four two-column switches is meant. */
+enum class TwoColumnSlot { HOME_PORTRAIT, HOME_LANDSCAPE, LIST_PORTRAIT, LIST_LANDSCAPE }
+
 /** When the A-Z strip shows on the home screen itself. */
 enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
+
+/** How hard the launcher taps back: silent, or three strengths. */
+enum class HapticFeedback { OFF, LIGHT, MEDIUM, STRONG }
 
 private val Context.dataStore by preferencesDataStore(name = "deluge_prefs")
 
@@ -159,6 +165,11 @@ class Prefs(private val context: Context) {
         val EDGE_SIDE = stringPreferencesKey("edge_side")
         val ALWAYS_SHOW_AZ = booleanPreferencesKey("always_show_az")
         val AZ_STRIP_VISIBILITY = stringPreferencesKey("az_strip_visibility")
+        val HAPTIC_FEEDBACK = stringPreferencesKey("haptic_feedback")
+        val HOME_TWO_COLUMN_PORTRAIT = booleanPreferencesKey("home_two_column_portrait")
+        val HOME_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("home_two_column_landscape")
+        val LIST_TWO_COLUMN_PORTRAIT = booleanPreferencesKey("list_two_column_portrait")
+        val LIST_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("list_two_column_landscape")
         val SHOW_ALPHABET = booleanPreferencesKey("show_alphabet")
         val ALIGN_RIGHT = booleanPreferencesKey("align_right")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
@@ -495,7 +506,14 @@ class Prefs(private val context: Context) {
     val wallpaperBlurDp: Flow<Int> =
         data.map { (it[Keys.WALLPAPER_BLUR_DP] ?: 0).coerceIn(0, 80) }.distinctUntilChanged()
 
-    val hapticsEnabled: Flow<Boolean> = data.map { it[Keys.HAPTICS_ENABLED] ?: true }.distinctUntilChanged()
+    /**
+     * How hard the launcher taps back. Reads the old on/off answer when this has not been
+     * set, so nobody's buzz appears or disappears on update.
+     */
+    val hapticFeedback: Flow<HapticFeedback> = data.map { pref ->
+        pref[Keys.HAPTIC_FEEDBACK]?.let { runCatching { HapticFeedback.valueOf(it) }.getOrNull() }
+            ?: if (pref[Keys.HAPTICS_ENABLED] == false) HapticFeedback.OFF else HapticFeedback.MEDIUM
+    }.distinctUntilChanged()
 
     val dimHomeAlpha: Flow<Float> = data.map { it[Keys.DIM_HOME_ALPHA] ?: 0f }.distinctUntilChanged()
 
@@ -529,6 +547,18 @@ class Prefs(private val context: Context) {
 
     /** The A-Z strip inside the app list; the edge gesture still works without it. */
     val showAlphabet: Flow<Boolean> = data.map { it[Keys.SHOW_ALPHABET] ?: true }.distinctUntilChanged()
+
+    /** Two favorites per home row, upright and sideways separately. */
+    val homeTwoColumnPortrait: Flow<Boolean> =
+        data.map { it[Keys.HOME_TWO_COLUMN_PORTRAIT] ?: false }.distinctUntilChanged()
+    val homeTwoColumnLandscape: Flow<Boolean> =
+        data.map { it[Keys.HOME_TWO_COLUMN_LANDSCAPE] ?: true }.distinctUntilChanged()
+
+    /** Two apps per list row, upright and sideways separately. */
+    val listTwoColumnPortrait: Flow<Boolean> =
+        data.map { it[Keys.LIST_TWO_COLUMN_PORTRAIT] ?: false }.distinctUntilChanged()
+    val listTwoColumnLandscape: Flow<Boolean> =
+        data.map { it[Keys.LIST_TWO_COLUMN_LANDSCAPE] ?: true }.distinctUntilChanged()
 
     /** Lay icons and labels out from the right edge instead of the left. */
     val alignRight: Flow<Boolean> = data.map { it[Keys.ALIGN_RIGHT] ?: false }.distinctUntilChanged()
@@ -691,7 +721,7 @@ class Prefs(private val context: Context) {
 
     /** Two-finger pinch on the home screen resizes the icons. */
     val pinchToResize: Flow<Boolean> =
-        data.map { it[Keys.PINCH_TO_RESIZE] ?: false }.distinctUntilChanged()
+        data.map { it[Keys.PINCH_TO_RESIZE] ?: true }.distinctUntilChanged()
 
     /** Skip the launcher's own transitions, for anyone who finds them distracting. */
     val reduceMotion: Flow<Boolean> =
@@ -1191,12 +1221,27 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.DOUBLE_TAP_TO_LOCK] = v }
     }
 
-    suspend fun setHapticsEnabled(v: Boolean) {
-        context.dataStore.edit { it[Keys.HAPTICS_ENABLED] = v }
+    suspend fun setHapticFeedback(v: HapticFeedback) {
+        context.dataStore.edit {
+            it[Keys.HAPTIC_FEEDBACK] = v.name
+            // The old switch follows, so a downgrade back reads the same answer.
+            it[Keys.HAPTICS_ENABLED] = v != HapticFeedback.OFF
+        }
     }
 
     suspend fun setShowAlphabet(v: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_ALPHABET] = v }
+    }
+
+    suspend fun setTwoColumn(which: TwoColumnSlot, v: Boolean) {
+        context.dataStore.edit {
+            it[when (which) {
+                TwoColumnSlot.HOME_PORTRAIT -> Keys.HOME_TWO_COLUMN_PORTRAIT
+                TwoColumnSlot.HOME_LANDSCAPE -> Keys.HOME_TWO_COLUMN_LANDSCAPE
+                TwoColumnSlot.LIST_PORTRAIT -> Keys.LIST_TWO_COLUMN_PORTRAIT
+                TwoColumnSlot.LIST_LANDSCAPE -> Keys.LIST_TWO_COLUMN_LANDSCAPE
+            }] = v
+        }
     }
 
     suspend fun setAlignRight(v: Boolean) {

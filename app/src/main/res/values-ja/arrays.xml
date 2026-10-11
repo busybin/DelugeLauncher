@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>ホームと一覧に縦/横の2列スイッチ。ペア行は水平を保つ。</item>
+        <item>振動強度：オフ/弱/中/強。</item>
+        <item>ピンチ拡縮は初期オン。範囲プレビューの文字は動的サイズ。</item>
+        <item>お気に入り長押しで壁紙変更可。</item>
+        <item>言語切替で「よく使う」は自動収束。タグメニューの重複解消。多選択バーはステータスバーを避ける。</item>
+        <item>更新履歴は言語に追従。アプリ名タップでプロジェクト頁へ。</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>ピンイン検索対応——頭文字も全綴りも探せ、一致箇所を強調表示。</item>
         <item>タグでアルファベットを越えて束ね：上部に独立セクション、ストリップには3文字。既存タグから選べる複数選択。</item>

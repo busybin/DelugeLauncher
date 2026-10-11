@@ -1,0 +1,11 @@
+Two columns, haptics and wallpaper.
+
+New:
+* Home and list each get portrait and landscape two-column switches; paired rows stay level.
+* Haptic strength: off, light, medium, strong.
+* Home long-press can change the wallpaper.
+
+Fixed and tuned:
+* Pinch-to-resize icons is on by default; the strip-range preview scales its letters.
+* The Frequent tag converges when the language changes; tag menus no longer double; the tag picker clears the status bar.
+* The changelog follows the language; tapping the app name opens the project page.

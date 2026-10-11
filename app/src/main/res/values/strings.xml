@@ -12,6 +12,8 @@
     <string name="action_remove">Remove</string>
     <string name="action_app_info">App info</string>
     <string name="action_uninstall">Uninstall</string>
+    <string name="action_change_wallpaper">Change wallpaper</string>
+    <string name="wallpaper_no_picker">No wallpaper picker found</string>
     <string name="action_lock_app">Lock app</string>
     <string name="action_unlock_app">Unlock app</string>
     <string name="action_set_tag">Set tag</string>
@@ -127,6 +129,18 @@
     <string name="settings_list_headers_detail">Off gives one continuous list. The A-Z strip still jumps to the letter</string>
     <string name="settings_notification_badges">Notification count on icons</string>
     <string name="settings_dim_paused_apps">Grey out paused apps</string>
+    <string name="haptic_off">Off</string>
+    <string name="haptic_light">Light</string>
+    <string name="haptic_medium">Medium</string>
+    <string name="haptic_strong">Strong</string>
+    <string name="settings_two_column_home_portrait">Home two columns (portrait)</string>
+    <string name="settings_two_column_home_portrait_detail">Two favorites share each row upright.</string>
+    <string name="settings_two_column_home_landscape">Home two columns (landscape)</string>
+    <string name="settings_two_column_home_landscape_detail">Two favorites share each row sideways.</string>
+    <string name="settings_two_column_list_portrait">List two columns (portrait)</string>
+    <string name="settings_two_column_list_portrait_detail">Two apps share each row upright.</string>
+    <string name="settings_two_column_list_landscape">List two columns (landscape)</string>
+    <string name="settings_two_column_list_landscape_detail">Two apps share each row sideways.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_detail">Disguises app names and icons for screenshots, and hides the status bar.</string>
     <string name="developer_unlocked">Developer mode unlocked</string>

@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Inicio y lista con doble columna vertical/horizontal; pares nivelados.</item>
+        <item>Intensidad: off/suave/media/fuerte.</item>
+        <item>Pellizco activado; vista previa escala sus letras.</item>
+        <item>Los favoritos cambian el fondo con pulsación larga.</item>
+        <item>Al cambiar idioma Frecuentes converge; menús sin duplicar; la barra evita la barra de estado.</item>
+        <item>El registro sigue el idioma; tocar el nombre abre el proyecto.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>La búsqueda encuentra apps por pinyin — iniciales y completo — con el acierto resaltado.</item>
         <item>Las etiquetas agrupan apps a través del alfabeto: secciones arriba, tres letras en la tira, multiselección desde las existentes.</item>

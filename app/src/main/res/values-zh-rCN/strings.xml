@@ -12,6 +12,8 @@
     <string name="action_remove">移除</string>
     <string name="action_app_info">应用信息</string>
     <string name="action_uninstall">卸载</string>
+    <string name="action_change_wallpaper">更换壁纸</string>
+    <string name="wallpaper_no_picker">没有可用的壁纸选择器</string>
     <string name="action_lock_app">锁定应用</string>
     <string name="action_unlock_app">取消锁定</string>
     <string name="action_set_tag">设置标签</string>
@@ -110,6 +112,18 @@
     <string name="settings_list_headers_detail">关闭后列表连续排布，字母条仍可跳到对应字母</string>
     <string name="settings_notification_badges">在图标上显示通知数</string>
     <string name="settings_dim_paused_apps">暂停的应用变灰</string>
+    <string name="haptic_off">关</string>
+    <string name="haptic_light">轻</string>
+    <string name="haptic_medium">中</string>
+    <string name="haptic_strong">重</string>
+    <string name="settings_two_column_home_portrait">主页竖屏双列</string>
+    <string name="settings_two_column_home_portrait_detail">竖屏时收藏每行两个。</string>
+    <string name="settings_two_column_home_landscape">主页横屏双列</string>
+    <string name="settings_two_column_home_landscape_detail">横屏时收藏每行两个。</string>
+    <string name="settings_two_column_list_portrait">列表竖屏双列</string>
+    <string name="settings_two_column_list_portrait_detail">竖屏时应用每行两个。</string>
+    <string name="settings_two_column_list_landscape">列表横屏双列</string>
+    <string name="settings_two_column_list_landscape_detail">横屏时应用每行两个。</string>
     <string name="settings_developer_mode">开发者模式</string>
     <string name="settings_developer_mode_detail">将应用名和图标伪装以便截图，并隐藏状态栏。</string>
     <string name="developer_unlocked">开发者模式已解锁</string>

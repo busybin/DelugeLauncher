@@ -12,6 +12,8 @@
     <string name="action_remove">移除</string>
     <string name="action_app_info">應用程式資訊</string>
     <string name="action_uninstall">解除安裝</string>
+    <string name="action_change_wallpaper">更換桌布</string>
+    <string name="wallpaper_no_picker">沒有可用的桌布選擇器</string>
     <string name="action_lock_app">鎖定應用程式</string>
     <string name="action_unlock_app">取消鎖定</string>
     <string name="action_set_tag">設定標籤</string>
@@ -110,6 +112,18 @@
     <string name="settings_list_headers_detail">關閉時會顯示成一份連續列表。字母列仍可跳到該字母</string>
     <string name="settings_notification_badges">圖示上的通知數量</string>
     <string name="settings_dim_paused_apps">暫停的應用程式變灰</string>
+    <string name="haptic_off">關</string>
+    <string name="haptic_light">輕</string>
+    <string name="haptic_medium">中</string>
+    <string name="haptic_strong">重</string>
+    <string name="settings_two_column_home_portrait">主畫面直式雙欄</string>
+    <string name="settings_two_column_home_portrait_detail">直式時收藏每列兩個。</string>
+    <string name="settings_two_column_home_landscape">主畫面橫式雙欄</string>
+    <string name="settings_two_column_home_landscape_detail">橫式時收藏每列兩個。</string>
+    <string name="settings_two_column_list_portrait">清單直式雙欄</string>
+    <string name="settings_two_column_list_portrait_detail">直式時應用每列兩個。</string>
+    <string name="settings_two_column_list_landscape">清單橫式雙欄</string>
+    <string name="settings_two_column_list_landscape_detail">橫式時應用每列兩個。</string>
     <string name="settings_developer_mode">開發者模式</string>
     <string name="settings_developer_mode_detail">將應用程式名稱與圖示偽裝以便截圖，並隱藏狀態列。</string>
     <string name="developer_unlocked">開發者模式已解鎖</string>

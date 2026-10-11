@@ -108,6 +108,13 @@ object DelugeIcons {
         stroke("M12,3 C14.5,3 16,7 16,12 C16,17 14.5,21 12,21 C9.5,21 8,17 8,12 C8,7 9.5,3 12,3", 2f)
         stroke("M3,12h18", 2f)
     }
+
+    val Wallpaper: ImageVector = vector("VicWallpaper") {
+        // A framed picture: sun in the corner, two hills below.
+        stroke("M4,4h16v16H4z", 2f)
+        fill("M8.2,10m-1.7,0a1.7,1.7 0,1 1,3.4 0a1.7,1.7 0,1 1,-3.4 0")
+        fill("M4,17.5l5.5,-5.5l3.5,3.5l3,-3l4,4v3.5z")
+    }
 }
 
 /** The Material icon size, so one of these sits right beside a `material-icons-core` icon. */

@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>홈과 목록에 세로/가로 2열 스위치. 짝 행은 수평 유지.</item>
+        <item>진동 강도: 끔/약/중/강.</item>
+        <item>핀치 조절 기본 켜짐. 범위 미리보기 글자 동적 크기.</item>
+        <item>즐겨찾기 길게 누기로 배경 화면 변경 가능.</item>
+        <item>언어 전환 시 “자주 쓰는” 자동 수렴. 태그 메뉴 중복 해소. 다중 선택 막대는 상태 막대를 피합니다.</item>
+        <item>변경 내역은 언어를 따릅니다. 앱 이름 누르면 프로젝트 페이지로.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>병음 검색 지원——초성과 전체 병음 모두 검색되며 일치 부분이 강조됩니다.</item>
         <item>태그로 알파벳을 넘어 묶기: 상단 독립 섹션, 스트립에는 3자. 기존 태그에서 고르는 다중 선택.</item>

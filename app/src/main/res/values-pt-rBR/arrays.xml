@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Início e lista com coluna dupla vertical/horizontal; pares nivelados.</item>
+        <item>Intensidade: off/leve/média/forte.</item>
+        <item>Pinça ativada; a prévia escala suas letras.</item>
+        <item>Favoritos trocam o fundo com toque longo.</item>
+        <item>Ao trocar idioma Frequentes converge; menus sem duplicar; a barra evita a barra de status.</item>
+        <item>O registro segue o idioma; tocar o nome abre o projeto.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>A busca acha apps por pinyin — iniciais e completo — com o acerto destacado.</item>
         <item>Tags juntam apps através do alfabeto: seções em cima, três letras na tira, multisseleção desde as existentes.</item>
