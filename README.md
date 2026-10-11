@@ -40,6 +40,16 @@ under a real finger. Everything else is upstream's design, kept as it was.
 Plus a number of smaller fixes and additions along the way. The in-app changelog
 (Settings → About → Changelog) has the release-by-release list.
 
+## Screenshots
+
+| Home | App list |
+| ---- | -------- |
+| ![Home](screenshots/home.png) | ![App list](screenshots/app-list.png) |
+
+| Scrubbing | Long-press menu |
+| --------- | --------------- |
+| ![Scrubbing](screenshots/scrub.png) | ![Long-press menu](screenshots/menu.png) |
+
 ## Install
 
 Requires Android 8.0 (API 26) or newer.
