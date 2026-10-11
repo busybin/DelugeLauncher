@@ -54,6 +54,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
@@ -111,6 +112,8 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import android.widget.Toast
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -170,6 +173,9 @@ private val SETTINGS_ROW_GAP = 20.dp
  */
 private val MAX_LIST_WIDTH = 600.dp
 
+/** How wide the list may run sideways, where two columns share it. */
+private val MAX_LIST_WIDTH_LANDSCAPE = 1000.dp
+
 /** How far the list dissolves at each end. */
 private val FADE_HEIGHT = 56.dp
 
@@ -195,6 +201,23 @@ private const val COMMIT_FRACTION = 0.4f
  * once — a bumper, not a bounce.
  */
 private const val EDGE_STRETCH_DAMPING = 0.55f
+
+/**
+ * One row's identity, section included. The long-press menu is keyed by this rather than by
+ * the app alone — and so is the list itself — because the same app legitimately stands twice
+ * in the list, under its tag and under its letter.
+ */
+private fun rowKey(row: AppListRow): String = when (row) {
+    is AppListRow.Header -> "header:${row.text}"
+    is AppListRow.Entry -> row.section?.let { "$it:${row.app.key}" } ?: row.app.key
+}
+
+/** One laid-out row's identity, pairing included. */
+private fun cellKey(cell: CellRow): String = when (cell) {
+    is CellRow.Header -> "header:${cell.text}"
+    is CellRow.One -> rowKey(cell.entry)
+    is CellRow.Two -> rowKey(cell.left) + "|" + (cell.right?.let { rowKey(it) } ?: "")
+}
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -262,6 +285,9 @@ fun AppListScreen(
     markWorkApps: Boolean,
     /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
     disguiseNames: Map<String, String>,
+    /** Two apps per list row, upright and sideways separately. */
+    listTwoColumnPortrait: Boolean,
+    listTwoColumnLandscape: Boolean,
     /** Whether the launcher's own text carries a shadow for legibility. */
     textShadow: Boolean,
     /** How strong that shadow is. */
@@ -325,6 +351,14 @@ fun AppListScreen(
     }
     // What a search result underlines: the query, and only while it is actually a search.
     val searchTerm = if (searching) query.trim() else ""
+    // Sideways the rows pair up, so the two columns stay level instead of one running long;
+    // upright every row holds one app, exactly as before — unless asked for two everywhere.
+    // Each orientation has its own switch, so all four combinations are possible.
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val twoColumn = if (landscape) listTwoColumnLandscape else listTwoColumnPortrait
+    // The model as laid out. Everything below — scrub placement, spy, gaps, keys — reads
+    // this rather than the model, so indices always mean laid-out rows.
+    val cells = remember(displayModel, twoColumn) { displayModel.toCells(twoColumn) }
     // The launcher's own transitions, collapsed to nothing when motion is reduced.
     val motionFast = if (reduceMotion) 0 else 180
     val motionSlow = if (reduceMotion) 0 else 240
@@ -379,7 +413,7 @@ fun AppListScreen(
     // still under a finger.
     val scrubRowIndex = remember(displayModel, scrubPlacement) {
         val letter = scrubPlacement?.letter ?: return@remember -1
-        displayModel.letterIndex.firstOrNull { it.first == letter }?.second ?: -1
+        cells.letterIndex.firstOrNull { it.first == letter }?.second ?: -1
     }
 
     // Row indices of the highlighted section. Applied *after* the scroll lands, otherwise
@@ -498,7 +532,7 @@ fun AppListScreen(
     fun forwardRoom(): Float {
         val info = listState.layoutInfo
         val last = info.visibleItemsInfo.lastOrNull() ?: return Float.MAX_VALUE
-        if (last.index < displayModel.rows.size) return Float.MAX_VALUE
+        if (last.index < cells.rows.size) return Float.MAX_VALUE
         val bottom = (last.offset - info.viewportStartOffset + last.size).toFloat()
         return bottom + idleBottomPaddingPx - viewportHeightPx
     }
@@ -512,7 +546,7 @@ fun AppListScreen(
     fun placementSettled(): Boolean {
         val items = listState.layoutInfo.visibleItemsInfo
         val first = items.firstOrNull() ?: return true
-        if (first.index == 0 && items.last().index >= displayModel.rows.size) return true
+        if (first.index == 0 && items.last().index >= cells.rows.size) return true
         return topGapRemaining() <= 0f
     }
 
@@ -649,7 +683,7 @@ fun AppListScreen(
         if (scrubRowIndex < 0) return@LaunchedEffect
         // The next letter's header ends this section. Walking the rows to find it copied the
         // whole tail of the list on every one of the ~26 letter changes in a gesture.
-        val end = displayModel.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: displayModel.rows.size
+        val end = cells.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: cells.rows.size
 
         // Room before the scroll, and a frame for it to land in. The scroll clamps against the
         // range as it stands when it runs, so asking for the room afterwards leaves the letter
@@ -1086,7 +1120,7 @@ fun AppListScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 // Capped and held against the strip's own side, so on a wide screen the names
                 // stay next to the letters being scrubbed instead of a screen away from them.
-                .widthIn(max = MAX_LIST_WIDTH)
+                .widthIn(max = if (twoColumn) MAX_LIST_WIDTH_LANDSCAPE else MAX_LIST_WIDTH)
                 // The capped column sits on the side the rows lean to: left-aligned names on the
                 // left, right-aligned on the right, centered centered. It used to follow the
                 // strip's own side, which parked a left-aligned list in the middle of a wide
@@ -1117,8 +1151,8 @@ fun AppListScreen(
                 onQueryChange = onQueryChange,
                 contentColor = contentColor,
                 onGo = {
-                    displayModel.rows
-                        .filterIsInstance<AppListRow.Entry>()
+                    cells.rows
+                        .flatMap { it.entries() }
                         .firstOrNull()
                         ?.let { onLaunch(it.app) }
                 },
@@ -1201,7 +1235,7 @@ fun AppListScreen(
                 )
             },
         ) {
-            if (searching && webSearchFallback && displayModel.rows.isEmpty()) {
+            if (searching && webSearchFallback && cells.rows.isEmpty()) {
                 item(key = "websearch") {
                     val term = query.trim()
                     Row(
@@ -1227,20 +1261,78 @@ fun AppListScreen(
             }
 
             itemsIndexed(
-                items = displayModel.rows,
-                // The section is part of the key because the same app legitimately appears
-                // twice: once under its letter and again under a section that repeats it.
-                key = { _, row ->
-                    when (row) {
-                        is AppListRow.Header -> "header:${row.text}"
-                        is AppListRow.Entry ->
-                            row.section?.let { "$it:${row.app.key}" } ?: row.app.key
+                items = cells.rows,
+                // Headers, singles and pairs lay out nothing alike; telling the list so lets
+                // it reuse each kind against its own pool while scrubbing.
+                key = { _, cell -> cellKey(cell) },
+                contentType = { _, cell ->
+                    when (cell) {
+                        is CellRow.Header -> 0
+                        is CellRow.One -> 1
+                        is CellRow.Two -> 2
                     }
                 },
-                // Headers and app rows are laid out nothing alike; telling the list so lets
-                // it reuse each kind against its own pool while scrubbing.
-                contentType = { _, row -> row is AppListRow.Header },
-            ) { index, row ->
+            ) { index, cell ->
+                @Composable
+                fun EntryCell(entry: AppListRow.Entry) {
+                    AppRow(
+                        shortcutSwipe = shortcutSwipe,
+                        favoritesEditable = favoritesEditable,
+                        contentColor = contentColor,
+                        alignment = alignment,
+                        iconSide = iconSide,
+                        app = entry.app,
+                        label = displayName(entry.app),
+                        highlightTerm = searchTerm,
+                        iconSizeDp = iconSizeDp,
+                        labelSizeSp = labelSizeSp,
+                        isFavorite = favoriteKeys.contains(entry.app.key),
+                        // The row's own key, not the app's: a tagged app stands twice in the
+                        // list (its group and its letter), and keying the menu by the app
+                        // alone opened both rows' menus stacked on each other.
+                        menuExpanded = menuForKey == rowKey(entry),
+                        menuOffset = menuOffset,
+                        touchPosition = touchPosition,
+                        onLaunch = {
+                            if (selecting) {
+                                selectedKeys = if (entry.app.key in selectedKeys) {
+                                    selectedKeys - entry.app.key
+                                } else {
+                                    selectedKeys + entry.app.key
+                                }
+                            } else {
+                                onLaunch(entry.app)
+                            }
+                        },
+                        selected = selecting && entry.app.key in selectedKeys,
+                        // No long-press while picking apps to tag: the row menu on top of the
+                        // selection is what turns it into a mess.
+                        onLongPress = if (selecting) {
+                            null
+                        } else {
+                            { offset -> menuOffset = offset; menuForKey = rowKey(entry) }
+                        },
+                        onDismissMenu = { menuForKey = null },
+                        onSetFavorite = { onSetFavorite(entry.app, it) },
+                        onEdit = { editDialogFor = entry.app },
+                        onAppInfo = { onAppInfo(entry.app) },
+                        onUninstall = { onUninstall(entry.app) },
+                        onUnpin = { onUnpinShortcut(entry.app) },
+                        onHide = {
+                            // Unhiding is its own confirmation — it puts the app back. Hiding
+                            // asks first, because a hidden app is not in the list to be found
+                            // again by accident.
+                            if (entry.app.key in hiddenApps) onHideApp(entry.app, false)
+                            else hideConfirmFor = entry.app
+                        },
+                        isHidden = entry.app.key in hiddenApps,
+                        dimPausedApps = dimPausedApps,
+                        isLocked = entry.app.key in lockedApps,
+                        onToggleLock = { onToggleLock(entry.app) },
+                        onEditTag = { selecting = true; selectedKeys = setOf(entry.app.key) },
+                        onMoveToFolder = { onMoveToFolder(entry.app) },
+                    )
+                }
                 Box(
                     // Read in the draw phase on purpose: the scrub fade would otherwise
                     // recompose every visible row on every frame of the 180ms tween.
@@ -1248,62 +1340,22 @@ fun AppListScreen(
                         alpha = if (index in highlightRange) 1f else othersAlpha
                     },
                 ) {
-                when (row) {
-                    is AppListRow.Header -> SectionHeader(row.text, labelSizeSp, contentColor, alignment)
-                    is AppListRow.Entry -> AppRow(
-                        shortcutSwipe = shortcutSwipe,
-                        favoritesEditable = favoritesEditable,
-                        contentColor = contentColor,
-                        alignment = alignment,
-                        iconSide = iconSide,
-                        app = row.app,
-                        label = displayName(row.app),
-                        highlightTerm = searchTerm,
-                        iconSizeDp = iconSizeDp,
-                        labelSizeSp = labelSizeSp,
-                        isFavorite = favoriteKeys.contains(row.app.key),
-                        menuExpanded = menuForKey == row.app.key,
-                        menuOffset = menuOffset,
-                        touchPosition = touchPosition,
-                        onLaunch = {
-                            if (selecting) {
-                                selectedKeys = if (row.app.key in selectedKeys) {
-                                    selectedKeys - row.app.key
-                                } else {
-                                    selectedKeys + row.app.key
-                                }
-                            } else {
-                                onLaunch(row.app)
-                            }
-                        },
-                        selected = selecting && row.app.key in selectedKeys,
-                        // No long-press while picking apps to tag: the row menu on top of the
-                        // selection is what turns it into a mess.
-                        onLongPress = if (selecting) {
-                            null
-                        } else {
-                            { offset -> menuOffset = offset; menuForKey = row.app.key }
-                        },
-                        onDismissMenu = { menuForKey = null },
-                        onSetFavorite = { onSetFavorite(row.app, it) },
-                        onEdit = { editDialogFor = row.app },
-                        onAppInfo = { onAppInfo(row.app) },
-                        onUninstall = { onUninstall(row.app) },
-                        onUnpin = { onUnpinShortcut(row.app) },
-                        onHide = {
-                            // Unhiding is its own confirmation — it puts the app back. Hiding
-                            // asks first, because a hidden app is not in the list to be found
-                            // again by accident.
-                            if (row.app.key in hiddenApps) onHideApp(row.app, false)
-                            else hideConfirmFor = row.app
-                        },
-                        isHidden = row.app.key in hiddenApps,
-                        dimPausedApps = dimPausedApps,
-                        isLocked = row.app.key in lockedApps,
-                        onToggleLock = { onToggleLock(row.app) },
-                        onEditTag = { selecting = true; selectedKeys = setOf(row.app.key) },
-                        onMoveToFolder = { onMoveToFolder(row.app) },
-                    )
+                when (cell) {
+                    is CellRow.Header -> SectionHeader(cell.text, labelSizeSp, contentColor, alignment)
+                    is CellRow.One -> EntryCell(cell.entry)
+                    // Sideways two apps share the row, each taking half, so the columns stay
+                    // level. A group ending on an odd app leaves the half empty. Pulled
+                    // together by one side inset: two rows side by side otherwise double the
+                    // gutter in the middle (20 + 8 each) while the outer edges keep one.
+                    is CellRow.Two -> Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(-28.dp),
+                    ) {
+                        Box(Modifier.weight(1f)) { EntryCell(cell.left) }
+                        Box(Modifier.weight(1f)) {
+                            cell.right?.let { EntryCell(it) }
+                        }
+                    }
                 }
                 }
             }
@@ -1357,8 +1409,8 @@ fun AppListScreen(
                 onQueryChange = onQueryChange,
                 contentColor = contentColor,
                 onGo = {
-                    displayModel.rows
-                        .filterIsInstance<AppListRow.Entry>()
+                    cells.rows
+                        .flatMap { it.entries() }
                         .firstOrNull()
                         ?.let { onLaunch(it.app) }
                 },
@@ -1374,7 +1426,7 @@ fun AppListScreen(
         if (showAlphabet && !searching) {
             val stripSide = if (alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT
             AlphabetSpyStrip(
-                displayModel = displayModel,
+                cells = cells,
                 scrub = scrub,
                 listState = listState,
                 scrubY = scrubY,
@@ -1392,7 +1444,10 @@ fun AppListScreen(
         if (selecting) {
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainer,
-                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+                // Below the status bar rather than under it: parked at the very top it
+                // collided with the clock. The inset is zero while the bar is hidden.
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
+                    .statusBarsPadding(),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
@@ -1433,8 +1488,8 @@ fun AppListScreen(
         }
 
         if (showTagPicker) {
-            val selectedApps = displayModel.rows
-                .filterIsInstance<AppListRow.Entry>()
+            val selectedApps = cells.rows
+                .flatMap { it.entries() }
                 .map { it.app }
                 .filter { it.key in selectedKeys }
                 .distinctBy { it.key }
@@ -1873,7 +1928,7 @@ private fun AppRow(
  */
 @Composable
 private fun AlphabetSpyStrip(
-    displayModel: AppListModel,
+    cells: CellModel,
     scrub: ScrubState,
     listState: LazyListState,
     scrubY: () -> Float?,
@@ -1884,20 +1939,20 @@ private fun AlphabetSpyStrip(
     modifier: Modifier = Modifier,
 ) {
     val scrubLetter = scrub.letter
-    val end = remember(displayModel) { displayModel.alphabetEnd() }
+    val end = remember(cells) { cells.alphabetEnd() }
     fun letterAt(i: Int): String? =
         if (i < 0 || i >= end) null
-        else displayModel.letterIndex.lastOrNull { it.second <= i }?.first
+        else cells.letterIndex.lastOrNull { it.second <= i }?.first
     // Indices only, never offsets: offsets change per pixel and must not recompose
     // anything. The calculation re-runs per frame while scrolling but only notifies
     // when the letter set actually changes.
-    val visibleLetters by remember(displayModel) {
+    val visibleLetters by remember(cells) {
         derivedStateOf {
             listState.layoutInfo.visibleItemsInfo.mapNotNullTo(mutableSetOf()) { letterAt(it.index) }
         }
     }
     EdgeScrubber(
-        letters = displayModel.letters,
+        letters = cells.letters,
         scrubY = scrubY,
         pullPx = pullPx,
         band = band,

@@ -62,6 +62,7 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.TextColorMode
+import dev.delugelauncher.data.HapticFeedback
 import androidx.compose.ui.res.stringResource
 import dev.delugelauncher.R
 import dev.delugelauncher.data.folderIdFromToken
@@ -359,7 +360,7 @@ fun DelugeNavHost(
     val alignRight by app.prefs.alignRight.collectAsState(initial = false)
     val dimWallpaperAlpha by app.prefs.dimWallpaperAlpha.collectAsState(initial = 0.35f)
     val wallpaperBlurDp by app.prefs.wallpaperBlurDp.collectAsState(initial = 0)
-    val hapticsEnabled by app.prefs.hapticsEnabled.collectAsState(initial = true)
+    val hapticFeedback by app.prefs.hapticFeedback.collectAsState(initial = HapticFeedback.MEDIUM)
     val dimHomeAlpha by app.prefs.dimHomeAlpha.collectAsState(initial = 0f)
     val showFavoriteLabels by app.prefs.showFavoriteLabels.collectAsState(initial = true)
     val textColorMode by app.prefs.textColorMode.collectAsState(initial = TextColorMode.AUTO)
@@ -432,8 +433,12 @@ fun DelugeNavHost(
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
     val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
-    val pinchToResize by app.prefs.pinchToResize.collectAsState(initial = false)
+    val pinchToResize by app.prefs.pinchToResize.collectAsState(initial = true)
     val reduceMotion by app.prefs.reduceMotion.collectAsState(initial = false)
+    val homeTwoColumnPortrait by app.prefs.homeTwoColumnPortrait.collectAsState(initial = false)
+    val homeTwoColumnLandscape by app.prefs.homeTwoColumnLandscape.collectAsState(initial = true)
+    val listTwoColumnPortrait by app.prefs.listTwoColumnPortrait.collectAsState(initial = false)
+    val listTwoColumnLandscape by app.prefs.listTwoColumnLandscape.collectAsState(initial = true)
     val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
     // Built fresh each time the mode turns on and dropped when it turns off: nothing stored,
     // so switching off restores every name and icon by itself.
@@ -508,14 +513,17 @@ fun DelugeNavHost(
     // Follows the counts the way the usage sort does: whoever newly enters the top five gains
     // the tag, whoever falls out loses it, other tags untouched. Keyed on everything that
     // decides membership but not on the tags themselves, so writing them does not loop.
+    // A language switch changes the tag's own word: every other language's word is stripped
+    // first, or 常用 and Frequent stand side by side. Reserved words can only ever come from
+    // here (the picker refuses them), so sweeping them all is safe.
     LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
         if (!autoFrequentTag) return@LaunchedEffect
         val top = topFrequentKeys()
         appsByKey.values.forEach { a ->
             if (a.kind != EntryKind.APP) return@forEach
-            val current = appTags[a.key] ?: emptySet()
-            val want = if (a.key in top) current + frequentTag else current - frequentTag
-            if (want != current) app.prefs.setAppTags(a.key, want)
+            val current = (appTags[a.key] ?: emptySet<String>()) - RESERVED_TAGS
+            val want = if (a.key in top) current + frequentTag else current
+            if (want != (appTags[a.key] ?: emptySet<String>())) app.prefs.setAppTags(a.key, want)
         }
     }
     // The number the hidden-apps screen itself arrives at, rather than the size of the stored
@@ -703,13 +711,17 @@ fun DelugeNavHost(
         dimWallpaperAlpha = dimWallpaperAlpha,
         dimHomeAlpha = dimHomeAlpha,
         dimColor = dimColor,
-        hapticsEnabled = hapticsEnabled,
+        hapticFeedback = hapticFeedback,
         showFavoriteLabels = showFavoriteLabels,
         doubleTapToLock = doubleTapToLock,
         contentColor = contentColor,
         dimPausedApps = dimPausedApps,
         pinchToResize = pinchToResize,
         reduceMotion = reduceMotion,
+        homeTwoColumnPortrait = homeTwoColumnPortrait,
+        homeTwoColumnLandscape = homeTwoColumnLandscape,
+        listTwoColumnPortrait = listTwoColumnPortrait,
+        listTwoColumnLandscape = listTwoColumnLandscape,
     )
 
     var pendingIconTarget by remember { mutableStateOf<String?>(null) }
@@ -959,7 +971,7 @@ fun DelugeNavHost(
                 hideStatusBarAppList = hideStatusBarAppList,
                 statusBarPeekSeconds = statusBarPeekSeconds,
                 dimWallpaperAlpha = dimWallpaperAlpha,
-                hapticsEnabled = hapticsEnabled,
+                hapticFeedback = hapticFeedback,
                 dimHomeAlpha = dimHomeAlpha,
                 showFavoriteLabels = showFavoriteLabels,
                 screenshotMode = screenshotMode,
@@ -1000,7 +1012,7 @@ fun DelugeNavHost(
                 onSetDimWallpaper = { scope.launch { app.prefs.setDimWallpaperAlpha(it) } },
                 wallpaperBlurDp = wallpaperBlurDp,
                 onSetWallpaperBlur = { scope.launch { app.prefs.setWallpaperBlurDp(it) } },
-                onSetHaptics = { scope.launch { app.prefs.setHapticsEnabled(it) } },
+                onSetHapticFeedback = { scope.launch { app.prefs.setHapticFeedback(it) } },
                 onSetDimHome = { scope.launch { app.prefs.setDimHomeAlpha(it) } },
                 onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
                 onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
@@ -1050,6 +1062,11 @@ fun DelugeNavHost(
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
                 autoFrequentTag = autoFrequentTag,
+                homeTwoColumnPortrait = homeTwoColumnPortrait,
+                homeTwoColumnLandscape = homeTwoColumnLandscape,
+                listTwoColumnPortrait = listTwoColumnPortrait,
+                listTwoColumnLandscape = listTwoColumnLandscape,
+                onSetTwoColumn = { slot, v -> scope.launch { app.prefs.setTwoColumn(slot, v) } },
                 onSetAutoFrequentTag = {
                     scope.launch {
                         // Turning it off takes its tags back with it: they were its doing,

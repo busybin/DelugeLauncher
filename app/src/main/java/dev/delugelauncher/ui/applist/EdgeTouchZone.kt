@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.service.HapticUtil
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -74,7 +75,7 @@ fun EdgeTouchZone(
     holdScroll: Boolean,
     /** How much of the very edge is left to the system's own gestures. */
     insetDp: Dp,
-    hapticsEnabled: Boolean,
+    hapticFeedback: HapticFeedback,
     state: ScrubState,
     /** Whether the app list is already showing, so a tap on the strip knows which it is. */
     listOpen: Boolean,
@@ -113,7 +114,7 @@ fun EdgeTouchZone(
                         .height((band.heightPx / density).dp)
                 }
             )
-            .pointerInput(letters, band, hapticsEnabled, fromLeft, bandOnly) {
+            .pointerInput(letters, band, hapticFeedback, fromLeft, bandOnly) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
                     down.consume()
@@ -154,7 +155,7 @@ fun EdgeTouchZone(
                         val index = ScrubberGeometry.indexForY(y, band.topPx, band.heightPx, letters.size)
                         if (enteredBand && index != lastIndex) {
                             lastIndex = index
-                            HapticUtil.tick(view, hapticsEnabled)
+                            HapticUtil.tick(view, hapticFeedback)
                         }
                         // Past the top of the letters by more than a thumb's width. Only
                         // the top dismisses: scrubbing down to Z and lifting off the bottom
@@ -167,7 +168,7 @@ fun EdgeTouchZone(
                             armedToClose = off
                             // Said out loud, or nothing tells you that letting go now does
                             // something other than what it did a moment ago.
-                            HapticUtil.tick(view, hapticsEnabled)
+                            HapticUtil.tick(view, hapticFeedback)
                         }
                         // How far the finger has pulled in toward the middle of the screen.
                         val inward = if (fromLeft) x - size.width else -x

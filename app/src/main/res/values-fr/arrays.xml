@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Accueil et liste en double colonne verticale/horizontale ; paires nivelées.</item>
+        <item>Intensité : off/léger/moyen/fort.</item>
+        <item>Pincement activé ; l’aperçu met ses lettres à l’échelle.</item>
+        <item>Les favoris changent le fond par appui long.</item>
+        <item>Au changement de langue Fréquentes converge ; menus sans doublon ; la barre évite la barre d’état.</item>
+        <item>Le journal suit la langue ; toucher le nom ouvre le projet.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>La recherche trouve les applis en pinyin — initiales comme épellation — le match surligné.</item>
         <item>Les étiquettes regroupent les applis à travers l’alphabet : sections en haut, trois lettres dans la bande, multisélection depuis l’existant.</item>

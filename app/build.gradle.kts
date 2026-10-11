@@ -33,8 +33,8 @@ android {
         // versionCode carries the same number and is what the system compares, so both move
         // together. A build with a lower number than the installed one is refused as a
         // downgrade, which is why this pair is only ever raised.
-        versionCode = 20
-        versionName = "V20"
+        versionCode = 21
+        versionName = "V21"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

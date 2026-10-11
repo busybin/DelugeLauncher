@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Home e lista con doppia colonna verticale/orizzontale; coppie livellate.</item>
+        <item>Intensità: off/leggera/media/forte.</item>
+        <item>Pizzico attivo; l’anteprima scala le sue lettere.</item>
+        <item>I preferiti cambiano lo sfondo con pressione lunga.</item>
+        <item>Al cambio lingua Frequenti converge; menu senza duplicati; la barra evita la barra di stato.</item>
+        <item>Il registro segue la lingua; toccare il nome apre il progetto.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>La ricerca trova le app in pinyin — iniziali e per intero — con l’esito evidenziato.</item>
         <item>Le etichette raccolgono app oltre l’alfabeto: sezioni in alto, tre lettere nella striscia, multiselezione dall’esistente.</item>

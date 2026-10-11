@@ -83,8 +83,6 @@ fun BandEditOverlay(
 ) {
     val density = LocalDensity.current
     val minHeightPx = with(density) { MIN_BAND_HEIGHT.toPx() }
-    // Half a line, so a letter's middle lands on the position the strip would give it.
-    val lineHalfPx = with(density) { 8.dp.toPx() }
     val alignment = if (side == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd
 
     val viewportPx = viewportHeightPx.toFloat()
@@ -148,8 +146,16 @@ fun BandEditOverlay(
             // The letters themselves, spread the way the strip will spread them. A plain block
             // says how tall the band is and nothing about what that height buys; laid out like
             // this, a range too short to read is obvious while it is being set rather than
-            // afterwards.
+            // afterwards. The font owns no more than its own cell: full size while it fits,
+            // smaller as the band shrinks, and past that every kth letter — positions stay
+            // truthful, only the unreadable in-between is skipped instead of overprinting.
+            val cellDp = if (letters.isEmpty()) 0f else
+                with(density) { (band.heightPx / letters.size).toDp().value }
+            val stride = (8f / cellDp.coerceAtLeast(0.01f)).toInt().coerceIn(1, 8)
+            val fontSp = (cellDp * 0.8f).coerceIn(8f, 13f)
+            val halfPx = with(density) { (fontSp.dp.toPx() / 2f) }
             letters.forEachIndexed { index, letter ->
+                if (index % stride != 0) return@forEachIndexed
                 val centerY = ScrubberGeometry.letterCenterY(
                     index,
                     0f,
@@ -157,12 +163,15 @@ fun BandEditOverlay(
                     letters.size,
                 )
                 Text(
-                    text = letter.toString(),
-                    fontSize = 13.sp,
+                    text = letter,
+                    // Three-character tags are wider than they are tall; a full-size one
+                    // would run past the band's edges into the handles.
+                    fontSize = (if (letter.length == 1) fontSp else fontSp * 0.72f).sp,
+                    maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .offset { IntOffset(0, (centerY - lineHalfPx).roundToInt()) },
+                        .offset { IntOffset(0, (centerY - halfPx).roundToInt()) },
                 )
             }
         }

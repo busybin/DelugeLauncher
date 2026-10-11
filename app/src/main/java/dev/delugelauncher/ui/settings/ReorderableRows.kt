@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import dev.delugelauncher.R
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.service.HapticUtil
 import kotlin.math.roundToInt
 
@@ -94,7 +95,7 @@ fun ReorderableRows(
                                 onDragStart = {
                                     // The row does not move until the finger does, so a tick
                                     // is the only confirmation that the grab took.
-                                    HapticUtil.tick(view, true)
+                                    HapticUtil.tick(view, HapticFeedback.MEDIUM)
                                     draggingIndex = index
                                     dragOffset = 0f
                                 },
@@ -120,7 +121,7 @@ fun ReorderableRows(
                                         // is drawn at has to come back by as much.
                                         dragOffset -= (to - from) * rowPx
                                         draggingIndex = to
-                                        HapticUtil.tick(view, true)
+                                        HapticUtil.tick(view, HapticFeedback.MEDIUM)
                                     }
                                 }
                             }

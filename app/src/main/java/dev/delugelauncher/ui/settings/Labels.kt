@@ -13,6 +13,7 @@ import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.TextColorMode
+import dev.delugelauncher.data.HapticFeedback
 
 /**
  * Display labels for the settings chips.
@@ -21,6 +22,14 @@ import dev.delugelauncher.data.TextColorMode
  * settings screen partly untranslatable — and tied user-visible text to identifiers that
  * exist for the code's benefit.
  */
+@StringRes
+fun HapticFeedback.labelRes(): Int = when (this) {
+    HapticFeedback.OFF -> R.string.haptic_off
+    HapticFeedback.LIGHT -> R.string.haptic_light
+    HapticFeedback.MEDIUM -> R.string.haptic_medium
+    HapticFeedback.STRONG -> R.string.haptic_strong
+}
+
 @StringRes
 fun AppFont.labelRes(): Int = when (this) {
     AppFont.SYSTEM -> R.string.font_system

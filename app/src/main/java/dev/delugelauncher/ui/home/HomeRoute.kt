@@ -87,6 +87,7 @@ import dev.delugelauncher.ui.applist.EdgeTouchZone
 import dev.delugelauncher.ui.applist.ScrubBand
 import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.ui.common.FolderPickerDialog
@@ -738,12 +739,14 @@ fun HomeRoute(
                 onSetWidgetOffsetX = { scope.launch { app.prefs.setWidgetOffsetXDp(it) } },
                 paddings = homePaddings,
                 widgetIds = widgetIds,
+                homeTwoColumnPortrait = settings.homeTwoColumnPortrait,
+                homeTwoColumnLandscape = settings.homeTwoColumnLandscape,
                 disguiseNames = disguiseNames,
                 folderDisguise = folderDisguise,
                 widgetPosition = widgetPosition,
                 widgetHeightDp = widgetHeightDp,
                 widgetTick = widgetTick,
-                hapticsEnabled = settings.hapticsEnabled,
+                hapticFeedback = settings.hapticFeedback,
                 nowPlayingEnabled = settings.nowPlayingEnabled,
                 nowPlayingHeightDp = settings.nowPlayingHeightDp,
                 onResizeNowPlaying = { scope.launch { app.prefs.setNowPlayingHeightDp(it) } },
@@ -895,6 +898,25 @@ fun HomeRoute(
                 // Same lock as the edge strip's double tap, on bare wallpaper instead.
                 onDoubleTapBackground = if (settings.doubleTapToLock) ({ lockOrExplain() }) else null,
                 onManageFavorites = { onNavigate("favorites") },
+                onChangeWallpaper = {
+                    // The system's own picker, not one drawn here: choosing and cropping are
+                    // its job, and some phones have no handler at all — which is told, not
+                    // silently swallowed.
+                    val started = runCatching {
+                        context.startActivity(
+                            Intent(Intent.ACTION_SET_WALLPAPER)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                        true
+                    }.getOrDefault(false)
+                    if (!started) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.wallpaper_no_picker),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
                 onSetName = { appInfo, name -> scope.launch { app.prefs.setNameOverride(appInfo.key, name) } },
                 onChangeIcon = { appInfo -> onNavigate(iconPickerRoute(appInfo.key)) },
                 onAppInfo = { app.appRepository.openAppInfo(it) },
@@ -997,6 +1019,8 @@ fun HomeRoute(
                 dimOthers = settings.dimOthersScrubbing,
                 markWorkApps = settings.markWorkApps,
                 disguiseNames = disguiseNames,
+                listTwoColumnPortrait = settings.listTwoColumnPortrait,
+                listTwoColumnLandscape = settings.listTwoColumnLandscape,
                 textShadow = settings.textShadow,
                 textShadowStrength = settings.textShadowStrength,
                 // Offered only where something can take it, or the row is a dead end.
@@ -1133,7 +1157,7 @@ fun HomeRoute(
                     band = band,
                     bandOnly = settings.edgeZoneBandOnly,
                     holdScroll = settings.holdScroll,
-                    hapticsEnabled = settings.hapticsEnabled,
+                    hapticFeedback = settings.hapticFeedback,
                     state = scrub,
                     listOpen = appListVisible,
                     onDismiss = { closeAppList() },
@@ -1220,7 +1244,7 @@ data class HomeSettings(
     val dimWallpaperAlpha: Float,
     val dimHomeAlpha: Float,
     val dimColor: Int,
-    val hapticsEnabled: Boolean,
+    val hapticFeedback: HapticFeedback,
     val showFavoriteLabels: Boolean,
     val doubleTapToLock: Boolean,
     val contentColor: Color,
@@ -1230,6 +1254,12 @@ data class HomeSettings(
     val pinchToResize: Boolean,
     /** Whether the launcher's own transitions are skipped. */
     val reduceMotion: Boolean,
+    /** Two favorites per home row, upright and sideways separately. */
+    val homeTwoColumnPortrait: Boolean,
+    val homeTwoColumnLandscape: Boolean,
+    /** Two apps per list row, upright and sideways separately. */
+    val listTwoColumnPortrait: Boolean,
+    val listTwoColumnLandscape: Boolean,
 )
 
 /** How long a private space unlock has to put the system's lock screen up before giving up. */

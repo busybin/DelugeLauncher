@@ -103,6 +103,8 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
+import android.content.res.Configuration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
@@ -111,6 +113,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.ShortcutSwipe
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.QuickLaunchSlot
@@ -220,6 +223,9 @@ fun HomeScreen(
     onSetWidgetOffsetX: (Int) -> Unit,
     paddings: HomePaddings,
     widgetIds: List<Int>,
+    /** Two favorites per home row, upright and sideways separately. */
+    homeTwoColumnPortrait: Boolean,
+    homeTwoColumnLandscape: Boolean,
     /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
     disguiseNames: Map<String, String>,
     /** Folder cover names by folder id while the screenshot disguise is on; empty otherwise. */
@@ -228,7 +234,7 @@ fun HomeScreen(
     widgetHeightDp: Int,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
     widgetTick: Int,
-    hapticsEnabled: Boolean,
+    hapticFeedback: HapticFeedback,
     nowPlayingEnabled: Boolean,
     nowPlayingHeightDp: Int,
     onResizeNowPlaying: (Int) -> Unit,
@@ -281,6 +287,8 @@ fun HomeScreen(
      */
     onDoubleTapBackground: (() -> Unit)?,
     onManageFavorites: () -> Unit,
+    /** Hands the wallpaper to the system's own picker; nothing is drawn or stored here. */
+    onChangeWallpaper: () -> Unit,
     onSetName: (AppInfo, String?) -> Unit,
     onChangeIcon: (AppInfo) -> Unit,
     onAppInfo: (AppInfo) -> Unit,
@@ -741,7 +749,13 @@ fun HomeScreen(
                 // the A-Z strip ends up a hand's width from the names it is scrubbing. The cap
                 // only bites on a screen wider than a phone held upright, so nothing moves on
                 // one that is not.
-                .widthIn(max = MAX_CONTENT_WIDTH)
+                .widthIn(
+                    max = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                        MAX_CONTENT_WIDTH_LANDSCAPE
+                    } else {
+                        MAX_CONTENT_WIDTH
+                    }
+                )
                 .align(alignment.wideScreenAlignment())
                 .fillMaxWidth()
                 .then(
@@ -892,7 +906,35 @@ fun HomeScreen(
             // a static local: a fresh instance each composition would invalidate every row
             // under it on every frame.
             CompositionLocalProvider(LocalIconConfig provides favoriteIconConfig) {
-            displayItems.forEachIndexed { index, item ->
+            // Two favorites share a row when asked, each taking half, so the columns stay
+            // level. Widgets always stand alone, and edit mode pairs nothing: reordering
+            // across pairs would fight the swap logic, so it edits single-column.
+            val homeLandscape =
+                LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+            val homeTwoColumn =
+                (if (homeLandscape) homeTwoColumnLandscape else homeTwoColumnPortrait) && !editMode
+            val homeCells: List<List<Pair<HomeItem, Int>>> =
+                remember(displayItems, homeTwoColumn) {
+                    if (!homeTwoColumn) {
+                        displayItems.mapIndexed { i, item -> listOf(item to i) }
+                    } else {
+                        buildList {
+                            var i = 0
+                            while (i < displayItems.size) {
+                                val item = displayItems[i]
+                                val next = displayItems.getOrNull(i + 1)
+                                if (item !is HomeItem.Widget && next != null && next !is HomeItem.Widget) {
+                                    add(listOf(item to i, next to (i + 1)))
+                                    i += 2
+                                } else {
+                                    add(listOf(item to i))
+                                    i++
+                                }
+                            }
+                        }
+                    }
+                }
+            val renderItem: @Composable (Int, HomeItem) -> Unit = { index, item ->
                 // Identified by which row it is, not by where it sits. Without this, rows in a
                 // loop are matched up by position from one composition to the next: reordering
                 // feeds different data into the same node rather than moving the node. Two apps
@@ -926,7 +968,7 @@ fun HomeScreen(
                                     // The handle is small and the row does not move until the
                                     // finger does, so a tick is the only confirmation that the
                                     // grab took.
-                                    HapticUtil.tick(view, hapticsEnabled)
+                                    HapticUtil.tick(view, hapticFeedback)
                                     dragOrder = items
                                     draggingIndex = at
                                     dragOffset = 0f
@@ -1166,6 +1208,21 @@ fun HomeScreen(
                 }
                 }
             }
+            homeCells.forEach { pair ->
+                if (pair.size == 1) {
+                    renderItem(pair[0].second, pair[0].first)
+                } else {
+                    // Pulled together by one side padding: two rows side by side otherwise
+                    // double the gutter in the middle while the outer edges keep one.
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy((-sidePaddingDp).dp),
+                    ) {
+                        Box(Modifier.weight(1f)) { renderItem(pair[0].second, pair[0].first) }
+                        Box(Modifier.weight(1f)) { renderItem(pair[1].second, pair[1].first) }
+                    }
+                }
+            }
             }
         }
 
@@ -1227,6 +1284,11 @@ fun HomeScreen(
                 text = { Text(stringResource(R.string.home_choose_favorites)) },
                 leadingIcon = { Icon(DelugeIcons.Checklist, contentDescription = null) },
                 onClick = { backgroundMenu = false; onManageFavorites() },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_change_wallpaper)) },
+                leadingIcon = { Icon(DelugeIcons.Wallpaper, contentDescription = null) },
+                onClick = { backgroundMenu = false; onChangeWallpaper() },
             )
             HorizontalDivider()
             DropdownMenuItem(
@@ -1921,6 +1983,9 @@ private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
  * a phone on its side keeps rows that are readable rather than a name at one edge and its icon
  * at the other.
  */
+/** How wide the home stack may run sideways, where two favorites share a row. */
+private val MAX_CONTENT_WIDTH_LANDSCAPE = 1000.dp
+
 private val MAX_CONTENT_WIDTH = 600.dp
 
 /**

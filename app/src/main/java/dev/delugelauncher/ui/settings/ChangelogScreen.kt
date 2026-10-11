@@ -38,6 +38,7 @@ data class Release(val version: String, val notesRes: Int)
 
 /** Newest first. Add an entry only when a version is actually being cut. */
 val CHANGELOG: List<Release> = listOf(
+    Release("V21", R.array.changelog_v21),
     Release("V20", R.array.changelog_v20),
     Release("V19", R.array.changelog_v19),
     Release("First fork releases", R.array.changelog_first),

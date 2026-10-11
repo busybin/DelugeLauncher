@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>主页和列表各有竖屏/横屏双列开关，配对行保持齐平。</item>
+        <item>震动强度：关/轻/中/重。</item>
+        <item>双指缩放图标默认开启；范围预览字母动态缩放。</item>
+        <item>收藏页长按可换壁纸。</item>
+        <item>切换语言时常用标签自动收敛；标签菜单不再重叠；多选栏避让状态栏。</item>
+        <item>更新日志跟随语言；点应用名打开项目页。</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>搜索支持拼音——首字母和全拼都能搜，命中处高亮。</item>
         <item>应用标签可跨字母表分组：顶部独立分组、字母条显示三字，多选打标并提供已有标签。</item>

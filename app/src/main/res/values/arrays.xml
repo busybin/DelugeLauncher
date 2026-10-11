@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v21">
+        <item>Home and list each get portrait and landscape two-column switches; paired rows stay level.</item>
+        <item>Haptic strength: off, light, medium, strong.</item>
+        <item>Pinch-to-resize icons is on by default; the strip-range preview scales its letters.</item>
+        <item>Home long-press can change the wallpaper.</item>
+        <item>The Frequent tag converges when the language changes; tag menus no longer double; the tag picker clears the status bar.</item>
+        <item>The changelog follows the language; tapping the app name opens the project page.</item>
+    </string-array>
     <string-array name="changelog_v20">
         <item>Search finds apps by pinyin — initials and full spelling — with the match highlighted.</item>
         <item>App tags group apps across the alphabet: sections on top, three letters in the strip, multi-select tagging with existing tags offered.</item>

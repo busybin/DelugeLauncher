@@ -15,6 +15,109 @@ internal const val RECENT_SECTION = "recent"
 /** The row key a tag group's entries carry, so the same app under a tag does not clash. */
 internal fun tagSectionToken(label: String) = "tag:$label"
 
+/**
+ * One laid-out row of the list. Portrait holds one app per row; sideways two share one,
+ * so the two columns stay level instead of one running long.
+ */
+@Immutable
+sealed interface CellRow {
+    data class Header(val text: String) : CellRow
+    data class One(val entry: AppListRow.Entry) : CellRow
+    data class Two(val left: AppListRow.Entry, val right: AppListRow.Entry?) : CellRow
+
+    fun entries(): List<AppListRow.Entry> = when (this) {
+        is Header -> emptyList()
+        is One -> listOf(entry)
+        is Two -> listOfNotNull(left, right)
+    }
+}
+
+/**
+ * The model as laid out: same shape as [AppListModel], so everything that reads letter
+ * indices and row positions — scrub placement, spy, gaps — works off this untouched.
+ */
+@Immutable
+data class CellModel(
+    val rows: List<CellRow>,
+    val letterIndex: List<Pair<String, Int>>,
+    val alphabetStart: Int = 0,
+) {
+    val letters: List<String> = letterIndex.map { it.first }
+}
+
+/**
+ * Pairs neighboring entries that belong together — same letter, same section — and leaves
+ * everything else (headings, loners at a group's end) one to a row. Pairing across a group
+ * boundary would sit strangers side by side and break the letter index.
+ */
+fun AppListModel.toCells(twoColumn: Boolean): CellModel {
+    if (!twoColumn) {
+        return CellModel(
+            rows = rows.map { row ->
+                when (row) {
+                    is AppListRow.Header -> CellRow.Header(row.text)
+                    is AppListRow.Entry -> CellRow.One(row)
+                }
+            },
+            letterIndex = letterIndex,
+            alphabetStart = alphabetStart,
+        )
+    }
+    fun groupOf(index: Int): String {
+        val row = rows[index]
+        if (row is AppListRow.Entry && row.section != null) return "s:${row.section}"
+        return "l:${letterIndex.lastOrNull { it.second <= index }?.first}"
+    }
+    val cellRows = mutableListOf<CellRow>()
+    val cellIndex = mutableListOf<Pair<String, Int>>()
+    var alphaStart = 0
+    fun recordLetter(at: Int) {
+        letterIndex.forEach { (letter, row) ->
+            if (row == at) cellIndex += letter to cellRows.size
+        }
+    }
+    var i = 0
+    while (i < rows.size) {
+        if (i == alphabetStart) alphaStart = cellRows.size
+        // Every row, heading or not: a letter is anchored at its heading, and only
+        // recording entries dropped every one of them — an empty index, no strip, and a
+        // highlight range that hid every row the moment a scrub began.
+        recordLetter(i)
+        when (val row = rows[i]) {
+            is AppListRow.Header -> {
+                cellRows += CellRow.Header(row.text)
+                i++
+            }
+            is AppListRow.Entry -> {
+                val next = rows.getOrNull(i + 1)
+                if (next is AppListRow.Entry && groupOf(i + 1) == groupOf(i)) {
+                    recordLetter(i + 1)
+                    cellRows += CellRow.Two(row, next)
+                    i += 2
+                } else {
+                    cellRows += CellRow.One(row)
+                    i++
+                }
+            }
+        }
+    }
+    return CellModel(cellRows, cellIndex, alphaStart)
+}
+
+fun CellModel.alphabetEnd(): Int {
+    // From where the alphabet begins: tag groups sit above it, and scanning from row zero
+    // would stop at the first tag and leave the whole strip unlit.
+    for (i in alphabetStart until rows.size) {
+        when (val row = rows[i]) {
+            is CellRow.Header -> if (row.text.length != 1) return i
+            is CellRow.One -> if (row.entry.section != null) return i
+            is CellRow.Two ->
+                if (row.left.section != null || row.right?.section != null) return i
+        }
+    }
+    return rows.size
+}
+
 /** A tag's stand-in for the strip; the heading shows the whole tag. */
 internal fun tagStripLabel(label: String): String =
     label.trim().take(STRIP_LABEL_CHARS)
@@ -68,6 +171,8 @@ data class AppListModel(
  * First row index past the A-Z alphabet: the private and recent sections belong to no
  * letter and must never light one up. A letter's heading is its own single character;
  * a section heading is a word, and an appended app carries its section along.
+ *
+ * Only the cell layout is ever drawn, so only it is ever asked; this stays for the tests.
  */
 fun AppListModel.alphabetEnd(): Int {
     // From where the alphabet begins: tag groups sit above it, and scanning from row zero would

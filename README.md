@@ -10,6 +10,10 @@ reaching the app list and a letter with one thumb — icons cached on disk, unne
 dependencies dropped, and the A-Z strip, edge gestures and row swipes made to behave
 under a real finger. Everything else is upstream's design, kept as it was.
 
+| Home | App list | Scrubbing | Long-press menu |
+| ---- | -------- | --------- | --------------- |
+| ![Home](screenshots/home.png) | ![App list](screenshots/app-list.png) | ![Scrubbing](screenshots/scrub.png) | ![Long-press menu](screenshots/menu.png) |
+
 ## What this fork changes
 
 - **Faster to open.** Icons are cached on disk, so the second launch reads bytes instead
@@ -28,7 +32,7 @@ under a real finger. Everything else is upstream's design, kept as it was.
 - **A lock per app.** Opening one asks for the screen lock; the long-press menu also
   uninstalls, hides with confirmation, and paused apps grey out live.
 - **Favorites reach the edge.** The home list runs full-bleed like the app list and
-  scrolls fully into view.
+  scrolls fully into view. Either one can pair rows into two columns, upright or sideways.
 - Folder rows say how many apps they hold and whether they are open.
 - Widget height follows the widget itself, unless you set it by hand. Widgets refresh
   when their app freezes and unfreezes, and a frozen one is never cleaned away.
@@ -39,16 +43,6 @@ under a real finger. Everything else is upstream's design, kept as it was.
 
 Plus a number of smaller fixes and additions along the way. The in-app changelog
 (Settings → About → Changelog) has the release-by-release list.
-
-## Screenshots
-
-| Home | App list |
-| ---- | -------- |
-| ![Home](screenshots/home.png) | ![App list](screenshots/app-list.png) |
-
-| Scrubbing | Long-press menu |
-| --------- | --------------- |
-| ![Scrubbing](screenshots/scrub.png) | ![Long-press menu](screenshots/menu.png) |
 
 ## Install
 
