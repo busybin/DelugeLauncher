@@ -7,6 +7,9 @@ import android.net.Uri
 import android.util.LruCache
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -293,6 +296,13 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
     val config = LocalIconConfig.current
     // Nothing drawn and no space taken, so rows close up rather than leaving a hole.
     if (!config.showIcons) return
+    // Screenshot disguise: a plain initial tile in the fake name's color, and no badge — a
+    // count would say which app this really is. Nothing is loaded, so there is nothing of
+    // the real icon left to recognise.
+    LocalScreenshotNames.current?.get(app.key)?.let { fake ->
+        ScreenshotTile(name = fake, sizeDp = sizeDp, modifier = modifier)
+        return
+    }
     val iconPackPackage = config.pack
     val overrideValue = config.overrides[app.key]
     val px = with(LocalDensity.current) { sizeDp.dp.roundToPx() }.coerceAtLeast(1)
@@ -336,6 +346,31 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
             )
         }
         if (badge > 0) NotificationBadge(badge, sizeDp, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/**
+ * The disguise tile: the fake name's initial on its color. Deliberately plain — anything
+ * drawn from the real icon would still be recognisable, and anything borrowed from another
+ * installed app would never match the name beside it.
+ */
+@Composable
+private fun ScreenshotTile(name: String, sizeDp: Int, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .size(sizeDp.dp)
+            .background(
+                color = Color(ScreenshotDisguise.tileColor(name)),
+                shape = RoundedCornerShape(28),
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = name.firstOrNull()?.uppercase() ?: "",
+            color = Color.White.copy(alpha = 0.95f),
+            fontSize = (sizeDp * 0.42f).sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
 

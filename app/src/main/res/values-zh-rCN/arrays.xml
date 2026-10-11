@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>搜索支持拼音——首字母和全拼都能搜，命中处高亮。</item>
+        <item>应用标签可跨字母表分组：顶部独立分组、字母条显示三字，多选打标并提供已有标签。</item>
+        <item>常用标签自动跟随使用频率，可关闭并收回已打标签；手动打常用会被拒绝。</item>
+        <item>单个应用可加锁，打开时验证锁屏，名字旁有锁标记；解锁时系统允许则一并解暂停。</item>
+        <item>长按菜单新增卸载；隐藏应用先确认；暂停的应用实时变灰。</item>
+        <item>收藏页像应用列表一样顶边显示、可完整滚到底，还多留三行余量。</item>
+        <item>滑过 Z 松手停在 Z；列表底部滑过头只回弹，不再关闭。</item>
+        <item>字母条默认居下半屏（横屏占满）；配色选择器是五列纯色网格。</item>
+        <item>设置返回键（含系统返回）回到来时的二级菜单；设置搜索能找到所有条目。</item>
+        <item>应用冻结/解冻时组件即时刷新，冻结中的组件不会被清理掉。</item>
+        <item>新增夜间深色主题、壁纸模糊、双指缩放图标、减少动画。</item>
+        <item>备份覆盖全部设置（含语言）；隐私空间内容不进备份。</item>
+        <item>关于页首行是应用名，点按打开项目主页；更新日志跟随语言。</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>设置中可选择语言——10 种语言加繁体中文。</item>
+        <item>字母条跟随应用列表对齐方向；切换语言后停在原页面。</item>
+        <item>显示状态栏时主屏内容不再被压住。</item>
+        <item>新增设为默认桌面提示卡，可永久关闭。</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>更名 Deluge Launcher，蓝色主题与新图标。</item>
+        <item>应用列表顶边显示，滚动时字母条高亮所有在屏字母。</item>
+        <item>修复斜滑卡死列表的问题。</item>
+        <item>修复回桌面图标空白与两秒黑屏。</item>
+        <item>冷启动更快：图标磁盘缓存。</item>
+        <item>文件夹行显示成员数与展开状态。</item>
+        <item>组件高度自动跟随；备份残留的死组件自动清理。</item>
+        <item>快捷滑动只响应横滑，滚动不再被抢。</item>
+        <item>移除导航库，改用自研路由。</item>
+    </string-array>
+</resources>

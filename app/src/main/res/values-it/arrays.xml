@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>La ricerca trova le app in pinyin — iniziali e per intero — con l’esito evidenziato.</item>
+        <item>Le etichette raccolgono app oltre l’alfabeto: sezioni in alto, tre lettere nella striscia, multiselezione dall’esistente.</item>
+        <item>Frequenti segue l’uso da sola, si spegne e riprende le sue; messa a mano, rifiutata.</item>
+        <item>Blocco per app con il blocco del telefono, lucchetto al nome; sbloccare toglie la pausa dove il sistema vuole.</item>
+        <item>Il menu lungo disinstalla; nascondere chiede prima; la pausa si attenua in diretta.</item>
+        <item>Preferiti al bordo come la lista, scorsi fino in fondo con margine d’avanzo.</item>
+        <item>Mollare oltre Z resta su Z; sforare in basso fa solo rimbalzo.</item>
+        <item>La striscia riposa in basso (piena in orizzontale); tavolozza in griglia unita di cinque colonne.</item>
+        <item>Indietro nelle impostazioni torna alla sezione da cui si veniva, indietro di sistema incluso; la ricerca trova ogni riga.</item>
+        <item>I widget seguono gelo e disgelo subito, e da gelati non si puliscono mai.</item>
+        <item>Tema scuro notturno, sfocatura sfondo, pizzico per le icone, meno movimento.</item>
+        <item>I backup coprono tutto, lingua compresa; il privato resta fuori.</item>
+        <item>Info comincia col nome — toccare apre il progetto; il registro segue la lingua.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Lingua a scelta nelle impostazioni — 10 lingue più il cinese tradizionale.</item>
+        <item>La striscia A–Z segue l’allineamento; dopo un cambio resti dove eri.</item>
+        <item>Barra visibile, più niente sotto.</item>
+        <item>Scheda per diventare la home, da buttare per sempre.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Rinominato Deluge Launcher, tema blu e icona nuova.</item>
+        <item>Lista app al bordo; scorrendo si accende ogni lettera a schermo.</item>
+        <item>Scorrimento riparato — i gesti in diagonale non lo bloccano più.</item>
+        <item>Icone vuote e due secondi di nero al ritorno riparati.</item>
+        <item>Avvio più rapido: cache icone su disco.</item>
+        <item>Le righe cartella dicono quante e se aperte.</item>
+        <item>L’altezza segue il widget; i morti dei backup si puliscono da soli.</item>
+        <item>Scorciatoie solo col gesto laterale; lo scorrere non si ruba mai.</item>
+        <item>Libreria di navigazione fuori, router di casa dentro.</item>
+    </string-array>
+</resources>

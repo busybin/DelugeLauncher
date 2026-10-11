@@ -16,6 +16,9 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -59,6 +62,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -106,7 +110,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.delugelauncher.data.AppInfo
-import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.Folder
@@ -131,6 +134,8 @@ import dev.delugelauncher.ui.common.recordTouchPosition
 import dev.delugelauncher.widget.WidgetSlot
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import dev.delugelauncher.R
@@ -175,12 +180,6 @@ private fun buildHomeItems(
 
 @Composable
 fun HomeScreen(
-    /** The side an always-present A-Z strip occupies, so content can keep out from under it. */
-    stripInsetSide: EdgeSide?,
-    /** The side or sides the invisible edge zone is live on, drawn or not. */
-    edgeZoneSide: EdgeSide,
-    /** How far in from the screen edge that zone reaches, its own gap included. */
-    edgeZoneExtentDp: Int,
     /** Bumped when HOME is pressed on a home screen already showing. */
     homeIntentTick: Int,
     /** Whether opening an app from inside a folder closes the folder behind it. */
@@ -221,8 +220,14 @@ fun HomeScreen(
     onSetWidgetOffsetX: (Int) -> Unit,
     paddings: HomePaddings,
     widgetIds: List<Int>,
+    /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
+    disguiseNames: Map<String, String>,
+    /** Folder cover names by folder id while the screenshot disguise is on; empty otherwise. */
+    folderDisguise: Map<String, String>,
     widgetPosition: Int,
     widgetHeightDp: Int,
+    /** Bumped on every package event, so frozen and unfrozen providers re-read. */
+    widgetTick: Int,
     hapticsEnabled: Boolean,
     nowPlayingEnabled: Boolean,
     nowPlayingHeightDp: Int,
@@ -245,6 +250,14 @@ fun HomeScreen(
     nowPlayingHasContent: Boolean,
     contentColor: Color,
     showFavoriteLabels: Boolean,
+    dimPausedApps: Boolean,
+    /** Whether a two-finger pinch resizes the icons. */
+    pinchToResize: Boolean,
+    /** Commits a size chosen by pinching; the settings slider writes the same value. */
+    onSetIconSize: (Int) -> Unit,
+    /** Keys that ask for the device lock before opening. */
+    lockedApps: Set<String>,
+    onToggleLock: (AppInfo) -> Unit,
     alignment: HomeAlignment,
     iconSide: IconSide,
     editMode: Boolean,
@@ -271,6 +284,7 @@ fun HomeScreen(
     onSetName: (AppInfo, String?) -> Unit,
     onChangeIcon: (AppInfo) -> Unit,
     onAppInfo: (AppInfo) -> Unit,
+    onUninstall: (AppInfo) -> Unit,
     onUnpinShortcut: (AppInfo) -> Unit,
     onOpenSettings: () -> Unit,
     /** The app a button in the bottom corner opens, or null when there is no button. */
@@ -280,9 +294,11 @@ fun HomeScreen(
     cornerButtonIsSearch: Boolean,
     onOpenCornerSearch: () -> Unit,
 ) {    // Appended at the point of showing rather than stored in the label, so a rename still
-    // wins and turning this off needs no re-reading of every app.
+    // wins and turning this off needs no re-reading of every app. The disguise wins over
+    // everything while it is on: a rename is exactly what must not show.
     val workSuffix = stringResource(R.string.app_work_suffix)
     fun displayName(app: AppInfo): String {
+        disguiseNames[app.key]?.let { return it }
         val base = nameOverrides[app.key] ?: app.label
         return if (markWorkApps && app.work) base + workSuffix else base
     }
@@ -296,6 +312,9 @@ fun HomeScreen(
     var nowPlayingMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
     val touchPosition = remember { mutableStateOf(Offset.Zero) }
+    // Live icon size while a pinch is in progress; the stored one until then, committed on
+    // release so a continuous gesture is one write rather than one per frame.
+    var liveIconSize by remember(iconSizeDp) { mutableIntStateOf(iconSizeDp) }
     val density = LocalDensity.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
@@ -484,50 +503,30 @@ fun HomeScreen(
         baseIconConfig.copy(showIcons = showFavoriteIcons)
     }
 
-    // An always-on A-Z strip is drawn over this screen rather than beside it, so the side or
-    // sides it can occupy have to be held clear — otherwise it sits on top of the favorites,
-    // which is what it did while this was passed in and never read.
-    //
-    // And the invisible edge zone has to be cleared too, drawn or not: it is live on its side
-    // the whole time the home screen is up, so a favorite under it gives its taps to the zone
-    // and opens the app list instead of the app. Clearing only a visible strip left every
-    // favorite on the swipe side under it, for anyone who had moved the swipe to their
-    // favorites' side of the screen.
-    //
-    // Only on the side the favorites lean towards, though. That is the only place the zone can
-    // be sitting over an icon; on the far side it covers the empty end of the row, and holding
-    // that clear would cost every default setup — swipe on the right, favorites on the left —
-    // shorter names and moved handles for a problem it does not have. Centered favorites are
-    // held clear on both sides, or clearing one would pull them off center.
-    val stripInset = remember(stripInsetSide, edgeZoneSide, edgeZoneExtentDp, alignment) {
-        fun covers(side: EdgeSide?, which: EdgeSide) = side == which || side == EdgeSide.BOTH
-        val zone = edgeZoneExtentDp.dp
-        val leansLeft = alignment != HomeAlignment.RIGHT
-        val leansRight = alignment != HomeAlignment.LEFT
-        val zoneLeft = if (covers(edgeZoneSide, EdgeSide.LEFT)) zone else 0.dp
-        val zoneRight = if (covers(edgeZoneSide, EdgeSide.RIGHT)) zone else 0.dp
-        val centered = alignment == HomeAlignment.CENTER
-        val zoneStart = when {
-            centered -> maxOf(zoneLeft, zoneRight)
-            leansLeft -> zoneLeft
-            else -> 0.dp
-        }
-        val zoneEnd = when {
-            centered -> maxOf(zoneLeft, zoneRight)
-            leansRight -> zoneRight
-            else -> 0.dp
-        }
-        val start = maxOf(if (covers(stripInsetSide, EdgeSide.LEFT)) STRIP_INSET else 0.dp, zoneStart)
-        val end = maxOf(if (covers(stripInsetSide, EdgeSide.RIGHT)) STRIP_INSET else 0.dp, zoneEnd)
-        if (start == 0.dp && end == 0.dp) Modifier else Modifier.padding(start = start, end = end)
-    }
+    // No inset is held for the strip or the edge zone: the rows run full-bleed under
+    // both, exactly like the app list. An inset here is what kept left-aligned favorites
+    // 56dp off the left edge (and right-aligned off the right) whenever the strip was
+    // shown, while the list beside it went edge to edge. Taps landing inside the zone
+    // still open the list rather than the row — the same trade the list itself makes.
 
     // Free vertical drag with spring bounce at both ends, outside edit mode.
     val offsetY = remember { Animatable(0f) }
+    // One drag event per frame is already more than the animation can apply, so every event
+    // launching its own snap meant each computed its landing from a value an earlier snap
+    // had not written yet — a fast fling collapsed into roughly one delta, and no fast
+    // gesture ever reached the end of a long favorites list. Slow drags worked, which is
+    // why short lists never showed it. Serialized, every delta lands exactly once.
+    val dragMutex = remember { Mutex() }
     var viewportHeight by remember { mutableIntStateOf(0) }
     var contentHeight by remember { mutableIntStateOf(0) }
-    val minOffset = remember(viewportHeight, contentHeight) {
-        minOf(0f, (viewportHeight - contentHeight).toFloat())
+    // Where the drag stops. The old range ended where the content did, which put the last
+    // favorite's bottom flush with the display edge and left it under the gesture bar. Three
+    // rows of travel past that is the difference between the last few icons being readable
+    // and not — this is the same extra room the doubled range was standing in for, now the
+    // measured amount instead of twice everything.
+    val bottomRoomPx = with(density) { (BOTTOM_ROOM_ROWS * (iconSizeDp + 8 + itemSpacingDp)).dp.toPx() }
+    val minOffset = remember(viewportHeight, contentHeight, bottomRoomPx) {
+        minOf(0f, viewportHeight - contentHeight - bottomRoomPx)
     }
     // Back to the top on HOME, for the same reason the app list closes on it: the home screen
     // you get back is the one you arranged, not the one you last dragged out of the way.
@@ -581,10 +580,40 @@ fun HomeScreen(
             .fillMaxSize()
             .onSizeChanged { viewportHeight = it.height }
             .onGloballyPositioned { rootY = it.positionInWindow().y }
+            // Two fingers resize the icons; one finger is left entirely to the drag below,
+            // which is why nothing is consumed until a second pointer is actually down.
+            .then(
+                if (pinchToResize) {
+                    Modifier.pointerInput(iconSizeDp) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                if (event.changes.count { it.pressed } >= 2) {
+                                    val zoom = event.calculateZoom()
+                                    if (zoom > 0f && zoom != 1f) {
+                                        liveIconSize = (liveIconSize * zoom)
+                                            .roundToInt()
+                                            .coerceIn(MIN_ICON_DP, MAX_ICON_DP)
+                                    }
+                                    event.changes.forEach { if (it.pressed) it.consume() }
+                                }
+                                if (event.changes.none { it.pressed }) break
+                            }
+                            onSetIconSize(liveIconSize)
+                        }
+                    }
+                } else {
+                    Modifier
+                }
+            )
             .draggable(
                 orientation = Orientation.Vertical,
                 enabled = !editMode && liveSlot == null,
                 onDragStarted = {
+                    // A settling fling from the last gesture must not still own the value
+                    // when a new finger lands, or the fresh drags queue behind it.
+                    offsetY.stop()
                     rawPullDown = 0f
                     rawPullUp = 0f
                     pullActionFired = false
@@ -611,10 +640,12 @@ fun HomeScreen(
                         onSwipeUpDrag(rawPullUp, -delta)
                     }
                     scope.launch {
-                        val next = offsetY.value + delta
-                        val outOfBounds = next > 0f || next < minOffset
-                        val applied = if (outOfBounds) offsetY.value + delta * 0.4f else next
-                        offsetY.snapTo(applied)
+                        dragMutex.withLock {
+                            val next = offsetY.value + delta
+                            val outOfBounds = next > 0f || next < minOffset
+                            val applied = if (outOfBounds) offsetY.value + delta * 0.4f else next
+                            offsetY.snapTo(applied)
+                        }
                     }
                 },
                 onDragStopped = { velocity ->
@@ -701,6 +732,11 @@ fun HomeScreen(
                     // clear. Edit mode pads its own header and is left alone.
                     if (avoidStatusBar && !editMode) Modifier.statusBarsPadding() else Modifier
                 )
+                // The mirror at the bottom: without it the last row slides under the gesture
+                // bar and no amount of dragging brings it fully into view — the scroll range
+                // is measured on this same column, so the inset is part of what can be
+                // reached rather than decoration outside it.
+                .navigationBarsPadding()
                 // A row of one short name stretched over a tablet is mostly empty space, and
                 // the A-Z strip ends up a hand's width from the names it is scrubbing. The cap
                 // only bites on a screen wider than a phone held upright, so nothing moves on
@@ -944,10 +980,6 @@ fun HomeScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        // Not the widget: it has a side padding of its own that someone has
-                        // already set to taste, and moving it would be answering a complaint
-                        // about the favorites by shifting something else.
-                        .then(if (item is HomeItem.Widget) Modifier else stripInset)
                         .onGloballyPositioned { coords ->
                             val measured = measureKey(item)
                             itemHeights[measured] = coords.size.height
@@ -972,6 +1004,7 @@ fun HomeScreen(
                             WidgetSlot(
                                 widgetIds = widgetIds,
                                 heightDp = widgetHeightDp,
+                                refreshTick = widgetTick,
                                 onEditLayout = { onEditModeChange(true) },
                                 actions = widgetActions,
                                 homeIntentTick = homeIntentTick,
@@ -1001,7 +1034,7 @@ fun HomeScreen(
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
                             dragHandle = dragHandle,
-                            iconSizeDp = iconSizeDp,
+                            iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
                             contentColor = contentColor,
@@ -1012,6 +1045,7 @@ fun HomeScreen(
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
                             displayName = { displayName(it) },
+                            folderDisguise = folderDisguise,
                             onToggleExpanded = {
                                 expandedFolders = if (item.folder.id in expandedFolders) {
                                     expandedFolders - item.folder.id
@@ -1048,11 +1082,12 @@ fun HomeScreen(
                             label = displayName(item.app),
                             editMode = editMode,
                             dragHandle = dragHandle,
-                            iconSizeDp = iconSizeDp,
+                            iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
+                            dimPausedApps = dimPausedApps,
                             alignment = alignment,
                             iconSide = iconSide,
                             menuExpanded = menuForKey == item.app.key,
@@ -1064,6 +1099,9 @@ fun HomeScreen(
                             onMoveToFolder = { menuForKey = null; onMoveToFolder(item.app) },
                             onEditLayout = { menuForKey = null; onEditModeChange(true) },
                             onAppInfo = { menuForKey = null; onAppInfo(item.app) },
+                            onUninstall = { menuForKey = null; onUninstall(item.app) },
+                            onToggleLock = { menuForKey = null; onToggleLock(item.app) },
+                            isLocked = item.app.key in lockedApps,
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
                             onEditIconName = { menuForKey = null; renameDialogFor = item.app },
@@ -1165,7 +1203,7 @@ fun HomeScreen(
                         modifier = Modifier.size(24.dp),
                     )
                 } else {
-                    cornerButtonApp?.let { AppIcon(app = it, sizeDp = iconSizeDp) }
+                    cornerButtonApp?.let { AppIcon(app = it, sizeDp = liveIconSize) }
                 }
             }
         }
@@ -1247,6 +1285,7 @@ private fun FavoriteRow(
     sidePaddingDp: Int,
     contentColor: Color,
     showLabels: Boolean,
+    dimPausedApps: Boolean,
     alignment: HomeAlignment,
     iconSide: IconSide,
     menuExpanded: Boolean,
@@ -1258,6 +1297,9 @@ private fun FavoriteRow(
     onMoveToFolder: () -> Unit,
     onEditLayout: () -> Unit,
     onAppInfo: () -> Unit,
+    onUninstall: () -> Unit,
+    onToggleLock: () -> Unit,
+    isLocked: Boolean,
     onUnpin: () -> Unit,
     onRemove: () -> Unit,
     onEditIconName: () -> Unit,
@@ -1308,23 +1350,48 @@ private fun FavoriteRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = alignment.arrangement(),
         ) {
+            // A paused app fades the same way a retired shortcut does, when the setting asks;
+            // the icon goes with the name so the whole row reads as set aside.
+            val dimmed = app.disabled || (dimPausedApps && app.suspended)
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
                 iconSide = iconSide,
                 iconWidth = iconSizeDp.dp,
-                icon = { AppIcon(app = app, sizeDp = iconSizeDp) },
+                icon = {
+                    AppIcon(
+                        app = app,
+                        sizeDp = iconSizeDp,
+                        modifier = if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier,
+                    )
+                },
             ) { labelModifier ->
-                Text(
-                    label,
-                    // Same dimming a hidden app gets in the A-Z list: a shortcut its
-                    // publisher has switched off is still listed, but tapping it only
-                    // explains why it will not open.
-                    color = if (app.disabled) contentColor.copy(alpha = 0.5f) else contentColor,
-                    fontSize = labelSizeSp.sp,
+                Row(
                     modifier = labelModifier,
-                    textAlign = alignment.textAlign(),
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        label,
+                        // Same dimming a hidden app gets in the A-Z list: a shortcut its
+                        // publisher has switched off is still listed, but tapping it only
+                        // explains why it will not open.
+                        color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
+                        fontSize = labelSizeSp.sp,
+                        textAlign = alignment.textAlign(),
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    // A lock beside the name, so which apps ask for the device lock is visible
+                    // without opening each one's menu.
+                    if (isLocked) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.action_lock_app),
+                            tint = contentColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
             }
         }
 
@@ -1360,6 +1427,22 @@ private fun FavoriteRow(
                     text = { Text(stringResource(R.string.action_app_info)) },
                     leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                     onClick = onAppInfo,
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_uninstall)) },
+                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                    onClick = onUninstall,
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isLocked) R.string.action_unlock_app else R.string.action_lock_app
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                    onClick = onToggleLock,
                 )
             }
             // Distinct from Remove below, which only takes it off the home screen: this hands
@@ -1415,6 +1498,8 @@ private fun FolderRow(
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
     displayName: (AppInfo) -> String,
+    /** Folder cover names by folder id while the screenshot disguise is on; empty otherwise. */
+    folderDisguise: Map<String, String>,
     onToggleExpanded: () -> Unit,
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
@@ -1480,7 +1565,7 @@ private fun FolderRow(
                     icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
                 ) { labelModifier ->
                     Text(
-                        folder.name,
+                        folderDisguise[folder.id] ?: folder.name,
                         color = contentColor,
                         fontSize = labelSizeSp.sp,
                         modifier = labelModifier,
@@ -1836,10 +1921,19 @@ private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
  * a phone on its side keeps rows that are readable rather than a name at one edge and its icon
  * at the other.
  */
-/** How much of an edge an always-on A-Z strip takes, matching what the app list holds clear. */
-private val STRIP_INSET = 56.dp
-
 private val MAX_CONTENT_WIDTH = 600.dp
+
+/**
+ * Rows of clearance under the last favorite when the stack is dragged to its end.
+ *
+ * Enough that the final rows sit clear of the gesture bar, and the ask that settled the
+ * range: three icons' worth of length past where the content stops.
+ */
+private const val BOTTOM_ROOM_ROWS = 3
+
+/** The same span the icon-size slider offers, so a pinch cannot go where a drag cannot. */
+private const val MIN_ICON_DP = 12
+private const val MAX_ICON_DP = 96
 
 /** Which side a capped stack sits against, so it stays where the rows are aligned. */
 private fun HomeAlignment.wideScreenAlignment(): Alignment = when (this) {
@@ -1882,6 +1976,10 @@ private fun RowScope.AlignedIconLabel(
     // No icon drawn means no gap to leave for one.
     val gap = if (showIcons) 16.dp else 0.dp
     val centered = alignment == HomeAlignment.CENTER
+    // A right-aligned row always puts its icon on the right: the name ending at the screen
+    // edge reads as the row running out of room, while the icon is the full stop. The side
+    // setting still decides everywhere else.
+    val side = if (alignment == HomeAlignment.RIGHT) IconSide.RIGHT else iconSide
     // fill = false is what keeps the icon beside its label. A plain weight makes the label
     // span the whole row, which pins the icon to the opposite edge — so a right-aligned row
     // with its icon on the left put the two at opposite ends of the screen. This way the
@@ -1894,7 +1992,7 @@ private fun RowScope.AlignedIconLabel(
         if (centered && showLabel && showIcons) Spacer(Modifier.width(iconWidth + gap))
     }
 
-    if (iconSide == IconSide.RIGHT) {
+    if (side == IconSide.RIGHT) {
         balance()
         if (showLabel) {
             label(labelModifier)

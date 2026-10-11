@@ -102,6 +102,12 @@ object DelugeIcons {
     val ArrowForwardIos: ImageVector = vector("VicArrowForwardIos") {
         fill("M7.6,4.6l1.4,-1.4l8.8,8.8l-8.8,8.8l-1.4,-1.4l7.4,-7.4z")
     }
+
+    val Language: ImageVector = vector("VicLanguage") {
+        stroke("M12,3m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0", 2f)
+        stroke("M12,3 C14.5,3 16,7 16,12 C16,17 14.5,21 12,21 C9.5,21 8,17 8,12 C8,7 9.5,3 12,3", 2f)
+        stroke("M3,12h18", 2f)
+    }
 }
 
 /** The Material icon size, so one of these sits right beside a `material-icons-core` icon. */

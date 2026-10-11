@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>La recherche trouve les applis en pinyin — initiales comme épellation — le match surligné.</item>
+        <item>Les étiquettes regroupent les applis à travers l’alphabet : sections en haut, trois lettres dans la bande, multisélection depuis l’existant.</item>
+        <item>Fréquentes suit seule l’usage, s’éteint et reprend les siennes ; mis à la main, refusé.</item>
+        <item>Verrou par appli avec le verrou du téléphone, cadenas au nom ; déverrouiller lève la pause où le système veut bien.</item>
+        <item>Le menu long désinstalle ; masquer demande d’abord ; la pause se grise en direct.</item>
+        <item>Favoris au bord comme la liste, défilés jusqu’au bout avec de la marge.</item>
+        <item>Lâcher passé Z reste sur Z ; dépasser en bas ne fait que rebondir.</item>
+        <item>La bande repose en bas (pleine en paysage) ; palette en grille unie de cinq colonnes.</item>
+        <item>Retour en réglages revient à la section d’où l’on venait, retour système compris ; la recherche trouve chaque ligne.</item>
+        <item>Les widgets suivent gel et dégel aussitôt, et gelés ne sont jamais rangés.</item>
+        <item>Thème sombre de nuit, flou de fond, pincement pour les icônes, mouvements réduits.</item>
+        <item>Les sauvegardes couvrent tout, langue comprise ; le privé reste dehors.</item>
+        <item>À propos commence par le nom — toucher ouvre le projet ; le journal suit la langue.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Langue au choix dans les réglages — 10 langues plus le chinois traditionnel.</item>
+        <item>La bande A–Z suit l’alignement ; après un changement on reste où l’on était.</item>
+        <item>Barre visible, plus rien dessous.</item>
+        <item>Carte pour devenir l’accueil, à jeter pour de bon.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Renommé Deluge Launcher, thème bleu et icône neuve.</item>
+        <item>Liste des applis à bord ; en défilant chaque lettre à l’écran s’allume.</item>
+        <item>Défilement réparé — les gestes en biais ne le bloquent plus.</item>
+        <item>Icônes vides et deux secondes de noir au retour réparées.</item>
+        <item>Démarrage plus vif : cache d’icônes sur disque.</item>
+        <item>Les lignes dossier disent combien et si ouvert.</item>
+        <item>La hauteur suit le widget ; les morts des sauvegardes se rangent seuls.</item>
+        <item>Raccourcis au seul geste latéral ; le défilement n’est jamais volé.</item>
+        <item>Bibliothèque de navigation dehors, routeur maison dedans.</item>
+    </string-array>
+</resources>

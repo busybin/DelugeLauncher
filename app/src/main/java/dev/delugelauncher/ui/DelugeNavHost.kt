@@ -15,12 +15,14 @@ import android.content.pm.ShortcutInfo
 import android.os.UserHandle
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,6 +45,7 @@ import dev.delugelauncher.DelugeApp
 import android.widget.Toast
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.PrivateSpace
@@ -50,6 +53,9 @@ import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.FavoritesSource
+import dev.delugelauncher.ui.applist.RESERVED_TAGS
+import dev.delugelauncher.ui.common.LocalScreenshotNames
+import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
@@ -95,6 +101,9 @@ import kotlinx.coroutines.withContext
  * Everything the destinations need is read here rather than in each screen, so the DataStore
  * is collected once per key instead of once per consumer.
  */
+/** How many of the most-used apps the 常用 tag covers. */
+private const val FREQUENT_TAG_COUNT = 5
+
 @Composable
 fun DelugeNavHost(
     app: DelugeApp,
@@ -113,6 +122,11 @@ fun DelugeNavHost(
     val navController = rememberSaveable(saver = RouterSaver) { Router("home") }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    // Bumped on every package event, so the widget pages re-read their provider: a frozen
+    // provider reads null and shows the dead page, and only a fresh read brings it back when
+    // it unfreezes. The ids do not change either way, so nothing else would recompose them.
+    // Declared up here because refresh() below is a local fun that must see it.
+    var widgetTick by remember { mutableIntStateOf(0) }
 
     // Enumerating every installed app costs a PackageManager round trip per app; doing it in
     // the first composition is what stalled the cold start. Load it off the main thread and
@@ -200,6 +214,9 @@ fun DelugeNavHost(
     DisposableEffect(Unit) {
         val launcherApps = context.getSystemService(LauncherApps::class.java)
         fun refresh() {
+            // Before the reload, so the widget pages re-read their provider even when the
+            // enumeration below finds the same apps: freeze and unfreeze change no id.
+            widgetTick++
             scope.launch {
                 // Taken before the read, so anything already enumerating is superseded by the
                 // moment this pass looked rather than by the moment it finished.
@@ -224,6 +241,11 @@ fun DelugeNavHost(
             override fun onPackageChanged(packageName: String?, user: UserHandle?) = refresh()
             override fun onPackagesAvailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
             override fun onPackagesUnavailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
+            // Pausing or resuming an app changes no package, so no package callback fires for
+            // it. Without these a paused app only went grey the next time something else
+            // happened to reload.
+            override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
+            override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
             // A shortcut can be added, renamed, re-iconed or switched off while we are
             // showing it, none of which is a package change.
             override fun onShortcutsChanged(
@@ -336,6 +358,7 @@ fun DelugeNavHost(
     val showAlphabet by app.prefs.showAlphabet.collectAsState(initial = true)
     val alignRight by app.prefs.alignRight.collectAsState(initial = false)
     val dimWallpaperAlpha by app.prefs.dimWallpaperAlpha.collectAsState(initial = 0.35f)
+    val wallpaperBlurDp by app.prefs.wallpaperBlurDp.collectAsState(initial = 0)
     val hapticsEnabled by app.prefs.hapticsEnabled.collectAsState(initial = true)
     val dimHomeAlpha by app.prefs.dimHomeAlpha.collectAsState(initial = 0f)
     val showFavoriteLabels by app.prefs.showFavoriteLabels.collectAsState(initial = true)
@@ -349,12 +372,23 @@ fun DelugeNavHost(
     val nowPlayingEnabled by app.prefs.nowPlayingEnabled.collectAsState(initial = false)
     val folders by app.prefs.folders.collectAsState(initial = emptyList())
     val widgetIds by app.prefs.widgetIds.collectAsState(initial = emptyList())
+    val widgetProviders by app.prefs.widgetProviders.collectAsState(initial = emptyMap())
     // A widget whose provider is gone — its app uninstalled, or an id restored from another
-    // device — is dropped once, rather than left as a page that says it is unavailable.
+    // device — is dropped once, rather than left as a page that says it is unavailable. But a
+    // frozen or suspended app reads null too, and that is temporary: only an id whose package
+    // is actually gone goes, while one whose package is still installed stays for the unfreeze.
+    // Ids from before the provider mapping existed name no package and keep the old answer.
     LaunchedEffect(widgetIds) {
         if (widgetIds.isEmpty()) return@LaunchedEffect
         val manager = AppWidgetManager.getInstance(context)
-        app.prefs.keepWidgetIds { id -> runCatching { manager.getAppWidgetInfo(id) }.getOrNull() != null }
+        val pm = context.packageManager
+        fun packageGone(packageName: String): Boolean =
+            runCatching { pm.getPackageInfo(packageName, 0); false }.getOrDefault(true)
+        app.prefs.keepWidgetIds { id ->
+            if (runCatching { manager.getAppWidgetInfo(id) }.getOrNull() != null) return@keepWidgetIds true
+            val pkg = widgetProviders[id] ?: return@keepWidgetIds false
+            !packageGone(pkg)
+        }
     }
     /**
      * What the widgets ask for themselves, when nobody has said otherwise by hand.
@@ -396,7 +430,20 @@ fun DelugeNavHost(
     val quickLaunchRightKey by app.prefs.quickLaunchRight.collectAsState(initial = null)
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
+    val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
+    val autoDark by app.prefs.autoDark.collectAsState(initial = false)
+    val pinchToResize by app.prefs.pinchToResize.collectAsState(initial = false)
+    val reduceMotion by app.prefs.reduceMotion.collectAsState(initial = false)
+    val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
+    // Built fresh each time the mode turns on and dropped when it turns off: nothing stored,
+    // so switching off restores every name and icon by itself.
+    val disguise = remember(screenshotMode, allApps) {
+        if (screenshotMode) ScreenshotDisguise.build(allApps) else null
+    }
     val fontFile by app.prefs.fontFile.collectAsState(initial = null)
+    val colorSchemeChoice by app.prefs.colorSchemeChoice.collectAsState(
+        initial = ColorSchemeChoice.DELUGE_BLUE
+    )
     val textColorCustom by app.prefs.textColorCustom.collectAsState(initial = 0xFFFFFFFF.toInt())
     val dimColor by app.prefs.dimColor.collectAsState(initial = 0xFF000000.toInt())
     val rotatesByDefault = LocalConfiguration.current.smallestScreenWidthDp >= 600
@@ -431,14 +478,46 @@ fun DelugeNavHost(
         }
         ClockWidgetProvider.render(context, manager, id)
         app.prefs.addWidgetId(id)
+        // The provider is known here, at bind time — see widgetProviders on why it is written.
+        app.prefs.setWidgetProvider(id, ClockWidgetProvider.componentName(context).packageName)
     }
     val welcomeSeen by app.prefs.welcomeSeen.collectAsState(initial = true)
     val hasCustomLayout by app.prefs.hasCustomLayout.collectAsState(initial = true)
     val hasCustomFavoritesTop by app.prefs.hasCustomFavoritesTop.collectAsState(initial = true)
     var settingsTick by remember { mutableIntStateOf(0) }
+    // Bumped on every package event, so the widget pages re-read their provider: a frozen
+    // provider reads null and shows the dead page, and only a fresh read brings it back when
+    // it unfreezes. The ids do not change either way, so nothing else would recompose them.
     val contentColor = rememberContentColor(textColorMode, textColorCustom)
 
     val appsByKey = remember(allApps) { allApps.associateBy { it.key } }
+    val appTags by app.prefs.appTags.collectAsState(initial = emptyMap())
+    val autoFrequentTag by app.prefs.autoFrequentTag.collectAsState(initial = false)
+    // The name of the auto tag in this language. Stored as-is: tags are user data, and one
+    // named in this language stays put when the language changes.
+    val frequentTag = stringResource(R.string.tag_frequent)
+
+    /** The keys that should carry the 常用 tag right now: five most-used non-favorites. */
+    fun topFrequentKeys(): Set<String> = appsByKey.values
+        .filter { it.kind == EntryKind.APP && it.key !in favoriteKeys && (launchCounts[it.key] ?: 0) > 0 }
+        .sortedByDescending { launchCounts[it.key] ?: 0 }
+        .take(FREQUENT_TAG_COUNT)
+        .map { it.key }
+        .toSet()
+
+    // Follows the counts the way the usage sort does: whoever newly enters the top five gains
+    // the tag, whoever falls out loses it, other tags untouched. Keyed on everything that
+    // decides membership but not on the tags themselves, so writing them does not loop.
+    LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
+        if (!autoFrequentTag) return@LaunchedEffect
+        val top = topFrequentKeys()
+        appsByKey.values.forEach { a ->
+            if (a.kind != EntryKind.APP) return@forEach
+            val current = appTags[a.key] ?: emptySet()
+            val want = if (a.key in top) current + frequentTag else current - frequentTag
+            if (want != current) app.prefs.setAppTags(a.key, want)
+        }
+    }
     // The number the hidden-apps screen itself arrives at, rather than the size of the stored
     // set: that screen lists rows, and a hidden app inside a locked private space has no row.
     // Counting the stored set in the subtitle says out loud how many apps are in there.
@@ -612,8 +691,9 @@ fun DelugeNavHost(
         holdScrollSpeed = holdScrollSpeed,
         favoritesSource = favoritesSource,
         appListSearchHidden = appListSearchHidden,
-        hideStatusBarAppList = hideStatusBarAppList,
-        hideStatusBar = hideStatusBar,
+        // Screenshot disguise always hides the status bar, whatever the setting says.
+        hideStatusBarAppList = hideStatusBarAppList || screenshotMode,
+        hideStatusBar = hideStatusBar || screenshotMode,
         sortByUsage = sortByUsage,
         quickLaunchLeft = quickLaunchLeftKey?.let { appsByKey[it] },
         quickLaunchRight = quickLaunchRightKey?.let { appsByKey[it] },
@@ -627,6 +707,9 @@ fun DelugeNavHost(
         showFavoriteLabels = showFavoriteLabels,
         doubleTapToLock = doubleTapToLock,
         contentColor = contentColor,
+        dimPausedApps = dimPausedApps,
+        pinchToResize = pinchToResize,
+        reduceMotion = reduceMotion,
     )
 
     var pendingIconTarget by remember { mutableStateOf<String?>(null) }
@@ -653,7 +736,12 @@ fun DelugeNavHost(
         if (result.resultCode == RESULT_OK) {
             val id = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
             // Appended rather than replacing: picking a widget now adds a page.
-            if (id != -1) scope.launch { app.prefs.addWidgetId(id) }
+            if (id != -1) scope.launch {
+                app.prefs.addWidgetId(id)
+                // The provider is known here, at bind time — see widgetProviders.
+                AppWidgetManager.getInstance(context).getAppWidgetInfo(id)
+                    ?.let { app.prefs.setWidgetProvider(id, it.provider.packageName) }
+            }
         }
     }
 
@@ -701,8 +789,16 @@ fun DelugeNavHost(
         }
     }
 
+    // System BACK walks the stack, one screen at a time. Without this it reached the Activity
+    // and finished it, dropping straight to the home screen from any settings screen — the
+    // screens above home are the launcher's own, so back has to mean back.
+    BackHandler(enabled = navController.stack.size > 1) { navController.popBackStack() }
+
     RouterHost(router = navController) {
         composable("home") {
+            // Fake names for the screenshot disguise, or nothing. Scoped to home and its
+            // list: the management screens keep real names and icons.
+            CompositionLocalProvider(LocalScreenshotNames provides disguise) {
             HomeRoute(
                 cornerButtonApp = cornerButtonKey?.takeIf { it != EntryKeys.SEARCH }?.let { appsByKey[it] },
                 cornerButtonIsSearch = cornerButtonKey == EntryKeys.SEARCH,
@@ -724,6 +820,7 @@ fun DelugeNavHost(
                 widgetPosition = widgetPosition,
                 widgetHeightDp = effectiveWidgetHeightDp,
                 widgetActions = widgetActions,
+                widgetTick = widgetTick,
                 launchCounts = launchCounts,
                 // Both flows start at a value that shows nothing, so the dialog can't flash
                 // before the stored answer arrives. A legacy install is stamped 0 and never
@@ -772,7 +869,9 @@ fun DelugeNavHost(
                     }
                 },
                 onNavigate = { route -> navController.navigate(route) },
+                disguiseNames = disguise ?: emptyMap(),
             )
+            }
         }
 
         composable("settings") {
@@ -823,6 +922,14 @@ fun DelugeNavHost(
                 onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
                 notificationBadges = notificationBadges,
                 onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
+                dimPausedApps = dimPausedApps,
+                onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
+                autoDark = autoDark,
+                onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
+                pinchToResize = pinchToResize,
+                onSetPinchToResize = { scope.launch { app.prefs.setPinchToResize(it) } },
+                reduceMotion = reduceMotion,
+                onSetReduceMotion = { scope.launch { app.prefs.setReduceMotion(it) } },
                 sectionTopPercent = sectionTopPercent,
                 onSetSectionTopPercent = { scope.launch { app.prefs.setSectionTopPercent(it) } },
                 closeFolderOnLaunch = closeFolderOnLaunch,
@@ -847,6 +954,7 @@ fun DelugeNavHost(
                 labelSizeSp = labelSizeSp,
                 itemSpacingDp = itemSpacingDp,
                 font = font,
+                colorScheme = colorSchemeChoice,
                 hideStatusBar = hideStatusBar,
                 hideStatusBarAppList = hideStatusBarAppList,
                 statusBarPeekSeconds = statusBarPeekSeconds,
@@ -854,6 +962,8 @@ fun DelugeNavHost(
                 hapticsEnabled = hapticsEnabled,
                 dimHomeAlpha = dimHomeAlpha,
                 showFavoriteLabels = showFavoriteLabels,
+                screenshotMode = screenshotMode,
+                onSetScreenshotMode = { scope.launch { app.prefs.setScreenshotMode(it) } },
                 textColorMode = textColorMode,
                 textColorCustom = textColorCustom,
                 dimColor = dimColor,
@@ -883,10 +993,13 @@ fun DelugeNavHost(
                 onSetLabelSize = { scope.launch { app.prefs.setLabelSizeSp(it) } },
                 onSetItemSpacing = { scope.launch { app.prefs.setItemSpacingDp(it) } },
                 onSetFont = { scope.launch { app.prefs.setFont(it) } },
+                onSetColorScheme = { scope.launch { app.prefs.setColorSchemeChoice(it) } },
                 onSetHideStatusBar = { scope.launch { app.prefs.setHideStatusBar(it) } },
                 onSetHideStatusBarAppList = { scope.launch { app.prefs.setHideStatusBarAppList(it) } },
                 onSetStatusBarPeekSeconds = { scope.launch { app.prefs.setStatusBarPeekSeconds(it) } },
                 onSetDimWallpaper = { scope.launch { app.prefs.setDimWallpaperAlpha(it) } },
+                wallpaperBlurDp = wallpaperBlurDp,
+                onSetWallpaperBlur = { scope.launch { app.prefs.setWallpaperBlurDp(it) } },
                 onSetHaptics = { scope.launch { app.prefs.setHapticsEnabled(it) } },
                 onSetDimHome = { scope.launch { app.prefs.setDimHomeAlpha(it) } },
                 onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
@@ -936,6 +1049,22 @@ fun DelugeNavHost(
                 onSetAzStripVisibility = { scope.launch { app.prefs.setAzStripVisibility(it) } },
                 onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                 onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
+                autoFrequentTag = autoFrequentTag,
+                onSetAutoFrequentTag = {
+                    scope.launch {
+                        // Turning it off takes its tags back with it: they were its doing,
+                        // and leaving them would freeze a ranking that no longer updates.
+                        // Every language's word, in case the language moved since.
+                        if (!it) {
+                            appsByKey.values.forEach { a ->
+                                val current = appTags[a.key] ?: emptySet()
+                                val stripped = current - RESERVED_TAGS
+                                if (stripped != current) app.prefs.setAppTags(a.key, stripped)
+                            }
+                        }
+                        app.prefs.setAutoFrequentTag(it)
+                    }
+                },
                 onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
                 onSetAppListSearchBottom = { scope.launch { app.prefs.setAppListSearchBottom(it) } },
                 onSetAppListSearchHidden = { scope.launch { app.prefs.setAppListSearchHidden(it) } },

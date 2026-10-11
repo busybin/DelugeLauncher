@@ -4,6 +4,7 @@ package dev.delugelauncher.data
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.LauncherApps
 import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
@@ -150,6 +151,12 @@ class AppRepository(
                             work = work,
                             privateProfile = privateProfile,
                             installedAt = installTimes[info.componentName.packageName] ?: 0L,
+                            // isPackageSuspended rather than the ApplicationInfo flag: the flag
+                            // is not reliably carried on a LauncherActivityInfo, so a paused
+                            // app kept looking normal.
+                            suspended = runCatching {
+                                context.packageManager.isPackageSuspended(info.componentName.packageName)
+                            }.getOrDefault(false),
                         )
                     }
             }
@@ -766,5 +773,55 @@ class AppRepository(
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         runCatching { context.startActivity(intent) }
+    }
+
+    /**
+     * Best-effort un-pause, so a locked-and-paused app can open once its lock is lifted.
+     *
+     * Android only lets the app that paused it, a profile owner or a device owner lift a
+     * suspension, so on a stock phone this is refused and the app stays paused. It is attempted
+     * anyway: where the launcher does hold the privilege, it is the difference between the app
+     * opening and doing nothing.
+     */
+    fun unsuspend(app: AppInfo) {
+        if (app.kind != EntryKind.APP) return
+        runCatching {
+            val pm = context.packageManager
+            // Found by name rather than referenced: the method is on PackageManager but is not
+            // in the public SDK stubs, and it needs a permission only a profile or device owner
+            // holds — so on a stock phone this is refused and the app stays paused. Attempted
+            // anyway, because where the launcher does hold it, it is the difference between the
+            // app opening and doing nothing.
+            val method = pm.javaClass.methods.firstOrNull {
+                it.name == "setPackagesSuspended" && it.parameterTypes.size == 5
+            }
+            method?.invoke(pm, arrayOf(app.componentName.packageName), false, null, null, null)
+        }
+    }
+
+    /**
+     * Hands an app to the system uninstaller.
+     *
+     * Never removes anything itself — the confirmation is the system's, and only the package
+     * manager may run it. A work-profile app is uninstalled from its own profile, which is why
+     * the user travels with the intent. Force stop is deliberately absent: a normal app cannot
+     * stop another's process, that needs a system permission this app does not hold.
+     */
+    fun uninstall(app: AppInfo) {
+        if (app.kind != EntryKind.APP) return
+        val pkg = app.componentName.packageName
+        val uri = Uri.fromParts("package", pkg, null)
+        // The system uninstaller, not the package manager: the confirmation and the removal are
+        // the system's, and only it may do them. A work-profile app is uninstalled from its own
+        // profile, so the user travels with the intent — but only when it is not the main one,
+        // where carrying it just confuses the installer.
+        fun intent(action: String) = Intent(action, uri).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (app.userSerial != 0L) app.user?.let { putExtra(Intent.EXTRA_USER, it) }
+        }
+        val started = runCatching { context.startActivity(intent(Intent.ACTION_DELETE)) }.isSuccess
+        if (!started) {
+            runCatching { context.startActivity(intent(Intent.ACTION_UNINSTALL_PACKAGE)) }
+        }
     }
 }

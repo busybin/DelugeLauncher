@@ -2,10 +2,14 @@
 package dev.delugelauncher.ui.home
 
 import android.app.SearchManager
+import android.app.Activity
+import android.app.KeyguardManager
 import android.content.Intent
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationState
@@ -83,6 +87,7 @@ import dev.delugelauncher.ui.applist.EdgeTouchZone
 import dev.delugelauncher.ui.applist.ScrubBand
 import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
+import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.ui.common.FolderPickerDialog
 import dev.delugelauncher.widget.WidgetSlotActions
@@ -155,6 +160,8 @@ fun HomeRoute(
     widgetPosition: Int,
     widgetHeightDp: Int,
     widgetActions: WidgetSlotActions,
+    /** Bumped on every package event, so frozen and unfrozen providers re-read. */
+    widgetTick: Int,
     launchCounts: Map<String, Int>,
     showWelcome: Boolean,
     /** Whether to offer the "make this your home screen" card, already decided by the caller. */
@@ -170,6 +177,8 @@ fun HomeRoute(
     /** Locks an open private space or asks for a locked one to be opened, off this thread. */
     onTogglePrivateSpace: () -> Unit,
     onNavigate: (String) -> Unit,
+    /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
+    disguiseNames: Map<String, String>,
 ) {
     val context = LocalContext.current
     // Read here because the models are built off the main thread, where a string resource
@@ -190,6 +199,25 @@ fun HomeRoute(
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
+    // Folder cover names while disguised, by folder id. Empty otherwise.
+    val folderDisguise = remember(disguiseNames, folders) {
+        if (disguiseNames.isEmpty()) emptyMap()
+        else folders.associate { it.id to ScreenshotDisguise.folderName(it.id) }
+    }
+    val appTags by app.prefs.appTags.collectAsState(initial = emptyMap())
+    // Tags gathered into groups for the list's own sections. Built here rather than in the
+    // background model because it is a handful of apps, not the whole alphabet.
+    val tagSections = remember(appTags, appsByKey, hiddenApps) {
+        val byTag = mutableMapOf<String, MutableList<AppInfo>>()
+        appTags.forEach { (key, tags) ->
+            val appInfo = appsByKey[key] ?: return@forEach
+            if (key in hiddenApps) return@forEach
+            tags.forEach { tag -> byTag.getOrPut(tag) { mutableListOf() }.add(appInfo) }
+        }
+        byTag.toSortedMap().map { (tag, list) -> tag to list }
+    }
+    val allTags = remember(appTags) { appTags.values.flatten().toSortedSet().toList() }
+
     // Hidden apps are left out of the model the list draws from, so reaching them by name
     // needs a model of its own. Only built when the setting asks for it, and it falls back to
     // the list's own model otherwise, so nothing is grouped and sorted twice for nothing.
@@ -205,6 +233,7 @@ fun HomeRoute(
         // Empty unless the sort is on, so an ordinary launch doesn't rebuild the whole list.
         if (settings.sortByUsage) launchCounts else emptyMap(),
         settings.showListHeaders,
+        tagSections,
     ) {
         val apps = appsByKey.values.toList()
         val counts = if (settings.sortByUsage) launchCounts else emptyMap()
@@ -212,13 +241,14 @@ fun HomeRoute(
             buildAppListModel(
                 apps,
                 hiddenApps,
-                { nameOverrides[it.key] ?: it.label },
+                { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
                 counts,
                 englishName = { app.appRepository.englishLabel(it) },
                 showHeaders = settings.showListHeaders,
                 renamed = { it.key in nameOverrides },
                 privateSectionLabel = privateSectionLabel,
                 recentSection = recentSectionArg,
+                tagSections = tagSections,
             )
         }
     }
@@ -240,7 +270,7 @@ fun HomeRoute(
                 buildAppListModel(
                     apps,
                     emptySet(),
-                    { nameOverrides[it.key] ?: it.label },
+                    { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
                     counts,
                     englishName = { app.appRepository.englishLabel(it) },
                     showHeaders = settings.showListHeaders,
@@ -294,10 +324,30 @@ fun HomeRoute(
                 .coerceIn(0f, (viewportHeightPx - bandHeight).coerceAtLeast(0f))
             ScrubBand(topPx = bandTop, heightPx = bandHeight)
         }
-    val band = ScrubberGeometry.capHeight(
-        liveBand ?: storedBand ?: favBand ?: ScrubBand.fallbackFor(viewportHeightPx),
-        viewportHeightPx.toFloat(),
-    )
+    // A range set by hand is honoured as set: clamping it is one thing, but growing it
+    // would undo an explicit choice. Only the bands the launcher works out itself get a
+    // floor, which is where the squeezed strip came from.
+    val autoBand = liveBand ?: storedBand ?: favBand ?: ScrubBand.fallbackFor(viewportHeightPx)
+    // Sideways the screen is short, and half of it is a strip of letters squeezed into a few
+    // centimetres. The strip takes the whole height there instead, and goes back to its band
+    // the moment the phone is upright again.
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val band = if (landscape) {
+        ScrubBand(0f, viewportHeightPx.toFloat())
+    } else if (liveBand != null || storedBand != null) {
+        ScrubberGeometry.capHeight(autoBand, viewportHeightPx.toFloat())
+    } else {
+        // A favourites list taller than the screen leaves the crop centered around its middle,
+        // which lands the strip in the upper half and reads as sitting at the top. The default
+        // is held down in the lower half — the fallback's own line — and only follows the
+        // favourites further down from there.
+        val floored = ScrubberGeometry.floorHeight(
+            ScrubberGeometry.capHeight(autoBand, viewportHeightPx.toFloat()),
+            viewportHeightPx.toFloat(),
+        )
+        val minTop = viewportHeightPx * ScrubberGeometry.FALLBACK_TOP_FRACTION
+        floored.copy(topPx = floored.topPx.coerceAtLeast(minTop))
+    }
 
     /** Locking is a strip gesture now, so the toast that explains it lives with the strip. */
     fun lockOrExplain() {
@@ -385,7 +435,7 @@ fun HomeRoute(
     // The one place a row press is turned into something happening. Every row in the launcher
     // arrives here, so a row that is not an app is recognised once, here, rather than in each
     // of the four places a press is wired up.
-    fun launchEntry(entry: AppInfo): Boolean = when (entry.kind) {
+    fun actuallyLaunch(entry: AppInfo): Boolean = when (entry.kind) {
         // Handed off rather than done here: locking or unlocking is several binder calls and
         // possibly the system's own authentication screen, which is not a press's work to do
         // on the main thread. True because the press was acted on — there is simply nothing
@@ -395,6 +445,46 @@ fun HomeRoute(
             true
         }
         else -> app.appRepository.launch(entry)
+    }
+
+    // A locked app asks for the device's own lock screen before it opens. Unlocked once per run
+    // of the launcher rather than once per tap: the point is to keep someone out who picked the
+    // phone up, not to ask the owner again every time they open it.
+    val lockedApps by app.prefs.lockedApps.collectAsState(initial = emptySet())
+    var sessionUnlocked by remember { mutableStateOf(emptySet<String>()) }
+    var pendingLaunch by remember { mutableStateOf<AppInfo?>(null) }
+    val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
+    val confirmLaunch = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val pending = pendingLaunch
+        pendingLaunch = null
+        if (pending != null && result.resultCode == Activity.RESULT_OK) {
+            sessionUnlocked = sessionUnlocked + pending.key
+            // A locked app that is also paused cannot start until it is un-paused, so the two
+            // are lifted together: unlocking it and then doing nothing would read as broken.
+            if (pending.suspended) app.appRepository.unsuspend(pending)
+            actuallyLaunch(pending)
+        }
+    }
+
+    fun launchEntry(entry: AppInfo): Boolean {
+        if (entry.kind == EntryKind.APP && entry.key in lockedApps && entry.key !in sessionUnlocked) {
+            // No secure lock on the phone means there is nothing to ask for; the app opens as
+            // usual rather than becoming unreachable.
+            val prompt = runCatching {
+                keyguard?.createConfirmDeviceCredentialIntent(
+                    context.getString(R.string.app_lock_title),
+                    context.getString(R.string.app_lock_prompt, entry.label),
+                )
+            }.getOrNull()
+            if (prompt != null) {
+                pendingLaunch = entry
+                confirmLaunch.launch(prompt)
+                return true
+            }
+        }
+        return actuallyLaunch(entry)
     }
 
     LaunchedEffect(settings.edgeSide) { scrub.syncRestingSide(settings.edgeSide) }
@@ -609,13 +699,6 @@ fun HomeRoute(
                 .graphicsLayer { alpha = homeContentAlpha },
         ) {
             HomeScreen(
-                stripInsetSide = if (!stripAlwaysVisible) null else settings.edgeSide,
-                edgeZoneSide = settings.edgeSide,
-                // Ghost strips: the zones stay live for scrubbing but no side
-                // is padded clear. If taps near an edge start opening the
-                // list instead of the row, narrow the zone width in settings
-                // rather than bringing the padding back.
-                edgeZoneExtentDp = 0,
                 homeIntentTick = homeIntentTick,
                 closeFolderOnLaunch = settings.closeFolderOnLaunch,
                 showFavoriteIcons = settings.showFavoriteIcons,
@@ -655,8 +738,11 @@ fun HomeRoute(
                 onSetWidgetOffsetX = { scope.launch { app.prefs.setWidgetOffsetXDp(it) } },
                 paddings = homePaddings,
                 widgetIds = widgetIds,
+                disguiseNames = disguiseNames,
+                folderDisguise = folderDisguise,
                 widgetPosition = widgetPosition,
                 widgetHeightDp = widgetHeightDp,
+                widgetTick = widgetTick,
                 hapticsEnabled = settings.hapticsEnabled,
                 nowPlayingEnabled = settings.nowPlayingEnabled,
                 nowPlayingHeightDp = settings.nowPlayingHeightDp,
@@ -725,6 +811,11 @@ fun HomeRoute(
                 nowPlayingHasContent = nowPlayingHasContent,
                 contentColor = settings.contentColor,
                 showFavoriteLabels = settings.showFavoriteLabels,
+                dimPausedApps = settings.dimPausedApps,
+                pinchToResize = settings.pinchToResize,
+                onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
+                lockedApps = lockedApps,
+                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, it.key !in lockedApps) } },
                 alignment = settings.alignment,
                 iconSide = settings.iconSide,
                 editMode = homeEditMode,
@@ -807,6 +898,7 @@ fun HomeRoute(
                 onSetName = { appInfo, name -> scope.launch { app.prefs.setNameOverride(appInfo.key, name) } },
                 onChangeIcon = { appInfo -> onNavigate(iconPickerRoute(appInfo.key)) },
                 onAppInfo = { app.appRepository.openAppInfo(it) },
+                onUninstall = { app.appRepository.uninstall(it) },
                 onUnpinShortcut = { app.appRepository.unpin(it) },
                 onOpenSettings = { onNavigate("settings") },
             )
@@ -873,6 +965,7 @@ fun HomeRoute(
                     onNavigate(iconPickerRoute(appInfo.key))
                 },
                 onAppInfo = { app.appRepository.openAppInfo(it) },
+                onUninstall = { closeAppList(); app.appRepository.uninstall(it) },
                 onUnpinShortcut = { appInfo -> closeAppList(); app.appRepository.unpin(appInfo) },
                 onHideApp = { appInfo, hide -> scope.launch { app.prefs.setHidden(appInfo.key, hide) } },
                 hiddenApps = hiddenApps,
@@ -883,6 +976,18 @@ fun HomeRoute(
                 showAlphabet = settings.showAlphabet,
                 statusBarHidden = settings.hideStatusBarAppList,
                 searchModel = searchModel,
+                dimPausedApps = settings.dimPausedApps,
+                reduceMotion = settings.reduceMotion,
+                lockedApps = lockedApps,
+                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, it.key !in lockedApps) } },
+                appTags = appTags,
+                allTags = allTags,
+                onAddTags = { apps, tags ->
+                    // Replace, not merge: what is checked goes on and what is not comes off.
+                    scope.launch {
+                        apps.forEach { a -> app.prefs.setAppTags(a.key, tags) }
+                    }
+                },
                 shortcutSwipe = settings.shortcutSwipe,
                 favoritesEditable = settings.favoritesSource == FavoritesSource.MANUAL,
                 showSettingsRow = settings.showSettingsRow,
@@ -891,6 +996,7 @@ fun HomeRoute(
                 holdScrollSpeed = settings.holdScrollSpeed,
                 dimOthers = settings.dimOthersScrubbing,
                 markWorkApps = settings.markWorkApps,
+                disguiseNames = disguiseNames,
                 textShadow = settings.textShadow,
                 textShadowStrength = settings.textShadowStrength,
                 // Offered only where something can take it, or the row is a dead end.
@@ -1118,6 +1224,12 @@ data class HomeSettings(
     val showFavoriteLabels: Boolean,
     val doubleTapToLock: Boolean,
     val contentColor: Color,
+    /** Whether a paused (suspended) app is shown greyed out. */
+    val dimPausedApps: Boolean,
+    /** Whether a two-finger pinch on the home screen resizes the icons. */
+    val pinchToResize: Boolean,
+    /** Whether the launcher's own transitions are skipped. */
+    val reduceMotion: Boolean,
 )
 
 /** How long a private space unlock has to put the system's lock screen up before giving up. */

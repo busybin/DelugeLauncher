@@ -37,6 +37,19 @@ enum class HomeAlignment { LEFT, CENTER, RIGHT }
 /** Which side of an app's name its icon sits on. */
 enum class IconSide { LEFT, RIGHT }
 
+/** The palette the launcher draws itself in. Deluge blue until told otherwise. */
+enum class ColorSchemeChoice {
+    DELUGE_BLUE,
+    DYNAMIC,
+    RED,
+    ORANGE,
+    YELLOW,
+    GREEN,
+    TEAL,
+    PURPLE,
+    PINK,
+}
+
 /** The two swipe directions under the favorites that can launch an app. */
 enum class QuickLaunchSlot { LEFT, RIGHT }
 
@@ -92,6 +105,12 @@ private val Context.dataStore by preferencesDataStore(name = "deluge_prefs")
 /** Bumped only if the shape of an exported file changes, so an old one can be refused. */
 private const val EXPORT_FORMAT = 1
 
+/** The backup's language entry, which lives outside the store — see exportJson. */
+private const val PREF_LANGUAGE = "language"
+
+/** Store keys that are modes, not settings, and must never travel in a backup. */
+private val NEVER_EXPORT = setOf("screenshot_mode")
+
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
 data class ExportResult(val json: String, val omittedPrivateSpace: Boolean)
 
@@ -119,6 +138,7 @@ class Prefs(private val context: Context) {
         val FAVORITES_PAD_TOP = intPreferencesKey("favorites_pad_top")
         val FAVORITES_PAD_BOTTOM = intPreferencesKey("favorites_pad_bottom")
         val FONT = stringPreferencesKey("font")
+        val COLOR_SCHEME = stringPreferencesKey("color_scheme")
         val FONT_FILE = stringPreferencesKey("font_file")
         val TEXT_COLOR_CUSTOM = intPreferencesKey("text_color_custom")
         val DIM_COLOR = intPreferencesKey("dim_color")
@@ -132,6 +152,7 @@ class Prefs(private val context: Context) {
         val DIM_WALLPAPER_ALPHA = floatPreferencesKey("dim_wallpaper_alpha")
         val HAPTICS_ENABLED = booleanPreferencesKey("haptics_enabled")
         val DIM_HOME_ALPHA = floatPreferencesKey("dim_home_alpha")
+        val WALLPAPER_BLUR_DP = intPreferencesKey("wallpaper_blur_dp")
         val SHOW_FAVORITE_LABELS = booleanPreferencesKey("show_favorite_labels")
         val TEXT_COLOR_MODE = stringPreferencesKey("text_color_mode")
         val DOUBLE_TAP_TO_LOCK = booleanPreferencesKey("double_tap_to_lock")
@@ -147,6 +168,7 @@ class Prefs(private val context: Context) {
         val WIDGET_HEIGHT_DP = intPreferencesKey("widget_height_dp")
         val DEFAULT_PROMPT_DISMISSED = booleanPreferencesKey("default_prompt_dismissed")
         val WIDGET_IDS = stringPreferencesKey("widget_ids")
+        val WIDGET_PROVIDERS = stringPreferencesKey("widget_providers")
         val WIDGET_SIDE_PADDING_DP = intPreferencesKey("widget_side_padding_dp")
         val WIDGET_OFFSET_X_DP = intPreferencesKey("widget_offset_x_dp")
         val SWIPE_UP_OPENS_LIST = booleanPreferencesKey("swipe_up_opens_list")
@@ -177,6 +199,14 @@ class Prefs(private val context: Context) {
         val FREQUENT_COUNT = intPreferencesKey("frequent_count")
         val SHOW_LIST_HEADERS = booleanPreferencesKey("show_list_headers")
         val NOTIFICATION_BADGES = booleanPreferencesKey("notification_badges")
+        val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
+        val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
+        val AUTO_DARK = booleanPreferencesKey("auto_dark")
+        val PINCH_TO_RESIZE = booleanPreferencesKey("pinch_to_resize")
+        val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
+        val AUTO_FREQUENT_TAG = booleanPreferencesKey("auto_frequent_tag")
+        val LOCKED_APPS = stringSetPreferencesKey("locked_apps")
+        val APP_TAGS = stringPreferencesKey("app_tags")
         val SECTION_TOP_PERCENT = intPreferencesKey("section_top_percent")
         val CLOSE_FOLDER_ON_LAUNCH = booleanPreferencesKey("close_folder_on_launch")
         val SHOW_SETTINGS_ROW = booleanPreferencesKey("show_settings_row")
@@ -231,6 +261,8 @@ class Prefs(private val context: Context) {
         val values = JSONObject()
         var omittedPrivateSpace = false
         stored.asMap().forEach { (key, rawValue) ->
+            // Modes, not settings: a screenshot disguise must never travel in a backup.
+            if (key.name in NEVER_EXPORT) return@forEach
             val value = stripPrivateSpaceFromExport(key.name, rawValue, stripOtherProfiles)
             if (value == null) {
                 omittedPrivateSpace = true
@@ -250,6 +282,12 @@ class Prefs(private val context: Context) {
             }
             values.put(key.name, entry)
         }
+        // The language lives outside the store (it must read before anything can suspend), so
+        // it travels as its own entry rather than as a key. Blank means follow the system.
+        values.put(
+            PREF_LANGUAGE,
+            JSONObject().put("type", "string").put("value", LanguagePrefs.read(context).orEmpty()),
+        )
         val json = JSONObject()
             .put("format", EXPORT_FORMAT)
             .put("app", "Deluge Launcher")
@@ -265,6 +303,7 @@ class Prefs(private val context: Context) {
      * store would leave someone with neither their old set-up nor the one they were restoring.
      */
     suspend fun importJson(text: String): Boolean {
+        var language: String? = null
         val parsed = runCatching {
             val root = JSONObject(text)
             if (root.optInt("format") != EXPORT_FORMAT) return false
@@ -272,6 +311,12 @@ class Prefs(private val context: Context) {
             buildList {
                 values.keys().forEach { name ->
                     val entry = values.getJSONObject(name)
+                    // The language is not a store key; it goes back to its own file below.
+                    // Absent in old backups, which simply keep the language they have.
+                    if (name == PREF_LANGUAGE && entry.optString("type") == "string") {
+                        language = entry.optString("value").takeIf { it.isNotBlank() }
+                        return@forEach
+                    }
                     // Pair(...) rather than `to`: DataStore has an infix `to` of its own on
                     // Key, which builds a Preferences.Pair and not the one wanted here.
                     val pair: Pair<Preferences.Key<*>, Any> = when (entry.getString("type")) {
@@ -301,6 +346,8 @@ class Prefs(private val context: Context) {
                 store[key as Preferences.Key<Any>] = value
             }
         }
+        // Applied on the next recreate, like a language picked by hand.
+        LanguagePrefs.write(context, language)
         return true
     }
 
@@ -424,6 +471,13 @@ class Prefs(private val context: Context) {
         runCatching { AppFont.valueOf(it[Keys.FONT] ?: AppFont.SYSTEM.name) }.getOrDefault(AppFont.SYSTEM)
     }.distinctUntilChanged()
 
+    /** Deluge blue until told otherwise; DYNAMIC follows the wallpaper on Android 12+. */
+    val colorSchemeChoice: Flow<ColorSchemeChoice> = data.map {
+        runCatching {
+            ColorSchemeChoice.valueOf(it[Keys.COLOR_SCHEME] ?: ColorSchemeChoice.DELUGE_BLUE.name)
+        }.getOrDefault(ColorSchemeChoice.DELUGE_BLUE)
+    }.distinctUntilChanged()
+
     val hideStatusBar: Flow<Boolean> = data.map { it[Keys.HIDE_STATUS_BAR] ?: false }.distinctUntilChanged()
 
     /**
@@ -436,6 +490,10 @@ class Prefs(private val context: Context) {
             .distinctUntilChanged()
 
     val dimWallpaperAlpha: Flow<Float> = data.map { it[Keys.DIM_WALLPAPER_ALPHA] ?: 0.35f }.distinctUntilChanged()
+
+    /** How far the wallpaper behind the window is blurred, in dp. Zero is off. */
+    val wallpaperBlurDp: Flow<Int> =
+        data.map { (it[Keys.WALLPAPER_BLUR_DP] ?: 0).coerceIn(0, 80) }.distinctUntilChanged()
 
     val hapticsEnabled: Flow<Boolean> = data.map { it[Keys.HAPTICS_ENABLED] ?: true }.distinctUntilChanged()
 
@@ -614,6 +672,62 @@ class Prefs(private val context: Context) {
 
     val notificationBadges: Flow<Boolean> =
         data.map { it[Keys.NOTIFICATION_BADGES] ?: false }.distinctUntilChanged()
+
+    /** Whether a paused (suspended) app is shown greyed out so it reads as set aside. */
+    val dimPausedApps: Flow<Boolean> =
+        data.map { it[Keys.DIM_PAUSED_APPS] ?: true }.distinctUntilChanged()
+
+    /**
+     * Screenshot disguise: mainstream names and borrowed icons everywhere, status bar hidden.
+     * Computed, never stored per app — switching it off restores everything by itself.
+     * A mode, not a setting: backups never carry it (see NEVER_EXPORT).
+     */
+    val screenshotMode: Flow<Boolean> =
+        data.map { it[Keys.SCREENSHOT_MODE] ?: false }.distinctUntilChanged()
+
+    /** Dark theme on a fixed night schedule (19:00–07:00) instead of following the system. */
+    val autoDark: Flow<Boolean> =
+        data.map { it[Keys.AUTO_DARK] ?: false }.distinctUntilChanged()
+
+    /** Two-finger pinch on the home screen resizes the icons. */
+    val pinchToResize: Flow<Boolean> =
+        data.map { it[Keys.PINCH_TO_RESIZE] ?: false }.distinctUntilChanged()
+
+    /** Skip the launcher's own transitions, for anyone who finds them distracting. */
+    val reduceMotion: Flow<Boolean> =
+        data.map { it[Keys.REDUCE_MOTION] ?: false }.distinctUntilChanged()
+
+    /** Whether the top-used apps carry the 常用 tag on their own, following the counts. */
+    val autoFrequentTag: Flow<Boolean> =
+        data.map { it[Keys.AUTO_FREQUENT_TAG] ?: false }.distinctUntilChanged()
+
+    /** Apps that ask for the device's own lock before they open. */
+    val lockedApps: Flow<Set<String>> =
+        data.map { it[Keys.LOCKED_APPS] ?: emptySet() }.distinctUntilChanged()
+
+    /** Free-form tags per app, so an app can be gathered under several headings at once. */
+    val appTags: Flow<Map<String, Set<String>>> = data.map { pref ->
+        val raw = pref[Keys.APP_TAGS] ?: return@map emptyMap()
+        runCatching {
+            val obj = org.json.JSONObject(raw)
+            buildMap {
+                obj.keys().forEach { k ->
+                    when (val v = obj.opt(k)) {
+                        is org.json.JSONArray -> {
+                            val set = buildSet {
+                                for (i in 0 until v.length()) {
+                                    v.optString(i).trim().takeIf { it.isNotEmpty() }?.let { add(it) }
+                                }
+                            }
+                            if (set.isNotEmpty()) put(k, set)
+                        }
+                        // The first cut stored one tag as a plain string; read it as a set of one.
+                        is String -> v.trim().takeIf { it.isNotEmpty() }?.let { put(k, setOf(it)) }
+                    }
+                }
+            }
+        }.getOrDefault(emptyMap())
+    }.distinctUntilChanged()
 
     /** How far down the screen a scrubbed letter is parked, as a percentage of the viewport. */
     val sectionTopPercent: Flow<Int> =
@@ -1041,6 +1155,10 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.FONT] = f.name }
     }
 
+    suspend fun setColorSchemeChoice(c: ColorSchemeChoice) {
+        context.dataStore.edit { it[Keys.COLOR_SCHEME] = c.name }
+    }
+
     suspend fun setHideStatusBarAppList(v: Boolean) {
         context.dataStore.edit { it[Keys.HIDE_STATUS_BAR_APPLIST] = v }
     }
@@ -1051,6 +1169,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setDimWallpaperAlpha(v: Float) {
         context.dataStore.edit { it[Keys.DIM_WALLPAPER_ALPHA] = v }
+    }
+
+    suspend fun setWallpaperBlurDp(v: Int) {
+        context.dataStore.edit { it[Keys.WALLPAPER_BLUR_DP] = v.coerceIn(0, 80) }
     }
 
     suspend fun setDimHomeAlpha(v: Float) {
@@ -1135,6 +1257,37 @@ class Prefs(private val context: Context) {
     }
 
     /**
+     * Which package provides each widget id, so a dead one can be told apart.
+     *
+     * A null provider info means two different things: the package is gone (uninstall — the
+     * id should go) or it is still installed but frozen or suspended (temporary — the id must
+     * stay, or unfreezing finds the widget deleted). The info itself names no package when it
+     * is null, so the mapping is written at bind time, when the provider is known.
+     */
+    val widgetProviders: Flow<Map<Int, String>> = data.map { pref ->
+        val raw = pref[Keys.WIDGET_PROVIDERS] ?: return@map emptyMap()
+        runCatching {
+            val obj = JSONObject(raw)
+            buildMap {
+                obj.keys().forEach { k ->
+                    k.toIntOrNull()?.let { id ->
+                        obj.optString(k).takeIf { it.isNotEmpty() }?.let { put(id, it) }
+                    }
+                }
+            }
+        }.getOrDefault(emptyMap())
+    }.distinctUntilChanged()
+
+    suspend fun setWidgetProvider(id: Int, packageName: String) {
+        context.dataStore.edit { pref ->
+            val obj = runCatching { JSONObject(pref[Keys.WIDGET_PROVIDERS] ?: "{}") }
+                .getOrDefault(JSONObject())
+            obj.put(id.toString(), packageName)
+            pref[Keys.WIDGET_PROVIDERS] = obj.toString()
+        }
+    }
+
+    /**
      * Keeps only the widget ids [keep] accepts, for the ids whose provider has gone.
      *
      * A widget whose app was uninstalled leaves a dead page that says so and has to be
@@ -1150,7 +1303,14 @@ class Prefs(private val context: Context) {
     }
 
     suspend fun removeWidgetId(id: Int) {
-        context.dataStore.edit { pref -> pref.writeWidgetIds(readWidgetIds(pref) - id) }
+        context.dataStore.edit { pref ->
+            pref.writeWidgetIds(readWidgetIds(pref) - id)
+            runCatching {
+                val obj = JSONObject(pref[Keys.WIDGET_PROVIDERS] ?: "{}")
+                obj.remove(id.toString())
+                pref[Keys.WIDGET_PROVIDERS] = obj.toString()
+            }
+        }
     }
 
     suspend fun setWidgetSidePaddingDp(v: Int) {
@@ -1229,6 +1389,47 @@ class Prefs(private val context: Context) {
 
     suspend fun setNotificationBadges(v: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATION_BADGES] = v }
+    }
+
+    suspend fun setDimPausedApps(v: Boolean) {
+        context.dataStore.edit { it[Keys.DIM_PAUSED_APPS] = v }
+    }
+
+    suspend fun setScreenshotMode(v: Boolean) {
+        context.dataStore.edit { it[Keys.SCREENSHOT_MODE] = v }
+    }
+
+    suspend fun setAutoDark(v: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_DARK] = v }
+    }
+
+    suspend fun setPinchToResize(v: Boolean) {
+        context.dataStore.edit { it[Keys.PINCH_TO_RESIZE] = v }
+    }
+
+    suspend fun setReduceMotion(v: Boolean) {
+        context.dataStore.edit { it[Keys.REDUCE_MOTION] = v }
+    }
+
+    suspend fun setAutoFrequentTag(v: Boolean) {
+        context.dataStore.edit { it[Keys.AUTO_FREQUENT_TAG] = v }
+    }
+
+    suspend fun setAppLocked(key: String, locked: Boolean) {
+        context.dataStore.edit { pref ->
+            val current = pref[Keys.LOCKED_APPS] ?: emptySet()
+            pref[Keys.LOCKED_APPS] = if (locked) current + key else current - key
+        }
+    }
+
+    suspend fun setAppTags(key: String, tags: Set<String>) {
+        context.dataStore.edit { pref ->
+            val obj = runCatching { org.json.JSONObject(pref[Keys.APP_TAGS] ?: "{}") }
+                .getOrDefault(org.json.JSONObject())
+            val clean = tags.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            if (clean.isEmpty()) obj.remove(key) else obj.put(key, org.json.JSONArray(clean.toList()))
+            pref[Keys.APP_TAGS] = obj.toString()
+        }
     }
 
     suspend fun setSectionTopPercent(v: Int) {

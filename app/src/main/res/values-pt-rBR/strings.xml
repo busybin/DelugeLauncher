@@ -11,6 +11,14 @@
     <string name="action_done">Concluído</string>
     <string name="action_remove">Remover</string>
     <string name="action_app_info">Informações do app</string>
+    <string name="action_uninstall">Desinstalar</string>
+    <string name="tag_frequent">Frequentes</string>
+    <string name="action_mark_frequent">Marcar mais usados como Frequentes</string>
+    <string name="frequent_tagged">%1$d apps marcados como %2$s</string>
+    <string name="settings_auto_frequent">Tag Frequentes automático</string>
+    <string name="settings_auto_frequent_detail">Mantém os apps mais usados marcados automaticamente, acompanhando o uso.</string>
+    <string name="settings_mark_frequent_detail">Marca na hora os cinco apps mais usados (exceto favoritos) como Frequentes.</string>
+    <string name="tag_reserved">“%1$s” é atribuído sozinho e não pode ser posto à mão.</string>
     <string name="action_edit_layout">Editar layout</string>
     <string name="action_edit_icon_and_name">Editar ícone &amp; nome</string>
     <string name="action_move_to_folder">Mover para a pasta…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">Cabeçalhos de letras</string>
     <string name="settings_list_headers_detail">Desativado dá uma lista contínua. A barra A-Z ainda pula para a letra</string>
     <string name="settings_notification_badges">Contagem de notificações nos ícones</string>
+    <string name="settings_dim_paused_apps">Atenuar apps pausados</string>
+    <string name="settings_wallpaper_blur">Desfoque do plano de fundo</string>
+    <string name="settings_dim_paused_apps_detail">Apps pausados aparecem atenuados, como se estivessem de lado. Desligue para vê-los como os demais.</string>
     <string name="settings_notification_badges_detail">Precisa do mesmo acesso a notificações que o Now Playing. Apenas contagens, nunca o que uma notificação diz</string>
     <string name="settings_section_top">Onde uma letra para</string>
     <string name="settings_close_folder">Fechar uma pasta depois de abrir um app</string>

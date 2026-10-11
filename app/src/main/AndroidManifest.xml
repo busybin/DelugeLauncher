@@ -17,6 +17,10 @@
          and the space can never be unlocked from here. Granted at install time, no prompt,
          and it only takes effect while this launcher holds the home role. -->
     <uses-permission android:name="android.permission.ACCESS_HIDDEN_PROFILES" />
+    <!-- Since Android 8, asking the system to uninstall another package needs this. Without it
+         ACTION_DELETE resolves to nothing and the tap does nothing at all. Granted at install,
+         no prompt, and it only lets the system's own uninstaller be opened. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Asked for at the moment the clock widget is set to show what is coming up, never at
          install. Read only, and nothing read here leaves the phone: there is no network

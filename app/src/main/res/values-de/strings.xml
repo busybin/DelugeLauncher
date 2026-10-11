@@ -11,6 +11,14 @@
     <string name="action_done">Fertig</string>
     <string name="action_remove">Entfernen</string>
     <string name="action_app_info">App-Info</string>
+    <string name="action_uninstall">Deinstallieren</string>
+    <string name="tag_frequent">Häufig</string>
+    <string name="action_mark_frequent">Meistgenutzte als „Häufig“ markieren</string>
+    <string name="frequent_tagged">%1$d Apps als %2$s markiert</string>
+    <string name="settings_auto_frequent">Automatischer Häufig-Tag</string>
+    <string name="settings_auto_frequent_detail">Hält die meistgenutzten Apps automatisch mit „Häufig“ markiert und folgt der Nutzung.</string>
+    <string name="settings_mark_frequent_detail">Markiert die fünf meistgenutzten Apps (außer Favoriten) sofort mit „Häufig“.</string>
+    <string name="tag_reserved">„%1$s“ wird automatisch vergeben und kann nicht von Hand gesetzt werden.</string>
     <string name="action_edit_layout">Layout bearbeiten</string>
     <string name="action_edit_icon_and_name">Symbol &amp; Name bearbeiten</string>
     <string name="action_move_to_folder">In Ordner verschieben…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">Buchstabenüberschriften</string>
     <string name="settings_list_headers_detail">Aus ergibt eine durchgehende Liste. Die A-Z-Leiste springt trotzdem zum Buchstaben</string>
     <string name="settings_notification_badges">Benachrichtigungsanzahl auf Symbolen</string>
+    <string name="settings_dim_paused_apps">Pausierte Apps ausgrauen</string>
+    <string name="settings_wallpaper_blur">Hintergrundbild weichzeichnen</string>
+    <string name="settings_dim_paused_apps_detail">Pausierte Apps werden gedimmt dargestellt, damit sie als beiseitegelegt erkennbar sind. Aus schaltet die Hervorhebung ab.</string>
     <string name="settings_notification_badges_detail">Benötigt denselben Benachrichtigungszugriff wie Now Playing. Nur Zählwerte, niemals den Inhalt einer Benachrichtigung</string>
     <string name="settings_section_top">Wo ein Buchstabe landet</string>
     <string name="settings_close_folder">Ordner nach dem Öffnen einer App schließen</string>

@@ -27,6 +27,8 @@ internal const val PREF_ICON_OVERRIDES = "icon_overrides_json"
 internal const val PREF_LAUNCH_COUNTS = "launch_counts_json"
 internal const val PREF_QUICK_LAUNCH_LEFT = "quick_launch_left_key"
 internal const val PREF_QUICK_LAUNCH_RIGHT = "quick_launch_right_key"
+internal const val PREF_LOCKED_APPS = "locked_apps"
+internal const val PREF_APP_TAGS = "app_tags"
 
 /**
  * Strips every second profile's keys out of one stored preference's value, given the DataStore
@@ -63,10 +65,10 @@ fun stripPrivateSpaceFromExport(name: String, value: Any, stripOtherProfiles: Bo
 
     return when (name) {
         PREF_FAVORITES -> (value as? String)?.let { stripNewlineList(it, isPrivate) } ?: value
-        PREF_HIDDEN_APPS, PREF_FREQUENT_EXCLUDED ->
+        PREF_HIDDEN_APPS, PREF_FREQUENT_EXCLUDED, PREF_LOCKED_APPS ->
             (value as? Set<*>)?.let { stripStringSet(it, isPrivate) } ?: value
         PREF_FOLDERS -> (value as? String)?.let { stripFoldersJson(it, isPrivate) } ?: value
-        PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS ->
+        PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS, PREF_APP_TAGS ->
             (value as? String)?.let { stripJsonMap(it, isPrivate) } ?: value
         PREF_QUICK_LAUNCH_LEFT, PREF_QUICK_LAUNCH_RIGHT -> {
             // Not `?.let { ... } ?: value`: that Elvis would mistake the deliberate null this

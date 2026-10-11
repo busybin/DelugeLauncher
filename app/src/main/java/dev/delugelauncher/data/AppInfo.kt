@@ -42,6 +42,12 @@ data class AppInfo(
     /** A shortcut its publisher has switched off: still listed, shown dimmed, never started. */
     val disabled: Boolean = false,
     /**
+     * Paused by the user (Android's "pause app" / suspended): still installed and launchable,
+     * but the launcher can show it as set aside. Kept separate from [disabled], which is a
+     * shortcut the publisher retired.
+     */
+    val suspended: Boolean = false,
+    /**
      * From a work profile, so it can say so.
      *
      * The system badges the icon already, but this is a list of names where an icon is small

@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppFont
 import dev.delugelauncher.data.AzStripVisibility
+import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.data.ShortcutSwipe
@@ -84,4 +85,17 @@ fun IconShape.labelRes(): Int = when (this) {
 fun IconSide.labelRes(): Int = when (this) {
     IconSide.LEFT -> R.string.alignment_left
     IconSide.RIGHT -> R.string.alignment_right
+}
+
+@StringRes
+fun ColorSchemeChoice.labelRes(): Int = when (this) {
+    ColorSchemeChoice.DELUGE_BLUE -> R.string.scheme_deluge_blue
+    ColorSchemeChoice.DYNAMIC -> R.string.scheme_dynamic
+    ColorSchemeChoice.RED -> R.string.scheme_red
+    ColorSchemeChoice.ORANGE -> R.string.scheme_orange
+    ColorSchemeChoice.YELLOW -> R.string.scheme_yellow
+    ColorSchemeChoice.GREEN -> R.string.scheme_green
+    ColorSchemeChoice.TEAL -> R.string.scheme_teal
+    ColorSchemeChoice.PURPLE -> R.string.scheme_purple
+    ColorSchemeChoice.PINK -> R.string.scheme_pink
 }

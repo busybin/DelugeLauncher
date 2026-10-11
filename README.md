@@ -16,13 +16,26 @@ under a real finger. Everything else is upstream's design, kept as it was.
   of drawing pictures, and two large libraries are gone: the icons pack and the
   navigation library.
 - **The A-Z strip is a thumb control.** It follows the list as you scroll, highlights
-  every letter on screen, sits on the side the list is not aligned to, and stops at half
-  the screen so reaching a letter never means moving the whole hand.
+  every letter on screen, sits on the side the list is not aligned to, and rests in the
+  lower half so reaching a letter never means moving the whole hand.
 - **Scrolling is never stolen.** A row only answers a sideways swipe, so a drag that
-  started at an angle scrolls the list instead of opening a shortcut menu.
+  started at an angle scrolls the list instead of opening a shortcut menu. Overscrolling
+  the bottom springs back instead of closing the list.
+- **Search speaks pinyin.** Initials and full spelling both find the app, with the match
+  highlighted.
+- **Tags across the alphabet.** Group apps by what they are for, scrub them from the
+  strip, and let the Frequent tag follow usage on its own.
+- **A lock per app.** Opening one asks for the screen lock; the long-press menu also
+  uninstalls, hides with confirmation, and paused apps grey out live.
+- **Favorites reach the edge.** The home list runs full-bleed like the app list and
+  scrolls fully into view.
 - Folder rows say how many apps they hold and whether they are open.
-- Widget height follows the widget itself, unless you set it by hand.
-- Settings has a changelog, and a restored backup re-pins the shortcuts it names.
+- Widget height follows the widget itself, unless you set it by hand. Widgets refresh
+  when their app freezes and unfreezes, and a frozen one is never cleaned away.
+- Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion.
+- Settings has a changelog that follows the language, every row is searchable, and Back
+  returns to the section it came from. A restored backup re-pins the shortcuts it names
+  and covers every setting including the language.
 
 Plus a number of smaller fixes and additions along the way. The in-app changelog
 (Settings → About → Changelog) has the release-by-release list.
@@ -41,8 +54,8 @@ The home screen starts almost empty on purpose — everything on it is put there
 - **Long-press the wallpaper** for the menu: favorites, widgets, edit layout, settings.
 - **Swipe in from either edge** for the A-Z list, then slide along the letters to jump to
   one. Tap the edge and let go to just open it.
-- **Long-press any app**, on either screen, to rename it, change its icon, hide it, or
-  file it in a folder.
+- **Long-press any app**, on either screen, to rename it, change its icon, tag it,
+  lock it, hide it, uninstall it, or file it in a folder.
 - **Edit layout** gives you drag handles for the order and steppers for every gap, height
   and margin.
 

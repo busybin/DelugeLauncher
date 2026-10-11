@@ -11,6 +11,14 @@
     <string name="action_done">Fatto</string>
     <string name="action_remove">Rimuovi</string>
     <string name="action_app_info">Info app</string>
+    <string name="action_uninstall">Disinstalla</string>
+    <string name="tag_frequent">Frequenti</string>
+    <string name="action_mark_frequent">Contrassegna più usate come Frequenti</string>
+    <string name="frequent_tagged">%1$d app contrassegnate come %2$s</string>
+    <string name="settings_auto_frequent">Etichetta Frequenti automatica</string>
+    <string name="settings_auto_frequent_detail">Mantiene automaticamente marcate le app più usate seguendone l\'uso.</string>
+    <string name="settings_mark_frequent_detail">Contrassegna subito le cinque app più usate (esclusi i preferiti) come Frequenti.</string>
+    <string name="tag_reserved">«%1$s» viene assegnato da solo e non si può mettere a mano.</string>
     <string name="action_edit_layout">Modifica layout</string>
     <string name="action_edit_icon_and_name">Modifica icona &amp; nome</string>
     <string name="action_move_to_folder">Sposta nella cartella…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">Intestazioni lettere</string>
     <string name="settings_list_headers_detail">Disattivato crea un unico elenco continuo. La barra A-Z salta comunque alla lettera</string>
     <string name="settings_notification_badges">Numero di notifiche sulle icone</string>
+    <string name="settings_dim_paused_apps">App in pausa in grigio</string>
+    <string name="settings_wallpaper_blur">Sfocatura sfondo</string>
+    <string name="settings_dim_paused_apps_detail">Le app in pausa vengono mostrate attenuate, come messe da parte. Disattiva per vederle come le altre.</string>
     <string name="settings_notification_badges_detail">Richiede lo stesso accesso alle notifiche di In riproduzione. Solo conteggi, mai il contenuto di una notifica</string>
     <string name="settings_section_top">Dove arriva una lettera</string>
     <string name="settings_close_folder">Chiudi una cartella dopo aver aperto un\'app</string>

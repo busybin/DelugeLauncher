@@ -66,7 +66,7 @@ private const val DOUBLE_TAP_WINDOW_MS = 300L
 fun EdgeTouchZone(
     side: EdgeSide,
     widthDp: Dp,
-    letters: List<Char>,
+    letters: List<String>,
     band: ScrubBand,
     /** Whether the live part of the edge is only as tall as the band. */
     bandOnly: Boolean,
@@ -156,13 +156,13 @@ fun EdgeTouchZone(
                             lastIndex = index
                             HapticUtil.tick(view, hapticsEnabled)
                         }
-                        // Past either end of the letters by more than a thumb's width. The
-                        // overshoot matters: a short one still clamps to A or Z, which is what
-                        // lets the first and last letters be grabbed from outside their own
-                        // position, and only past that does leaving mean leaving.
-                        val off = enteredBand && (
-                            y < band.topPx - overshoot || y > band.bottomPx + overshoot
-                        )
+                        // Past the top of the letters by more than a thumb's width. Only
+                        // the top dismisses: scrubbing down to Z and lifting off the bottom
+                        // must park the list at Z, not close it. The overshoot still matters:
+                        // a short one clamps to A, which is what lets the first letter be
+                        // grabbed from outside its own position, and only past that does
+                        // leaving mean leaving.
+                        val off = enteredBand && y < band.topPx - overshoot
                         if (off != armedToClose) {
                             armedToClose = off
                             // Said out loud, or nothing tells you that letting go now does
