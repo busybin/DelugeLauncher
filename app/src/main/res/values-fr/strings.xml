@@ -11,6 +11,14 @@
     <string name="action_done">Terminé</string>
     <string name="action_remove">Supprimer</string>
     <string name="action_app_info">Infos sur l\'application</string>
+    <string name="action_uninstall">Désinstaller</string>
+    <string name="tag_frequent">Fréquentes</string>
+    <string name="action_mark_frequent">Marquer les plus utilisées comme Fréquentes</string>
+    <string name="frequent_tagged">%1$d applis marquées comme %2$s</string>
+    <string name="settings_auto_frequent">Étiquette Fréquentes auto</string>
+    <string name="settings_auto_frequent_detail">Garde automatiquement les applis les plus utilisées marquées et suit leur usage.</string>
+    <string name="settings_mark_frequent_detail">Marque tout de suite les cinq applis les plus utilisées (hors favoris) comme Fréquentes.</string>
+    <string name="tag_reserved">« %1$s » est attribué seul et ne peut pas être mis à la main.</string>
     <string name="action_edit_layout">Modifier la disposition</string>
     <string name="action_edit_icon_and_name">Modifier l\'icône &amp; le nom</string>
     <string name="action_move_to_folder">Déplacer vers un dossier…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">En-têtes de lettres</string>
     <string name="settings_list_headers_detail">Désactivé donne une liste continue. La barre A-Z permet toujours d\'accéder à une lettre</string>
     <string name="settings_notification_badges">Nombre de notifications sur les icônes</string>
+    <string name="settings_dim_paused_apps">Griser les applis en pause</string>
+    <string name="settings_wallpaper_blur">Flou du fond d\'écran</string>
+    <string name="settings_dim_paused_apps_detail">Les applis en pause s\'affichent en grisé, comme mises de côté. Désactivez pour les voir comme les autres.</string>
     <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, jamais le contenu d\'une notification</string>
     <string name="settings_section_top">Où arrive une lettre</string>
     <string name="settings_close_folder">Fermer un dossier après l\'ouverture d\'une application</string>

@@ -1,0 +1,18 @@
+Search, tags and locks.
+
+New:
+* Search finds apps by pinyin — initials and full spelling — with the match highlighted.
+* App tags group apps across the alphabet: sections on top, three letters in the strip, multi-select tagging with existing tags offered.
+* The Frequent tag follows usage on its own and can be switched off, taking its tags back.
+* A per-app lock asks for the screen lock, with a lock badge on the name.
+* The long-press menu gains uninstall; hiding an app asks first.
+* Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion.
+
+Fixed and tuned:
+* Favorites reach the bottom edge like the app list and scroll fully into view; scrubbing past Z stays at Z.
+* The strip rests in the lower half (full height sideways); the palette picker is a five-column grid.
+* Settings back navigation returns to the section it came from; settings search finds every row.
+* Paused apps grey out live; widgets refresh when their app freezes and unfreezes and are never cleaned away.
+* Backups now cover every setting including the language; private-space keys stay out.
+* About leads with the app name; tapping it opens the project page; the changelog follows the language.
+* A hand-applied Frequent tag is refused; unlocking lifts a pause where the system allows.

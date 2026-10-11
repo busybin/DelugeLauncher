@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>Suche findet Apps per Pinyin — Initialen wie volle Schreibweise — mit markiertem Treffer.</item>
+        <item>Tags sammeln Apps über das Alphabet hinweg: Abschnitte oben, drei Zeichen in der Leiste, Mehrfachvergabe aus vorhandenen Tags.</item>
+        <item>„Häufig“ folgt der Nutzung von selbst, lässt sich abschalten und nimmt seine Tags zurück; von Hand vergeben wird abgelehnt.</item>
+        <item>Appsperre pro App mit Gerätesperre, Schloss am Namen; Entsperren hebt die Pause, wo das System es zulässt.</item>
+        <item>Langdruck-Menü deinstalliert; Ausblenden fragt erst; Pausiertes graut live aus.</item>
+        <item>Favoriten reichen wie die Liste bis an den Rand und scrollen mit Reserve ganz durch.</item>
+        <item>Wer über Z hinaus loslässt, bleibt auf Z; Überziehen am Listenende federt nur zurück.</item>
+        <item>Die Leiste ruht in der unteren Hälfte (quer volle Höhe); Farbauswahl als fünfspaltiges Raster aus Vollfarben.</item>
+        <item>Zurück in den Einstellungen führt in den Abschnitt zurück, System-Zurück inklusive; die Suche findet jede Zeile.</item>
+        <item>Widgets aktualisieren sich beim Einfrieren und Auftauen sofort und werden gefroren nie weggeräumt.</item>
+        <item>Nacht-Dunkelmodus, Hintergrund-Weichzeichner, Icons per Pinch zoomen, reduzierte Bewegung.</item>
+        <item>Backups enthalten alle Einstellungen samt Sprache; Privates bleibt draußen.</item>
+        <item>Über führt mit dem App-Namen — tippen öffnet die Projektseite; das Änderungsprotokoll folgt der Sprache.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Sprache in den Einstellungen wählbar — 10 Sprachen plus traditionelles Chinesisch.</item>
+        <item>Die A–Z-Leiste folgt der Listenausrichtung; nach einem Sprachwechsel bleibt man wo man war.</item>
+        <item>Bei eingeblendeter Statusleiste liegt nichts mehr darunter.</item>
+        <item>Karte zum Standard-Home, dauerhaft weglegbar.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Umbenannt in Deluge Launcher, mit blauem Thema und neuem Icon.</item>
+        <item>App-Liste randlos; beim Scrollen leuchtet jeder Buchstabe auf dem Schirm.</item>
+        <item>Scrollen behoben — schräge Wischgesten blockieren die Liste nicht mehr.</item>
+        <item>Leere Icons und zwei Sekunden Schwarz bei der Heimkehr behoben.</item>
+        <item>Schnellerer Kaltstart: Icon-Cache auf der Platte.</item>
+        <item>Ordnerzeilen zeigen Anzahl und Offen-Status.</item>
+        <item>Widget-Höhe folgt dem Widget; tote Widgets aus Backups räumen sich weg.</item>
+        <item>Kurzbefehle nur bei Seitwärtswisch; Scrollen wird nie gestohlen.</item>
+        <item>Navigationsbibliothek raus, eigener Router rein.</item>
+    </string-array>
+</resources>

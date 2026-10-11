@@ -84,6 +84,8 @@ fun WidgetSlot(
     heightDp: Int,
     onEditLayout: () -> Unit,
     actions: WidgetSlotActions,
+    /** Bumped on every package event, so frozen and unfrozen providers re-read. */
+    refreshTick: Int,
     /** Bumped when HOME is pressed on a home screen already showing, so the stack goes back. */
     homeIntentTick: Int,
     modifier: Modifier = Modifier,
@@ -142,7 +144,11 @@ fun WidgetSlot(
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
                 val id = widgetIds[page]
-                WidgetPage(widgetId = id, onPressAndHold = { x, y -> openMenu(id, x, y) })
+                WidgetPage(
+                    widgetId = id,
+                    refreshTick = refreshTick,
+                    onPressAndHold = { x, y -> openMenu(id, x, y) },
+                )
             }
 
             if (widgetIds.size > 1) {
@@ -241,11 +247,19 @@ fun WidgetSlot(
 
 /** One hosted widget. [onLongPress] carries the press position in this page's local pixels. */
 @Composable
-private fun WidgetPage(widgetId: Int, onPressAndHold: (x: Float, y: Float) -> Unit) {
+private fun WidgetPage(
+    widgetId: Int,
+    /** Bumped on every package event; the provider is re-read, so freeze and unfreeze show. */
+    refreshTick: Int,
+    onPressAndHold: (x: Float, y: Float) -> Unit,
+) {
     val context = LocalContext.current
     val app = context.applicationContext as DelugeApp
     val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
-    val providerInfo: AppWidgetProviderInfo? = remember(widgetId) {
+    // Re-read on every package event, not just when the id changes: a frozen provider reads
+    // null and draws the dead page, and only a fresh read brings it back on unfreeze. The
+    // ids stay the same either way, so keying on the id alone left it dead for good.
+    val providerInfo: AppWidgetProviderInfo? = remember(widgetId, refreshTick) {
         if (widgetId > 0) appWidgetManager.getAppWidgetInfo(widgetId) else null
     }
     val density = LocalDensity.current

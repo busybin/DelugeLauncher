@@ -23,6 +23,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.unit.dp
 import dev.delugelauncher.R
 
@@ -30,40 +31,16 @@ import dev.delugelauncher.R
  * One release's notes.
  *
  * Here rather than in a file so a release's notes travel with the code that made them, and
- * nothing has to be parsed at run time. English only: it is a developer's log, and a
- * translated changelog drifts from the code it describes. Everything on screen is
- * translated.
+ * nothing has to be parsed at run time. The notes live in string arrays, one per release, so
+ * every language the app speaks has its own — English in values/, the rest beside it.
  */
-data class Release(val version: String, val notes: List<String>)
+data class Release(val version: String, val notesRes: Int)
 
 /** Newest first. Add an entry only when a version is actually being cut. */
 val CHANGELOG: List<Release> = listOf(
-    Release(
-        "V19",
-        listOf(
-            "Language can now be chosen in settings — 10 languages plus Traditional Chinese.",
-            "The A-Z strip sits on the side the app list is not aligned to.",
-            "The launcher keeps you where you were when the language changes.",
-            "Home screen content no longer sits under the status bar when it is shown.",
-            "Set as default: a card on the home screen offers to make Deluge your home app, and can be dismissed for good.",
-        ),
-    ),
-    Release(
-        "First fork releases",
-        listOf(
-            "Renamed and rebranded as Deluge Launcher, with a new blue theme and icon.",
-            "App list: the strip lights up every letter on screen while scrolling, and the list runs edge to edge.",
-            "Fixed the list refusing to scroll when a swipe started at an angle.",
-            "Fixed the home screen taking seconds to draw after leaving an app.",
-            "Fixed a two second blank screen when returning home from another app.",
-            "App icons are cached on disk, so the second launch is fast.",
-            "Folder rows show how many apps they hold, and whether they are open.",
-            "Widget height follows the widget itself unless it is set by hand.",
-            "Dead widgets left over from a backup are cleaned up on their own.",
-            "Swipe for shortcuts only fires on a sideways swipe, so scrolling past a row is never stolen.",
-            "Added a disk-backed icon cache, a lighter icon set, and the navigation library removed.",
-        ),
-    ),
+    Release("V20", R.array.changelog_v20),
+    Release("V19", R.array.changelog_v19),
+    Release("First fork releases", R.array.changelog_first),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,6 +72,9 @@ fun ChangelogScreen(onBack: () -> Unit) {
                 .padding(horizontal = 16.dp),
         ) {
             items(CHANGELOG) { release ->
+                // Resolved here, once per release rather than once per row: the array follows
+                // the language, so switching languages re-reads it on its own.
+                val notes = stringArrayResource(release.notesRes)
                 Surface(
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.surfaceContainer,
@@ -109,7 +89,7 @@ fun ChangelogScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.primary,
                         )
                         Spacer(Modifier.height(8.dp))
-                        release.notes.forEach { note ->
+                        notes.forEach { note ->
                             Text(
                                 text = "•  $note",
                                 style = MaterialTheme.typography.bodyMedium,

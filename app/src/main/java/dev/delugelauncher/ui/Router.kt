@@ -6,6 +6,7 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 
 /**
@@ -146,5 +147,13 @@ fun RouterHost(router: Router, content: @Composable RouterScope.() -> Unit) {
     val scope = RouterScope()
     scope.content()
     val resolved = scope.resolve(router.top) ?: return
-    resolved.second(resolved.first)
+    // Each route's own rememberSaveable state is kept while it is off screen, so a screen
+    // opened from inside another comes back to where it was left — the settings sections in
+    // particular, which are a state on one screen rather than routes of their own. Without
+    // this, coming back from Language or the changelog landed on the top settings menu
+    // instead of the section it was opened from.
+    val holder = rememberSaveableStateHolder()
+    holder.SaveableStateProvider(router.top) {
+        resolved.second(resolved.first)
+    }
 }

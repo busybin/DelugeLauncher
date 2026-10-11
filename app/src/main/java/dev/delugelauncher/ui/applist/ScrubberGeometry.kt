@@ -33,12 +33,29 @@ object ScrubberGeometry {
         if (viewportPx <= 0f || band.heightPx <= 0f) return band
         val max = viewportPx * MAX_HEIGHT_FRACTION
         if (band.heightPx <= max) return band
-        // The bottom holds still and the top gives way: a stripped-down strip stays
-        // anchored where it ended, which is the half of the screen a thumb is in.
-        // Keeping the top instead parked the whole thing in the upper half of the
-        // screen on any arrangement taller than the cap.
-        val top = (band.bottomPx - max).coerceIn(0f, (viewportPx - max).coerceAtLeast(0f))
+        // Cropped around the band's own middle: keeping the bottom glued the strip to the
+        // floor whenever the favorites ran long, and keeping the top parked it up high.
+        // The middle of what it belongs to is the only end that is never wrong.
+        val center = (band.topPx + band.bottomPx) / 2f
+        val top = (center - max / 2f).coerceIn(0f, (viewportPx - max).coerceAtLeast(0f))
         return ScrubBand(top, max)
+    }
+
+    /**
+     * [band] with its height no less than [MAX_HEIGHT_FRACTION] of [viewportPx].
+     *
+     * A band shorter than this is a strip of a few letters squeezed into a corner — with
+     * only a handful of apps installed, or an alphabet that stops well short of Z, the
+     * favorites' span is a few rows high and sits wherever the favorites are. Growing
+     * downward from its top keeps it attached to what it belongs to instead of dropping it
+     * somewhere unrelated.
+     */
+    fun floorHeight(band: ScrubBand, viewportPx: Float): ScrubBand {
+        if (viewportPx <= 0f || band.heightPx <= 0f) return band
+        val min = viewportPx * MAX_HEIGHT_FRACTION
+        if (band.heightPx >= min) return band
+        val height = min.coerceAtMost(viewportPx)
+        return ScrubBand(band.topPx.coerceIn(0f, (viewportPx - height).coerceAtLeast(0f)), height)
     }
 
     fun indexForY(y: Float, topPx: Float, heightPx: Float, count: Int): Int {

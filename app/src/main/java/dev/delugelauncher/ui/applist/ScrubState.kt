@@ -26,8 +26,8 @@ import dev.delugelauncher.data.EdgeSide
  */
 @Stable
 class ScrubState {
-    /** The letter under the fingertip, or null when no scrub is in progress. */
-    var letter by mutableStateOf<Char?>(null)
+    /** The label under the fingertip, or null when no scrub is in progress. */
+    var letter by mutableStateOf<String?>(null)
         private set
 
     /**
@@ -44,7 +44,7 @@ class ScrubState {
 
     private var placementCount = 0L
 
-    data class Placement(val letter: Char, val count: Long)
+    data class Placement(val letter: String, val count: Long)
 
     /** True while a finger is down on an edge zone. */
     var active by mutableStateOf(false)
@@ -120,7 +120,7 @@ class ScrubState {
         scrubbing = true
     }
 
-    fun update(y: Float, inwardPx: Float, letter: Char?) {
+    fun update(y: Float, inwardPx: Float, letter: String?) {
         this.y = y
         this.pull = inwardPx
         this.letter = letter

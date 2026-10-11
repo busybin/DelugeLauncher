@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>A busca acha apps por pinyin — iniciais e completo — com o acerto destacado.</item>
+        <item>Tags juntam apps através do alfabeto: seções em cima, três letras na tira, multisseleção desde as existentes.</item>
+        <item>Frequentes segue sozinho o uso, desliga e retoma as suas; posto à mão, recusado.</item>
+        <item>Bloqueio por app com o bloqueio do telefone, cadeado no nome; desbloquear levanta a pausa onde o sistema deixa.</item>
+        <item>O menu longo desinstala; ocultar pergunta antes; a pausa se atenua ao vivo.</item>
+        <item>Favoritos na borda como a lista, rolados até o fim com folga de sobra.</item>
+        <item>Soltar após o Z fica no Z; passar embaixo só rebate.</item>
+        <item>A tira descansa embaixo (cheia na horizontal); paleta em grade lisa de cinco colunas.</item>
+        <item>Voltar nos ajustes volta à seção de onde se veio, voltar do sistema incluído; a busca acha cada linha.</item>
+        <item>Widgets seguem congelar e descongelar na hora, e congelados nunca se limpam.</item>
+        <item>Tema escuro noturno, desfoque de fundo, pinça nos ícones, menos movimento.</item>
+        <item>Backups cobrem tudo, idioma incluído; o privado fica de fora.</item>
+        <item>Sobre começa pelo nome — tocar abre o projeto; o registro segue o idioma.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Idioma à escolha nos ajustes — 10 idiomas mais chinês tradicional.</item>
+        <item>A tira A–Z segue o alinhamento; após trocar seguimos onde estávamos.</item>
+        <item>Barra visível, nada mais embaixo.</item>
+        <item>Cartão para virar o início, dispensável para sempre.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Renomeado Deluge Launcher, tema azul e ícone novo.</item>
+        <item>Lista de apps na borda; rolando acende cada letra na tela.</item>
+        <item>Rolagem consertada — gestos na diagonal não a travam mais.</item>
+        <item>Ícones vazios e dois segundos de preto na volta consertados.</item>
+        <item>Partida mais rápida: cache de ícones em disco.</item>
+        <item>Linhas de pasta dizem quantos e se abertas.</item>
+        <item>A altura segue o widget; os mortos de backups se limpam sós.</item>
+        <item>Atalhos só no gesto lateral; a rolagem nunca é roubada.</item>
+        <item>Biblioteca de navegação fora, roteador da casa dentro.</item>
+    </string-array>
+</resources>

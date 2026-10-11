@@ -8,6 +8,7 @@ import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
+import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowCompat
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.media.NowPlayingListenerService
 import dev.delugelauncher.service.StatusBarFader
@@ -86,6 +88,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val hideStatusBar by app.prefs.hideStatusBar.collectAsState(initial = false)
             val hideStatusBarAppList by app.prefs.hideStatusBarAppList.collectAsState(initial = false)
+            val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
             val peekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
             // A short pull-down peeks the status bar, then it slides away again.
             var statusBarPeek by remember { mutableStateOf(false) }
@@ -99,7 +102,8 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val hideHere = if (appListOpen) hideStatusBarAppList else hideStatusBar
-            val statusBarVisible = !hideHere || statusBarPeek
+            // Screenshot disguise always hides the bar, whatever the setting says.
+            val statusBarVisible = (!hideHere && !screenshotMode) || statusBarPeek
             // Keyed on the answer, not on what went into it. Re-asking for a state the bar is
             // already in restarts the fade, and a fade out begins by holding the bar fully
             // shown — so opening the list with both set to hide flashed it into view.
@@ -110,12 +114,32 @@ class MainActivity : ComponentActivity() {
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
             val fontFile by app.prefs.fontFile.collectAsState(initial = null)
+            val colorSchemeChoice by app.prefs.colorSchemeChoice.collectAsState(
+                initial = ColorSchemeChoice.DELUGE_BLUE
+            )
             val allowRotation by app.prefs.allowRotation.collectAsState(initial = null)
             LaunchedEffect(allowRotation, rotatesByDefault) {
                 requestedOrientation = if (allowRotation ?: rotatesByDefault) {
                     ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 } else {
                     ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                }
+            }
+            // The wallpaper belongs to the system, so it cannot be blurred by drawing it — it is
+            // the window's own background blur that does it, which needs Android 12.
+            val wallpaperBlurDp by app.prefs.wallpaperBlurDp.collectAsState(initial = 0)
+            LaunchedEffect(wallpaperBlurDp) {
+                window.setBlurBehind(wallpaperBlurDp, resources.displayMetrics.density)
+            }
+
+            // Dark by the clock rather than by the system, when asked. Re-checked each minute so
+            // the turn of the hour is not missed while the launcher is the thing on screen.
+            val autoDark by app.prefs.autoDark.collectAsState(initial = false)
+            var nightNow by remember { mutableStateOf(isNightHour()) }
+            LaunchedEffect(autoDark) {
+                while (autoDark) {
+                    nightNow = isNightHour()
+                    delay(60_000L)
                 }
             }
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
@@ -143,7 +167,12 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            DelugeTheme(font = font, fontFile = fontFile) {
+            DelugeTheme(
+                font = font,
+                fontFile = fontFile,
+                scheme = colorSchemeChoice,
+                forceDark = if (autoDark) nightNow else null,
+            ) {
                 CompositionLocalProvider(LocalIconConfig provides iconConfig) {
                     DelugeNavHost(
                         app = app,
@@ -259,4 +288,28 @@ class MainActivity : ComponentActivity() {
         StatusBarFader.release()
         super.onStop()
     }
+}
+
+/**
+ * Blurs what the window sits over — the wallpaper — instead of drawing the wallpaper ourselves
+ * and blurring that, which is not ours to do and would not follow a live one. Android 12 added
+ * the flag and the radius together; below that the wallpaper is left alone.
+ */
+private fun Window.setBlurBehind(radiusDp: Int, density: Float) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return
+    val params = attributes
+    if (radiusDp > 0) {
+        addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+        params.blurBehindRadius = (radiusDp * density).toInt()
+    } else {
+        clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+        params.blurBehindRadius = 0
+    }
+    attributes = params
+}
+
+/** Night for the auto-dark schedule: before 07:00 and from 19:00. */
+private fun isNightHour(): Boolean {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    return hour < 7 || hour >= 19
 }

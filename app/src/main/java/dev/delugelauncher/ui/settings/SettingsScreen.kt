@@ -6,6 +6,8 @@ import dev.delugelauncher.ui.common.DelugeIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import dev.delugelauncher.data.ColorSchemeChoice
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
@@ -30,6 +32,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
@@ -57,7 +63,13 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,13 +89,18 @@ import androidx.compose.foundation.lazy.items
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.os.SystemClock
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import dev.delugelauncher.service.HapticUtil
 import dev.delugelauncher.data.CrashLog
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -108,6 +125,7 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.TextColorMode
+import android.content.Intent
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.theme.toFontFamily
 import dev.delugelauncher.R
@@ -132,6 +150,8 @@ fun SettingsScreen(
     hapticsEnabled: Boolean,
     dimHomeAlpha: Float,
     showFavoriteLabels: Boolean,
+    screenshotMode: Boolean,
+    onSetScreenshotMode: (Boolean) -> Unit,
     textColorMode: TextColorMode,
     textColorCustom: Int,
     dimColor: Int,
@@ -145,6 +165,8 @@ fun SettingsScreen(
     azStripVisibility: AzStripVisibility,
     showAlphabet: Boolean,
     sortByUsage: Boolean,
+    autoFrequentTag: Boolean,
+    onSetAutoFrequentTag: (Boolean) -> Unit,
     appListSearch: Boolean,
     appListSearchBottom: Boolean,
     appListSearchHidden: Boolean,
@@ -195,6 +217,14 @@ fun SettingsScreen(
     onSetHoldScrollSpeed: (Int) -> Unit,
     notificationBadges: Boolean,
     onSetNotificationBadges: (Boolean) -> Unit,
+    dimPausedApps: Boolean,
+    onSetDimPausedApps: (Boolean) -> Unit,
+    autoDark: Boolean,
+    onSetAutoDark: (Boolean) -> Unit,
+    pinchToResize: Boolean,
+    onSetPinchToResize: (Boolean) -> Unit,
+    reduceMotion: Boolean,
+    onSetReduceMotion: (Boolean) -> Unit,
     sectionTopPercent: Int,
     onSetSectionTopPercent: (Int) -> Unit,
     closeFolderOnLaunch: Boolean,
@@ -209,11 +239,15 @@ fun SettingsScreen(
     onSetLabelSize: (Int) -> Unit,
     onSetItemSpacing: (Int) -> Unit,
     onSetFont: (AppFont) -> Unit,
+    colorScheme: ColorSchemeChoice,
+    onSetColorScheme: (ColorSchemeChoice) -> Unit,
     statusBarPeekSeconds: Int,
     onSetHideStatusBar: (Boolean) -> Unit,
     onSetHideStatusBarAppList: (Boolean) -> Unit,
     onSetStatusBarPeekSeconds: (Int) -> Unit,
     onSetDimWallpaper: (Float) -> Unit,
+    wallpaperBlurDp: Int,
+    onSetWallpaperBlur: (Int) -> Unit,
     onSetHaptics: (Boolean) -> Unit,
     onSetDimHome: (Float) -> Unit,
     onSetShowFavoriteLabels: (Boolean) -> Unit,
@@ -338,11 +372,24 @@ fun SettingsScreen(
     // the plain one — rebuild the Activity, and a plain remember goes with it, dropping whoever
     // was three rows into a section back at the top menu.
     var openSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    // The developer switch hides until it is unlocked: five seconds held on the app name in
+    // About. Not persisted — a dead process relocks, which is the point of hiding it.
+    var developerUnlocked by rememberSaveable { mutableStateOf(false) }
     // Typed across every section at once, since the whole trouble with a settings screen is
     // knowing which section the thing you want was filed under.
     var query by rememberSaveable { mutableStateOf("") }
     BackHandler(enabled = openSection != null || query.isNotBlank()) {
         if (query.isNotBlank()) query = "" else openSection = null
+    }
+
+    // The project's page: new releases live there. Opened from the app name in About.
+    fun openProjectPage() {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
     }
 
 
@@ -357,9 +404,13 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_language),
                 value = languageLabel(),
                 onClick = onOpenLanguage,
+                leading = DelugeIcons.Language,
             )
         },
         // ---- Appearance ----
+        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_color_scheme), "theme color palette blue") {
+            ColorSchemeRow(colorScheme, onSetColorScheme)
+        },
         SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_preview)) {
             RowPreview(previewApp, iconSizeDp, labelSizeSp, font, fontFile, itemSpacingDp)
         },
@@ -427,6 +478,30 @@ fun SettingsScreen(
             // Only worth offering once something is actually dimmed.
             visible = dimHomeAlpha > 0f || dimWallpaperAlpha > 0f,
         ) { DimColorRow(dimColor, onSetDimColor) },
+        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_wallpaper_blur), "blur background frosted") {
+            SliderRow(
+                label = stringResource(R.string.settings_wallpaper_blur),
+                value = wallpaperBlurDp.toFloat(),
+                range = 0f..80f,
+                valueLabel = "${wallpaperBlurDp}dp",
+                onValueChange = { onSetWallpaperBlur(it.roundToInt()) },
+                step = 1f,
+            )
+        },
+        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_auto_dark), "dark night theme schedule") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_auto_dark),
+                detail = stringResource(R.string.settings_auto_dark_detail),
+                checked = autoDark, onCheckedChange = onSetAutoDark,
+            )
+        },
+        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_reduce_motion), "animation motion") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_reduce_motion),
+                detail = stringResource(R.string.settings_reduce_motion_detail),
+                checked = reduceMotion, onCheckedChange = onSetReduceMotion,
+            )
+        },
 
         // ---- Home screen ----
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_favorites_source), "frequent most used manual") {
@@ -529,6 +604,13 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_sort_by_usage),
                 detail = stringResource(R.string.settings_sort_by_usage_detail),
                 checked = sortByUsage, onCheckedChange = onSetSortByUsage,
+            )
+        },
+        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_auto_frequent), "frequent tag auto") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_auto_frequent),
+                detail = stringResource(R.string.settings_auto_frequent_detail),
+                checked = autoFrequentTag, onCheckedChange = onSetAutoFrequentTag,
             )
         },
         SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_az_visibility), "alphabet strip a-z") {
@@ -707,6 +789,13 @@ fun SettingsScreen(
         },
 
         // ---- Gestures ----
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_pinch_resize), "pinch zoom icons size") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_pinch_resize),
+                detail = stringResource(R.string.settings_pinch_resize_detail),
+                checked = pinchToResize, onCheckedChange = onSetPinchToResize,
+            )
+        },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_haptics), "vibrate") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_haptics),
@@ -729,6 +818,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_quick_launch_left),
                 value = quickLaunchLeftLabel,
                 onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.LEFT) },
+                leading = Icons.Filled.KeyboardArrowLeft,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_right), "swipe launch") {
@@ -736,6 +826,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_quick_launch_right),
                 value = quickLaunchRightLabel,
                 onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.RIGHT) },
+                leading = Icons.Filled.KeyboardArrowRight,
             )
         },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_corner_button), "button shortcut corner") {
@@ -743,6 +834,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_corner_button),
                 value = cornerButtonLabel,
                 onClick = onOpenCornerPicker,
+                leading = Icons.Filled.Star,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_double_tap_lock), "lock screen") {
@@ -802,6 +894,13 @@ fun SettingsScreen(
         SettingsEntry(SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
+        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_dim_paused_apps),
+                detail = stringResource(R.string.settings_dim_paused_apps_detail),
+                checked = dimPausedApps, onCheckedChange = onSetDimPausedApps,
+            )
+        },
         SettingsEntry(
             SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_notification_access_detail), "permission access",
             visible = nowPlayingEnabled || notificationBadges,
@@ -833,11 +932,23 @@ fun SettingsScreen(
         },
 
         // ---- Apps ----
+        SettingsEntry(SettingsSection.APPS, stringResource(R.string.settings_default_launcher), "home default launcher set") {
+            BackupRow(
+                label = stringResource(R.string.settings_default_launcher),
+                detail = if (isDefaultLauncher) {
+                    stringResource(R.string.settings_default_launcher_yes)
+                } else {
+                    stringResource(R.string.settings_default_launcher_no)
+                },
+                onClick = onOpenHomeSettings,
+            )
+        },
         SettingsEntry(SettingsSection.APPS, stringResource(R.string.settings_favorites), "manage") {
             BackupRow(
                 label = stringResource(R.string.settings_favorites),
                 detail = stringResource(R.string.settings_favorites_detail),
                 onClick = onOpenFavorites,
+                leading = Icons.Filled.Favorite,
             )
         },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty") {
@@ -866,17 +977,6 @@ fun SettingsScreen(
                 onValueChange = { onSetTextShadowStrength(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APPS, stringResource(R.string.settings_default_launcher), "home default launcher set") {
-            BackupRow(
-                label = stringResource(R.string.settings_default_launcher),
-                detail = if (isDefaultLauncher) {
-                    stringResource(R.string.settings_default_launcher_yes)
-                } else {
-                    stringResource(R.string.settings_default_launcher_no)
-                },
-                onClick = onOpenHomeSettings,
-            )
-        },
         SettingsEntry(
             SettingsSection.APPS, stringResource(R.string.settings_frequent_excluded),
             "most used favorites exclude block",
@@ -894,6 +994,7 @@ fun SettingsScreen(
                     )
                 },
                 onClick = onOpenFrequentExcluded,
+                leading = Icons.Filled.FavoriteBorder,
             )
         },
         SettingsEntry(SettingsSection.APPS, stringResource(R.string.settings_hidden_apps), "hide") {
@@ -902,6 +1003,70 @@ fun SettingsScreen(
                 detail = if (hiddenCount == 0) stringResource(R.string.settings_hidden_none)
                     else stringResource(R.string.settings_hidden_count, hiddenCount),
                 onClick = onOpenHiddenApps,
+                leading = DelugeIcons.VisibilityOff,
+            )
+        },
+        // These live as entries rather than as hand-drawn items in the list below, so the
+        // search box can find them: a row written straight into the LazyColumn is invisible to
+        // the search, which only ever looks at the entries.
+        SettingsEntry(SettingsSection.BACKUP, stringResource(R.string.settings_export), "backup export save share") {
+            BackupRow(
+                label = stringResource(R.string.settings_export),
+                detail = stringResource(R.string.settings_export_detail),
+                onClick = onExportSettings,
+            )
+        },
+        SettingsEntry(SettingsSection.BACKUP, stringResource(R.string.settings_import), "backup import restore load") {
+            BackupRow(
+                label = stringResource(R.string.settings_import),
+                detail = stringResource(R.string.settings_import_detail),
+                onClick = onImportSettings,
+            )
+        },
+        // The app name is pinned first in About. A tap opens the project's page, where new
+        // releases live; holding it for five seconds unlocks the hidden developer switch.
+        SettingsEntry(SettingsSection.ABOUT, stringResource(R.string.app_name), "version about deluge launcher github") {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .developerUnlock(
+                        hapticsEnabled = hapticsEnabled,
+                        onTap = { openProjectPage() },
+                        onUnlock = {
+                            developerUnlocked = true
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.developer_unlocked),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                    )
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+            ) {
+                Text(stringResource(R.string.app_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                Text(
+                    stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            }
+        },
+        SettingsEntry(
+            SettingsSection.ABOUT, stringResource(R.string.settings_developer_mode),
+            "developer screenshot disguise", visible = developerUnlocked,
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_developer_mode),
+                detail = stringResource(R.string.settings_developer_mode_detail),
+                checked = screenshotMode, onCheckedChange = onSetScreenshotMode,
+            )
+        },
+        SettingsEntry(SettingsSection.ABOUT, stringResource(R.string.settings_changelog), "changelog whats new release notes version history") {
+            QuickLaunchRow(
+                label = stringResource(R.string.settings_changelog),
+                value = stringResource(R.string.settings_changelog_detail),
+                onClick = onOpenChangelog,
+                leading = Icons.Filled.Info,
             )
         },
     ).filter { it.visible }
@@ -1046,56 +1211,24 @@ fun SettingsScreen(
                 )
             }
 
-            if (openSection == SettingsSection.BACKUP) item {
-                Section(stringResource(R.string.settings_section_backup)) {
+            if (openSection == SettingsSection.ABOUT && query.isBlank()) item {
+                // Only after a crash, so there is nothing here to explain the rest of the time.
+                // A launcher draws other apps' widgets with their own code, so the trace is
+                // often the only thing that says whose crash it was. The version line is an
+                // entry above, so it stays first in the section.
+                val crash = remember { CrashLog.read(context) }
+                var crashCleared by remember { mutableStateOf(false) }
+                if (crash != null && !crashCleared) {
                     BackupRow(
-                        label = stringResource(R.string.settings_export),
-                        detail = stringResource(R.string.settings_export_detail),
-                        onClick = onExportSettings,
+                        label = stringResource(R.string.settings_crash_copy),
+                        detail = stringResource(R.string.settings_crash_detail),
+                        onClick = {
+                            clipboard.setPrimaryClip(ClipData.newPlainText("Deluge crash", crash))
+                            Toast.makeText(context, R.string.settings_crash_copied, Toast.LENGTH_SHORT).show()
+                            CrashLog.clear(context)
+                            crashCleared = true
+                        },
                     )
-                    RowDivider()
-                    BackupRow(
-                        label = stringResource(R.string.settings_import),
-                        detail = stringResource(R.string.settings_import_detail),
-                        onClick = onImportSettings,
-                    )
-                }
-            }
-
-            if (openSection == SettingsSection.ABOUT) item {
-                Section(stringResource(R.string.settings_section_about)) {
-                    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-                        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-                        Text(
-                            stringResource(R.string.settings_version, BuildConfig.VERSION_NAME),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        )
-                    }
-                    RowDivider()
-                    QuickLaunchRow(
-                        label = stringResource(R.string.settings_changelog),
-                        value = stringResource(R.string.settings_changelog_detail),
-                        onClick = onOpenChangelog,
-                    )
-                    // Only after a crash, so there is nothing here to explain the rest of the
-                    // time. A launcher draws other apps' widgets with their own code, so the
-                    // trace is often the only thing that says whose crash it was.
-                    val crash = remember { CrashLog.read(context) }
-                    var crashCleared by remember { mutableStateOf(false) }
-                    if (crash != null && !crashCleared) {
-                        RowDivider()
-                        BackupRow(
-                            label = stringResource(R.string.settings_crash_copy),
-                            detail = stringResource(R.string.settings_crash_detail),
-                            onClick = {
-                                clipboard.setPrimaryClip(ClipData.newPlainText("Deluge crash", crash))
-                                Toast.makeText(context, R.string.settings_crash_copied, Toast.LENGTH_SHORT).show()
-                                CrashLog.clear(context)
-                                crashCleared = true
-                            },
-                        )
-                    }
                 }
             }
         }
@@ -1343,6 +1476,116 @@ private fun IconPackRow(
     }
 }
 
+/**
+ * The palette picker: one flat swatch per scheme, in the scheme's own colour, so the choice is
+ * visible before it is made.
+ *
+ * It wraps. Nine swatches with their names are wider than a phone, and a single row simply cuts
+ * off whatever does not fit — green onward ran off the right edge and read as if those schemes
+ * did not exist. Wallpaper has no colour of its own until the system hands it one, so its
+ * swatch shows the palette the wallpaper is giving the launcher right now.
+ */
+@Composable
+private fun ColorSchemeRow(selected: ColorSchemeChoice, onSelect: (ColorSchemeChoice) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_color_scheme), style = MaterialTheme.typography.bodyMedium)
+        Text(
+            stringResource(R.string.settings_color_scheme_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+        )
+        // A fixed five-column grid rather than a wrapping row. A flow packs each line to the
+        // width and leaves the lines' edges not meeting, which is what read as crooked: every
+        // row here has the same columns, and a short last row is padded with empty ones so its
+        // swatches stay under the swatches above.
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            ColorSchemeChoice.entries.chunked(SWATCHES_PER_ROW).forEach { line ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    line.forEach { choice ->
+                        SchemeSwatch(
+                            choice = choice,
+                            isSelected = choice == selected,
+                            onClick = { onSelect(choice) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    repeat(SWATCHES_PER_ROW - line.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
+/** One dot and its name, sharing the row equally so every column lines up. */
+@Composable
+private fun SchemeSwatch(
+    choice: ColorSchemeChoice,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(schemeSwatchColor(choice), CircleShape)
+                .border(
+                    width = if (isSelected) 3.dp else 1.dp,
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outlineVariant
+                    },
+                    shape = CircleShape,
+                ),
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(choice.labelRes()),
+            style = MaterialTheme.typography.labelMedium,
+            color = if (isSelected) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+}
+
+/**
+ * The colour a scheme's swatch is drawn in: one flat Material tone per hue.
+ *
+ * Flat rather than a gradient — a two-tone dot reads as a shade of its own, not as the palette,
+ * and nine gradients side by side are harder to tell apart than nine solid colours. These are the
+ * familiar Material hues rather than the muted tones the theme itself is built from, so the
+ * swatch is recognisable at a glance.
+ */
+@Composable
+private fun schemeSwatchColor(choice: ColorSchemeChoice): Color = when (choice) {
+    ColorSchemeChoice.DELUGE_BLUE -> Color(0xFF2196F3)
+    ColorSchemeChoice.DYNAMIC -> rememberWallpaperPalette()?.primary ?: Color(0xFF2196F3)
+    ColorSchemeChoice.RED -> Color(0xFFF44336)
+    ColorSchemeChoice.ORANGE -> Color(0xFFFF9800)
+    ColorSchemeChoice.YELLOW -> Color(0xFFFBC02D)
+    ColorSchemeChoice.GREEN -> Color(0xFF4CAF50)
+    ColorSchemeChoice.TEAL -> Color(0xFF009688)
+    ColorSchemeChoice.PURPLE -> Color(0xFF9C27B0)
+    ColorSchemeChoice.PINK -> Color(0xFFE91E63)
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FontRow(
@@ -1540,7 +1783,7 @@ private class SettingsEntry(
 }
 
 @Composable
-private fun BackupRow(label: String, detail: String, onClick: () -> Unit) {
+private fun BackupRow(label: String, detail: String, onClick: () -> Unit, leading: ImageVector? = null) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1548,6 +1791,7 @@ private fun BackupRow(label: String, detail: String, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) RowLeadingIcon(leading)
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -1692,6 +1936,66 @@ private val SWATCHES = listOf(
     0xFF26C6DA.toInt(), 0xFF42A5F5.toInt(), 0xFF7E57C2.toInt(), 0xFFEC407A.toInt(),
 )
 
+/** How long the app name must be held to unlock the hidden developer switch. */
+private const val DEVELOPER_HOLD_MS = 5000L
+
+/**
+ * A tap does [onTap]; holding still for five seconds does [onUnlock] instead.
+ *
+ * Built on the same press detector every other row uses, so it cannot lose to the scroll
+ * container the way a hand-rolled gesture loop did — a drift that the list claims cancels
+ * the press, and a cancelled press does nothing at all.
+ */
+@Composable
+private fun Modifier.developerUnlock(
+    hapticsEnabled: Boolean,
+    onTap: () -> Unit,
+    onUnlock: () -> Unit,
+): Modifier {
+    // Read when the gesture ends, not when it starts: the lambdas change every composition.
+    val currentTap by rememberUpdatedState(onTap)
+    val currentUnlock by rememberUpdatedState(onUnlock)
+    val view = LocalView.current
+    // The timer lives beside the gesture the way the strip's hold timer does.
+    val scope = rememberCoroutineScope()
+    return pointerInput(Unit) {
+        var hold: Job? = null
+        var unlocked = false
+        fun fire() {
+            if (unlocked) return
+            unlocked = true
+            HapticUtil.tick(view, hapticsEnabled)
+            currentUnlock()
+        }
+        detectTapGestures(
+            onPress = {
+                unlocked = false
+                // A stolen press (slow scroll starting on this row) cannot be observed from
+                // here, so its timer still fires — accepted: it only ever reveals the owner's
+                // own hidden switch to the owner. A fresh press replaces the old timer.
+                hold?.cancel()
+                hold = scope.launch {
+                    delay(DEVELOPER_HOLD_MS)
+                    fire()
+                }
+            },
+            // A release before the timer is a tap; a release after it already unlocked, so
+            // the tap must not fire as well. A press the list steals never reaches here.
+            onTap = {
+                hold?.cancel()
+                hold = null
+                if (!unlocked) currentTap()
+            },
+        )
+    }
+}
+
+/** How many palette swatches share a line, so the picker is a grid rather than a ragged flow. */
+private const val SWATCHES_PER_ROW = 5
+
+/** Where new releases live, opened from the app name in About. */
+private const val PROJECT_URL = "https://github.com/busybin/DelugeLauncher"
+
 /**
  * Getting to the accessibility toggle, and to the screen that unblocks it.
  *
@@ -1719,12 +2023,40 @@ private fun languageLabel(): String {
     return dev.delugelauncher.data.LanguagePrefs.displayName(tag).ifEmpty { tag }
 }
 
+/**
+ * The mark in front of a row that opens something else: same tonal circle the section
+ * list uses, so navigation rows read as navigation wherever they sit.
+ */
 @Composable
-private fun QuickLaunchRow(label: String, value: String?, onClick: () -> Unit) {
+private fun RowLeadingIcon(icon: ImageVector) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+    Spacer(Modifier.width(14.dp))
+}
+
+@Composable
+private fun QuickLaunchRow(
+    label: String,
+    value: String?,
+    onClick: () -> Unit,
+    leading: ImageVector? = null,
+) {
     Row(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) RowLeadingIcon(leading)
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(

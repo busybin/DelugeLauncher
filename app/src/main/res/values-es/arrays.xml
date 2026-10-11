@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>La búsqueda encuentra apps por pinyin — iniciales y completo — con el acierto resaltado.</item>
+        <item>Las etiquetas agrupan apps a través del alfabeto: secciones arriba, tres letras en la tira, multiselección desde las existentes.</item>
+        <item>Frecuentes sigue solo el uso, se apaga y retira lo suyo; puesto a mano se rechaza.</item>
+        <item>Bloqueo por app con el bloqueo del teléfono, candado en el nombre; desbloquear levanta la pausa si el sistema deja.</item>
+        <item>El menú largo desinstala; ocultar pregunta antes; lo pausado se atenúa en vivo.</item>
+        <item>Favoritos llegan al borde como la lista y se desplazan del todo, con margen de sobra.</item>
+        <item>Soltar pasado Z se queda en Z; pasarse abajo solo rebota.</item>
+        <item>La tira descansa abajo (llena en horizontal); paleta en cuadrícula de cinco columnas lisas.</item>
+        <item>Atrás en ajustes vuelve a la sección de la que se vino, atrás del sistema incluido; la búsqueda encuentra cada fila.</item>
+        <item>Los widgets se actualizan al congelar y descongelar al momento, y congelados nunca se limpian.</item>
+        <item>Tema oscuro nocturno, desenfoque de fondo, pellizco para los iconos, menos movimiento.</item>
+        <item>Las copias incluyen todo, idioma incluido; lo privado queda fuera.</item>
+        <item>Acerca de empieza con el nombre — tocar abre el proyecto; el registro sigue el idioma.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Idioma elegible en ajustes — 10 idiomas más chino tradicional.</item>
+        <item>La tira A–Z sigue la alineación; tras cambiar idioma sigues donde estabas.</item>
+        <item>Con la barra visible, nada queda debajo.</item>
+        <item>Tarjeta para ser el inicio, descartable para siempre.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Renombrado a Deluge Launcher, con tema azul e icono nuevo.</item>
+        <item>Lista de apps a borde; al desplazar brilla cada letra en pantalla.</item>
+        <item>Desplazar arreglado — los gestos en diagonal ya no lo bloquean.</item>
+        <item>Iconos vacíos y dos segundos en negro al volver arreglados.</item>
+        <item>Arranque más rápido: caché de iconos en disco.</item>
+        <item>Las filas de carpeta dicen cuántas llevan y si están abiertas.</item>
+        <item>La altura sigue al widget; los muertos de copias se limpian solos.</item>
+        <item>Atajos solo con gesto lateral; el desplazar nunca se roba.</item>
+        <item>Fuera la librería de navegación, dentro el router propio.</item>
+    </string-array>
+</resources>

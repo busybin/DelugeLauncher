@@ -12,6 +12,26 @@ import java.text.Normalizer
 internal const val PRIVATE_SECTION = "private"
 internal const val RECENT_SECTION = "recent"
 
+/** The row key a tag group's entries carry, so the same app under a tag does not clash. */
+internal fun tagSectionToken(label: String) = "tag:$label"
+
+/** A tag's stand-in for the strip; the heading shows the whole tag. */
+internal fun tagStripLabel(label: String): String =
+    label.trim().take(STRIP_LABEL_CHARS)
+
+/** How many characters of a tag the strip shows. Three reads, one does not. */
+internal const val STRIP_LABEL_CHARS = 3
+
+/**
+ * Tags the usage auto-tagger owns, in every language shipped. Kept beside `tag_frequent` in
+ * each locale: adding a language means adding its word here too, or the picker will let it
+ * through by hand and fight the auto-tagger over it.
+ */
+internal val RESERVED_TAGS = setOf(
+    "Frequent", "常用", "よく使う", "자주 쓰는", "Häufig",
+    "Frecuentes", "Fréquentes", "Frequenti", "Frequentes", "Частые",
+)
+
 @Immutable
 sealed interface AppListRow {
     data class Header(val text: String) : AppListRow
@@ -35,11 +55,13 @@ sealed interface AppListRow {
 @Immutable
 data class AppListModel(
     val rows: List<AppListRow>,
-    /** First row index for each A-Z letter, in scrubber order. */
-    val letterIndex: List<Pair<Char, Int>>,
+    /** First row index for each strip entry, in scrubber order: tag groups first, then A-Z. */
+    val letterIndex: List<Pair<String, Int>>,
+    /** The row the A-Z alphabet begins at; tag groups sit above it. */
+    val alphabetStart: Int = 0,
 ) {
-    /** The scrubber's alphabet, derived once here rather than at each place that draws it. */
-    val letters: List<Char> = letterIndex.map { it.first }
+    /** The scrubber's labels, derived once here rather than at each place that draws it. */
+    val letters: List<String> = letterIndex.map { it.first }
 }
 
 /**
@@ -48,7 +70,10 @@ data class AppListModel(
  * a section heading is a word, and an appended app carries its section along.
  */
 fun AppListModel.alphabetEnd(): Int {
-    rows.forEachIndexed { i, row ->
+    // From where the alphabet begins: tag groups sit above it, and scanning from row zero would
+    // stop at the first tag and leave the whole strip unlit.
+    for (i in alphabetStart until rows.size) {
+        val row = rows[i]
         when {
             row is AppListRow.Entry && row.section != null -> return i
             row is AppListRow.Header && row.text.length != 1 -> return i
@@ -206,20 +231,37 @@ fun buildAppListModel(
     privateSectionLabel: String? = null,
     /** Heading and how many, for a section of what was installed most recently. */
     recentSection: Pair<String, Int>? = null,
+    /** Apps gathered under a tag, each group with its own heading, across the alphabet. */
+    tagSections: List<Pair<String, List<AppInfo>>> = emptyList(),
 ): AppListModel {
     val all = apps.filter { it.key !in hidden }
     // Lifted out of the alphabet entirely rather than listed twice. A private app and its main
     // profile twin have the same name, which is the whole reason for asking.
     val visible = if (privateSectionLabel == null) all else all.filterNot { it.privateProfile }
     val rows = mutableListOf<AppListRow>()
+    val letterIndex = mutableListOf<Pair<String, Int>>()
+
+    // Tag groups first, above the alphabet. A tag is a heading of its own and the apps under it
+    // are the same apps that are in the alphabet — the point being to find an app by what it is
+    // for rather than by its first letter. The strip shows each tag by its first three
+    // characters, centred on its own row like every other entry; the heading shows it in full.
+    tagSections.forEach { (label, group) ->
+        val shown = group.filter { it.key !in hidden }
+        if (shown.isNotEmpty()) {
+            letterIndex += tagStripLabel(label) to rows.size
+            rows += AppListRow.Header(label)
+            shown.sortedBy { displayName(it).lowercase() }
+                .forEach { rows += AppListRow.Entry(it, section = tagSectionToken(label)) }
+        }
+    }
+    val alphabetStart = rows.size
 
     val byLetter = visible.groupBy { app ->
         filingLetter(displayName(app), renamed(app)) { englishName(app) }
     }
 
-    val letterIndex = mutableListOf<Pair<Char, Int>>()
     byLetter.toSortedMap().forEach { (letter, list) ->
-        letterIndex += letter to rows.size
+        letterIndex += letter.toString() to rows.size
         if (showHeaders) rows += AppListRow.Header(letter.toString())
         list.sortedWith(
             compareByDescending<AppInfo> { launchCounts[it.key] ?: 0 }
@@ -249,7 +291,7 @@ fun buildAppListModel(
         }
     }
 
-    return AppListModel(rows, letterIndex)
+    return AppListModel(rows, letterIndex, alphabetStart)
 }
 
 /**
@@ -259,14 +301,14 @@ fun buildAppListModel(
  */
 fun AppListModel.filtered(match: (AppInfo) -> Boolean): AppListModel {
     val kept = mutableListOf<AppListRow>()
-    val newIndex = mutableListOf<Pair<Char, Int>>()
+    val newIndex = mutableListOf<Pair<String, Int>>()
     var pendingHeader: AppListRow.Header? = null
 
     // Which letter the row being looked at belongs to. Read from the index this model already
     // carries rather than from the heading above it, because a list drawn without headings has
     // no heading to read — and the letters still have to come out of it.
     var cursor = 0
-    var letter: Char? = null
+    var letter: String? = null
     var letterKept = false
 
     rows.forEachIndexed { index, row ->
@@ -322,7 +364,7 @@ fun AppListModel.rankedBy(rank: (AppInfo) -> Int): AppListModel {
     // result is not a letter's worth of apps anyway.
     val letterIndex = sorted.mapIndexedNotNull { index, row ->
         indexLetter(row.app.label).takeIf { index == 0 || it != indexLetter(sorted[index - 1].app.label) }
-            ?.let { it to index }
+            ?.let { it.toString() to index }
     }
     return AppListModel(sorted, letterIndex)
 }

@@ -75,7 +75,7 @@ fun BandEditOverlay(
     side: EdgeSide,
     viewportHeightPx: Int,
     /** The alphabet as the list would draw it, so the band shows what it is sizing. */
-    letters: List<Char>,
+    letters: List<String>,
     onBandChange: (ScrubBand) -> Unit,
     onReset: () -> Unit,
     onDone: () -> Unit,

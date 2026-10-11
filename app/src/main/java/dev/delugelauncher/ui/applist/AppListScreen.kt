@@ -23,8 +23,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
@@ -59,7 +63,10 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
@@ -77,6 +84,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
@@ -102,7 +110,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
@@ -199,10 +213,24 @@ fun AppListScreen(
     onSetName: (AppInfo, String?) -> Unit,
     onChangeIcon: (AppInfo) -> Unit,
     onAppInfo: (AppInfo) -> Unit,
+    onUninstall: (AppInfo) -> Unit,
     onUnpinShortcut: (AppInfo) -> Unit,
     onHideApp: (AppInfo, Boolean) -> Unit,
     /** Which apps are hidden, so a search that turns one up can say so and put it back. */
     hiddenApps: Set<String>,
+    /** Whether a paused (suspended) app is shown greyed out. */
+    dimPausedApps: Boolean,
+    /** Whether the launcher's own transitions are collapsed to instant. */
+    reduceMotion: Boolean,
+    /** Keys that ask for the device lock before opening. */
+    lockedApps: Set<String>,
+    onToggleLock: (AppInfo) -> Unit,
+    /** Every tag in use, offered by the picker. */
+    allTags: List<String>,
+    /** Tags by app key, so the picker can pre-check what the chosen apps already carry. */
+    appTags: Map<String, Set<String>>,
+    /** Sets the chosen apps' tags to exactly this set — checked are applied, unchecked removed. */
+    onAddTags: (List<AppInfo>, Set<String>) -> Unit,
     onMoveToFolder: (AppInfo) -> Unit,
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit,
@@ -232,6 +260,8 @@ fun AppListScreen(
     dimOthers: Boolean,
     /** Whether a work profile's apps say so after their name. */
     markWorkApps: Boolean,
+    /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
+    disguiseNames: Map<String, String>,
     /** Whether the launcher's own text carries a shadow for legibility. */
     textShadow: Boolean,
     /** How strong that shadow is. */
@@ -250,9 +280,11 @@ fun AppListScreen(
     iconSide: IconSide,
 ) {
     // Appended at the point of showing rather than stored in the label, so a rename still
-    // wins and turning this off needs no re-reading of every app.
+    // wins and turning this off needs no re-reading of every app. The disguise wins over
+    // everything while it is on: a rename is exactly what must not show.
     val workSuffix = stringResource(R.string.app_work_suffix)
     fun displayName(app: AppInfo): String {
+        disguiseNames[app.key]?.let { return it }
         val base = nameOverrides[app.key] ?: app.label
         return if (markWorkApps && app.work) base + workSuffix else base
     }
@@ -282,16 +314,20 @@ fun AppListScreen(
             val term = query.trim()
             searchModel
                 .filtered { app ->
-                    displayName(app).contains(term, ignoreCase = true) ||
-                        // An app names itself in the language of the device, so on a Japanese
-                        // phone Settings calls itself 設定 and no amount of typing "settings"
-                        // reaches it. Package names are ASCII almost without exception, so the
-                        // English word is usually sitting right there in com.android.settings.
-                        app.componentName.packageName.contains(term, ignoreCase = true)
+                    // The name it shows, its pinyin (微信 answers to "wx"), and — for a phone
+                    // that names everything in its own language, so Settings calls itself 設定
+                    // — the package name, where the English word is still sitting.
+                    PinyinSearch.rank(displayName(app), app.componentName.packageName, term) !=
+                        PinyinSearch.NO_MATCH
                 }
-                .rankedBy { searchRank(displayName(it), it.componentName.packageName, term) }
+                .rankedBy { PinyinSearch.rank(displayName(it), it.componentName.packageName, term) }
         }
     }
+    // What a search result underlines: the query, and only while it is actually a search.
+    val searchTerm = if (searching) query.trim() else ""
+    // The launcher's own transitions, collapsed to nothing when motion is reduced.
+    val motionFast = if (reduceMotion) 0 else 180
+    val motionSlow = if (reduceMotion) 0 else 240
     // Animated rather than switched, so an end does not snap from crisp to faded the moment
     // the first pixel scrolls past it.
     val topFade by animateFloatAsState(
@@ -328,7 +364,7 @@ fun AppListScreen(
         } else {
             1f
         },
-        animationSpec = tween(durationMillis = 180),
+        animationSpec = tween(durationMillis = motionFast),
         label = "othersAlpha",
     )
     // Where a scrubbed letter is parked. A setting because how far up the screen you can
@@ -691,7 +727,6 @@ fun AppListScreen(
              * end, which is what makes a pull from it a collapse rather than a scroll.
              */
             private var topPullEligible = false
-            private var bottomPullEligible = false
 
             /**
              * Whether this gesture may collapse the overlay.
@@ -785,8 +820,11 @@ fun AppListScreen(
                     // Collapsing has to be a deliberate pull from rest. Letting a scroll that
                     // merely *arrives* at an end turn into one is what made a fast flick
                     // shrink and fade the whole list halfway through the gesture.
+                    //
+                    // Only the top collapses. Pulling on at the bottom used to dismiss the
+                    // list, which is not what reaching the end of a list and scrolling once more
+                    // means — there it just springs against the edge.
                     topPullEligible = !listState.canScrollBackward
-                    bottomPullEligible = !listState.canScrollForward
                     pullArmed = false
                     scrolledInGesture = 0f
                 }
@@ -839,16 +877,12 @@ fun AppListScreen(
                         if (available.y < 0f) {
                             val room = (blankCeilingPx - blank).coerceAtLeast(0f)
                             if (-available.y > room) {
-                                // Refused, but not swallowed. Consuming it outright left
-                                // nothing for the elastic to pick up, so pulling on past the
-                                // line stopped meaning anything and the list could no longer
-                                // be pulled off its end to go home. What the clamp will not
-                                // spend on scrolling goes where it would have gone had the
-                                // list simply run out, which is what it has done.
+                                // Refused, but not swallowed: what the clamp will not spend on
+                                // scrolling goes to the edge elastic, the same as running off
+                                // the end any other way. Pulling on past the line springs back
+                                // rather than closing the list.
                                 val excess = available.y + room
-                                val resistance = 1f - (abs(overPull) / maxPullPx).coerceIn(0f, 0.75f)
-                                overPull = (overPull + excess * resistance)
-                                    .coerceIn(-maxPullPx, maxPullPx)
+                                stretch(excess)
                                 return available
                             }
                         }
@@ -892,8 +926,9 @@ fun AppListScreen(
                 scrolledInGesture += abs(consumed.y)
                 if (available.y == 0f) return Offset.Zero
                 if (scrolledInGesture <= nearEndPx || abs(available.y) <= fastDragPx) pullArmed = true
-                val startedAtThisEnd = if (available.y > 0f) topPullEligible else bottomPullEligible
-                val pulling = startedAtThisEnd || pullArmed
+                // Top only, and only the top: the bottom is an edge to spring against, not a
+                // way to close the list. A pull there falls through to the elastic below.
+                val pulling = available.y > 0f && (topPullEligible || pullArmed)
                 if (pulling) {
                     // Signed: pulled down off the top is positive, pulled up off the bottom is
                     // negative, and every reader below works off the sign rather than a
@@ -926,7 +961,7 @@ fun AppListScreen(
                             collapseAnim.animateTo(
                                 // Off whichever edge it was heading for.
                                 targetValue = viewportHeightPx.toFloat() * away,
-                                animationSpec = tween(240, easing = FastOutLinearInEasing),
+                                animationSpec = tween(motionSlow, easing = FastOutLinearInEasing),
                             )
                             currentDismiss()
                         } else {
@@ -964,8 +999,14 @@ fun AppListScreen(
 
     // Long-press anywhere in the list (not just favorites) to edit that app.
     var menuForKey by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
     var editDialogFor by remember { mutableStateOf<AppInfo?>(null) }
+    var hideConfirmFor by remember { mutableStateOf<AppInfo?>(null) }
+    // Picking apps to tag: a mode of its own, so a tap chooses rather than launches.
+    var selecting by remember { mutableStateOf(false) }
+    var selectedKeys by remember { mutableStateOf(emptySet<String>()) }
+    var showTagPicker by remember { mutableStateOf(false) }
     val touchPosition = remember { mutableStateOf(Offset.Zero) }
 
     // The vertical span the rows actually occupy. A tap inside it belongs to the list even
@@ -1046,7 +1087,17 @@ fun AppListScreen(
                 // Capped and held against the strip's own side, so on a wide screen the names
                 // stay next to the letters being scrubbed instead of a screen away from them.
                 .widthIn(max = MAX_LIST_WIDTH)
-                .align(if (activeSide == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
+                // The capped column sits on the side the rows lean to: left-aligned names on the
+                // left, right-aligned on the right, centered centered. It used to follow the
+                // strip's own side, which parked a left-aligned list in the middle of a wide
+                // screen — the strip is on the opposite side from the alignment.
+                .align(
+                    when (alignment) {
+                        HomeAlignment.LEFT -> Alignment.TopStart
+                        HomeAlignment.RIGHT -> Alignment.TopEnd
+                        HomeAlignment.CENTER -> Alignment.TopCenter
+                    }
+                )
                 .fillMaxSize()
                 .then(
                     if (statusBarHidden) {
@@ -1207,21 +1258,50 @@ fun AppListScreen(
                         iconSide = iconSide,
                         app = row.app,
                         label = displayName(row.app),
+                        highlightTerm = searchTerm,
                         iconSizeDp = iconSizeDp,
                         labelSizeSp = labelSizeSp,
                         isFavorite = favoriteKeys.contains(row.app.key),
                         menuExpanded = menuForKey == row.app.key,
                         menuOffset = menuOffset,
                         touchPosition = touchPosition,
-                        onLaunch = { onLaunch(row.app) },
-                        onLongPress = { offset -> menuOffset = offset; menuForKey = row.app.key },
+                        onLaunch = {
+                            if (selecting) {
+                                selectedKeys = if (row.app.key in selectedKeys) {
+                                    selectedKeys - row.app.key
+                                } else {
+                                    selectedKeys + row.app.key
+                                }
+                            } else {
+                                onLaunch(row.app)
+                            }
+                        },
+                        selected = selecting && row.app.key in selectedKeys,
+                        // No long-press while picking apps to tag: the row menu on top of the
+                        // selection is what turns it into a mess.
+                        onLongPress = if (selecting) {
+                            null
+                        } else {
+                            { offset -> menuOffset = offset; menuForKey = row.app.key }
+                        },
                         onDismissMenu = { menuForKey = null },
                         onSetFavorite = { onSetFavorite(row.app, it) },
                         onEdit = { editDialogFor = row.app },
                         onAppInfo = { onAppInfo(row.app) },
+                        onUninstall = { onUninstall(row.app) },
                         onUnpin = { onUnpinShortcut(row.app) },
-                        onHide = { onHideApp(row.app, row.app.key !in hiddenApps) },
+                        onHide = {
+                            // Unhiding is its own confirmation — it puts the app back. Hiding
+                            // asks first, because a hidden app is not in the list to be found
+                            // again by accident.
+                            if (row.app.key in hiddenApps) onHideApp(row.app, false)
+                            else hideConfirmFor = row.app
+                        },
                         isHidden = row.app.key in hiddenApps,
+                        dimPausedApps = dimPausedApps,
+                        isLocked = row.app.key in lockedApps,
+                        onToggleLock = { onToggleLock(row.app) },
+                        onEditTag = { selecting = true; selectedKeys = setOf(row.app.key) },
                         onMoveToFolder = { onMoveToFolder(row.app) },
                     )
                 }
@@ -1307,6 +1387,38 @@ fun AppListScreen(
             )
         }
 
+        // While picking apps to tag, a bar says how many and offers the tag picker, and a FAB
+        // does the same at the thumb's end of the screen.
+        if (selecting) {
+            Surface(
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { selecting = false; selectedKeys = emptySet() }) {
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_cancel))
+                    }
+                    Text(
+                        stringResource(R.string.tag_selected_count, selectedKeys.size),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { showTagPicker = true }) {
+                        Text(stringResource(R.string.action_set_tag))
+                    }
+                }
+            }
+            FloatingActionButton(
+                onClick = { showTagPicker = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_set_tag))
+            }
+        }
+
         editDialogFor?.let { target ->
             EditAppDialog(
                 currentName = displayName(target),
@@ -1317,6 +1429,65 @@ fun AppListScreen(
                     editDialogFor = null
                 },
                 onDismiss = { editDialogFor = null },
+            )
+        }
+
+        if (showTagPicker) {
+            val selectedApps = displayModel.rows
+                .filterIsInstance<AppListRow.Entry>()
+                .map { it.app }
+                .filter { it.key in selectedKeys }
+                .distinctBy { it.key }
+            // What the chosen apps already agree on — for a single app, all of its tags. Shown
+            // checked, so confirming keeps them and unchecking removes them. The auto tag is
+            // never offered: it belongs to the usage counter, and handing it out by hand
+            // would fight it.
+            val commonTags = selectedApps
+                .map { appTags[it.key] ?: emptySet<String>() }
+                .reduceOrNull { a, b -> a intersect b }
+                ?.minus(RESERVED_TAGS)
+                ?: emptySet()
+            // Whatever reserved tags the chosen apps already carry stay put: the picker can
+            // neither show nor remove them, so confirming must not drop them either.
+            val reservedKept = selectedApps
+                .flatMapTo(mutableSetOf()) { appTags[it.key] ?: emptySet() }
+                .intersect(RESERVED_TAGS)
+            TagPickerDialog(
+                allTags = allTags - RESERVED_TAGS,
+                initialChecked = commonTags,
+                onConfirm = { tags ->
+                    val blocked = tags.intersect(RESERVED_TAGS)
+                    if (blocked.isNotEmpty()) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.tag_reserved, blocked.first()),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                    onAddTags(selectedApps, tags - RESERVED_TAGS + reservedKept)
+                    showTagPicker = false
+                    selecting = false
+                    selectedKeys = emptySet()
+                },
+                onDismiss = { showTagPicker = false },
+            )
+        }
+
+        hideConfirmFor?.let { target ->
+            AlertDialog(
+                onDismissRequest = { hideConfirmFor = null },
+                title = { Text(stringResource(R.string.applist_hide)) },
+                text = { Text(stringResource(R.string.hide_confirm_message, displayName(target))) },
+                confirmButton = {
+                    TextButton(onClick = { onHideApp(target, true); hideConfirmFor = null }) {
+                        Text(stringResource(R.string.applist_hide))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { hideConfirmFor = null }) {
+                        Text(stringResource(R.string.action_cancel))
+                    }
+                },
             )
         }
 
@@ -1354,6 +1525,61 @@ fun AppListScreen(
     }
 }
 
+/**
+ * Choose the tags to put on the selected apps: the ones already in use, plus a field for a new
+ * one. Additive — an app keeps the tags it already had, and one app can carry several.
+ */
+@Composable
+private fun TagPickerDialog(
+    allTags: List<String>,
+    initialChecked: Set<String>,
+    onConfirm: (Set<String>) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val chosen = remember { mutableStateListOf<String>().apply { addAll(initialChecked) } }
+    var newTag by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.action_set_tag)) },
+        text = {
+            Column {
+                allTags.forEach { tag ->
+                    val on = tag in chosen
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { if (on) chosen.remove(tag) else chosen.add(tag) }
+                            .padding(vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(
+                            checked = on,
+                            onCheckedChange = { if (on) chosen.remove(tag) else chosen.add(tag) },
+                        )
+                        Text(tag, modifier = Modifier.weight(1f))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = newTag,
+                    onValueChange = { newTag = it },
+                    singleLine = true,
+                    label = { Text(stringResource(R.string.tag_new)) },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val extra = newTag.trim()
+                onConfirm(chosen.toSet() + if (extra.isNotEmpty()) setOf(extra) else emptySet())
+            }) { Text(stringResource(R.string.action_done)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
 @Composable
 private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, alignment: HomeAlignment) {
     Box(
@@ -1385,22 +1611,33 @@ private fun AppRow(
     touchPosition: MutableState<Offset>,
     app: AppInfo,
     label: String,
+    /** The live query, so the stretch it matched can be marked. Empty when not searching. */
+    highlightTerm: String,
     iconSizeDp: Int,
     labelSizeSp: Int,
     isFavorite: Boolean,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     onLaunch: () -> Unit,
-    onLongPress: (DpOffset) -> Unit,
+    onLongPress: ((DpOffset) -> Unit)?,
     onDismissMenu: () -> Unit,
     onSetFavorite: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onAppInfo: () -> Unit,
+    onUninstall: () -> Unit,
     onUnpin: () -> Unit,
     onHide: () -> Unit,
     onMoveToFolder: () -> Unit,
     /** Hidden apps only ever reach this list through a search. */
     isHidden: Boolean,
+    /** Whether a paused (suspended) app is shown greyed out. */
+    dimPausedApps: Boolean,
+    /** Whether this app asks for the device lock before it opens. */
+    isLocked: Boolean,
+    onToggleLock: () -> Unit,
+    onEditTag: () -> Unit,
+    /** True while picking apps to tag and this one is picked. */
+    selected: Boolean,
 ) {
     // Same press treatment as the home screen: the stock ripple all but vanishes against a
     // wallpaper, and without any feedback a tap that did register reads as one that didn't.
@@ -1408,6 +1645,9 @@ private fun AppRow(
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
     var shortcutMenu by remember { mutableStateOf(false) }
+    // A paused app fades the way a hidden one does, when the setting asks; the icon goes with
+    // the name so the whole row reads as set aside.
+    val dimmed = isHidden || app.disabled || (dimPausedApps && app.suspended)
 
     Box {
         Row(
@@ -1421,19 +1661,25 @@ private fun AppRow(
                 }
                 .padding(horizontal = 20.dp)
                 .background(
-                    color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                    color = when {
+                        selected -> MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
+                        pressed -> contentColor.copy(alpha = 0.15f)
+                        else -> Color.Transparent
+                    },
                     shape = RoundedCornerShape(18.dp),
                 )
                 .combinedClickable(
                     interactionSource = interaction,
                     indication = null,
                     onClick = onLaunch,
-                    onLongClick = {
-                        onLongPress(
-                            with(density) {
-                                DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
-                            }
-                        )
+                    onLongClick = onLongPress?.let { lp ->
+                        {
+                            lp(
+                                with(density) {
+                                    DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
+                                }
+                            )
+                        }
                     },
                 )
                 // The whole row is the target, not the label: at small icon sizes the strip
@@ -1451,22 +1697,57 @@ private fun AppRow(
             // fill = false so the label takes only the width it needs and the icon stays
             // beside it; a plain weight spans the row and pins the icon to the far edge.
             val labelModifier = Modifier.weight(1f, fill = false)
+            val matched = remember(label, highlightTerm) {
+                if (highlightTerm.isEmpty()) null else PinyinSearch.highlight(label, highlightTerm)
+            }
             val text: @Composable () -> Unit = {
-                Text(
-                    label,
-                    // Dimmed, because a hidden app only ever turns up here through a search
-                    // and nothing else on the row says it is one. A shortcut its publisher
-                    // has switched off gets the same treatment, for the same reason: it is
-                    // listed, but tapping it only explains why it will not open.
-                    color = if (isHidden || app.disabled) contentColor.copy(alpha = 0.5f) else contentColor,
-                    fontSize = labelSizeSp.sp,
+                // The name, with whatever the query matched picked out. A pinyin hit marks the
+                // characters it was read from, not the letters that were typed — typing "wx"
+                // underlines 微信 rather than leaving the row looking unmatched.
+                val shown = if (matched == null) {
+                    AnnotatedString(label)
+                } else {
+                    val mark = SpanStyle(
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    buildAnnotatedString {
+                        append(label.substring(0, matched.first))
+                        withStyle(mark) { append(label.substring(matched.first, matched.last + 1)) }
+                        append(label.substring(matched.last + 1))
+                    }
+                }
+                Row(
                     modifier = labelModifier,
-                    textAlign = when (alignment) {
-                        HomeAlignment.LEFT -> TextAlign.Start
-                        HomeAlignment.CENTER -> TextAlign.Center
-                        HomeAlignment.RIGHT -> TextAlign.End
-                    },
-                )
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        shown,
+                        // Dimmed, because a hidden app only ever turns up here through a search
+                        // and nothing else on the row says it is one. A shortcut its publisher
+                        // has switched off gets the same treatment, for the same reason: it is
+                        // listed, but tapping it only explains why it will not open.
+                        color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
+                        fontSize = labelSizeSp.sp,
+                        modifier = Modifier.weight(1f, fill = false),
+                        textAlign = when (alignment) {
+                            HomeAlignment.LEFT -> TextAlign.Start
+                            HomeAlignment.CENTER -> TextAlign.Center
+                            HomeAlignment.RIGHT -> TextAlign.End
+                        },
+                    )
+                    // A lock beside the name, so which apps ask for the device lock is visible
+                    // without opening each one's menu.
+                    if (isLocked) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.action_lock_app),
+                            tint = contentColor.copy(alpha = 0.7f),
+                            modifier = Modifier.size(14.dp),
+                        )
+                    }
+                }
             }
             // Centerd rows balance the icon with a spacer on the label's far side, so the
             // text lands on the screen's center line rather than the pair straddling it.
@@ -1476,13 +1757,18 @@ private fun AppRow(
                     Spacer(Modifier.width(iconSizeDp.dp + gap))
                 }
             }
-            if (iconSide == IconSide.RIGHT) {
+            // A right-aligned row always puts its icon on the right, same as the home
+            // screen: the name ending at the screen edge reads as the row running out
+            // of room. The side setting still decides everywhere else.
+            val side = if (alignment == HomeAlignment.RIGHT) IconSide.RIGHT else iconSide
+            val iconModifier = if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier
+            if (side == IconSide.RIGHT) {
                 balance()
                 text()
                 Spacer(Modifier.width(gap))
-                AppIcon(app = app, sizeDp = iconSizeDp)
+                AppIcon(app = app, sizeDp = iconSizeDp, modifier = iconModifier)
             } else {
-                AppIcon(app = app, sizeDp = iconSizeDp)
+                AppIcon(app = app, sizeDp = iconSizeDp, modifier = iconModifier)
                 Spacer(Modifier.width(gap))
                 text()
                 balance()
@@ -1521,6 +1807,27 @@ private fun AppRow(
                     text = { Text(stringResource(R.string.action_app_info)) },
                     leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                     onClick = { onDismissMenu(); onAppInfo() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_uninstall)) },
+                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                    onClick = { onDismissMenu(); onUninstall() },
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isLocked) R.string.action_unlock_app else R.string.action_lock_app
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                    onClick = { onDismissMenu(); onToggleLock() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_set_tag)) },
+                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    onClick = { onDismissMenu(); onEditTag() },
                 )
             }
             // Hands the shortcut back to the app that pinned it, which is the only way one
@@ -1578,7 +1885,7 @@ private fun AlphabetSpyStrip(
 ) {
     val scrubLetter = scrub.letter
     val end = remember(displayModel) { displayModel.alphabetEnd() }
-    fun letterAt(i: Int): Char? =
+    fun letterAt(i: Int): String? =
         if (i < 0 || i >= end) null
         else displayModel.letterIndex.lastOrNull { it.second <= i }?.first
     // Indices only, never offsets: offsets change per pixel and must not recompose

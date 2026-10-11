@@ -11,6 +11,14 @@
     <string name="action_done">完了</string>
     <string name="action_remove">削除</string>
     <string name="action_app_info">アプリ情報</string>
+    <string name="action_uninstall">アンインストール</string>
+    <string name="tag_frequent">よく使う</string>
+    <string name="action_mark_frequent">よく使うものを「よく使う」にする</string>
+    <string name="frequent_tagged">%1$d件を%2$sにしました</string>
+    <string name="settings_auto_frequent">「よく使う」を自動で付ける</string>
+    <string name="settings_auto_frequent_detail">よく使うアプリに自動で付け、使用状況に合わせて付け替えます。</string>
+    <string name="settings_mark_frequent_detail">よく使う上位5件（お気に入り除く）に今すぐ「よく使う」を付けます。</string>
+    <string name="tag_reserved">「%1$s」は自動で付くため手動では付けられません。</string>
     <string name="action_edit_layout">レイアウトを編集</string>
     <string name="action_edit_icon_and_name">アイコン &amp; 名前を編集</string>
     <string name="action_move_to_folder">フォルダへ移動…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">文字の見出し</string>
     <string name="settings_list_headers_detail">オフにすると1つの連続した一覧になります。A-Zバーは引き続きその文字にジャンプします</string>
     <string name="settings_notification_badges">アイコンの通知数</string>
+    <string name="settings_dim_paused_apps">一時停止したアプリをグレー表示</string>
+    <string name="settings_wallpaper_blur">壁紙のぼかし</string>
+    <string name="settings_dim_paused_apps_detail">一時停止したアプリのアイコンと名前をグレーで表示し、脇に置いた状態として見せます。オフにすると他のアプリと同じ表示です。</string>
     <string name="settings_notification_badges_detail">再生中と同じ通知アクセスが必要です。数だけで、通知の内容は表示しません</string>
     <string name="settings_section_top">文字を表示する位置</string>
     <string name="settings_close_folder">アプリを開いた後にフォルダを閉じる</string>

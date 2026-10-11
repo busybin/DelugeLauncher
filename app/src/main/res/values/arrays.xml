@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="changelog_v20">
+        <item>Search finds apps by pinyin — initials and full spelling — with the match highlighted.</item>
+        <item>App tags group apps across the alphabet: sections on top, three letters in the strip, multi-select tagging with existing tags offered.</item>
+        <item>The Frequent tag follows usage on its own and can be switched off, taking its tags back; a hand-applied Frequent is refused.</item>
+        <item>A per-app lock asks for the screen lock, with a lock badge on the name; unlocking lifts a pause where the system allows.</item>
+        <item>The long-press menu gains uninstall; hiding an app asks first; paused apps grey out live.</item>
+        <item>Favorites reach the bottom edge like the app list and scroll fully into view, with room to spare.</item>
+        <item>Scrubbing past Z stays at Z; overscrolling the list bottom springs back instead of closing it.</item>
+        <item>The strip rests in the lower half (full height sideways); the palette picker is a five-column grid of flat Material colors.</item>
+        <item>Settings back navigation returns to the section it came from, system Back included; settings search finds every row.</item>
+        <item>Widgets refresh the moment their app freezes and unfreezes, and a frozen widget is never cleaned away.</item>
+        <item>Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion.</item>
+        <item>Backups now cover every setting including the language; private-space keys stay out of them.</item>
+        <item>About leads with the app name — tapping it opens the project page; the changelog follows the language.</item>
+    </string-array>
+    <string-array name="changelog_v19">
+        <item>Language can now be chosen in settings — 10 languages plus Traditional Chinese.</item>
+        <item>The A-Z strip sits on the side the app list is not aligned to, and the launcher keeps you where you were when the language changes.</item>
+        <item>Home screen content no longer sits under the status bar when it is shown.</item>
+        <item>Set as default: a card on the home screen offers to make Deluge your home app, and can be dismissed for good.</item>
+    </string-array>
+    <string-array name="changelog_first">
+        <item>Renamed and rebranded as Deluge Launcher, with a new blue theme and icon.</item>
+        <item>App list: runs edge to edge, and the strip lights up every letter on screen while scrolling.</item>
+        <item>Fixed scrolling — the list no longer refuses to scroll when a swipe starts at an angle.</item>
+        <item>Fixed the home screen being slow or blank for a couple of seconds when returning from another app.</item>
+        <item>Faster cold start: app icons are cached on disk.</item>
+        <item>Folder rows show how many apps they hold, and whether they are open.</item>
+        <item>Widgets: height follows the widget itself unless it is set by hand, and dead ones left over from a backup are cleaned up.</item>
+        <item>Swipe for shortcuts only fires on a sideways swipe, so scrolling past a row is never stolen.</item>
+        <item>Dropped the navigation library in favour of the launcher\'s own.</item>
+    </string-array>
+</resources>

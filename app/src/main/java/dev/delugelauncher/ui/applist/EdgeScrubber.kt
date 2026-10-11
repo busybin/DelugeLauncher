@@ -68,13 +68,13 @@ const val SCRUB_BUBBLE_INSET_DP = EDGE_INSET_DP + BELL_AMPLITUDE_DP + LETTER_HAL
  */
 @Composable
 fun EdgeScrubber(
-    letters: List<Char>,
+    letters: List<String>,
     scrubY: () -> Float?,
     pullPx: () -> Float,
     band: ScrubBand,
     side: EdgeSide,
     /** Sections with a row on screen while nobody is scrubbing, drawn enlarged. */
-    spotlights: Set<Char> = emptySet(),
+    spotlights: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     if (letters.isEmpty()) return
@@ -127,8 +127,11 @@ fun EdgeScrubber(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = c.toString(),
-                    fontSize = 13.sp,
+                    text = c,
+                    // A tag shows three characters where a letter shows one. Smaller, so it
+                    // fits the cell; centred on the same line, so it sits level with them.
+                    fontSize = if (c.length == 1) 13.sp else 9.sp,
+                    maxLines = 1,
                     fontWeight = if (lit) FontWeight.Bold else FontWeight.Normal,
                     color = Color.White,
                 )

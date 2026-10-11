@@ -11,6 +11,14 @@
     <string name="action_done">Hecho</string>
     <string name="action_remove">Quitar</string>
     <string name="action_app_info">Información de la aplicación</string>
+    <string name="action_uninstall">Desinstalar</string>
+    <string name="tag_frequent">Frecuentes</string>
+    <string name="action_mark_frequent">Marcar más usadas como Frecuentes</string>
+    <string name="frequent_tagged">%1$d apps marcadas como %2$s</string>
+    <string name="settings_auto_frequent">Etiqueta Frecuentes automática</string>
+    <string name="settings_auto_frequent_detail">Mantiene marcadas automáticamente las apps más usadas y sigue su uso.</string>
+    <string name="settings_mark_frequent_detail">Marca ahora mismo las cinco apps más usadas (salvo favoritas) como Frecuentes.</string>
+    <string name="tag_reserved">«%1$s» se asigna sola y no se puede poner a mano.</string>
     <string name="action_edit_layout">Editar diseño</string>
     <string name="action_edit_icon_and_name">Editar icono &amp; nombre</string>
     <string name="action_move_to_folder">Mover a carpeta…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">Encabezados de letras</string>
     <string name="settings_list_headers_detail">Desactivado da una lista continua. La barra A-Z sigue saltando a la letra</string>
     <string name="settings_notification_badges">Contador de notificaciones en los iconos</string>
+    <string name="settings_dim_paused_apps">Atenuar apps en pausa</string>
+    <string name="settings_wallpaper_blur">Desenfoque del fondo</string>
+    <string name="settings_dim_paused_apps_detail">Las apps en pausa se muestran atenuadas, como apartadas. Desactívalo para verlas como las demás.</string>
     <string name="settings_notification_badges_detail">Necesita el mismo acceso a las notificaciones que Now Playing. Solo cuenta, nunca lo que dice una notificación</string>
     <string name="settings_section_top">Dónde queda una letra</string>
     <string name="settings_close_folder">Cerrar una carpeta al abrir una aplicación</string>

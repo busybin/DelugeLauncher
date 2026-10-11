@@ -11,6 +11,14 @@
     <string name="action_done">Готово</string>
     <string name="action_remove">Удалить</string>
     <string name="action_app_info">О приложении</string>
+    <string name="action_uninstall">Удалить</string>
+    <string name="tag_frequent">Частые</string>
+    <string name="action_mark_frequent">Пометить частые как «Частые»</string>
+    <string name="frequent_tagged">Помечено приложений: %1$d (%2$s)</string>
+    <string name="settings_auto_frequent">Тег «Частые» автоматически</string>
+    <string name="settings_auto_frequent_detail">Само держит самые используемые приложения помеченными, следя за использованием.</string>
+    <string name="settings_mark_frequent_detail">Сразу помечает пять самых используемых (кроме избранного) как «Частые».</string>
+    <string name="tag_reserved">«%1$s» ставится сам и вручную не задаётся.</string>
     <string name="action_edit_layout">Изменить расположение</string>
     <string name="action_edit_icon_and_name">Изменить значок &amp; название</string>
     <string name="action_move_to_folder">Переместить в папку…</string>
@@ -92,6 +100,9 @@
     <string name="settings_list_headers">Заголовки букв</string>
     <string name="settings_list_headers_detail">Если выключено, список будет непрерывным. Полоса A-Z по-прежнему переходит к букве</string>
     <string name="settings_notification_badges">Количество уведомлений на значках</string>
+    <string name="settings_dim_paused_apps">Приглушать приостановленные приложения</string>
+    <string name="settings_wallpaper_blur">Размытие обоев</string>
+    <string name="settings_dim_paused_apps_detail">Приостановленные приложения показываются приглушённо, как отложенные. Выключите, чтобы они выглядели как остальные.</string>
     <string name="settings_notification_badges_detail">Требуется тот же доступ к уведомлениям, что и для «Сейчас играет». Показываются только счётчики, а не текст уведомлений</string>
     <string name="settings_section_top">Куда ведёт буква</string>
     <string name="settings_close_folder">Закрывать папку после открытия приложения</string>
