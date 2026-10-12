@@ -68,7 +68,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">Activa Deluge Launcher en Ajustes → Accesibilidad para abrir las notificaciones</string>
-    <string name="toast_enable_accessibility_lock">Activa Deluge Launcher en Ajustes → Accesibilidad para bloquear la pantalla</string>
 
     <!-- Settings -->
     <string name="settings_title">Ajustes de Deluge</string>
@@ -130,7 +129,6 @@
     <string name="settings_edge_side">Qué borde abre la lista de aplicaciones</string>
     <string name="settings_double_tap_lock">Doble toque para bloquear la pantalla</string>
     <string name="settings_double_tap_lock_detail">Toca dos veces la barra A-Z</string>
-    <string name="settings_lock_needs_accessibility">Necesita que Deluge Launcher esté activado en Accesibilidad. Si ese interruptor está atenuado, abre primero Información de la aplicación y permite los ajustes restringidos desde el menú ⋮.</string>
     <string name="settings_az_visibility">Mostrar A-Z en la pantalla de inicio</string>
     <string name="az_visibility_never">Nunca</string>
     <string name="az_visibility_landscape">Horizontal</string>
@@ -416,4 +414,70 @@
     <string name="prompt_default_skip">Ahora no</string>
     <string name="settings_changelog">Novedades</string>
     <string name="settings_changelog_detail">Qué cambió en cada versión</string>
+    <string name="settings_corner_tap">Tocar el botón</string>
+    <string name="settings_corner_swipe">Deslizar el botón hacia arriba</string>
+    <string name="settings_night_start">La noche empieza</string>
+    <string name="settings_night_end">La noche termina</string>
+    <string name="settings_two_column_needs_rotation">Necesita «Girar con el dispositivo» activado.</string>
+    <string name="applist_empty_search">Sin resultados</string>
+    <string name="applist_empty_list">Nada que mostrar</string>
+    <string name="corner_action_failed">Nada en este teléfono puede hacer eso</string>
+    <string name="corner_action_app_list">Abrir la lista de apps</string>
+    <string name="corner_action_search">Abrir la búsqueda de la lista de apps</string>
+    <string name="corner_action_camera">Abrir la cámara</string>
+    <string name="corner_action_flashlight">Alternar la linterna</string>
+    <string name="corner_action_shade">Abrir el panel de notificaciones</string>
+    <string name="corner_action_lock">Bloquear la pantalla</string>
+    <string name="torch_on">Linterna encendida</string>
+    <string name="torch_off">Linterna apagada</string>
+    <string name="action_change_wallpaper">Cambiar fondo</string>
+    <string name="wallpaper_no_picker">No se encontró selector de fondo</string>
+    <string name="action_lock_app">Bloquear app</string>
+    <string name="action_unlock_app">Desbloquear app</string>
+    <string name="action_set_tag">Poner etiqueta</string>
+    <string name="tag_label">Etiqueta</string>
+    <string name="tag_new">Nueva etiqueta</string>
+    <string name="tag_selected_count">%1$d seleccionadas</string>
+    <string name="tag_remove">Quitar etiqueta</string>
+    <string name="app_lock_title">Desbloquear para abrir</string>
+    <string name="app_lock_prompt">Confirma el bloqueo de pantalla para abrir %1$s</string>
+    <string name="settings_color_scheme">Esquema de color</string>
+    <string name="settings_color_scheme_detail">Azul Deluge salvo indicación contraria. Fondo necesita Android 12 o posterior, y usa azul en versiones anteriores.</string>
+    <string name="scheme_deluge_blue">Azul Deluge</string>
+    <string name="scheme_dynamic">Fondo</string>
+    <string name="scheme_purple">Morado</string>
+    <string name="scheme_green">Verde</string>
+    <string name="scheme_red">Rojo</string>
+    <string name="scheme_orange">Naranja</string>
+    <string name="scheme_yellow">Amarillo</string>
+    <string name="scheme_pink">Rosa</string>
+    <string name="scheme_teal">Turquesa</string>
+    <string name="haptic_off">Apagado</string>
+    <string name="haptic_light">Suave</string>
+    <string name="haptic_medium">Media</string>
+    <string name="haptic_strong">Fuerte</string>
+    <string name="settings_two_column_home_portrait">Inicio en dos columnas (vertical)</string>
+    <string name="settings_two_column_home_portrait_detail">Dos favoritos comparten cada fila en vertical.</string>
+    <string name="settings_two_column_home_landscape">Inicio en dos columnas (horizontal)</string>
+    <string name="settings_two_column_home_landscape_detail">Dos favoritos comparten cada fila en horizontal.</string>
+    <string name="settings_two_column_list_portrait">Lista en dos columnas (vertical)</string>
+    <string name="settings_two_column_list_portrait_detail">Dos apps comparten cada fila en vertical.</string>
+    <string name="settings_two_column_list_landscape">Lista en dos columnas (horizontal)</string>
+    <string name="settings_two_column_list_landscape_detail">Dos apps comparten cada fila en horizontal.</string>
+    <string name="settings_developer_mode">Modo desarrollador</string>
+    <string name="settings_developer_mode_detail">Disfraza nombres e iconos para capturas y oculta la barra de estado.</string>
+    <string name="developer_unlocked">Modo desarrollador desbloqueado</string>
+    <string name="settings_auto_dark">Tema oscuro de noche</string>
+    <string name="settings_auto_dark_detail">Pasa al tema oscuro por la noche y vuelve por la mañana, en vez de seguir al sistema.</string>
+    <string name="settings_reduce_motion">Reducir movimiento</string>
+    <string name="settings_reduce_motion_detail">Omite las transiciones propias del lanzador; abrir la lista y sus fundidos ocurren a la vez.</string>
+    <string name="settings_pinch_resize">Pellizcar para cambiar iconos</string>
+    <string name="settings_pinch_resize_detail">Dos dedos en el inicio cambian el tamaño de los iconos.</string>
+    <string name="hide_confirm_message">¿Ocultar %1$s de la lista de apps? Podrás traerla de vuelta en Ajustes > Apps > Apps ocultas.</string>
+    <string name="settings_lock_setup">Bloquear necesita un permiso</string>
+    <string name="settings_lock_setup_detail">Bloquear necesita accesibilidad activada. No observa nada; solo bloquea.</string>
+    <string name="corner_action_open_app">Abrir una app</string>
+    <string name="corner_action_open_shortcut">Abrir un acceso directo</string>
+    <string name="corner_action_do_nothing">No hacer nada</string>
+    <string name="slot_no_shortcuts">Aún no hay accesos directos fijados</string>
 </resources>

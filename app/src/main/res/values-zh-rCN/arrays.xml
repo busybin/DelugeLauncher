@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>角落按钮：按压缩小回弹，按住上滑执行；点按和上滑各选九种动作；编辑布局里可拖到任意位置。</item>
+        <item>收藏下方的左右滑提供同样的九种动作，两边各存一套。</item>
+        <item>自动深色跟随自定义的夜晚起止时间。</item>
+        <item>每个手势绑自己的应用或快捷方式，新增无动作，选择窗空手回来不改任何东西。</item>
+        <item>下滑通知栏恢复；重启后天气还在；小部件计数准确。</item>
+        <item>备份排除角落按钮的私密应用，语言往返正常。</item>
+        <item>字母条滑动即时落位；图标预热和手指共享 CPU。</item>
+        <item>十几处审计修复：手电循环、空文件夹文案、文件夹变灰、搜索归档等。</item>
+        <item>11 种语言全部补齐。</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>主页和列表各有竖屏/横屏双列开关，配对行保持齐平。</item>
         <item>震动强度：关/轻/中/重。</item>

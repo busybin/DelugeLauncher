@@ -48,6 +48,9 @@ internal object PinyinSearch {
     }
 
     private fun key(label: String): Key = keys.getOrPut(label) {
+        // Unbounded would pin every rename and disguise string forever; the active set is a
+        // few hundred, so shedding bulk past that costs one rebuild, not memory.
+        if (keys.size > 2000) keys.clear()
         val full = StringBuilder()
         val initials = StringBuilder()
         val source = ArrayList<Int>(label.length)
@@ -95,15 +98,19 @@ internal object PinyinSearch {
      */
     fun rank(name: String, packageName: String, term: String): Int {
         if (term.isEmpty()) return 0
+        // Lowercase once up front with a fixed locale: Turkish dotted-I would otherwise move
+        // hits around, and building the pinyin key before the cheap checks costs a full
+        // transliteration scan of every app on the first keystroke.
+        val folded = term.lowercase(java.util.Locale.ROOT)
+        if (name.startsWith(folded, ignoreCase = true)) return 0
+        if (name.split(' ', '-', '_', '.').any { it.startsWith(folded, ignoreCase = true) }) return 1
+        if (name.contains(folded, ignoreCase = true)) return 2
         val key = key(name)
         return when {
-            name.startsWith(term, ignoreCase = true) -> 0
-            name.split(' ', '-', '_', '.').any { it.startsWith(term, ignoreCase = true) } -> 1
-            key.initials.startsWith(term, ignoreCase = true) -> 1
-            name.contains(term, ignoreCase = true) -> 2
-            key.full.startsWith(term, ignoreCase = true) -> 2
-            key.full.contains(term, ignoreCase = true) -> 3
-            packageName.contains(term, ignoreCase = true) -> 4
+            key.initials.startsWith(folded, ignoreCase = true) -> 1
+            key.full.startsWith(folded, ignoreCase = true) -> 2
+            key.full.contains(folded, ignoreCase = true) -> 3
+            packageName.contains(folded, ignoreCase = true) -> 4
             else -> NO_MATCH
         }
     }
@@ -113,11 +120,12 @@ internal object PinyinSearch {
         if (term.isEmpty()) return null
         val direct = label.indexOf(term, ignoreCase = true)
         if (direct >= 0) return direct until direct + term.length
+        val folded = term.lowercase(java.util.Locale.ROOT)
         val key = key(label)
-        val at = key.full.indexOf(term.lowercase())
-        if (at < 0) return null
+        val at = key.full.indexOf(folded)
+        if (at < 0 || key.source.isEmpty()) return null
         val from = key.source[at]
-        val to = key.source[(at + term.length - 1).coerceAtMost(key.source.lastIndex)]
+        val to = key.source[(at + folded.length - 1).coerceAtMost(key.source.lastIndex)]
         return from..to
     }
 }

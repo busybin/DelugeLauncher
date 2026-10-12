@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>모서리 버튼: 누르면 들어가고, 길게 밀어 실행. 탭과 스와이프 각 9종 중 선택. 레이아웃 편집에서 자유 이동.</item>
+        <item>즐겨찾기 아래 스와이프도 같은 9종, 좌우 따로 설정.</item>
+        <item>자동 다크가 직접 정한 밤 시간 따름.</item>
+        <item>각 제스처에 전용 앱/바로가기와 아무것도 안 함 추가. 선택 없이 돌아와도 바뀌지 않음.</item>
+        <item>아래 스와이프 알림창 복구. 재부팅 후에도 날씨. 위젯 숫자 정확.</item>
+        <item>백업은 버튼의 비공개 앱 제외, 언어 왕복 정상.</item>
+        <item>문자 바 즉시 이동. 아이콘 예열은 손가락과 CPU 공유.</item>
+        <item>감사 수정 15건 이상: 손전등 루프, 빈 폴더 문구, 폴더 흐리게, 검색 정리 등.</item>
+        <item>11개 언어 전부 완성.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>홈과 목록에 세로/가로 2열 스위치. 짝 행은 수평 유지.</item>
         <item>진동 강도: 끔/약/중/강.</item>

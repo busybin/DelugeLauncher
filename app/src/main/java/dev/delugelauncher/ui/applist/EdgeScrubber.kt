@@ -132,7 +132,10 @@ fun EdgeScrubber(
                     // fits the cell; centred on the same line, so it sits level with them.
                     fontSize = if (c.length == 1) 13.sp else 9.sp,
                     maxLines = 1,
-                    fontWeight = if (lit) FontWeight.Bold else FontWeight.Normal,
+                    // Always the same weight: the spotlight already scales the letter 1.6x
+                    // in the draw phase, and toggling Bold here re-laid-out every letter of
+                    // the strip on each section change mid-scrub.
+                    fontWeight = FontWeight.Normal,
                     color = Color.White,
                 )
             }

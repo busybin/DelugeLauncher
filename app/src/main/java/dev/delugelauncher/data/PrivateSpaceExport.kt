@@ -27,6 +27,8 @@ internal const val PREF_ICON_OVERRIDES = "icon_overrides_json"
 internal const val PREF_LAUNCH_COUNTS = "launch_counts_json"
 internal const val PREF_QUICK_LAUNCH_LEFT = "quick_launch_left_key"
 internal const val PREF_QUICK_LAUNCH_RIGHT = "quick_launch_right_key"
+internal const val PREF_CORNER_BUTTON_KEY = "corner_button_key"
+internal const val PREF_CORNER_SWIPE_KEY = "corner_swipe_key"
 internal const val PREF_LOCKED_APPS = "locked_apps"
 internal const val PREF_APP_TAGS = "app_tags"
 
@@ -70,7 +72,7 @@ fun stripPrivateSpaceFromExport(name: String, value: Any, stripOtherProfiles: Bo
         PREF_FOLDERS -> (value as? String)?.let { stripFoldersJson(it, isPrivate) } ?: value
         PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS, PREF_APP_TAGS ->
             (value as? String)?.let { stripJsonMap(it, isPrivate) } ?: value
-        PREF_QUICK_LAUNCH_LEFT, PREF_QUICK_LAUNCH_RIGHT -> {
+        PREF_QUICK_LAUNCH_LEFT, PREF_QUICK_LAUNCH_RIGHT, PREF_CORNER_BUTTON_KEY, PREF_CORNER_SWIPE_KEY -> {
             // Not `?.let { ... } ?: value`: that Elvis would mistake the deliberate null this
             // branch can return (drop the slot) for the cast having failed, and hand the
             // private key straight back out.

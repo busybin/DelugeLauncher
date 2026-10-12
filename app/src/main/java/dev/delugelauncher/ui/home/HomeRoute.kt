@@ -4,7 +4,17 @@ package dev.delugelauncher.ui.home
 import android.app.SearchManager
 import android.app.Activity
 import android.app.KeyguardManager
+import android.Manifest
 import android.content.Intent
+import android.provider.Settings
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CameraMetadata
+import android.provider.MediaStore
+import androidx.core.content.ContextCompat
+import dev.delugelauncher.data.CornerAction
+import dev.delugelauncher.data.targetKind
 import android.graphics.Rect
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -73,6 +83,7 @@ import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.HomePaddings
+import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.PaddingSlot
 import dev.delugelauncher.data.folderToken
@@ -95,6 +106,7 @@ import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
@@ -206,6 +218,12 @@ fun HomeRoute(
         else folders.associate { it.id to ScreenshotDisguise.folderName(it.id) }
     }
     val appTags by app.prefs.appTags.collectAsState(initial = emptyMap())
+    // The auto tag in any language it ever wore: the picker refuses these by hand and keeps
+    // them through a confirm, exactly like the static set.
+    val autoFrequentWords by app.prefs.autoFrequentWords.collectAsState(initial = emptySet<String>())
+    val reservedTags = remember(autoFrequentWords) {
+        dev.delugelauncher.ui.applist.RESERVED_TAGS + autoFrequentWords
+    }
     // Tags gathered into groups for the list's own sections. Built here rather than in the
     // background model because it is a handful of apps, not the whole alphabet.
     val tagSections = remember(appTags, appsByKey, hiddenApps) {
@@ -287,7 +305,20 @@ fun HomeRoute(
     var appListVisible by remember { mutableStateOf(false) }
     val scrub = remember { ScrubState() }
     var viewportHeightPx by remember { mutableIntStateOf(0) }
+    var viewportWidthPx by remember { mutableIntStateOf(0) }
     var favBand by remember { mutableStateOf<ScrubBand?>(null) }
+    // The corner button's bounds in root pixels: the edge zone leaves that rect alone so a
+    // tap on the button reaches the button, and the strip stops above it. Reported by the
+    // button itself, nulled when it leaves.
+    var cornerBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    val cornerTapAction by app.prefs.cornerTapAction.collectAsState(initial = CornerAction.OPEN_APP)
+    val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
+    // The slide-up's own target; the tap keeps the button key and never shares it.
+    val cornerSwipeKey by app.prefs.cornerSwipeKey.collectAsState(initial = null)
+    // Portrait and landscape each keep their own position and never share: turning the
+    // phone must not drag the button somewhere it was never put.
+    val cornerPosPortrait by app.prefs.cornerPosPortrait.collectAsState(initial = null)
+    val cornerPosLandscape by app.prefs.cornerPosLandscape.collectAsState(initial = null)
     // Enough height for every letter to be worth aiming at. Counted per letter rather than set
     // as one number, since an alphabet with accents in it has more letters to find room for.
     val minBandHeightPx = with(LocalDensity.current) {
@@ -297,10 +328,19 @@ fun HomeRoute(
     var folderPickerFor by remember { mutableStateOf<AppInfo?>(null) }
 
     val nowPlaying by NowPlayingBus.state.collectAsState()
-    val listenerGranted = remember(homeIntentTick) { isListenerEnabled(context) }
+    // The grant lives in system Settings, so a BACK from there resumes without a HOME
+    // intent: re-check on every resume, not just when the tick moves.
+    var resumeTick by remember { mutableStateOf(0) }
+    val listenerGranted = remember(homeIntentTick, resumeTick) { isListenerEnabled(context) }
     // Don't reserve the block (or its padding) unless there is something to render:
     // no live session means the whole thing collapses, padding included.
     val nowPlayingHasContent = settings.nowPlayingEnabled && (!listenerGranted || nowPlaying != null)
+    // The corner button owns the finger from its hold to its release: the same upward
+    // travel is also a swipe-up-to-open-list, and without this both fire — the action
+    // runs and the list opens under it, frozen mid-animation and translucent, because
+    // the button consumes the rest of the gesture and the home drag never ends it.
+    var cornerOwnsGesture by remember { mutableStateOf(false) }
+    var listOpenBeforeCorner by remember { mutableStateOf(false) }
     // While the band is being edited the live value wins; otherwise a range the user set by
     // hand wins over the measured favorites, which is what makes it stop following them.
     var bandEditMode by remember { mutableStateOf(false) }
@@ -350,19 +390,82 @@ fun HomeRoute(
         floored.copy(topPx = floored.topPx.coerceAtLeast(minTop))
     }
 
+    // The idle strip stops above the corner button when they share a side: letters painted
+    // over the button read as broken. Only the idle strip is shortened — the band editor
+    // and the app list keep the true range. A top-corner button cuts the top instead: the
+    // strip starts under it rather than running through it.
+    // Mirrors the button's own visibility below: the strip yields exactly when the mark
+    // is on screen.
+    val cornerTapBound = cornerButtonApp != null || cornerButtonIsSearch
+    val cornerSwipeBound = cornerSwipeKey != null &&
+        (cornerSwipeKey == EntryKeys.SEARCH || appsByKey.containsKey(cornerSwipeKey))
+    val cornerButtonOnScreen = homeEditMode ||
+        (cornerTapAction != CornerAction.DO_NOTHING &&
+            (cornerTapAction.targetKind() == null || cornerTapBound)) ||
+        (cornerSwipeAction != CornerAction.DO_NOTHING &&
+            (cornerSwipeAction.targetKind() == null || cornerSwipeBound))
+    val stripMarginPx = with(LocalDensity.current) { 12.dp.toPx() }
+    val stripBand = remember(
+        band, cornerBounds, settings.alignment, cornerButtonOnScreen, viewportWidthPx,
+        viewportHeightPx,
+    ) {
+        val bounds = cornerBounds
+        if (!cornerButtonOnScreen || bounds == null) {
+            band
+        } else {
+            val stripOnLeft = settings.alignment == HomeAlignment.RIGHT
+            // Measured, not stored: the button is dragged freely now, so which half it
+            // sits in is read off where it is.
+            val buttonOnLeft = viewportWidthPx <= 0 ||
+                bounds.center.x * 2f < viewportWidthPx.toFloat()
+            if (stripOnLeft != buttonOnLeft) {
+                band
+            } else {
+                val buttonOnTop = viewportHeightPx > 0 &&
+                    bounds.center.y * 2f < viewportHeightPx.toFloat()
+                if (buttonOnTop) {
+                    val minTop = bounds.bottom + stripMarginPx
+                    if (minTop >= band.bottomPx) band
+                    else band.copy(
+                        topPx = minTop.coerceAtMost(band.bottomPx),
+                        heightPx = (band.bottomPx - minTop).coerceAtLeast(0f),
+                    )
+                } else {
+                    val maxBottom = bounds.top - stripMarginPx
+                    if (maxBottom <= band.topPx) band
+                    else band.copy(heightPx = (maxBottom - band.topPx).coerceAtLeast(0f))
+                }
+            }
+        }
+    }
+
+    // Portrait and landscape resolve apart, and only the stored value is passed down: the
+    // default spot is computed in HomeScreen from the measured frame (CornerGeometry), so
+    // there is one place that decides it rather than two that can disagree.
+    val portrait =
+        LocalConfiguration.current.orientation != Configuration.ORIENTATION_LANDSCAPE
+    val cornerPos = if (portrait) cornerPosPortrait else cornerPosLandscape
+
     /** Locking is a strip gesture now, so the toast that explains it lives with the strip. */
     fun lockOrExplain() {
-        if (!SystemUi.lockScreen()) {
+        if (SystemUi.lockScreen()) return
+        // No way to lock: straight to the page that grants one rather than a toast about
+        // it. The toast below is only for the launch itself failing.
+        runCatching {
+            context.startActivity(
+                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }.onFailure {
             Toast.makeText(
                 context,
-                context.getString(R.string.toast_enable_accessibility_lock),
+                context.getString(R.string.settings_lock_setup),
                 Toast.LENGTH_SHORT,
             ).show()
         }
     }
 
-    // How far in the overlay is: 0 sitting off the bottom, the full distance fully open. The
-    // edge zones jump it straight to open, a swipe drags it there by hand.
+    // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
+    var launchClose by remember { mutableStateOf<Job?>(null) }
     val openDistancePx = with(LocalDensity.current) { SWIPE_OPEN_DISTANCE.toPx() }
     val openAnim = remember { Animatable(0f) }
     val appListState = rememberLazyListState()
@@ -370,9 +473,6 @@ fun HomeRoute(
     // flick that ends it can be handed on rather than stopping dead.
     var swipeScrolledList by remember { mutableStateOf(false) }
     val flingDecay = rememberSplineBasedDecay<Float>()
-
-    // Set while a launched app is expected to take over the screen; see closeAfterLaunch.
-    var launchClose by remember { mutableStateOf<Job?>(null) }
 
     // The home screen fades back in when we put the list away ourselves, but not when the
     // system did it for us: laying our own fade over Android's home transition — or running it
@@ -389,6 +489,137 @@ fun HomeRoute(
     // Bumped to ask the list for the cursor, for the openings that are a search rather than
     // a look — the corner button set to it. A count because the same request can come twice.
     var searchFocusTick by remember { mutableIntStateOf(0) }
+
+    fun openCornerList() {
+        appListVisible = true
+        // Opened the whole way, as tapping the edge does. Marking it visible is not
+        // opening it: the list is drawn against this, so without it the button produced
+        // the half-faded list of a swipe abandoned part way.
+        scope.launch { openAnim.snapTo(openDistancePx) }
+    }
+
+    fun openCornerSearch() {
+        appListVisible = true
+        appListQuery = ""
+        forceSearch = true
+        scope.launch { openAnim.snapTo(openDistancePx) }
+        searchFocusTick++
+    }
+
+    fun expandShade() {
+        // Say so rather than failing silently — that way a pull that does nothing tells
+        // you whether the gesture or the permission is at fault.
+        if (!SystemUi.expandNotificationShade(context)) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.toast_enable_accessibility_shade),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    fun openCamera() {
+        // Two ways in: the capture intent first, which hands the shot straight to whichever
+        // camera app wants it, and the plain "show me the camera" action when nothing
+        // answers that — a stripped-down camera app that only takes the second one.
+        val started = runCatching {
+            listOf(
+                Intent(MediaStore.ACTION_IMAGE_CAPTURE),
+                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
+            ).firstOrNull { it.resolveActivity(context.packageManager) != null }
+                ?.let {
+                    context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    true
+                }
+                ?: false
+        }.getOrDefault(false)
+        if (!started) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.corner_action_failed),
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
+    // The flashlight: back camera with a flash, toggled. The camera permission is asked
+    // for on first use rather than up front — most corners never point here.
+    val cameraManager = remember(context) {
+        runCatching { context.getSystemService(CameraManager::class.java) }.getOrNull()
+    }
+    val torchCameraId = remember(cameraManager) {
+        runCatching {
+            val ids = cameraManager?.cameraIdList?.toList().orEmpty()
+            ids.firstOrNull { id ->
+                val chars = cameraManager?.getCameraCharacteristics(id)
+                chars?.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
+                    chars.get(CameraCharacteristics.LENS_FACING) == CameraMetadata.LENS_FACING_BACK
+            } ?: ids.firstOrNull { id ->
+                cameraManager?.getCameraCharacteristics(id)
+                    ?.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+            }
+        }.getOrNull()
+    }
+    var torchOn by remember { mutableStateOf(false) }
+    var torchRetry by remember { mutableStateOf(false) }
+    // What the granted permission is waiting to do. A state rather than a direct call because
+    // the fun below is not in scope inside a launcher declared before it.
+    var torchPendingOn by remember { mutableStateOf<Boolean?>(null) }
+    val torchPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // Granted: do the thing that was being asked for. Refused: state stays, and the
+        // next tap asks again rather than silently doing nothing.
+        if (granted && torchRetry) {
+            torchRetry = false
+            torchPendingOn = !torchOn
+        } else {
+            torchRetry = false
+        }
+    }
+    fun setTorchWanted(on: Boolean) {
+        val id = torchCameraId
+        if (cameraManager == null || id == null) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.corner_action_failed),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return
+        }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            // Ask; the answer comes back through the launcher above, which is the only
+            // place that sets what the grant was waiting for. Setting it here too would
+            // fire the effect below while permission is still missing, re-asking in a loop.
+            torchRetry = true
+            torchPermission.launch(Manifest.permission.CAMERA)
+            return
+        }
+        runCatching { cameraManager.setTorchMode(id, on) }
+            .onSuccess {
+                torchOn = on
+                Toast.makeText(
+                    context,
+                    context.getString(if (on) R.string.torch_on else R.string.torch_off),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+            .onFailure {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.corner_action_failed),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+    }
+    // Placed after the fun it drives, and applies whatever a granted permission was waiting for.
+    LaunchedEffect(torchPendingOn) {
+        val want = torchPendingOn ?: return@LaunchedEffect
+        torchPendingOn = null
+        setTorchWanted(want)
+    }
 
     // A keystroke on the home screen opens the list already searching for it. Only when there
     // is a search field to type into: without one the query filters a list showing no sign of
@@ -451,7 +682,11 @@ fun HomeRoute(
     // A locked app asks for the device's own lock screen before it opens. Unlocked once per run
     // of the launcher rather than once per tap: the point is to keep someone out who picked the
     // phone up, not to ask the owner again every time they open it.
-    val lockedApps by app.prefs.lockedApps.collectAsState(initial = emptySet())
+    // Null until the store answers: while loading, a tap is asked for credentials rather than
+    // waved through, so the first frame cannot be timed to skip the lock.
+    val lockedAppsOrNull by app.prefs.lockedApps.collectAsState(initial = null)
+    val lockedApps = lockedAppsOrNull ?: emptySet()
+    val lockLoaded = lockedAppsOrNull != null
     var sessionUnlocked by remember { mutableStateOf(emptySet<String>()) }
     var pendingLaunch by remember { mutableStateOf<AppInfo?>(null) }
     val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
@@ -464,13 +699,18 @@ fun HomeRoute(
             sessionUnlocked = sessionUnlocked + pending.key
             // A locked app that is also paused cannot start until it is un-paused, so the two
             // are lifted together: unlocking it and then doing nothing would read as broken.
-            if (pending.suspended) app.appRepository.unsuspend(pending)
+            // Off the main thread: it is a binder round trip that is refused on most phones.
+            if (pending.suspended) (context.applicationContext as? DelugeApp)?.offMain {
+                app.appRepository.unsuspend(pending)
+            }
             actuallyLaunch(pending)
         }
     }
 
     fun launchEntry(entry: AppInfo): Boolean {
-        if (entry.kind == EntryKind.APP && entry.key in lockedApps && entry.key !in sessionUnlocked) {
+        if (entry.kind == EntryKind.APP && entry.key !in sessionUnlocked &&
+            (!lockLoaded || entry.key in lockedApps)
+        ) {
             // No secure lock on the phone means there is nothing to ask for; the app opens as
             // usual rather than becoming unreachable.
             val prompt = runCatching {
@@ -480,8 +720,12 @@ fun HomeRoute(
                 )
             }.getOrNull()
             if (prompt != null) {
-                pendingLaunch = entry
-                confirmLaunch.launch(prompt)
+                // A second locked tap while one is already waiting keeps the first: handing
+                // the second app the first answer would open the wrong thing.
+                if (pendingLaunch == null) {
+                    pendingLaunch = entry
+                    confirmLaunch.launch(prompt)
+                }
                 return true
             }
         }
@@ -516,6 +760,46 @@ fun HomeRoute(
     // to the system and left the home screen stuck in it.
     BackHandler(enabled = homeEditMode) { homeEditMode = false }
 
+    /**
+     * Runs [action], using the picked target of the slot that asked.
+     *
+     * All four slots — the corner button's tap, its slide up, the swipe under the favorites on
+     * either side — offer the same list and run it here, so a behaviour only exists once.
+     * [pickedKey] is the app or shortcut chosen for the slot, used only by
+     * [CornerAction.OPEN_APP] and [CornerAction.OPEN_SHORTCUT].
+     */
+    fun performSlotAction(action: CornerAction, pickedKey: String? = null) {
+        when (action) {
+            CornerAction.OPEN_APP, CornerAction.OPEN_SHORTCUT -> {
+                // The search entry is kept as a pseudo key from before there were actions.
+                val key = pickedKey ?: return
+                if (key == EntryKeys.SEARCH) openCornerSearch()
+                else appsByKey[key]?.let { launchEntry(it) }
+            }
+            CornerAction.APP_LIST -> openCornerList()
+            CornerAction.SEARCH -> openCornerSearch()
+            CornerAction.CAMERA -> openCamera()
+            CornerAction.FLASHLIGHT -> setTorchWanted(!torchOn)
+            CornerAction.SHADE -> expandShade()
+            CornerAction.LOCK -> lockOrExplain()
+            CornerAction.DO_NOTHING -> Unit
+        }
+    }
+
+    /** Everything the corner button's tap can do funnels through here. */
+    fun performCornerAction(action: CornerAction) {
+        // The button's own pick, which is the search entry when the corner was set to search.
+        performSlotAction(
+            action,
+            if (cornerButtonIsSearch) EntryKeys.SEARCH else cornerButtonApp?.key,
+        )
+    }
+
+    /** Everything the corner button's slide up can do funnels through here. */
+    fun performCornerSwipeAction(action: CornerAction) {
+        performSlotAction(action, cornerSwipeKey)
+    }
+
     fun commitBand() {
         liveBand?.let { edited ->
             if (viewportHeightPx > 0) {
@@ -526,7 +810,10 @@ fun HomeRoute(
         bandEditMode = false
     }
 
-    BackHandler(enabled = bandEditMode) { commitBand() }
+    // A half-dragged range is abandoned, not stored: Done is the only thing that saves,
+    // and a BACK that kept a range nobody asked to keep would be indistinguishable from
+    // a bug.
+    BackHandler(enabled = bandEditMode) { liveBand = null; bandEditMode = false }
 
     // Set for the length of a private space unlock that was asked to keep the list open.
     var keepListThroughPause by remember { mutableStateOf(false) }
@@ -545,7 +832,16 @@ fun HomeRoute(
                 // later departure.
                 Lifecycle.Event.ON_PAUSE ->
                     if (keepListThroughPause) keepListThroughPause = false else closeAppList(snap = true)
-                Lifecycle.Event.ON_RESUME -> keepListThroughPause = false
+                Lifecycle.Event.ON_RESUME -> {
+                    keepListThroughPause = false
+                    // The notification-listener grant may have changed while system
+                    // Settings was in front; a BACK from there resumes with no HOME
+                    // intent, so the tick alone would keep yesterday's answer.
+                    resumeTick++
+                    // An update can leave the accessibility grant on but its binding
+                    // dead; heal that silently, or nudge once if the grant is gone.
+                    SystemUi.refreshAccessibilityBinding(context)
+                }
                 else -> Unit
             }
         }
@@ -630,7 +926,10 @@ fun HomeRoute(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { viewportHeightPx = it.height },
+            .onSizeChanged {
+                viewportHeightPx = it.height
+                viewportWidthPx = it.width
+            },
     ) {
         // Hidden entirely while the list is up, so only the wallpaper sits behind it — and
         // kept composed the same way, so coming back is instant.
@@ -712,21 +1011,52 @@ fun HomeRoute(
                 textShadowStrength = settings.textShadowStrength,
                 compactTapArea = settings.compactTapArea,
                 cornerButtonApp = cornerButtonApp,
-                onOpenCornerApp = { launchEntry(it) },
                 cornerButtonIsSearch = cornerButtonIsSearch,
-                onOpenCornerSearch = {
-                    appListVisible = true
-                    appListQuery = ""
-                    forceSearch = true
-                    // Opened the whole way, as tapping the edge does. Marking it visible is
-                    // not opening it: the list is drawn against this, so without it the
-                    // button produced the half-faded list of a swipe abandoned part way.
-                    scope.launch { openAnim.snapTo(openDistancePx) }
-                    searchFocusTick++
+                cornerPos = cornerPos,
+                onSetCornerPos = { x, y ->
+                    scope.launch { app.prefs.setCornerPos(portrait, x, y) }
                 },
+                cornerTapAction = cornerTapAction,
+                cornerSwipeAction = cornerSwipeAction,
+                onCornerAction = { performCornerAction(it) },
+                onCornerSwipeAction = { performCornerSwipeAction(it) },
+                onCornerBoundsChanged = { bounds ->
+                    // A 0.5px dead zone like the favorites': every layout hands over a new
+                    // Rect object, and exact comparison would bounce the strip's band — and
+                    // through it this callback — on rounding dust. Null clears the button.
+                    val target = bounds ?: run {
+                        cornerBounds = null
+                        return@HomeScreen
+                    }
+                    val current = cornerBounds
+                    val moved = current == null ||
+                        kotlin.math.abs(current.left - target.left) > 0.5f ||
+                        kotlin.math.abs(current.top - target.top) > 0.5f ||
+                        kotlin.math.abs(current.right - target.right) > 0.5f ||
+                        kotlin.math.abs(current.bottom - target.bottom) > 0.5f
+                    if (moved) cornerBounds = target
+                },
+                onCornerOwnershipChanged = { owned ->
+                    // Only on transitions: the home drag's own start also reports false,
+                    // and that must be a no-op rather than a second verdict.
+                    if (owned) {
+                        listOpenBeforeCorner = appListVisible
+                        cornerOwnsGesture = true
+                    } else if (cornerOwnsGesture) {
+                        cornerOwnsGesture = false
+                        // Whatever the leaked travel opened while the button owned the
+                        // finger goes back: the gesture asked for the corner's action,
+                        // not the list.
+                        if (!listOpenBeforeCorner && appListVisible) closeAppList()
+                        listOpenBeforeCorner = false
+                    }
+                },
+                cornerSwipeBound = cornerSwipeBound,
                 favoritesReorderable = settings.favoritesSource == FavoritesSource.MANUAL,
                 shortcutSwipe = settings.shortcutSwipe,
                 favorites = favorites,
+                hiddenApps = hiddenApps,
+                overlayOpen = appListVisible,
                 nameOverrides = nameOverrides,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
@@ -767,12 +1097,17 @@ fun HomeRoute(
                 },
                 onOpenFolderApp = { launchEntry(it) },
                 onRenameFolder = { folder, name ->
-                    scope.launch { app.prefs.upsertFolder(folder.copy(name = name)) }
+                    // Blank names draw blank rows; keep the old one instead.
+                    if (name.isNotBlank()) {
+                        scope.launch { app.prefs.upsertFolder(folder.copy(name = name.trim())) }
+                    }
                 },
                 onDeleteFolder = { folder -> scope.launch { app.prefs.deleteFolder(folder.id) } },
                 onChangeFolderIcon = { folder -> onNavigate(iconPickerRoute(folderToken(folder.id))) },
                 onResetFolderIcon = { folder -> scope.launch { app.prefs.setFolderIcon(folder.id, null) } },
-                onManageFolder = { folder -> onNavigate("folder/" + folder.id) },
+                onManageFolder = { folder ->
+                    onNavigate("folder/" + android.net.Uri.encode(folder.id))
+                },
                 onRemoveFromFolder = { folder, appInfo ->
                     scope.launch { app.prefs.removeAppFromFolder(folder.id, appInfo.key) }
                 },
@@ -811,6 +1146,12 @@ fun HomeRoute(
                         minHeightPx = minBandHeightPx,
                     )
                 },
+                onFavoritesCleared = {
+                    // Same freeze as above while the overlay or the editor owns the screen;
+                    // otherwise the strip falls back to the full height until favorites return.
+                    if (appListVisible || homeEditMode) return@HomeScreen
+                    favBand = null
+                },
                 nowPlayingHasContent = nowPlayingHasContent,
                 contentColor = settings.contentColor,
                 showFavoriteLabels = settings.showFavoriteLabels,
@@ -827,6 +1168,9 @@ fun HomeRoute(
                 centerFavorites = settings.centerFavorites,
                 swipeUpOpensAppList = settings.swipeUpOpensAppList,
                 onSwipeUpDrag = { total, delta ->
+                    // The corner button owns the finger from its hold on: its own upward
+                    // travel would otherwise open the list under its action too.
+                    if (cornerOwnsGesture) return@HomeScreen
                     appListVisible = true
                     scope.launch { openAnim.snapTo(total.coerceAtMost(openDistancePx)) }
                     // Once it is all the way in the finger is usually still moving, so the
@@ -837,6 +1181,12 @@ fun HomeRoute(
                     }
                 },
                 onSwipeUpEnd = { velocity ->
+                    if (cornerOwnsGesture) return@HomeScreen
+                    // Read now: the coroutine below runs after the animation, by which time
+                    // this flag is long reset — checking it there would always see false and
+                    // focus search even when the finger had been scrolling the list.
+                    val scrolled = swipeScrolledList
+                    swipeScrolledList = false
                     scope.launch {
                         val settled = openAnim.value > openDistancePx * 0.4f || velocity < -1200f
                         if (settled) {
@@ -849,7 +1199,7 @@ fun HomeRoute(
                             )
                             // Asked for once it has settled, not on the way: a keyboard
                             // arriving mid-animation fights the list for the same space.
-                            if (settings.swipeUpOpensSearch && !swipeScrolledList) {
+                            if (settings.swipeUpOpensSearch && !scrolled) {
                                 searchFocusTick++
                             }
                         } else {
@@ -861,7 +1211,7 @@ fun HomeRoute(
                     // no momentum of its own — so a flick that starts after the list is
                     // already moving has to have its velocity handed over explicitly, or the
                     // list stops the instant the finger leaves.
-                    if (swipeScrolledList && velocity < 0f) {
+                    if (scrolled && velocity < 0f) {
                         scope.launch {
                             appListState.scroll {
                                 var travelled = 0f
@@ -875,13 +1225,25 @@ fun HomeRoute(
                     }
                     swipeScrolledList = false
                 },
-                quickLaunchEnabled = settings.quickLaunchLeft != null || settings.quickLaunchRight != null,
+                // Any deliberate choice counts: a side set to the camera opens the camera
+                // even with no app chosen for it. Opening an app is the default, so only
+                // a bound key enables it on its own.
+                quickLaunchEnabled = settings.quickLaunchLeft != null ||
+                    settings.quickLaunchRight != null ||
+                    settings.quickLaunchLeftAction != CornerAction.OPEN_APP ||
+                    settings.quickLaunchRightAction != CornerAction.OPEN_APP,
                 onQuickLaunch = { slot ->
-                    val target = when (slot) {
+                    // Same list the corner button runs: open an app, open a shortcut, the
+                    // list, search, the camera, the flashlight, the shade, the lock, nothing.
+                    val action = when (slot) {
+                        QuickLaunchSlot.LEFT -> settings.quickLaunchLeftAction
+                        QuickLaunchSlot.RIGHT -> settings.quickLaunchRightAction
+                    }
+                    val picked = when (slot) {
                         QuickLaunchSlot.LEFT -> settings.quickLaunchLeft
                         QuickLaunchSlot.RIGHT -> settings.quickLaunchRight
                     }
-                    target?.let { launchEntry(it) }
+                    performSlotAction(action, picked?.key)
                 },
                 onPeekStatusBar = onPeekStatusBar,
                 onExpandShade = {
@@ -944,6 +1306,8 @@ fun HomeRoute(
             AppListScreen(
                 model = listModel,
                 nameOverrides = nameOverrides,
+                englishName = { app.appRepository.englishLabel(it) },
+                isRenamed = { it.key in nameOverrides },
                 scrub = scrub,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
@@ -1004,10 +1368,19 @@ fun HomeRoute(
                 onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, it.key !in lockedApps) } },
                 appTags = appTags,
                 allTags = allTags,
+                reservedTags = reservedTags,
                 onAddTags = { apps, tags ->
                     // Replace, not merge: what is checked goes on and what is not comes off.
+                    // One edit for the whole batch, read fresh inside it: per-app writes
+                    // raced the auto-tagger's pass and the later commit won whole.
                     scope.launch {
-                        apps.forEach { a -> app.prefs.setAppTags(a.key, tags) }
+                        val clean = tags.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                        val current = app.prefs.appTags.first()
+                        val next = HashMap(current)
+                        apps.forEach { a ->
+                            if (clean.isEmpty()) next.remove(a.key) else next[a.key] = clean
+                        }
+                        app.prefs.setAllAppTags(next)
                     }
                 },
                 shortcutSwipe = settings.shortcutSwipe,
@@ -1064,7 +1437,7 @@ fun HomeRoute(
                 letters = listModel.letters,
                 scrubY = { null },
                 pullPx = { 0f },
-                band = band,
+                band = stripBand,
                 // Beside the empty end of the row, matching the app list: favorites aligned
                 // right leave their left side free, so that is where the strip goes.
                 side = if (settings.alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT,
@@ -1154,12 +1527,15 @@ fun HomeRoute(
                     widthDp = settings.edgeZoneWidthDp.dp,
                     insetDp = (if (side == EdgeSide.LEFT) insetLeftDp else insetRightDp).dp,
                     letters = listModel.letters,
-                    band = band,
+                    band = stripBand,
                     bandOnly = settings.edgeZoneBandOnly,
                     holdScroll = settings.holdScroll,
                     hapticFeedback = settings.hapticFeedback,
                     state = scrub,
                     listOpen = appListVisible,
+                    // The corner button's rect in root pixels: a press starting inside it
+                    // belongs to the button, so the zone lets it through untouched.
+                    exclusion = cornerBounds,
                     onDismiss = { closeAppList() },
                     onOpen = {
                         appListVisible = true
@@ -1239,6 +1615,9 @@ data class HomeSettings(
     val sortByUsage: Boolean,
     val quickLaunchLeft: AppInfo?,
     val quickLaunchRight: AppInfo?,
+    /** What a swipe under the favorites does, per side. Same list the button offers. */
+    val quickLaunchLeftAction: CornerAction,
+    val quickLaunchRightAction: CornerAction,
     /** Place the favorites by measurement, until the user sets a padding of their own. */
     val centerFavorites: Boolean,
     val dimWallpaperAlpha: Float,

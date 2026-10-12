@@ -114,8 +114,8 @@ class RouterScope {
     }
 
     /** The block for [route], with any `{placeholders}` filled in, or null when unknown. */
-    fun resolve(route: String): Pair<NavBackStackEntry, @Composable (NavBackStackEntry) -> Unit>? {
-        routes[route]?.let { return NavBackStackEntry(NavArguments(emptyMap())) to it }
+    fun resolve(route: String): Resolved? {
+        routes[route]?.let { return Resolved(NavBackStackEntry(NavArguments(emptyMap())), route, it) }
         val wanted = route.split('/')
         for ((pattern, block) in routes) {
             val parts = pattern.split('/')
@@ -125,17 +125,27 @@ class RouterScope {
             for (i in parts.indices) {
                 val part = parts[i]
                 if (part.startsWith("{") && part.endsWith("}")) {
-                    args[part.substring(1, part.length - 1)] = wanted[i]
+                    args[part.substring(1, part.length - 1)] = android.net.Uri.decode(wanted[i])
                 } else if (part != wanted[i]) {
                     matched = false
                     break
                 }
             }
-            if (matched) return NavBackStackEntry(NavArguments(args)) to block
+            if (matched) return Resolved(NavBackStackEntry(NavArguments(args)), pattern, block)
         }
         return null
     }
 }
+
+/**
+ * A route match: the entry with its arguments filled in, the pattern that matched
+ * (placeholders intact), and the screen to draw.
+ */
+class Resolved(
+    val entry: NavBackStackEntry,
+    val pattern: String,
+    val content: @Composable (NavBackStackEntry) -> Unit,
+)
 
 /**
  * Draws whatever the router is pointed at. Deliberately without a transition: these are
@@ -146,14 +156,25 @@ class RouterScope {
 fun RouterHost(router: Router, content: @Composable RouterScope.() -> Unit) {
     val scope = RouterScope()
     scope.content()
-    val resolved = scope.resolve(router.top) ?: return
+    // Unknown routes fall back to home rather than drawing nothing: a restored stack can
+    // name a screen this version no longer registers. Logged so a mistyped navigate() shows
+    // up in logcat instead of silently landing on home and looking like a dead link.
+    val resolved = scope.resolve(router.top) ?: scope.resolve("home")?.also {
+        android.util.Log.w("DelugeRouter", "unknown route \"${router.top}\", fell back to home")
+    } ?: return
     // Each route's own rememberSaveable state is kept while it is off screen, so a screen
     // opened from inside another comes back to where it was left — the settings sections in
     // particular, which are a state on one screen rather than routes of their own. Without
     // this, coming back from Language or the changelog landed on the top settings menu
     // instead of the section it was opened from.
+    //
+    // Keyed by the matched pattern, placeholders intact: iconpicker/a and iconpicker/b are
+    // the same screen and share, but "settings" and "settings/changelog" are different
+    // screens and must not. Collapsing both to the first segment shared one registry
+    // between them and the section was lost on every return — the bug that brought this
+    // comment back.
     val holder = rememberSaveableStateHolder()
-    holder.SaveableStateProvider(router.top) {
-        resolved.second(resolved.first)
+    holder.SaveableStateProvider(resolved.pattern) {
+        resolved.content(resolved.entry)
     }
 }

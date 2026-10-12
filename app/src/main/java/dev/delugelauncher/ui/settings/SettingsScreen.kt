@@ -8,6 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import dev.delugelauncher.data.ColorSchemeChoice
+import dev.delugelauncher.data.CornerAction
+import dev.delugelauncher.data.SlotKind
+import dev.delugelauncher.data.SlotTarget
+import dev.delugelauncher.data.targetKind
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
@@ -76,6 +80,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import dev.delugelauncher.ui.theme.fontFamilyOf
@@ -95,6 +100,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import dev.delugelauncher.service.HapticUtil
 import dev.delugelauncher.data.CrashLog
+import dev.delugelauncher.ui.applist.PinyinSearch
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -122,7 +128,6 @@ import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
-import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.TextColorMode
 import dev.delugelauncher.data.HapticFeedback
@@ -228,6 +233,10 @@ fun SettingsScreen(
     onSetDimPausedApps: (Boolean) -> Unit,
     autoDark: Boolean,
     onSetAutoDark: (Boolean) -> Unit,
+    nightStartHour: Int,
+    onSetNightStartHour: (Int) -> Unit,
+    nightEndHour: Int,
+    onSetNightEndHour: (Int) -> Unit,
     pinchToResize: Boolean,
     onSetPinchToResize: (Boolean) -> Unit,
     reduceMotion: Boolean,
@@ -281,9 +290,17 @@ fun SettingsScreen(
     onSetAppListSearchHidden: (Boolean) -> Unit,
     quickLaunchLeftLabel: String?,
     quickLaunchRightLabel: String?,
-    onOpenQuickLaunchPicker: (QuickLaunchSlot) -> Unit,
     cornerButtonLabel: String?,
-    onOpenCornerPicker: () -> Unit,
+    cornerSwipeLabel: String?,
+    onOpenSlotPicker: (SlotTarget, SlotKind) -> Unit,
+    quickLaunchLeftAction: CornerAction,
+    onSetQuickLaunchLeftAction: (CornerAction) -> Unit,
+    quickLaunchRightAction: CornerAction,
+    onSetQuickLaunchRightAction: (CornerAction) -> Unit,
+    cornerTapAction: CornerAction,
+    onSetCornerTapAction: (CornerAction) -> Unit,
+    cornerSwipeAction: CornerAction,
+    onSetCornerSwipeAction: (CornerAction) -> Unit,
     autoKeyboard: Boolean,
     onSetAutoKeyboard: (Boolean) -> Unit,
     lastLetterToLine: Boolean,
@@ -399,6 +416,17 @@ fun SettingsScreen(
         }
     }
 
+    // Sideways switches do nothing while the rotation lock holds the phone upright: say so
+    // on the row itself rather than letting the switch read as broken.
+    val rotationNote = stringResource(R.string.settings_two_column_needs_rotation)
+    fun landscapeDetail(base: String): String =
+        if (allowRotation) base else "$base $rotationNote"
+
+
+    // Only after a crash, so there is nothing here to explain the rest of the time.
+    // Read once up front: the entry below only shows while there is one.
+    val crashText = remember { CrashLog.read(context) }
+    var crashCleared by remember { mutableStateOf(false) }
 
     // Every row of settings as one list: what it is called, what else it answers to, the
     // section it belongs in, and the control itself. One list rather than a block per section
@@ -500,6 +528,32 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_auto_dark),
                 detail = stringResource(R.string.settings_auto_dark_detail),
                 checked = autoDark, onCheckedChange = onSetAutoDark,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPEARANCE, stringResource(R.string.settings_night_start),
+            "dark night theme schedule start evening", visible = autoDark,
+        ) {
+            SliderRow(
+                label = stringResource(R.string.settings_night_start),
+                value = nightStartHour.toFloat(),
+                range = 0f..23f,
+                valueLabel = String.format("%02d:00", nightStartHour),
+                onValueChange = { onSetNightStartHour(it.roundToInt()) },
+                step = 1f,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPEARANCE, stringResource(R.string.settings_night_end),
+            "dark night theme schedule end morning", visible = autoDark,
+        ) {
+            SliderRow(
+                label = stringResource(R.string.settings_night_end),
+                value = nightEndHour.toFloat(),
+                range = 0f..23f,
+                valueLabel = String.format("%02d:00", nightEndHour),
+                onValueChange = { onSetNightEndHour(it.roundToInt()) },
+                step = 1f,
             )
         },
         SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_reduce_motion), "animation motion") {
@@ -631,7 +685,7 @@ fun SettingsScreen(
         SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_two_column_list_landscape), "two columns landscape sideways") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_two_column_list_landscape),
-                detail = stringResource(R.string.settings_two_column_list_landscape_detail),
+                detail = landscapeDetail(stringResource(R.string.settings_two_column_list_landscape_detail)),
                 checked = listTwoColumnLandscape,
                 onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_LANDSCAPE, it) },
             )
@@ -849,28 +903,56 @@ fun SettingsScreen(
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_swipe_shortcuts), "swipe shortcuts") {
             ShortcutSwipeRow(shortcutSwipe, onSetShortcutSwipe)
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_left), "swipe launch") {
-            QuickLaunchRow(
-                label = stringResource(R.string.settings_quick_launch_left),
-                value = quickLaunchLeftLabel,
-                onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.LEFT) },
-                leading = Icons.Filled.KeyboardArrowLeft,
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_left), "swipe launch left") {
+            CornerActionRow(
+                summary = stringResource(R.string.settings_quick_launch_left),
+                selected = quickLaunchLeftAction,
+                onSelect = { action ->
+                    // An app or a shortcut needs a target: the picker comes up for it,
+                    // and nothing is stored until something is picked — backing out
+                    // keeps whatever was there before. Anything else stores at once.
+                    action.targetKind()?.let { kind ->
+                        onOpenSlotPicker(SlotTarget.QUICK_LEFT, kind)
+                    } ?: onSetQuickLaunchLeftAction(action)
+                },
+                // What it opens, under the action's own name, once there is something picked.
+                picked = quickLaunchLeftLabel,
             )
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_right), "swipe launch") {
-            QuickLaunchRow(
-                label = stringResource(R.string.settings_quick_launch_right),
-                value = quickLaunchRightLabel,
-                onClick = { onOpenQuickLaunchPicker(QuickLaunchSlot.RIGHT) },
-                leading = Icons.Filled.KeyboardArrowRight,
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_right), "swipe launch right") {
+            CornerActionRow(
+                summary = stringResource(R.string.settings_quick_launch_right),
+                selected = quickLaunchRightAction,
+                onSelect = { action ->
+                    action.targetKind()?.let { kind ->
+                        onOpenSlotPicker(SlotTarget.QUICK_RIGHT, kind)
+                    } ?: onSetQuickLaunchRightAction(action)
+                },
+                picked = quickLaunchRightLabel,
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_corner_button), "button shortcut corner") {
-            QuickLaunchRow(
-                label = stringResource(R.string.settings_corner_button),
-                value = cornerButtonLabel,
-                onClick = onOpenCornerPicker,
-                leading = Icons.Filled.Star,
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_tap), "button shortcut corner tap") {
+            CornerActionRow(
+                summary = stringResource(R.string.settings_corner_tap),
+                selected = cornerTapAction,
+                onSelect = { action ->
+                    action.targetKind()?.let { kind ->
+                        onOpenSlotPicker(SlotTarget.CORNER_TAP, kind)
+                    } ?: onSetCornerTapAction(action)
+                },
+                picked = cornerButtonLabel,
+            )
+        },
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_swipe), "button shortcut corner slide up") {
+            CornerActionRow(
+                summary = stringResource(R.string.settings_corner_swipe),
+                selected = cornerSwipeAction,
+                onSelect = { action ->
+                    action.targetKind()?.let { kind ->
+                        onOpenSlotPicker(SlotTarget.CORNER_SWIPE, kind)
+                    } ?: onSetCornerSwipeAction(action)
+                },
+                picked = cornerSwipeLabel,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_double_tap_lock), "lock screen") {
@@ -881,21 +963,18 @@ fun SettingsScreen(
             )
         },
         SettingsEntry(
-            SettingsSection.GESTURES, stringResource(R.string.settings_lock_needs_accessibility), "lock accessibility",
-            // Switching it on does nothing at all without the permission, so the way to grant
-            // it belongs right here rather than buried in a toast later.
+            SettingsSection.GESTURES, stringResource(R.string.settings_lock_setup), "lock permission",
+            // Switching it on does nothing at all without a way to lock, so the way to
+            // grant one belongs right here rather than buried in a toast later.
             visible = doubleTapToLock && !lockGestureReady,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            Column(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
                 Text(
-                    stringResource(R.string.settings_lock_needs_accessibility),
+                    stringResource(R.string.settings_lock_setup_detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.weight(1f),
                 )
+                Spacer(Modifier.height(8.dp))
                 AccessibilityActions(onOpenAccessibilitySettings, onOpenAppInfo)
             }
         },
@@ -998,7 +1077,7 @@ fun SettingsScreen(
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_landscape), "two columns favorites landscape sideways") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_two_column_home_landscape),
-                detail = stringResource(R.string.settings_two_column_home_landscape_detail),
+                detail = landscapeDetail(stringResource(R.string.settings_two_column_home_landscape_detail)),
                 checked = homeTwoColumnLandscape,
                 onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_LANDSCAPE, it) },
             )
@@ -1119,6 +1198,27 @@ fun SettingsScreen(
                 value = stringResource(R.string.settings_changelog_detail),
                 onClick = onOpenChangelog,
                 leading = Icons.Filled.Info,
+            )
+        },
+        // A launcher draws other apps' widgets with their own code, so the trace is often
+        // the only thing that says whose crash it was. An entry like any other, so the
+        // search box finds it too.
+        SettingsEntry(
+            SettingsSection.ABOUT, stringResource(R.string.settings_crash_copy),
+            "crash log report bug trace",
+            visible = crashText != null && !crashCleared,
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_crash_copy),
+                detail = stringResource(R.string.settings_crash_detail),
+                onClick = {
+                    crashText?.let { crash ->
+                        clipboard.setPrimaryClip(ClipData.newPlainText("Deluge crash", crash))
+                        Toast.makeText(context, R.string.settings_crash_copied, Toast.LENGTH_SHORT).show()
+                        CrashLog.clear(context)
+                        crashCleared = true
+                    }
+                },
             )
         },
     ).filter { it.visible }
@@ -1261,27 +1361,6 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp),
                 )
-            }
-
-            if (openSection == SettingsSection.ABOUT && query.isBlank()) item {
-                // Only after a crash, so there is nothing here to explain the rest of the time.
-                // A launcher draws other apps' widgets with their own code, so the trace is
-                // often the only thing that says whose crash it was. The version line is an
-                // entry above, so it stays first in the section.
-                val crash = remember { CrashLog.read(context) }
-                var crashCleared by remember { mutableStateOf(false) }
-                if (crash != null && !crashCleared) {
-                    BackupRow(
-                        label = stringResource(R.string.settings_crash_copy),
-                        detail = stringResource(R.string.settings_crash_detail),
-                        onClick = {
-                            clipboard.setPrimaryClip(ClipData.newPlainText("Deluge crash", crash))
-                            Toast.makeText(context, R.string.settings_crash_copied, Toast.LENGTH_SHORT).show()
-                            CrashLog.clear(context)
-                            crashCleared = true
-                        },
-                    )
-                }
             }
         }
     }
@@ -1830,7 +1909,12 @@ private class SettingsEntry(
 ) {
     fun matches(query: String): Boolean {
         val q = query.trim()
-        return title.contains(q, ignoreCase = true) || keywords.contains(q, ignoreCase = true)
+        if (q.isEmpty()) return true
+        if (title.contains(q, ignoreCase = true) || keywords.contains(q, ignoreCase = true)) {
+            return true
+        }
+        // Pinyin too, so a latin keyboard reaches a Chinese row ("yuyan" finds 语言).
+        return PinyinSearch.rank(title, keywords, q) != PinyinSearch.NO_MATCH
     }
 }
 
@@ -1893,6 +1977,93 @@ private fun DimColorRow(dimColor: Int, onSetDimColor: (Int) -> Unit) {
             onDismiss = { picking = false },
         )
     }
+}
+
+/**
+ * What a gesture or tap does, chosen from the same list everywhere.
+ *
+ * Tap to the next option, or hold and release on the dialog row to read the current one;
+ * the row's second line is the answer, spelled out.
+ */
+@Composable
+internal fun CornerActionRow(
+    summary: String,
+    selected: CornerAction,
+    onSelect: (CornerAction) -> Unit,
+    /** The app or shortcut this slot opens, shown when that is what the action is. */
+    picked: String? = null,
+) {
+    var picking by remember { mutableStateOf(false) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { picking = true }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(summary, style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(selected.labelRes()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+            // The chosen app or shortcut, only for the actions that open one.
+            if (selected.targetKind() != null && !picked.isNullOrBlank()) {
+                Text(
+                    picked,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                )
+            }
+        }
+        Icon(
+            DelugeIcons.ArrowForwardIos,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+        )
+    }
+    if (picking) {
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            title = { Text(summary) },
+            text = {
+                Column {
+                CornerAction.entries.forEach { action ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(action); picking = false }
+                            .padding(horizontal = 4.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = action == selected, onClick = null)
+                        Spacer(Modifier.width(12.dp))
+                        Text(stringResource(action.labelRes()), style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { picking = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+}
+
+/** Display name of an action. */
+private fun CornerAction.labelRes(): Int = when (this) {
+    CornerAction.OPEN_APP -> R.string.corner_action_open_app
+    CornerAction.OPEN_SHORTCUT -> R.string.corner_action_open_shortcut
+    CornerAction.APP_LIST -> R.string.corner_action_app_list
+    CornerAction.SEARCH -> R.string.corner_action_search
+    CornerAction.CAMERA -> R.string.corner_action_camera
+    CornerAction.FLASHLIGHT -> R.string.corner_action_flashlight
+    CornerAction.SHADE -> R.string.corner_action_shade
+    CornerAction.LOCK -> R.string.corner_action_lock
+    CornerAction.DO_NOTHING -> R.string.corner_action_do_nothing
 }
 
 /** A swatch to tap or a hex value to type; enough for picking a text color, and no library. */

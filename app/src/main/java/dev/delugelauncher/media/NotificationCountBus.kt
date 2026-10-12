@@ -3,6 +3,8 @@ package dev.delugelauncher.media
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 /**
  * How many notifications each package is currently showing.
@@ -15,15 +17,32 @@ import kotlinx.coroutines.flow.StateFlow
  * whoever happened to be looking at the phone.
  */
 object NotificationCountBus {
+    // The last published counts, persisted: the bus is memory-only, so a widget drawn
+    // before the listener has published in this process would otherwise read an empty
+    // map and hide the row. Package names never contain U+0001, so the join is safe.
+    const val PERSIST_FILE = "deluge_notification_counts"
+    const val PERSIST_KEY = "counts"
+
     private val _counts = MutableStateFlow<Map<String, Int>>(emptyMap())
     val counts: StateFlow<Map<String, Int>> = _counts
 
+    /** Whether anything has been published in this process. See [update]. */
+    @Volatile
+    var published = false
+        private set
+
     fun update(value: Map<String, Int>) {
         _counts.value = value
+        published = true
     }
+
+    /** One package's count: collecting this recomposes only when its own number moves. */
+    fun countFor(packageName: String): kotlinx.coroutines.flow.Flow<Int> =
+        _counts.map { it[packageName] ?: 0 }.distinctUntilChanged()
 
     /** Nothing is known once the service goes, and a stale badge is worse than no badge. */
     fun clear() {
         _counts.value = emptyMap()
+        published = true
     }
 }

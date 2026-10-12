@@ -79,7 +79,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">在“设置 → 无障碍”中启用 Deluge Launcher 即可打开通知栏</string>
-    <string name="toast_enable_accessibility_lock">在“设置 → 无障碍”中启用 Deluge Launcher 即可锁屏</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge 设置</string>
@@ -124,12 +123,15 @@
     <string name="settings_two_column_list_portrait_detail">竖屏时应用每行两个。</string>
     <string name="settings_two_column_list_landscape">列表横屏双列</string>
     <string name="settings_two_column_list_landscape_detail">横屏时应用每行两个。</string>
+    <string name="settings_two_column_needs_rotation">需要先打开“跟随设备旋转”才会生效。</string>
     <string name="settings_developer_mode">开发者模式</string>
     <string name="settings_developer_mode_detail">将应用名和图标伪装以便截图，并隐藏状态栏。</string>
     <string name="developer_unlocked">开发者模式已解锁</string>
     <string name="settings_wallpaper_blur">壁纸模糊</string>
     <string name="settings_auto_dark">深色主题（夜间自动）</string>
     <string name="settings_auto_dark_detail">傍晚自动切到深色、早上切回，不跟随系统。</string>
+    <string name="settings_night_start">夜间开始</string>
+    <string name="settings_night_end">夜间结束</string>
     <string name="settings_reduce_motion">减少动画</string>
     <string name="settings_reduce_motion_detail">跳过启动器自己的过渡：打开应用列表、淡化等瞬间完成。</string>
     <string name="settings_pinch_resize">双指缩放图标</string>
@@ -162,7 +164,6 @@
     <string name="settings_edge_side">从哪侧边缘打开应用列表</string>
     <string name="settings_double_tap_lock">双击锁屏</string>
     <string name="settings_double_tap_lock_detail">在字母条上点按两下</string>
-    <string name="settings_lock_needs_accessibility">需要在“无障碍”中启用 Deluge Launcher。若该开关显示为灰色，请先打开应用信息，在更多菜单中允许“受限设置”。</string>
     <string name="settings_az_visibility">在主屏幕显示 A-Z</string>
     <string name="az_visibility_never">从不</string>
     <string name="az_visibility_landscape">横屏时</string>
@@ -170,6 +171,19 @@
     <string name="settings_always_show_az">始终显示 A-Z</string>
     <string name="settings_show_alphabet">在应用列表中显示 A-Z</string>
     <string name="applist_search_web">在网上搜索 \"%1$s\"</string>
+    <string name="applist_empty_search">没有匹配结果</string>
+    <string name="applist_empty_list">暂无内容</string>
+    <string name="corner_action_failed">这台手机上没有能这么做的应用</string>
+    <string name="torch_on">已打开手电筒</string>
+    <string name="torch_off">已关闭手电筒</string>
+    <string name="settings_corner_tap">点击按钮时</string>
+    <string name="settings_corner_swipe">上滑按钮时</string>
+    <string name="corner_action_app_list">打开应用列表</string>
+    <string name="corner_action_search">打开应用列表搜索</string>
+    <string name="corner_action_camera">打开相机</string>
+    <string name="corner_action_flashlight">切换手电筒</string>
+    <string name="corner_action_shade">打开通知栏</string>
+    <string name="corner_action_lock">锁屏</string>
     <string name="settings_web_search">提供网络搜索</string>
     <string name="settings_web_search_detail">列表中没有匹配内容时，会有一行把你输入的词交给浏览器。不点按就不会发送任何内容</string>
     <string name="settings_swipe_up_search">上滑打开搜索</string>
@@ -460,4 +474,10 @@
     <string name="scheme_yellow">黄</string>
     <string name="scheme_pink">粉</string>
     <string name="scheme_teal">青</string>
+    <string name="settings_lock_setup">锁屏需要一个权限</string>
+    <string name="settings_lock_setup_detail">锁屏需要打开无障碍。它不监视任何东西，只替你锁屏。</string>
+    <string name="corner_action_open_app">打开应用</string>
+    <string name="corner_action_open_shortcut">打开快捷方式</string>
+    <string name="corner_action_do_nothing">无动作</string>
+    <string name="slot_no_shortcuts">还没有固定的快捷方式</string>
 </resources>

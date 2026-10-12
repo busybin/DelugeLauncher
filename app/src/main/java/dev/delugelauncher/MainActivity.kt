@@ -32,7 +32,11 @@ import dev.delugelauncher.ui.DelugeNavHost
 import dev.delugelauncher.ui.common.IconConfig
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.theme.DelugeTheme
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** One keystroke taken on the home screen; a null character is a backspace. */
 data class TypedKey(val seq: Long, val char: Char?)
@@ -132,14 +136,17 @@ class MainActivity : ComponentActivity() {
                 window.setBlurBehind(wallpaperBlurDp, resources.displayMetrics.density)
             }
 
-            // Dark by the clock rather than by the system, when asked. Re-checked each minute so
-            // the turn of the hour is not missed while the launcher is the thing on screen.
+            // Dark by the clock rather than by the system, when asked. Sleeps until the
+            // next hour, since whole hours are all the schedule resolves to.
             val autoDark by app.prefs.autoDark.collectAsState(initial = false)
-            var nightNow by remember { mutableStateOf(isNightHour()) }
-            LaunchedEffect(autoDark) {
+            val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
+            val nightEndHour by app.prefs.nightEndHour.collectAsState(initial = 7)
+            var nightNow by remember { mutableStateOf(isNightHour(nightStartHour, nightEndHour)) }
+            LaunchedEffect(autoDark, nightStartHour, nightEndHour) {
+                nightNow = isNightHour(nightStartHour, nightEndHour)
                 while (autoDark) {
-                    nightNow = isNightHour()
-                    delay(60_000L)
+                    delay(msToNextHour())
+                    nightNow = isNightHour(nightStartHour, nightEndHour)
                 }
             }
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
@@ -263,10 +270,18 @@ class MainActivity : ComponentActivity() {
         homeIntentTick++
     }
 
+    // One widget refresh in flight at most: rapid background/foreground hops used to queue
+    // a render per resume, each a binder round trip measured in seconds on a cold system.
+    private var widgetRefreshJob: Job? = null
+
     override fun onStart() {
         super.onStart()
-        (application as DelugeApp).widgetHost.startListening()
-        NowPlayingListenerService.rebindIfPermitted(this)
+        val app = application as DelugeApp
+        // Binder into the widget service and a settings read: not on the resume path.
+        app.offMain {
+            runCatching { app.widgetHost.startListening() }
+            runCatching { NowPlayingListenerService.rebindIfPermitted(this) }
+        }
         // The clock widget's own rows go stale on their own — an event passes, an alarm is
         // set, "in 20 minutes" stops being true. Half an hour is the shortest the system will
         // wake a widget on a schedule, so the other half of keeping it honest is redrawing it
@@ -279,7 +294,12 @@ class MainActivity : ComponentActivity() {
         // took five. Nothing here feeds the first frame — it is a clock, and a number that is
         // a beat out of date is invisible. Blocking the resume on it froze the whole window
         // on a blank screen for those same two seconds.
-        (application as DelugeApp).offMain { ClockWidgetProvider.renderAll(this) }
+        // Debounced and single-flight: only the last resume in a quick burst redraws.
+        widgetRefreshJob?.cancel()
+        widgetRefreshJob = lifecycleScope.launch(Dispatchers.IO) {
+            delay(300)
+            runCatching { ClockWidgetProvider.renderAll(this@MainActivity) }
+        }
     }
 
     override fun onStop() {
@@ -308,8 +328,22 @@ private fun Window.setBlurBehind(radiusDp: Int, density: Float) {
     attributes = params
 }
 
-/** Night for the auto-dark schedule: before 07:00 and from 19:00. */
-private fun isNightHour(): Boolean {
+/** Night for the auto-dark schedule: from [startHour] (inclusive) to [endHour] (exclusive). */
+private fun isNightHour(startHour: Int = 19, endHour: Int = 7): Boolean {
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-    return hour < 7 || hour >= 19
+    if (startHour == endHour) return false
+    return if (startHour < endHour) hour in startHour until endHour
+    else hour >= startHour || hour < endHour
+}
+
+/** How long until the next whole hour, when the schedule can next change its mind. */
+private fun msToNextHour(): Long {
+    val now = java.util.Calendar.getInstance()
+    val next = (now.clone() as java.util.Calendar).apply {
+        add(java.util.Calendar.HOUR_OF_DAY, 1)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+        set(java.util.Calendar.MILLISECOND, 0)
+    }
+    return (next.timeInMillis - now.timeInMillis).coerceAtLeast(60_000L)
 }

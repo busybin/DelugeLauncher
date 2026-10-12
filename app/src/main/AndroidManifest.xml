@@ -6,6 +6,11 @@
     <!-- Tapping the clock widget opens the alarm app. Some OEM clocks gate their own
          SHOW_ALARMS activity behind this, and it is granted at install with no prompt. -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <!-- The reflection fallback for opening the notification shade goes through the system
+         service, which checks this permission on the caller. Removed once as supposedly
+         dead — swipe-down shade died on a phone with no accessibility service the same
+         day — so it stays: on builds that grant or bypass it for the home app, this line
+         is the difference between working and a toast. -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
     <!-- A launcher must be able to see every installed app, icon pack, and widget provider
          on the device; without this, PackageManager silently filters almost everything out
@@ -26,6 +31,16 @@
          install. Read only, and nothing read here leaves the phone: there is no network
          permission to send it with. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
+
+    <!-- The flashlight, asked for the first time the corner button is set to it rather than at
+         install: setTorchMode holds the camera open for as long as the light is on. Nothing is
+         captured, and no picture ever leaves the device. Declared even though most launchers
+         never need it — an undeclared runtime permission is denied before it is ever asked. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- No camera of our own is required, so a device without one can still install this. -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
 
     <application
         android:name=".DelugeApp"

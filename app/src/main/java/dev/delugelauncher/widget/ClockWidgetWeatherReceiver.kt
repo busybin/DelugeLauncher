@@ -39,15 +39,30 @@ class ClockWidgetWeatherReceiver : BroadcastReceiver() {
         if (!ClockWidgetWeather.store(context, parsed.first, parsed.second)) return
 
         // The widgets are only ever drawn when something asks, and weather arriving is the
-        // only thing that knows this one changed.
-        runCatching {
-            val manager = AppWidgetManager.getInstance(context)
-            manager.getAppWidgetIds(ClockWidgetProvider.componentName(context))
-                ?.forEach { ClockWidgetProvider.render(context, manager, it) }
+        // only thing that knows this one changed. Off the receiver's main-thread budget:
+        // render is binder plus disk plus a calendar query.
+        val pending = goAsync()
+        val appContext = context.applicationContext
+        background.execute {
+            try {
+                runCatching {
+                    val manager = AppWidgetManager.getInstance(appContext)
+                    manager.getAppWidgetIds(ClockWidgetProvider.componentName(appContext))
+                        ?.filter { ClockWidgetConfig.read(appContext, it).showWeather }
+                        ?.forEach { ClockWidgetProvider.render(appContext, manager, it) }
+                }
+            } finally {
+                pending.finish()
+            }
         }
     }
 
     private companion object {
+        // One thread, shared by every broadcast: the system already serializes deliveries.
+        private val background: java.util.concurrent.ExecutorService by lazy {
+            java.util.concurrent.Executors.newSingleThreadExecutor()
+        }
+
         const val ACTION_GENERIC_WEATHER =
             "nodomain.freeyourgadget.gadgetbridge.ACTION_GENERIC_WEATHER"
         const val EXTRA_WEATHER_JSON = "WeatherJson"

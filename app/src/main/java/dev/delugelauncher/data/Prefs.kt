@@ -100,6 +100,35 @@ enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 /** Which of the four two-column switches is meant. */
 enum class TwoColumnSlot { HOME_PORTRAIT, HOME_LANDSCAPE, LIST_PORTRAIT, LIST_LANDSCAPE }
 
+/** What a slot does: the corner button's tap, its slide up, either swipe under the favorites. */
+enum class CornerAction {
+    /** Opens the app chosen for that slot. */
+    OPEN_APP,
+    /** Opens the shortcut chosen for that slot. */
+    OPEN_SHORTCUT,
+    APP_LIST,
+    SEARCH,
+    CAMERA,
+    FLASHLIGHT,
+    SHADE,
+    LOCK,
+    /** Nothing at all. */
+    DO_NOTHING,
+}
+
+/** Which gesture a picker is binding a target for. */
+enum class SlotTarget { CORNER_TAP, CORNER_SWIPE, QUICK_LEFT, QUICK_RIGHT }
+
+/** What kind of target a picker lists. */
+enum class SlotKind { APP, SHORTCUT }
+
+/** Whether picking this action needs a target first — nothing is stored until one is picked. */
+fun CornerAction.targetKind(): SlotKind? = when (this) {
+    CornerAction.OPEN_APP -> SlotKind.APP
+    CornerAction.OPEN_SHORTCUT -> SlotKind.SHORTCUT
+    else -> null
+}
+
 /** When the A-Z strip shows on the home screen itself. */
 enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
 
@@ -193,6 +222,8 @@ class Prefs(private val context: Context) {
         val EDGE_ZONE_INSET_AUTO = booleanPreferencesKey("edge_zone_inset_auto")
         val QUICK_LAUNCH_LEFT = stringPreferencesKey(PREF_QUICK_LAUNCH_LEFT)
         val QUICK_LAUNCH_RIGHT = stringPreferencesKey(PREF_QUICK_LAUNCH_RIGHT)
+        val QUICK_LAUNCH_LEFT_ACTION = stringPreferencesKey("quick_launch_left_action")
+        val QUICK_LAUNCH_RIGHT_ACTION = stringPreferencesKey("quick_launch_right_action")
         val LAYOUT_DEFAULTS_VERSION = intPreferencesKey("layout_defaults_version")
         val WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
         val DIM_OTHERS_SCRUBBING = booleanPreferencesKey("dim_others_scrubbing")
@@ -213,15 +244,25 @@ class Prefs(private val context: Context) {
         val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
         val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
         val AUTO_DARK = booleanPreferencesKey("auto_dark")
+        val NIGHT_START_HOUR = intPreferencesKey("night_start_hour")
+        val NIGHT_END_HOUR = intPreferencesKey("night_end_hour")
         val PINCH_TO_RESIZE = booleanPreferencesKey("pinch_to_resize")
         val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
         val AUTO_FREQUENT_TAG = booleanPreferencesKey("auto_frequent_tag")
-        val LOCKED_APPS = stringSetPreferencesKey("locked_apps")
-        val APP_TAGS = stringPreferencesKey("app_tags")
+        val AUTO_FREQUENT_WORDS = stringSetPreferencesKey("auto_frequent_words")
+        val LOCKED_APPS = stringSetPreferencesKey(PREF_LOCKED_APPS)
+        val APP_TAGS = stringPreferencesKey(PREF_APP_TAGS)
         val SECTION_TOP_PERCENT = intPreferencesKey("section_top_percent")
         val CLOSE_FOLDER_ON_LAUNCH = booleanPreferencesKey("close_folder_on_launch")
         val SHOW_SETTINGS_ROW = booleanPreferencesKey("show_settings_row")
-        val CORNER_BUTTON_KEY = stringPreferencesKey("corner_button_key")
+        val CORNER_BUTTON_KEY = stringPreferencesKey(PREF_CORNER_BUTTON_KEY)
+        val CORNER_SWIPE_KEY = stringPreferencesKey(PREF_CORNER_SWIPE_KEY)
+        val CORNER_X_PORTRAIT = floatPreferencesKey("corner_x_portrait")
+        val CORNER_Y_PORTRAIT = floatPreferencesKey("corner_y_portrait")
+        val CORNER_X_LANDSCAPE = floatPreferencesKey("corner_x_landscape")
+        val CORNER_Y_LANDSCAPE = floatPreferencesKey("corner_y_landscape")
+        val CORNER_TAP_ACTION = stringPreferencesKey("corner_tap_action")
+        val CORNER_SWIPE_ACTION = stringPreferencesKey("corner_swipe_action")
         val AUTO_KEYBOARD = booleanPreferencesKey("auto_keyboard")
         val LAST_LETTER_TO_LINE = booleanPreferencesKey("last_letter_to_line")
         val FAVORITES_EVER_SET = booleanPreferencesKey("favorites_ever_set")
@@ -280,6 +321,20 @@ class Prefs(private val context: Context) {
                 return@forEach
             }
             if (value != rawValue) omittedPrivateSpace = true
+            // A malformed JSON we could not parse comes back as-is rather than crashing — but
+            // "as-is" may still hold another profile's keys, so the backup must say it omitted.
+            if (value == rawValue && value is String && stripOtherProfiles &&
+                (key.name == PREF_FOLDERS || key.name == PREF_NAME_OVERRIDES ||
+                    key.name == PREF_ICON_OVERRIDES || key.name == PREF_LAUNCH_COUNTS ||
+                    key.name == PREF_APP_TAGS) &&
+                ((value.startsWith("{") && runCatching {
+                    JSONObject(value)
+                }.isFailure) || (value.startsWith("[") && runCatching {
+                    JSONArray(value)
+                }.isFailure))
+            ) {
+                omittedPrivateSpace = true
+            }
             val entry = JSONObject()
             when (value) {
                 is Boolean -> entry.put("type", "boolean").put("value", value)
@@ -315,37 +370,62 @@ class Prefs(private val context: Context) {
      */
     suspend fun importJson(text: String): Boolean {
         var language: String? = null
+        var languagePresent = false
         val parsed = runCatching {
             val root = JSONObject(text)
-            if (root.optInt("format") != EXPORT_FORMAT) return false
+            // Unknown future formats are read entry by entry rather than refused whole:
+            // entries we understand restore, the rest are skipped below.
+            if (root.optInt("format") < EXPORT_FORMAT) return false
             val values = root.getJSONObject("values")
             buildList {
                 values.keys().forEach { name ->
-                    val entry = values.getJSONObject(name)
+                    val entry = runCatching { values.getJSONObject(name) }.getOrNull() ?: return@forEach
                     // The language is not a store key; it goes back to its own file below.
                     // Absent in old backups, which simply keep the language they have.
+                    // Present-but-blank means follow the system — tracked separately so it
+                    // is not mistaken for absent.
                     if (name == PREF_LANGUAGE && entry.optString("type") == "string") {
-                        language = entry.optString("value").takeIf { it.isNotBlank() }
+                        language = entry.optString("value")
+                        languagePresent = true
                         return@forEach
                     }
+                    // Modes, not settings: a hand-edited backup must not smuggle back what
+                    // export refuses to carry (screenshot_mode and friends).
+                    if (name in NEVER_EXPORT) return@forEach
                     // Pair(...) rather than `to`: DataStore has an infix `to` of its own on
                     // Key, which builds a Preferences.Pair and not the one wanted here.
-                    val pair: Pair<Preferences.Key<*>, Any> = when (entry.getString("type")) {
-                        "boolean" -> Pair(booleanPreferencesKey(name), entry.getBoolean("value"))
-                        "int" -> Pair(intPreferencesKey(name), entry.getInt("value"))
-                        "long" -> Pair(longPreferencesKey(name), entry.getLong("value"))
-                        "float" -> Pair(floatPreferencesKey(name), entry.getDouble("value").toFloat())
-                        "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
-                        "stringSet" -> {
-                            val array = entry.getJSONArray("value")
-                            Pair(
-                                stringSetPreferencesKey(name),
-                                (0 until array.length()).map { array.getString(it) }.toSet(),
-                            )
+                    // One bad entry skips itself rather than rejecting the whole backup.
+                    val pair: Pair<Preferences.Key<*>, Any> = runCatching {
+                        when (entry.getString("type")) {
+                            "boolean" -> Pair(booleanPreferencesKey(name), entry.getBoolean("value"))
+                            "int" -> Pair(intPreferencesKey(name), entry.getInt("value"))
+                            "long" -> Pair(longPreferencesKey(name), entry.getLong("value"))
+                            "float" -> Pair(floatPreferencesKey(name), entry.getDouble("value").toFloat())
+                            "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
+                            "stringSet" -> {
+                                val array = entry.getJSONArray("value")
+                                Pair(
+                                    stringSetPreferencesKey(name),
+                                    (0 until array.length()).map { array.getString(it) }.toSet(),
+                                )
+                            }
+                            else -> return@forEach
                         }
-                        else -> return@forEach
+                    }.getOrNull() ?: return@forEach
+                    // A hand-edited backup can smuggle a shortcut id carrying a newline, which
+                    // would corrupt the whole favorites list on the way back in. The pin flow
+                    // refuses such ids; import does the same rather than storing them.
+                    if (name == PREF_FAVORITES && pair.second is String) {
+                        val lines = (pair.second as String).split("\n").filter { line ->
+                            if (!EntryKeys.isShortcut(line)) true
+                            else EntryKeys.parseShortcut(line)?.let {
+                                EntryKeys.isStorableShortcutId(it.shortcutId)
+                            } == true
+                        }
+                        add(Pair(pair.first, lines.joinToString("\n")))
+                    } else {
+                        add(pair)
                     }
-                    add(pair)
                 }
             }
         }.getOrNull() ?: return false
@@ -357,8 +437,14 @@ class Prefs(private val context: Context) {
                 store[key as Preferences.Key<Any>] = value
             }
         }
-        // Applied on the next recreate, like a language picked by hand.
-        LanguagePrefs.write(context, language)
+        // A cleared store reads as a fresh install; stamp it as an established one so the
+        // first-run defaults (welcome, auto clock widget) do not fire on imported data.
+        // Language kept only when the backup carried it — see above.
+        ensureInstallMarker()
+        // Applied on the next recreate, like a language picked by hand. Absent means the
+        // backup predates the language entry: keep whatever language is set now. Blank
+        // means follow the system, which LanguagePrefs.write maps back to removing the key.
+        if (languagePresent) LanguagePrefs.write(context, language?.takeIf { it.isNotBlank() })
         return true
     }
 
@@ -665,6 +751,15 @@ class Prefs(private val context: Context) {
 
     val quickLaunchRight: Flow<String?> = data.map { it[Keys.QUICK_LAUNCH_RIGHT] }.distinctUntilChanged()
 
+    /** What a swipe under the favorites does, on each side. Same list the button offers. */
+    val quickLaunchLeftAction: Flow<CornerAction> = readCornerAction(
+        Keys.QUICK_LAUNCH_LEFT_ACTION, CornerAction.OPEN_APP,
+    )
+
+    val quickLaunchRightAction: Flow<CornerAction> = readCornerAction(
+        Keys.QUICK_LAUNCH_RIGHT_ACTION, CornerAction.OPEN_APP,
+    )
+
     /** Drawing icons at all; off leaves text-only rows everywhere. */
     val showAppIcons: Flow<Boolean> = data.map { it[Keys.SHOW_APP_ICONS] ?: true }.distinctUntilChanged()
 
@@ -715,9 +810,17 @@ class Prefs(private val context: Context) {
     val screenshotMode: Flow<Boolean> =
         data.map { it[Keys.SCREENSHOT_MODE] ?: false }.distinctUntilChanged()
 
-    /** Dark theme on a fixed night schedule (19:00–07:00) instead of following the system. */
+    /** Dark theme on a nightly schedule instead of following the system. */
     val autoDark: Flow<Boolean> =
         data.map { it[Keys.AUTO_DARK] ?: false }.distinctUntilChanged()
+
+    /** Night starts at this hour for the auto-dark schedule. */
+    val nightStartHour: Flow<Int> =
+        data.map { (it[Keys.NIGHT_START_HOUR] ?: 19).coerceIn(0, 23) }.distinctUntilChanged()
+
+    /** Night ends at this hour for the auto-dark schedule. */
+    val nightEndHour: Flow<Int> =
+        data.map { (it[Keys.NIGHT_END_HOUR] ?: 7).coerceIn(0, 23) }.distinctUntilChanged()
 
     /** Two-finger pinch on the home screen resizes the icons. */
     val pinchToResize: Flow<Boolean> =
@@ -730,6 +833,14 @@ class Prefs(private val context: Context) {
     /** Whether the top-used apps carry the 常用 tag on their own, following the counts. */
     val autoFrequentTag: Flow<Boolean> =
         data.map { it[Keys.AUTO_FREQUENT_TAG] ?: false }.distinctUntilChanged()
+
+    /**
+     * Every word the auto-tagger has ever added, in whatever language was current. The static
+     * reserved set covers the shipped languages; this covers any language added later, so its
+     * word is refused by hand and taken back with the switch exactly like the others.
+     */
+    val autoFrequentWords: Flow<Set<String>> =
+        data.map { it[Keys.AUTO_FREQUENT_WORDS] ?: emptySet() }.distinctUntilChanged()
 
     /** Apps that ask for the device's own lock before they open. */
     val lockedApps: Flow<Set<String>> =
@@ -1027,9 +1138,28 @@ class Prefs(private val context: Context) {
             val counts = jsonToMap(pref[Keys.LAUNCH_COUNTS])
             if (componentKey in counts) pref[Keys.LAUNCH_COUNTS] = mapToJson(counts - componentKey)
 
+            // Per-app sets keyed the same way: an unpinned app must not keep its lock, its
+            // tags, or its opt-out of the frequent list behind, or a backup carries them
+            // back in for an app that is gone.
+            val excluded = pref[Keys.FREQUENT_EXCLUDED] ?: emptySet()
+            if (componentKey in excluded) pref[Keys.FREQUENT_EXCLUDED] = excluded - componentKey
+
+            val locked = pref[Keys.LOCKED_APPS] ?: emptySet()
+            if (componentKey in locked) pref[Keys.LOCKED_APPS] = locked - componentKey
+
+            runCatching {
+                val tags = org.json.JSONObject(pref[Keys.APP_TAGS] ?: "{}")
+                if (tags.has(componentKey)) {
+                    tags.remove(componentKey)
+                    pref[Keys.APP_TAGS] = tags.toString()
+                }
+            }
+
             // A quick-launch slot that still points at this key would otherwise swipe to
-            // nothing once the row is gone for good.
+            // nothing once the row is gone for good. The corner's tap and slide-up keep
+            // their own targets, so both are cleared here.
             if (pref[Keys.CORNER_BUTTON_KEY] == componentKey) pref.remove(Keys.CORNER_BUTTON_KEY)
+            if (pref[Keys.CORNER_SWIPE_KEY] == componentKey) pref.remove(Keys.CORNER_SWIPE_KEY)
             if (pref[Keys.QUICK_LAUNCH_LEFT] == componentKey) pref.remove(Keys.QUICK_LAUNCH_LEFT)
             if (pref[Keys.QUICK_LAUNCH_RIGHT] == componentKey) pref.remove(Keys.QUICK_LAUNCH_RIGHT)
         }
@@ -1343,7 +1473,17 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             val current = readWidgetIds(pref)
             val kept = current.filter(keep)
-            if (kept.size != current.size) pref.writeWidgetIds(kept)
+            if (kept.size != current.size) {
+                pref.writeWidgetIds(kept)
+                // The provider map would otherwise keep rows for widgets that no longer
+                // exist, like removeWidgetId already avoids doing one at a time.
+                runCatching {
+                    val obj = JSONObject(pref[Keys.WIDGET_PROVIDERS] ?: "{}")
+                    val keptStrings = kept.map { it.toString() }.toSet()
+                    obj.keys().forEach { id -> if (id !in keptStrings) obj.remove(id) }
+                    pref[Keys.WIDGET_PROVIDERS] = obj.toString()
+                }
+            }
         }
     }
 
@@ -1412,6 +1552,15 @@ class Prefs(private val context: Context) {
         }
     }
 
+    suspend fun setQuickLaunchAction(slot: QuickLaunchSlot, action: CornerAction) {
+        context.dataStore.edit { pref ->
+            pref[when (slot) {
+                QuickLaunchSlot.LEFT -> Keys.QUICK_LAUNCH_LEFT_ACTION
+                QuickLaunchSlot.RIGHT -> Keys.QUICK_LAUNCH_RIGHT_ACTION
+            }] = action.name
+        }
+    }
+
     suspend fun setShowAppIcons(v: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_APP_ICONS] = v }
     }
@@ -1448,6 +1597,14 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.AUTO_DARK] = v }
     }
 
+    suspend fun setNightStartHour(v: Int) {
+        context.dataStore.edit { it[Keys.NIGHT_START_HOUR] = v.coerceIn(0, 23) }
+    }
+
+    suspend fun setNightEndHour(v: Int) {
+        context.dataStore.edit { it[Keys.NIGHT_END_HOUR] = v.coerceIn(0, 23) }
+    }
+
     suspend fun setPinchToResize(v: Boolean) {
         context.dataStore.edit { it[Keys.PINCH_TO_RESIZE] = v }
     }
@@ -1458,6 +1615,15 @@ class Prefs(private val context: Context) {
 
     suspend fun setAutoFrequentTag(v: Boolean) {
         context.dataStore.edit { it[Keys.AUTO_FREQUENT_TAG] = v }
+    }
+
+    /** Remembers a word the auto-tagger added, so later languages' words stay reserved too. */
+    suspend fun recordAutoFrequentWord(word: String) {
+        val clean = word.trim()
+        if (clean.isEmpty()) return
+        context.dataStore.edit { pref ->
+            pref[Keys.AUTO_FREQUENT_WORDS] = (pref[Keys.AUTO_FREQUENT_WORDS] ?: emptySet()) + clean
+        }
     }
 
     suspend fun setAppLocked(key: String, locked: Boolean) {
@@ -1477,6 +1643,18 @@ class Prefs(private val context: Context) {
         }
     }
 
+    /** Writes the whole tag map at once: N apps retagged cost one edit, not N. */
+    suspend fun setAllAppTags(tags: Map<String, Set<String>>) {
+        context.dataStore.edit { pref ->
+            val obj = org.json.JSONObject()
+            tags.forEach { (key, set) ->
+                val clean = set.map { it.trim() }.filter { it.isNotEmpty() }
+                if (clean.isNotEmpty()) obj.put(key, org.json.JSONArray(clean))
+            }
+            pref[Keys.APP_TAGS] = obj.toString()
+        }
+    }
+
     suspend fun setSectionTopPercent(v: Int) {
         context.dataStore.edit { it[Keys.SECTION_TOP_PERCENT] = v.coerceIn(SECTION_TOP_RANGE) }
     }
@@ -1486,6 +1664,82 @@ class Prefs(private val context: Context) {
             if (componentKey.isNullOrBlank()) pref.remove(Keys.CORNER_BUTTON_KEY)
             else pref[Keys.CORNER_BUTTON_KEY] = componentKey
         }
+    }
+
+    /** The slide-up's own target: the tap keeps the button key above, never shared. */
+    val cornerSwipeKey: Flow<String?> = data.map { it[Keys.CORNER_SWIPE_KEY] }.distinctUntilChanged()
+
+    suspend fun setCornerSwipeKey(componentKey: String?) {
+        context.dataStore.edit { pref ->
+            if (componentKey.isNullOrBlank()) pref.remove(Keys.CORNER_SWIPE_KEY)
+            else pref[Keys.CORNER_SWIPE_KEY] = componentKey
+        }
+    }
+
+    /**
+     * Where the home button sits, as fractions of its middle over the viewport — [Pair.x]
+     * across, [Pair.y] down, each 0..1. Portrait and landscape are stored apart and never
+     * share. Null until the user drags it there; until then the default (bottom right,
+     * clear of the strip) is computed, not stored.
+     *
+     * Plain floats, so a backup carries them like any other number — and clamps them on
+     * the way back in, so a hand-edited file cannot park the button off screen for good.
+     */
+    val cornerPosPortrait: Flow<Pair<Float, Float>?> = data.map { pref ->
+        cornerPair(pref, Keys.CORNER_X_PORTRAIT, Keys.CORNER_Y_PORTRAIT)
+    }.distinctUntilChanged()
+
+    val cornerPosLandscape: Flow<Pair<Float, Float>?> = data.map { pref ->
+        cornerPair(pref, Keys.CORNER_X_LANDSCAPE, Keys.CORNER_Y_LANDSCAPE)
+    }.distinctUntilChanged()
+
+    private fun cornerPair(
+        pref: Preferences,
+        xKey: Preferences.Key<Float>,
+        yKey: Preferences.Key<Float>,
+    ): Pair<Float, Float>? {
+        val x = pref[xKey] ?: return null
+        val y = pref[yKey] ?: return null
+        if (!x.isFinite() || !y.isFinite()) return null
+        return x.coerceIn(0f, 1f) to y.coerceIn(0f, 1f)
+    }
+
+    suspend fun setCornerPos(portrait: Boolean, x: Float, y: Float) {
+        context.dataStore.edit { pref ->
+            if (portrait) {
+                pref[Keys.CORNER_X_PORTRAIT] = x.coerceIn(0f, 1f)
+                pref[Keys.CORNER_Y_PORTRAIT] = y.coerceIn(0f, 1f)
+            } else {
+                pref[Keys.CORNER_X_LANDSCAPE] = x.coerceIn(0f, 1f)
+                pref[Keys.CORNER_Y_LANDSCAPE] = y.coerceIn(0f, 1f)
+            }
+        }
+    }
+
+    private fun readCornerAction(key: Preferences.Key<String>, default: CornerAction): Flow<CornerAction> =
+        data.map { pref ->
+            pref[key]?.let { stored ->
+                // The combined option was split in two: an old binding opens whatever it
+                // points at, which is what opening an app does.
+                if (stored == "APP_OR_SHORTCUT") CornerAction.OPEN_APP
+                else runCatching { CornerAction.valueOf(stored) }.getOrNull()
+            } ?: default
+        }.distinctUntilChanged()
+
+    /** What a tap on the corner button does. */
+    val cornerTapAction: Flow<CornerAction> =
+        readCornerAction(Keys.CORNER_TAP_ACTION, CornerAction.OPEN_APP)
+
+    /** What hold-slide-up on the corner button does. */
+    val cornerSwipeAction: Flow<CornerAction> =
+        readCornerAction(Keys.CORNER_SWIPE_ACTION, CornerAction.APP_LIST)
+
+    suspend fun setCornerTapAction(action: CornerAction) {
+        context.dataStore.edit { it[Keys.CORNER_TAP_ACTION] = action.name }
+    }
+
+    suspend fun setCornerSwipeAction(action: CornerAction) {
+        context.dataStore.edit { it[Keys.CORNER_SWIPE_ACTION] = action.name }
     }
 
     suspend fun setLastLetterToLine(v: Boolean) {

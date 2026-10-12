@@ -68,7 +68,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">Aktivieren Sie Deluge Launcher in den Einstellungen → Bedienungshilfen, um Benachrichtigungen zu öffnen</string>
-    <string name="toast_enable_accessibility_lock">Aktivieren Sie Deluge Launcher in den Einstellungen → Bedienungshilfen, um den Bildschirm zu sperren</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge-Einstellungen</string>
@@ -130,7 +129,6 @@
     <string name="settings_edge_side">Welcher Rand die App-Liste öffnet</string>
     <string name="settings_double_tap_lock">Doppeltippen zum Sperren des Bildschirms</string>
     <string name="settings_double_tap_lock_detail">Die A-Z-Leiste zweimal antippen</string>
-    <string name="settings_lock_needs_accessibility">Erfordert, dass Deluge Launcher unter Bedienungshilfen aktiviert ist. Wenn dieser Schalter ausgegraut ist, öffnen Sie App-Info und erlauben Sie zuerst eingeschränkte Einstellungen im ⋮-Menü.</string>
     <string name="settings_az_visibility">A-Z auf dem Startbildschirm anzeigen</string>
     <string name="az_visibility_never">Nie</string>
     <string name="az_visibility_landscape">Querformat</string>
@@ -416,4 +414,70 @@
     <string name="prompt_default_skip">Später</string>
     <string name="settings_changelog">Änderungen</string>
     <string name="settings_changelog_detail">Was sich in jeder Version geändert hat</string>
+    <string name="settings_corner_tap">Tippen auf die Taste</string>
+    <string name="settings_corner_swipe">Taste nach oben wischen</string>
+    <string name="settings_night_start">Nacht beginnt</string>
+    <string name="settings_night_end">Nacht endet</string>
+    <string name="settings_two_column_needs_rotation">Wirkt erst, wenn „Mit dem Gerät drehen“ an ist.</string>
+    <string name="applist_empty_search">Keine Treffer</string>
+    <string name="applist_empty_list">Nichts zu zeigen</string>
+    <string name="corner_action_failed">Auf diesem Telefon kann das nichts davon tun</string>
+    <string name="corner_action_app_list">App-Liste öffnen</string>
+    <string name="corner_action_search">Suche der App-Liste öffnen</string>
+    <string name="corner_action_camera">Kamera öffnen</string>
+    <string name="corner_action_flashlight">Taschenlampe umschalten</string>
+    <string name="corner_action_shade">Benachrichtigungsleiste öffnen</string>
+    <string name="corner_action_lock">Bildschirm sperren</string>
+    <string name="torch_on">Taschenlampe an</string>
+    <string name="torch_off">Taschenlampe aus</string>
+    <string name="action_change_wallpaper">Hintergrund ändern</string>
+    <string name="wallpaper_no_picker">Kein Hintergrundprogramm gefunden</string>
+    <string name="action_lock_app">App sperren</string>
+    <string name="action_unlock_app">App entsperren</string>
+    <string name="action_set_tag">Tag festlegen</string>
+    <string name="tag_label">Tag</string>
+    <string name="tag_new">Neuer Tag</string>
+    <string name="tag_selected_count">%1$d ausgewählt</string>
+    <string name="tag_remove">Tag entfernen</string>
+    <string name="app_lock_title">Zum Öffnen entsperren</string>
+    <string name="app_lock_prompt">Displaysperre bestätigen, um %1$s zu öffnen</string>
+    <string name="settings_color_scheme">Farbschema</string>
+    <string name="settings_color_scheme_detail">Deluge-Blau, sofern nichts anderes gewählt. Hintergrund braucht Android 12 oder neuer, darunter Blau.</string>
+    <string name="scheme_deluge_blue">Deluge-Blau</string>
+    <string name="scheme_dynamic">Hintergrund</string>
+    <string name="scheme_purple">Lila</string>
+    <string name="scheme_green">Grün</string>
+    <string name="scheme_red">Rot</string>
+    <string name="scheme_orange">Orange</string>
+    <string name="scheme_yellow">Gelb</string>
+    <string name="scheme_pink">Rosa</string>
+    <string name="scheme_teal">Türkis</string>
+    <string name="haptic_off">Aus</string>
+    <string name="haptic_light">Leicht</string>
+    <string name="haptic_medium">Mittel</string>
+    <string name="haptic_strong">Stark</string>
+    <string name="settings_two_column_home_portrait">Startbildschirm zwei Spalten (hochkant)</string>
+    <string name="settings_two_column_home_portrait_detail">Zwei Favoriten teilen sich jede Zeile im Hochformat.</string>
+    <string name="settings_two_column_home_landscape">Startbildschirm zwei Spalten (quer)</string>
+    <string name="settings_two_column_home_landscape_detail">Zwei Favoriten teilen sich jede Zeile im Querformat.</string>
+    <string name="settings_two_column_list_portrait">Liste zwei Spalten (hochkant)</string>
+    <string name="settings_two_column_list_portrait_detail">Zwei Apps teilen sich jede Zeile im Hochformat.</string>
+    <string name="settings_two_column_list_landscape">Liste zwei Spalten (quer)</string>
+    <string name="settings_two_column_list_landscape_detail">Zwei Apps teilen sich jede Zeile im Querformat.</string>
+    <string name="settings_developer_mode">Entwicklermodus</string>
+    <string name="settings_developer_mode_detail">Verkleidet App-Namen und Symbole für Screenshots und blendet die Statusleiste aus.</string>
+    <string name="developer_unlocked">Entwicklermodus entsperrt</string>
+    <string name="settings_auto_dark">Dunkles Theme nachts</string>
+    <string name="settings_auto_dark_detail">Wechselt abends zum dunklen Theme und morgens zurück, statt dem System zu folgen.</string>
+    <string name="settings_reduce_motion">Bewegung reduzieren</string>
+    <string name="settings_reduce_motion_detail">Überspringt die eigenen Übergänge des Launchers; Öffnen der App-Liste und Überblendungen geschehen auf einmal.</string>
+    <string name="settings_pinch_resize">Icons per Pinch skalieren</string>
+    <string name="settings_pinch_resize_detail">Zwei Finger auf dem Startbildschirm ändern die Icongröße.</string>
+    <string name="hide_confirm_message">%1$s aus der App-Liste ausblenden? Unter Einstellungen > Apps > Versteckte Apps kommt es zurück.</string>
+    <string name="settings_lock_setup">Bildschirmsperre braucht eine Berechtigung</string>
+    <string name="settings_lock_setup_detail">Sperren braucht die Bedienungshilfen. Sie beobachten nichts; sie sperren nur.</string>
+    <string name="corner_action_open_app">Eine App öffnen</string>
+    <string name="corner_action_open_shortcut">Eine Verknüpfung öffnen</string>
+    <string name="corner_action_do_nothing">Nichts tun</string>
+    <string name="slot_no_shortcuts">Noch keine Verknüpfungen angepinnt</string>
 </resources>

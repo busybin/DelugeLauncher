@@ -44,8 +44,12 @@ import dev.delugelauncher.TypedKey
 import dev.delugelauncher.DelugeApp
 import android.widget.Toast
 import dev.delugelauncher.data.IconShape
+import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.AppFont
 import dev.delugelauncher.data.ColorSchemeChoice
+import dev.delugelauncher.data.CornerAction
+import dev.delugelauncher.data.SlotKind
+import dev.delugelauncher.data.SlotTarget
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.PrivateSpace
@@ -73,6 +77,7 @@ import dev.delugelauncher.ui.common.IconPickerScreen
 import dev.delugelauncher.ui.common.IconStyle
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.clearIconCache
+import dev.delugelauncher.ui.common.clearIconCacheForPackage
 import dev.delugelauncher.ui.common.clearIconDiskCache
 import dev.delugelauncher.ui.common.encodePackOverride
 import dev.delugelauncher.ui.common.warmIconCache
@@ -214,7 +219,7 @@ fun DelugeNavHost(
 
     DisposableEffect(Unit) {
         val launcherApps = context.getSystemService(LauncherApps::class.java)
-        fun refresh() {
+        fun refresh(packageName: String? = null) {
             // Before the reload, so the widget pages re-read their provider even when the
             // enumeration below finds the same apps: freeze and unfreeze change no id.
             widgetTick++
@@ -228,7 +233,10 @@ fun DelugeNavHost(
                 adoptPrivateSpace(state, pass)
                 // An app that ships a new icon in an update changes none of the cache
                 // key's components, so nothing else would invalidate the stale bitmap.
-                clearIconDiskCache(context)
+                // Scoped to the package that changed: one update must not empty the cache
+                // for the other three hundred apps.
+                if (packageName != null) clearIconCacheForPackage(context, packageName)
+                else clearIconDiskCache(context)
                 reloadApps(state, pass)
             }
         }
@@ -237,23 +245,28 @@ fun DelugeNavHost(
         // only ever describe the profile we run in, so an app installed into a work profile or
         // a private space would never reach the list.
         val callback = object : LauncherApps.Callback() {
-            override fun onPackageAdded(packageName: String?, user: UserHandle?) = refresh()
-            override fun onPackageRemoved(packageName: String?, user: UserHandle?) = refresh()
-            override fun onPackageChanged(packageName: String?, user: UserHandle?) = refresh()
+            override fun onPackageAdded(packageName: String?, user: UserHandle?) =
+                refresh(packageName)
+            override fun onPackageRemoved(packageName: String?, user: UserHandle?) =
+                refresh(packageName)
+            override fun onPackageChanged(packageName: String?, user: UserHandle?) =
+                refresh(packageName)
             override fun onPackagesAvailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
             override fun onPackagesUnavailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
             // Pausing or resuming an app changes no package, so no package callback fires for
             // it. Without these a paused app only went grey the next time something else
-            // happened to reload.
+            // happened to reload. No icon invalidation: the picture did not change.
             override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
             override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
             // A shortcut can be added, renamed, re-iconed or switched off while we are
-            // showing it, none of which is a package change.
+            // showing it, none of which is a package change. The enumeration itself comes
+            // from the shortcutChanges flow below, which fires for the same event — so this
+            // only drops the one package's icons instead of enumerating a second time.
             override fun onShortcutsChanged(
                 packageName: String,
                 shortcuts: MutableList<ShortcutInfo>,
                 user: UserHandle,
-            ) = refresh()
+            ) = clearIconCacheForPackage(context, packageName)
         }
         runCatching { launcherApps.registerCallback(callback) }
 
@@ -379,8 +392,11 @@ fun DelugeNavHost(
     // frozen or suspended app reads null too, and that is temporary: only an id whose package
     // is actually gone goes, while one whose package is still installed stays for the unfreeze.
     // Ids from before the provider mapping existed name no package and keep the old answer.
-    LaunchedEffect(widgetIds) {
+    LaunchedEffect(widgetIds, widgetProviders) {
         if (widgetIds.isEmpty()) return@LaunchedEffect
+        // The provider map arrives on its own flow: cleaning while it is still empty would
+        // mistake "mapping not here yet" for "package uninstalled" and delete live widgets.
+        if (widgetIds.any { !widgetProviders.containsKey(it) }) return@LaunchedEffect
         val manager = AppWidgetManager.getInstance(context)
         val pm = context.packageManager
         fun packageGone(packageName: String): Boolean =
@@ -400,14 +416,18 @@ fun DelugeNavHost(
      * the stored number, once set by the stepper, wins over this for good, until the
      * widget menu hands the decision back.
      */
-    val autoWidgetHeightDp = remember(widgetIds) {
-        val manager = AppWidgetManager.getInstance(context)
-        widgetIds.mapNotNull { id ->
-            runCatching { manager.getAppWidgetInfo(id)?.minHeight?.takeIf { it > 0 } }.getOrNull()
-        }.maxOrNull()?.coerceIn(80, 900)
+    var autoWidgetHeightResolved by remember(widgetIds) { mutableStateOf<Int?>(null) }
+    // Binder per widget id: measured off the composition thread, applied when it lands.
+    LaunchedEffect(widgetIds) {
+        autoWidgetHeightResolved = withContext(Dispatchers.Default) {
+            val manager = AppWidgetManager.getInstance(context)
+            widgetIds.mapNotNull { id ->
+                runCatching { manager.getAppWidgetInfo(id)?.minHeight?.takeIf { it > 0 } }.getOrNull()
+            }.maxOrNull()?.coerceIn(80, 900)
+        }
     }
     val effectiveWidgetHeightDp =
-        if (hasCustomWidgetHeight) widgetHeightDp else (autoWidgetHeightDp ?: widgetHeightDp)
+        if (hasCustomWidgetHeight) widgetHeightDp else (autoWidgetHeightResolved ?: widgetHeightDp)
     val widgetSidePaddingDp by app.prefs.widgetSidePaddingDp.collectAsState(initial = sidePaddingDp)
     val widgetOffsetXDp by app.prefs.widgetOffsetXDp.collectAsState(initial = 0)
     val swipeUpOpensList by app.prefs.swipeUpOpensList.collectAsState(initial = false)
@@ -418,6 +438,9 @@ fun DelugeNavHost(
     val showListHeaders by app.prefs.showListHeaders.collectAsState(initial = true)
     val showSettingsRow by app.prefs.showSettingsRow.collectAsState(initial = true)
     val cornerButtonKey by app.prefs.cornerButtonKey.collectAsState(initial = null)
+    val cornerTapAction by app.prefs.cornerTapAction.collectAsState(initial = CornerAction.OPEN_APP)
+    val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
+    val cornerSwipeKey by app.prefs.cornerSwipeKey.collectAsState(initial = null)
     val autoKeyboard by app.prefs.autoKeyboard.collectAsState(initial = false)
     val lastLetterToLine by app.prefs.lastLetterToLine.collectAsState(initial = false)
     val showFavoriteIcons by app.prefs.showFavoriteIcons.collectAsState(initial = true)
@@ -429,10 +452,16 @@ fun DelugeNavHost(
     val edgeZoneWidthDp by app.prefs.edgeZoneWidthDp.collectAsState(initial = 56)
     val quickLaunchLeftKey by app.prefs.quickLaunchLeft.collectAsState(initial = null)
     val quickLaunchRightKey by app.prefs.quickLaunchRight.collectAsState(initial = null)
+    val quickLaunchLeftAction by app.prefs.quickLaunchLeftAction
+        .collectAsState(initial = CornerAction.OPEN_APP)
+    val quickLaunchRightAction by app.prefs.quickLaunchRightAction
+        .collectAsState(initial = CornerAction.OPEN_APP)
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
     val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
+    val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
+    val nightEndHour by app.prefs.nightEndHour.collectAsState(initial = 7)
     val pinchToResize by app.prefs.pinchToResize.collectAsState(initial = true)
     val reduceMotion by app.prefs.reduceMotion.collectAsState(initial = false)
     val homeTwoColumnPortrait by app.prefs.homeTwoColumnPortrait.collectAsState(initial = false)
@@ -441,9 +470,12 @@ fun DelugeNavHost(
     val listTwoColumnLandscape by app.prefs.listTwoColumnLandscape.collectAsState(initial = true)
     val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
     // Built fresh each time the mode turns on and dropped when it turns off: nothing stored,
-    // so switching off restores every name and icon by itself.
-    val disguise = remember(screenshotMode, allApps) {
-        if (screenshotMode) ScreenshotDisguise.build(allApps) else null
+    // so switching off restores every name and icon by itself. Keyed on the mode alone, so
+    // an unrelated reload while the mode is off costs nothing at all.
+    val disguise = if (!screenshotMode) {
+        null
+    } else {
+        remember(allApps) { ScreenshotDisguise.build(allApps) }
     }
     val fontFile by app.prefs.fontFile.collectAsState(initial = null)
     val colorSchemeChoice by app.prefs.colorSchemeChoice.collectAsState(
@@ -497,6 +529,7 @@ fun DelugeNavHost(
 
     val appsByKey = remember(allApps) { allApps.associateBy { it.key } }
     val appTags by app.prefs.appTags.collectAsState(initial = emptyMap())
+    val autoFrequentWords by app.prefs.autoFrequentWords.collectAsState(initial = emptySet())
     val autoFrequentTag by app.prefs.autoFrequentTag.collectAsState(initial = false)
     // The name of the auto tag in this language. Stored as-is: tags are user data, and one
     // named in this language stays put when the language changes.
@@ -515,16 +548,29 @@ fun DelugeNavHost(
     // decides membership but not on the tags themselves, so writing them does not loop.
     // A language switch changes the tag's own word: every other language's word is stripped
     // first, or 常用 and Frequent stand side by side. Reserved words can only ever come from
-    // here (the picker refuses them), so sweeping them all is safe.
+    // here (the picker refuses them), so sweeping them all is safe. The recorded words cover
+    // languages added after the static set was written.
     LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
         if (!autoFrequentTag) return@LaunchedEffect
+        app.prefs.recordAutoFrequentWord(frequentTag)
         val top = topFrequentKeys()
+        // One edit for the whole pass: per-app writes fanned out a DataStore write per app on
+        // every launch count change, each waking every collector on this screen.
+        val current = appTags
+        val reserved = RESERVED_TAGS + autoFrequentWords
+        var changed = false
+        val next = HashMap<String, Set<String>>(current)
         appsByKey.values.forEach { a ->
             if (a.kind != EntryKind.APP) return@forEach
-            val current = (appTags[a.key] ?: emptySet<String>()) - RESERVED_TAGS
-            val want = if (a.key in top) current + frequentTag else current
-            if (want != (appTags[a.key] ?: emptySet<String>())) app.prefs.setAppTags(a.key, want)
+            val have = current[a.key] ?: emptySet()
+            val wantBase = have - reserved
+            val want = if (a.key in top) wantBase + frequentTag else wantBase
+            if (want != have) {
+                changed = true
+                if (want.isEmpty()) next.remove(a.key) else next[a.key] = want
+            }
         }
+        if (changed) app.prefs.setAllAppTags(next)
     }
     // The number the hidden-apps screen itself arrives at, rather than the size of the stored
     // set: that screen lists rows, and a hidden app inside a locked private space has no row.
@@ -545,6 +591,8 @@ fun DelugeNavHost(
         favoriteKeys,
         appsByKey,
         foldersById,
+        hiddenApps,
+        privateSpace,
         if (favoritesSource == FavoritesSource.FREQUENT) launchCounts else emptyMap(),
         frequentCount,
         frequentExcluded,
@@ -556,15 +604,20 @@ fun DelugeNavHost(
                 // the row simply going missing.
                 .filter { it.key !in frequentExcluded }
                 .mapNotNull { (key, count) -> appsByKey[key]?.let { it to count } }
+                // Hidden or concealed rows must not surface here: hiding an app hides it
+                // everywhere, and a locked space's apps have no business on the home screen.
+                .filter { (app, _) -> app.key !in hiddenApps && !privateSpace.conceals(app.key) }
                 .sortedWith(
                     compareByDescending<Pair<AppInfo, Int>> { it.second }
-                        .thenBy { it.first.label.lowercase() }
+                        .thenBy { it.first.label.lowercase(java.util.Locale.ROOT) }
+                        .thenBy { it.first.key }
                 )
                 .take(frequentCount)
                 .map { FavoriteEntry.App(it.first) }
                 .toList()
         } else {
             favoriteKeys.mapNotNull { token ->
+                if (token in hiddenApps) return@mapNotNull null
                 val folderId = folderIdFromToken(token)
                 if (folderId != null) {
                     foldersById[folderId]?.let { FavoriteEntry.FolderRef(it) }
@@ -705,6 +758,8 @@ fun DelugeNavHost(
         sortByUsage = sortByUsage,
         quickLaunchLeft = quickLaunchLeftKey?.let { appsByKey[it] },
         quickLaunchRight = quickLaunchRightKey?.let { appsByKey[it] },
+        quickLaunchLeftAction = quickLaunchLeftAction,
+        quickLaunchRightAction = quickLaunchRightAction,
         // Both flows start null/true so nothing is centered or offered before the stored
         // answer arrives; a legacy install is stamped 0 and never enters either path.
         centerFavorites = layoutDefaultsVersion == 1 && !hasCustomFavoritesTop,
@@ -795,9 +850,11 @@ fun DelugeNavHost(
 
     // HOME has to unwind the whole stack. The equivalent effect inside the home destination
     // can't do this: that destination isn't composed while Settings is on screen.
+    // Drained to the last screen rather than popped to a named one: the stack can hold
+    // "home" twice (home -> settings -> home), and popping to the name keeps the middle.
     LaunchedEffect(homeIntentTick) {
         if (homeIntentTick > 0 && navController.currentDestination?.route != "home") {
-            navController.popBackStack("home", inclusive = false)
+            while (navController.popBackStack()) { /* unwind fully */ }
         }
     }
 
@@ -887,8 +944,31 @@ fun DelugeNavHost(
         }
 
         composable("settings") {
-            val iconPacks = remember { app.iconPackRepository.getInstalledIconPacks() }
-            val listenerEnabled = remember(homeIntentTick) { isListenerEnabled(context) }
+            // Package-manager query, five of them: off the composition thread or the settings
+            // screen drops frames on its way in.
+            var iconPacks by remember { mutableStateOf(emptyList<IconPackRepository.IconPackInfo>()) }
+            LaunchedEffect(Unit) {
+                iconPacks = withContext(Dispatchers.Default) {
+                    app.iconPackRepository.getInstalledIconPacks()
+                }
+            }
+            // Same grant, same staleness as on home: re-check on resume, since the user
+            // grants it in system Settings and comes back with BACK, not HOME.
+            val settingsLifecycle = LocalLifecycleOwner.current
+            var settingsResumeTick by remember { mutableStateOf(0) }
+            DisposableEffect(settingsLifecycle) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) {
+                        settingsResumeTick++
+                        // Same heal-or-nudge as home: the grant screen is reached from
+                        // here, and coming back is a resume, not a HOME intent.
+                        SystemUi.refreshAccessibilityBinding(context)
+                    }
+                }
+                settingsLifecycle.lifecycle.addObserver(observer)
+                onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
+            }
+            val listenerEnabled = remember(homeIntentTick, settingsResumeTick) { isListenerEnabled(context) }
             SettingsScreen(
                 hiddenCount = hiddenShownCount,
                 iconPacks = iconPacks,
@@ -938,6 +1018,14 @@ fun DelugeNavHost(
                 onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
                 autoDark = autoDark,
                 onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
+                cornerTapAction = cornerTapAction,
+                onSetCornerTapAction = { scope.launch { app.prefs.setCornerTapAction(it) } },
+                cornerSwipeAction = cornerSwipeAction,
+                onSetCornerSwipeAction = { scope.launch { app.prefs.setCornerSwipeAction(it) } },
+                nightStartHour = nightStartHour,
+                onSetNightStartHour = { scope.launch { app.prefs.setNightStartHour(it) } },
+                nightEndHour = nightEndHour,
+                onSetNightEndHour = { scope.launch { app.prefs.setNightEndHour(it) } },
                 pinchToResize = pinchToResize,
                 onSetPinchToResize = { scope.launch { app.prefs.setPinchToResize(it) } },
                 reduceMotion = reduceMotion,
@@ -1071,11 +1159,13 @@ fun DelugeNavHost(
                     scope.launch {
                         // Turning it off takes its tags back with it: they were its doing,
                         // and leaving them would freeze a ranking that no longer updates.
-                        // Every language's word, in case the language moved since.
+                        // Every language's word, in case the language moved since — plus
+                        // every word ever recorded, for languages added after the set.
                         if (!it) {
+                            val reserved = RESERVED_TAGS + autoFrequentWords
                             appsByKey.values.forEach { a ->
                                 val current = appTags[a.key] ?: emptySet()
-                                val stripped = current - RESERVED_TAGS
+                                val stripped = current - reserved
                                 if (stripped != current) app.prefs.setAppTags(a.key, stripped)
                             }
                         }
@@ -1092,13 +1182,23 @@ fun DelugeNavHost(
                 quickLaunchRightLabel = quickLaunchRightKey?.let { key ->
                     appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
                 },
-                onOpenQuickLaunchPicker = { slot -> navController.navigate("apppicker/" + slot.name) },
+                onOpenSlotPicker = { slot, kind ->
+                    navController.navigate("slotpicker/" + slot.name + "/" + kind.name)
+                },
+                quickLaunchLeftAction = quickLaunchLeftAction,
+                onSetQuickLaunchLeftAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.LEFT, it) } },
+                quickLaunchRightAction = quickLaunchRightAction,
+                onSetQuickLaunchRightAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.RIGHT, it) } },
                 cornerButtonLabel = when (cornerButtonKey) {
                     null -> null
                     EntryKeys.SEARCH -> stringResource(R.string.settings_corner_search)
                     else -> appsByKey[cornerButtonKey]?.let { nameOverrides[it.key] ?: it.label }
                 },
-                onOpenCornerPicker = { navController.navigate("cornerpicker") },
+                cornerSwipeLabel = when (cornerSwipeKey) {
+                    null -> null
+                    EntryKeys.SEARCH -> stringResource(R.string.settings_corner_search)
+                    else -> appsByKey[cornerSwipeKey]?.let { nameOverrides[it.key] ?: it.label }
+                },
                 autoKeyboard = autoKeyboard,
                 lastLetterToLine = lastLetterToLine,
                 onSetLastLetterToLine = { scope.launch { app.prefs.setLastLetterToLine(it) } },
@@ -1107,8 +1207,8 @@ fun DelugeNavHost(
                 onSetAppListAlignment = { scope.launch { app.prefs.setAppListAlignment(it) } },
                 onSetIconSide = { scope.launch { app.prefs.setIconSide(it) } },
                 onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
-                shadeGestureReady = remember(homeIntentTick) { SystemUi.canExpandShade() },
-                lockGestureReady = remember(homeIntentTick) { SystemUi.canLockScreen() },
+                shadeGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canExpandShade() },
+                lockGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canLockScreen() },
                 onOpenAccessibilitySettings = {
                     context.startActivity(
                         Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -1207,21 +1307,70 @@ fun DelugeNavHost(
             )
         }
 
-        composableArgs("apppicker/{slot}") { entry ->
+        composableArgs("slotpicker/{slot}/{kind}") { entry ->
             val slot = runCatching {
-                QuickLaunchSlot.valueOf(entry.arguments?.getString("slot").orEmpty())
-            }.getOrDefault(QuickLaunchSlot.LEFT)
+                SlotTarget.valueOf(entry.arguments?.getString("slot").orEmpty())
+            }.getOrDefault(SlotTarget.QUICK_LEFT)
+            val kind = runCatching {
+                SlotKind.valueOf(entry.arguments?.getString("kind").orEmpty())
+            }.getOrDefault(SlotKind.APP)
+            // Apps open apps, shortcuts open shortcuts: each picker lists only its own
+            // kind, so a binding can never point at the wrong sort of thing.
+            val wantShortcuts = kind == SlotKind.SHORTCUT
+            val listed = remember(allApps, wantShortcuts) {
+                if (wantShortcuts) allApps.filter { it.kind == EntryKind.SHORTCUT }
+                else allApps.filter { it.kind == EntryKind.APP }
+            }
+            val currentKey: String? = when (slot) {
+                SlotTarget.CORNER_TAP -> cornerButtonKey
+                SlotTarget.CORNER_SWIPE -> cornerSwipeKey
+                SlotTarget.QUICK_LEFT -> quickLaunchLeftKey
+                SlotTarget.QUICK_RIGHT -> quickLaunchRightKey
+            }
+            // The action this pick binds: opening an app or opening a shortcut.
+            val boundAction =
+                if (wantShortcuts) CornerAction.OPEN_SHORTCUT else CornerAction.OPEN_APP
             AppPickerScreen(
                 title = stringResource(
-                    if (slot == QuickLaunchSlot.LEFT) R.string.settings_quick_launch_left
-                    else R.string.settings_quick_launch_right
+                    when (slot) {
+                        SlotTarget.CORNER_TAP -> R.string.settings_corner_tap
+                        SlotTarget.CORNER_SWIPE -> R.string.settings_corner_swipe
+                        SlotTarget.QUICK_LEFT -> R.string.settings_quick_launch_left
+                        SlotTarget.QUICK_RIGHT -> R.string.settings_quick_launch_right
+                    }
                 ),
-                allApps = allApps,
-                selectedKey = if (slot == QuickLaunchSlot.LEFT) quickLaunchLeftKey else quickLaunchRightKey,
+                allApps = listed,
+                selectedKey = currentKey,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
+                emptyText = if (wantShortcuts) stringResource(R.string.slot_no_shortcuts) else null,
                 onPick = { picked ->
-                    scope.launch { app.prefs.setQuickLaunch(slot, picked?.key) }
+                    scope.launch {
+                        // Saved together or not at all: backing out (onBack) stores
+                        // nothing, so a slot never ends up opening something with nothing
+                        // bound. Picking "none" clears the target and parks the slot on
+                        // doing nothing, which is the only honest reading of it.
+                        val action =
+                            if (picked == null) CornerAction.DO_NOTHING else boundAction
+                        when (slot) {
+                            SlotTarget.CORNER_TAP -> {
+                                app.prefs.setCornerButton(picked?.key)
+                                app.prefs.setCornerTapAction(action)
+                            }
+                            SlotTarget.CORNER_SWIPE -> {
+                                app.prefs.setCornerSwipeKey(picked?.key)
+                                app.prefs.setCornerSwipeAction(action)
+                            }
+                            SlotTarget.QUICK_LEFT -> {
+                                app.prefs.setQuickLaunch(QuickLaunchSlot.LEFT, picked?.key)
+                                app.prefs.setQuickLaunchAction(QuickLaunchSlot.LEFT, action)
+                            }
+                            SlotTarget.QUICK_RIGHT -> {
+                                app.prefs.setQuickLaunch(QuickLaunchSlot.RIGHT, picked?.key)
+                                app.prefs.setQuickLaunchAction(QuickLaunchSlot.RIGHT, action)
+                            }
+                        }
+                    }
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() },
@@ -1234,26 +1383,6 @@ fun DelugeNavHost(
 
         composable("settings/changelog") {
             ChangelogScreen(onBack = { navController.popBackStack() })
-        }
-
-        composable("cornerpicker") {
-            AppPickerScreen(
-                title = stringResource(R.string.settings_corner_button),
-                allApps = allApps,
-                selectedKey = cornerButtonKey,
-                extraChoice = EntryKeys.SEARCH to stringResource(R.string.settings_corner_search),
-                onPickExtra = { key ->
-                    scope.launch { app.prefs.setCornerButton(key) }
-                    navController.popBackStack()
-                },
-                nameOverrides = nameOverrides,
-                iconSizeDp = iconSizeDp,
-                onPick = { picked ->
-                    scope.launch { app.prefs.setCornerButton(picked?.key) }
-                    navController.popBackStack()
-                },
-                onBack = { navController.popBackStack() },
-            )
         }
 
         composable("settings/hidden") {            HiddenAppsScreen(
@@ -1285,7 +1414,9 @@ fun DelugeNavHost(
         }
 
         composableArgs("iconpicker/{key}") { entry ->
-            val key = entry.arguments?.getString("key")?.let { Uri.decode(it) }.orEmpty()
+            // Decoded once already by the router: decoding again turns a literal %25
+            // in a shortcut id into % and then into whatever follows it.
+            val key = entry.arguments?.getString("key").orEmpty()
             val folderId = folderIdFromToken(key)
             val targetApp = allApps.find { it.key == key }
             val label = when {

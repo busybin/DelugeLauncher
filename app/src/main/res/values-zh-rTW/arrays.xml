@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>角落按鈕：按壓縮小回彈，按住上滑執行；點按和上滑各選九種動作；編輯版面裡可拖到任意位置。</item>
+        <item>收藏下方的左右滑提供同樣的九種動作，兩邊各存一套。</item>
+        <item>自動深色跟隨自訂的夜晚起止時間。</item>
+        <item>每個手勢綁自己的應用或捷徑，新增無動作，選擇窗空手回來不改任何東西。</item>
+        <item>下滑通知欄恢復；重啟後天氣還在；小工具計數準確。</item>
+        <item>備份排除角落按鈕的私密應用，語言往返正常。</item>
+        <item>字母條滑動即時落位；圖示預熱和手指共享 CPU。</item>
+        <item>十幾處審計修復：手電循環、空資料夾文案、資料夾變灰、搜尋歸檔等。</item>
+        <item>11 種語言全部補齊。</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>主畫面和清單各有直式/橫式雙欄開關，配對列保持齊平。</item>
         <item>震動強度：關/輕/中/重。</item>

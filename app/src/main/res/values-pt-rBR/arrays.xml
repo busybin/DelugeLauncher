@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>Botão de canto: apertar cede, segurar desliza para executar; toque e deslize escolhem entre nove ações; arraste para onde quiser na edição.</item>
+        <item>Deslizar sob favoritos oferece as mesmas nove ações, um jogo por lado.</item>
+        <item>Escuro auto segue horas de noite próprias.</item>
+        <item>Cada gesto vincula seu próprio app ou atalho, soma não fazer nada, e sair do seletor sem escolher não muda nada.</item>
+        <item>Barra de notificações de volta; clima após reiniciar; contagens do widget certas.</item>
+        <item>Backups deixam o app privado do botão fora e mantêm o idioma.</item>
+        <item>A faixa de letras aterrissa na hora; o pré-aquecimento divide núcleos com o dedo.</item>
+        <item>Mais de quinze correções de auditoria: loop de lanterna, textos de pastas, escurecer, arquivar busca e mais.</item>
+        <item>Os 11 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>Início e lista com coluna dupla vertical/horizontal; pares nivelados.</item>
         <item>Intensidade: off/leve/média/forte.</item>

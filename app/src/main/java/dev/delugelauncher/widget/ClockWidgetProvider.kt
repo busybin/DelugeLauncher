@@ -27,6 +27,9 @@ import dev.delugelauncher.media.NotificationCountBus
 class ClockWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
+        // The system calls this after a reboot too, which is the only thing that revives
+        // the weather receiver: its enabled state does not survive a restart on its own.
+        syncWeatherReceiver(context)
         ids.forEach { render(context, manager, it) }
     }
 
@@ -63,6 +66,28 @@ class ClockWidgetProvider : AppWidgetProvider() {
                     ?.any { ClockWidgetConfig.read(context, it).showWeather } == true
             }.getOrDefault(false)
             ClockWidgetWeather.setReceiverEnabled(context, wanted)
+        }
+
+        /**
+         * The live counts when the listener has published in this process, else the last
+         * ones it persisted. Package names never contain U+0001, so the join is safe.
+         */
+        fun notificationTotal(context: Context): Int {
+            if (NotificationCountBus.published) {
+                return NotificationCountBus.counts.value.values.sum()
+            }
+            return runCatching {
+                context.getSharedPreferences(
+                    NotificationCountBus.PERSIST_FILE,
+                    Context.MODE_PRIVATE,
+                )
+                    .getStringSet(NotificationCountBus.PERSIST_KEY, emptySet()).orEmpty()
+                    .sumOf { entry ->
+                        val separator = entry.lastIndexOf('\u0001')
+                        if (separator < 0) 0
+                        else entry.substring(separator + 1).toIntOrNull() ?: 0
+                    }
+            }.getOrDefault(0)
         }
 
         /**
@@ -136,8 +161,11 @@ class ClockWidgetProvider : AppWidgetProvider() {
 
                 // A count and nothing else, for the same reason the badges carry no text: what
                 // a notification says is its own business and not the home screen's.
+                // Before the listener has published in this process (a tick after a restart),
+                // the bus is empty for no reason — fall back to the last published counts
+                // rather than hiding the row until something changes.
                 val notifications = if (config.showNotifications) {
-                    NotificationCountBus.counts.value.values.sum().takeIf { it > 0 }
+                    notificationTotal(context).takeIf { it > 0 }
                 } else {
                     null
                 }

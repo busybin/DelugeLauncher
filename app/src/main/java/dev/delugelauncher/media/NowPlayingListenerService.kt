@@ -40,6 +40,11 @@ class NowPlayingListenerService : NotificationListenerService() {
             }
             runCatching { requestRebind(component) }
         }
+
+        // Binder plus disk plus a calendar query per render: never on the listener's thread.
+        private val background: java.util.concurrent.ExecutorService by lazy {
+            java.util.concurrent.Executors.newSingleThreadExecutor()
+        }
     }
 
     private lateinit var sessionManager: MediaSessionManager
@@ -107,7 +112,8 @@ class NowPlayingListenerService : NotificationListenerService() {
         val active = runCatching { activeNotifications }.getOrNull()
         if (active == null) {
             NotificationCountBus.clear()
-            ClockWidgetProvider.renderAll(this)
+            persistCounts(emptyMap())
+            renderAllAsync()
             return
         }
         val counts = HashMap<String, Int>()
@@ -117,11 +123,35 @@ class NowPlayingListenerService : NotificationListenerService() {
             if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return@forEach
             counts[sbn.packageName] = (counts[sbn.packageName] ?: 0) + 1
         }
-        val before = NotificationCountBus.counts.value.values.sum()
+        val before = NotificationCountBus.counts.value
         NotificationCountBus.update(counts)
+        persistCounts(counts)
         // A widget is drawn only when something asks. The home screen follows the bus on its
-        // own; a RemoteViews cannot, so the total changing is what has to ask for it.
-        if (counts.values.sum() != before) ClockWidgetProvider.renderAll(this)
+        // own; a RemoteViews cannot, so a change in who has what — not just the total — has
+        // to ask for it. One app gaining what another lost keeps the sum but not the rows.
+        // Render carries a calendar query plus binder per widget: off this thread.
+        if (counts != before) renderAllAsync()
+    }
+
+    /** Binder plus disk plus a calendar query: never on the listener's main thread. */
+    private fun renderAllAsync() {
+        background.execute { runCatching { ClockWidgetProvider.renderAll(this) } }
+    }
+
+    /**
+     * The last published counts, for a widget drawn before the listener has published in
+     * this process. The bus is memory-only, so a tick arriving after a restart would
+     * otherwise read an empty map and hide the row; a live publish always wins over this.
+     */
+    private fun persistCounts(counts: Map<String, Int>) {
+        runCatching {
+            getSharedPreferences(NotificationCountBus.PERSIST_FILE, MODE_PRIVATE).edit()
+                .putStringSet(
+                    NotificationCountBus.PERSIST_KEY,
+                    counts.map { (pkg, count) -> "$pkg\u0001$count" }.toSet(),
+                )
+                .apply()
+        }
     }
 
     /** Follow whichever session is worth showing, and watch it for changes. */

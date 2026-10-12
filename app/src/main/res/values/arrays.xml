@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>Corner button: press gives, hold slides up to run; tap and slide each pick from nine actions; drag it anywhere in edit layout.</item>
+        <item>Swipes under the favorites offer the same nine actions, one set per side.</item>
+        <item>Auto-dark follows custom night hours you set.</item>
+        <item>Each gesture binds its own app or shortcut, adds do-nothing, and backing out of a picker changes nothing.</item>
+        <item>Swipe-down shade restored; weather survives reboot; widget counts stay true.</item>
+        <item>Backups leave the corner button\'s private app out and round-trip the language.</item>
+        <item>App-list scrubbing lands at once; icon warmup shares cores with the finger.</item>
+        <item>Fifteen-plus audit fixes: torch loop, empty-folder text, folder dimming, search filing, and more.</item>
+        <item>All 11 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>Home and list each get portrait and landscape two-column switches; paired rows stay level.</item>
         <item>Haptic strength: off, light, medium, strong.</item>
