@@ -34,9 +34,14 @@ under a real finger. Everything else is upstream's design, kept as it was.
 - **Favorites reach the edge.** The home list runs full-bleed like the app list and
   scrolls fully into view. Either one can pair rows into two columns, upright or sideways.
 - Folder rows say how many apps they hold and whether they are open.
+- **A corner button with nine actions.** Tap it, or hold and slide up; each gesture
+  opens an app or a shortcut, the list, search, the camera, the flashlight, the
+  shade, locks the screen, or does nothing — and the button parks in any corner.
+  The swipes under the favorites offer the same list, one set per side.
 - Widget height follows the widget itself, unless you set it by hand. Widgets refresh
   when their app freezes and unfreezes, and a frozen one is never cleaned away.
-- Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion.
+- Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion. Auto-dark
+  follows custom night hours you set yourself.
 - Settings has a changelog that follows the language, every row is searchable, and Back
   returns to the section it came from. A restored backup re-pins the shortcuts it names
   and covers every setting including the language.

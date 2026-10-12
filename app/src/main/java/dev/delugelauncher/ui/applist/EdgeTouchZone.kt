@@ -14,10 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Dp
@@ -84,6 +91,8 @@ fun EdgeTouchZone(
     onDismiss: () -> Unit,
     /** Null when double-tap-to-lock is off, so a second tap is simply another tap. */
     onDoubleTap: (() -> Unit)?,
+    /** A rect in root pixels the zone leaves alone — the corner button lives there. */
+    exclusion: Rect? = null,
     modifier: Modifier = Modifier,
 ) {
     val view = LocalView.current
@@ -95,6 +104,10 @@ fun EdgeTouchZone(
     val currentDoubleTap by rememberUpdatedState(onDoubleTap)
     val currentDismiss by rememberUpdatedState(onDismiss)
     val currentListOpen by rememberUpdatedState(listOpen)
+    val currentExclusion by rememberUpdatedState(exclusion)
+    // Where this zone sits in the root, so a press can be tested against the exclusion in
+    // the same space the button reported itself in.
+    var zoneOrigin by remember { mutableStateOf(Offset.Zero) }
 
     Box(
         modifier = modifier
@@ -117,6 +130,11 @@ fun EdgeTouchZone(
             .pointerInput(letters, band, hapticFeedback, fromLeft, bandOnly) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false)
+                    // Starting on the corner button: not ours, leave it alone so the tap
+                    // reaches the button underneath instead of opening the list.
+                    if (currentExclusion?.contains(zoneOrigin + down.position) == true) {
+                        return@awaitEachGesture
+                    }
                     down.consume()
                     // Read before onOpen changes it: a tap that opened the list must not
                     // also be read as a tap on an open one.
@@ -261,6 +279,9 @@ fun EdgeTouchZone(
                         }
                     }
                 }
-            },
+            }
+            // On the same node as the gesture above, so a press tests against the exclusion
+            // in the same coordinates it arrives in — not the padded outer box.
+            .onGloballyPositioned { zoneOrigin = it.positionInRoot() },
     )
 }

@@ -25,6 +25,11 @@ object ClockWidgetBattery {
     /** Last level drawn, so the many broadcasts that change nothing visible cost nothing. */
     private var lastPercent = -1
     private var watching = false
+    // onReceive gets ~10s on the main thread: binder plus disk plus a calendar query do not
+    // belong in it. One thread is enough; broadcasts are already serialized by the system.
+    private val background: java.util.concurrent.ExecutorService by lazy {
+        java.util.concurrent.Executors.newSingleThreadExecutor()
+    }
 
     /** The level right now, for a draw that happens between broadcasts. */
     fun percent(context: Context): Int? = runCatching {
@@ -42,7 +47,14 @@ object ClockWidgetBattery {
                 val percent = percentOf(intent) ?: return
                 if (percent == lastPercent) return
                 lastPercent = percent
-                redraw(app)
+                val pending = goAsync()
+                background.execute {
+                    try {
+                        redraw(app)
+                    } finally {
+                        pending.finish()
+                    }
+                }
             }
         }
         // The sticky broadcast arrives as soon as this registers, so the first draw is right.

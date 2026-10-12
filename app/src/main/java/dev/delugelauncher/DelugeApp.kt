@@ -38,7 +38,7 @@ class DelugeApp : Application() {
         private set
 
     /** Outlives any screen, for work that must finish even as the launcher is left behind. */
-    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /**
      * Runs [block] off the main thread, for work that must not hold up the first frame after
@@ -47,7 +47,7 @@ class DelugeApp : Application() {
      * the waiting screen shows.
      */
     fun offMain(block: () -> Unit) {
-        appScope.launch { block() }
+        appScope.launch { runCatching { block() } }
     }
 
     override fun onCreate() {

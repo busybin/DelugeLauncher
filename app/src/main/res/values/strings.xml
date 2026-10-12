@@ -79,7 +79,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">Enable Deluge Launcher in Settings → Accessibility to open notifications</string>
-    <string name="toast_enable_accessibility_lock">Enable Deluge Launcher in Settings → Accessibility to lock the screen</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge settings</string>
@@ -141,12 +140,15 @@
     <string name="settings_two_column_list_portrait_detail">Two apps share each row upright.</string>
     <string name="settings_two_column_list_landscape">List two columns (landscape)</string>
     <string name="settings_two_column_list_landscape_detail">Two apps share each row sideways.</string>
+    <string name="settings_two_column_needs_rotation">Needs “Rotate with the device” on to take effect.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_detail">Disguises app names and icons for screenshots, and hides the status bar.</string>
     <string name="developer_unlocked">Developer mode unlocked</string>
     <string name="settings_wallpaper_blur">Wallpaper blur</string>
     <string name="settings_auto_dark">Dark theme at night</string>
     <string name="settings_auto_dark_detail">Switch to the dark theme in the evening and back in the morning, instead of following the system.</string>
+    <string name="settings_night_start">Night starts</string>
+    <string name="settings_night_end">Night ends</string>
     <string name="settings_reduce_motion">Reduce motion</string>
     <string name="settings_reduce_motion_detail">Skip the launcher\'s own transitions; opening the app list and its fades happen at once.</string>
     <string name="settings_pinch_resize">Pinch to resize icons</string>
@@ -179,7 +181,8 @@
     <string name="settings_edge_side">Which edge opens the app list</string>
     <string name="settings_double_tap_lock">Double-tap to lock screen</string>
     <string name="settings_double_tap_lock_detail">Tap the A-Z strip twice</string>
-    <string name="settings_lock_needs_accessibility">Needs Deluge Launcher enabled under Accessibility. If that switch is greyed out, open App info and allow restricted settings from the ⋮ menu first.</string>
+    <string name="settings_lock_setup">Screen lock needs a permission</string>
+    <string name="settings_lock_setup_detail">Locking needs the accessibility service switched on. It watches nothing; it only locks for you.</string>
     <string name="settings_az_visibility">Show A-Z on the home screen</string>
     <string name="az_visibility_never">Never</string>
     <string name="az_visibility_landscape">Landscape</string>
@@ -187,6 +190,19 @@
     <string name="settings_always_show_az">Always show A-Z</string>
     <string name="settings_show_alphabet">Show A-Z in app list</string>
     <string name="applist_search_web">Search the web for \"%1$s\"</string>
+    <string name="applist_empty_search">No matches</string>
+    <string name="applist_empty_list">Nothing to show</string>
+    <string name="corner_action_failed">Nothing here can do that on this phone</string>
+    <string name="torch_on">Flashlight on</string>
+    <string name="torch_off">Flashlight off</string>
+    <string name="settings_corner_tap">Button tap does</string>
+    <string name="settings_corner_swipe">Button slide up does</string>
+    <string name="corner_action_app_list">Open the app list</string>
+    <string name="corner_action_search">Open the app list search</string>
+    <string name="corner_action_camera">Open the camera</string>
+    <string name="corner_action_flashlight">Toggle the flashlight</string>
+    <string name="corner_action_shade">Open the notification shade</string>
+    <string name="corner_action_lock">Lock the screen</string>
     <string name="settings_web_search">Offer a web search</string>
     <string name="settings_web_search_detail">When nothing in the list matches what you typed, a row offers the words to your browser. Nothing is sent anywhere unless you tap it</string>
     <string name="settings_swipe_up_search">Swipe up opens the search</string>
@@ -460,4 +476,8 @@
         <item quantity="one">%1$d app kept out</item>
         <item quantity="other">%1$d apps kept out</item>
     </plurals>
+    <string name="corner_action_open_app">Open an app</string>
+    <string name="corner_action_open_shortcut">Open a shortcut</string>
+    <string name="corner_action_do_nothing">Do nothing</string>
+    <string name="slot_no_shortcuts">No shortcuts pinned yet</string>
 </resources>

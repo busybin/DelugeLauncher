@@ -72,12 +72,18 @@ fun renderIcon(
     val bleed = Bitmap.createBitmap(full, full, Bitmap.Config.ARGB_8888)
     layers(Canvas(bleed), full)
 
+    // Crop and mask in one pass: the bleed is drawn shifted under the shape path, so no
+    // intermediate cropped bitmap is allocated and freed per icon.
     val inset = (full - px) / 2
-    val cropped = Bitmap.createBitmap(bleed, inset, inset, px, px)
-    bleed.recycle()
-
     val path = shapePath(if (shape == IconShape.SYSTEM) IconShape.CIRCLE else shape, px)
-    return cropped.maskedTo(path)
+    val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(out)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+    canvas.drawPath(path, paint)
+    paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.SRC_IN)
+    canvas.drawBitmap(bleed, -inset.toFloat(), -inset.toFloat(), paint)
+    bleed.recycle()
+    return out
 }
 
 private fun Drawable.toSquareBitmap(px: Int): Bitmap {

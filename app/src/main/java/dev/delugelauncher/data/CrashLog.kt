@@ -25,24 +25,38 @@ object CrashLog {
 
     private const val FILE_NAME = "last_crash.txt"
 
+    /** A runaway cause chain is not a backup: cap the trace before writing it. */
+    private const val MAX_TRACE_CHARS = 64 * 1024
+
     /**
      * Records the trace, then lets the process die the way it was going to.
      *
      * Chained rather than replacing what was there: the handler ahead of this one is what
      * actually ends the process and tells the system it crashed. Swallowing that would leave a
-     * launcher frozen on screen instead of restarting.
+     * launcher frozen on screen instead of restarting — so when there is no handler ahead,
+     * this one ends the process itself.
      */
     fun install(context: Context) {
         val appContext = context.applicationContext
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             runCatching { write(appContext, thread, error) }
-            previous?.uncaughtException(thread, error)
+            if (previous != null) {
+                previous.uncaughtException(thread, error)
+            } else {
+                // Nobody else to end the process: do it here rather than limping on with a
+                // half-dead launcher that will never restart.
+                android.os.Process.killProcess(android.os.Process.myPid())
+                kotlin.system.exitProcess(10)
+            }
         }
     }
 
     private fun write(context: Context, thread: Thread, error: Throwable) {
         val stack = StringWriter().also { error.printStackTrace(PrintWriter(it)) }.toString()
+            // A runaway cause chain is not a backup: cap the trace so a huge file cannot
+            // mislead the next read or crowd the disk.
+            .take(MAX_TRACE_CHARS)
         val when_ = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
         file(context).writeText(
             buildString {

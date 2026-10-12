@@ -1,0 +1,14 @@
+Corner button, night hours, and fixes.
+
+New:
+* Corner button with press, hold-slide-up, and free placement; tap and slide each pick from nine actions: open app, open shortcut, list, search, camera, flashlight, shade, lock, do nothing.
+* Swipes under the favorites offer the same nine actions, one set per side.
+* Auto-dark follows custom night hours.
+* Each gesture binds its own app or shortcut, adds do-nothing, and backing out of a picker changes nothing.
+
+Fixed and tuned:
+* Swipe-down shade restored; torch permission loop fixed; weather survives reboot; widget notification counts stay true.
+* Backups leave the corner button's private app out, refuse smuggled modes, and round-trip the language.
+* App-list scrubbing lands at once and rows stop chasing; icon warmup shares cores with the finger.
+* A full audit's worth of fixes: empty-folder text, folder dimming, search filing, startup races, and more.
+* All 11 languages complete.

@@ -2,6 +2,8 @@
 package dev.delugelauncher.ui.settings
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.ui.common.AppIcon
+import dev.delugelauncher.ui.common.pressPop
 
 /**
  * Pick one app, or none. Same shape as the favorites picker, with radio buttons because these
@@ -43,14 +47,8 @@ fun AppPickerScreen(
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
     onPick: (AppInfo?) -> Unit,
-    /**
-     * An entry offered above the apps that is not one, with the key it stores.
-     *
-     * Null for the pickers that only ever bind an app. The corner button also takes "open the
-     * search", which is a thing to do rather than a thing to launch and so has no app to pick.
-     */
-    extraChoice: Pair<String, String>? = null,
-    onPickExtra: (String) -> Unit = {},
+    /** Shown when there is nothing to list — a shortcut picker with none pinned, say. */
+    emptyText: String? = null,
     onBack: () -> Unit,
 ) {
     Scaffold(
@@ -91,36 +89,24 @@ fun AppPickerScreen(
                 HorizontalDivider()
             }
 
-            if (extraChoice != null) {
-                val (key, label) = extraChoice
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPickExtra(key) }
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.weight(1f),
-                        )
-                        RadioButton(selected = selectedKey == key, onClick = { onPickExtra(key) })
-                    }
-                    HorizontalDivider()
-                }
-            }
-
             items(allApps, key = { it.key }) { app ->
+                // Keyed items keep their own press state, so the icon pops on the row that
+                // was actually tapped.
+                val pickPress = remember { MutableInteractionSource() }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onPick(app) }
+                        .clickable(
+                            interactionSource = pickPress,
+                            indication = null,
+                            onClick = { onPick(app) },
+                        )
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
+                    Box(Modifier.pressPop(pickPress)) {
+                        AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
+                    }
                     Spacer(Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -129,6 +115,18 @@ fun AppPickerScreen(
                         )
                     }
                     RadioButton(selected = selectedKey == app.key, onClick = { onPick(app) })
+                }
+            }
+            if (allApps.isEmpty() && emptyText != null) {
+                item {
+                    Text(
+                        emptyText,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 32.dp),
+                    )
                 }
             }
         }

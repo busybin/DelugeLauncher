@@ -32,16 +32,20 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.delugelauncher.DelugeApp
+import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -59,7 +63,11 @@ fun IconPickerScreen(
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as DelugeApp
-    val packs = remember { app.iconPackRepository.getInstalledIconPacks() }
+    // Package-manager query off the composition thread: opening the picker must not hitch.
+    var packs by remember { mutableStateOf(emptyList<IconPackRepository.IconPackInfo>()) }
+    LaunchedEffect(Unit) {
+        packs = withContext(Dispatchers.Default) { app.iconPackRepository.getInstalledIconPacks() }
+    }
     // Null means All: browse or search every pack at once. Picking a pack narrows both.
     var selectedPack by remember { mutableStateOf<String?>(null) }
     // Seeded with the app's own name, because that is what you came here to find. It also
@@ -73,18 +81,27 @@ fun IconPickerScreen(
         selectedPack?.let { chosen -> packs.filter { it.packageName == chosen } } ?: packs
     }
 
-    val matches: List<Pair<String, String>> = remember(searched, query) {
+    // Drawable tables off the composition thread too: a pack ships thousands, and reading
+    // them on the way in hitched the grid behind every keystroke.
+    var packIcons by remember { mutableStateOf(emptyMap<String, List<String>>()) }
+    LaunchedEffect(packs) {
+        packIcons = withContext(Dispatchers.Default) {
+            packs.associate { it.packageName to app.iconPackRepository.getPackIcons(it.packageName) }
+        }
+    }
+
+    val matches: List<Pair<String, String>> = remember(searched, packIcons, query) {
         val term = query.trim()
         searched.flatMap { pack ->
-            val names = app.iconPackRepository.getPackIcons(pack.packageName)
+            val names = packIcons[pack.packageName] ?: emptyList()
             val hits = if (term.isBlank()) names else names.filter { it.contains(term, ignoreCase = true) }
             // Capped per pack rather than overall, so one enormous pack cannot fill the grid
             // and leave the others with nothing to show for themselves.
             hits.take(PER_PACK_MATCH_LIMIT).map { pack.packageName to it }
         }
     }
-    val anyIcons = remember(searched) {
-        searched.any { app.iconPackRepository.getPackIcons(it.packageName).isNotEmpty() }
+    val anyIcons = remember(searched, packIcons) {
+        searched.any { (packIcons[it.packageName]?.isNotEmpty() == true) }
     }
 
     Scaffold(

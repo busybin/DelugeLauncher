@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateOffsetAsState
 import androidx.compose.animation.core.calculateTargetValue
 import androidx.compose.animation.core.exponentialDecay
 import androidx.compose.animation.core.spring
@@ -18,6 +19,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -28,6 +30,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,6 +52,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -75,9 +83,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.LocalTextStyle
 import dev.delugelauncher.ui.theme.launcherTextShadow
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -87,16 +98,19 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInWindow
@@ -104,14 +118,18 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalLayoutDirection
 import android.content.res.Configuration
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.unit.sp
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.CornerAction
+import dev.delugelauncher.data.targetKind
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.EntryKind
@@ -134,11 +152,15 @@ import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.EditAppDialog
 import dev.delugelauncher.ui.common.FolderIconImage
 import dev.delugelauncher.ui.common.recordTouchPosition
+import dev.delugelauncher.ui.common.pressPop
 import dev.delugelauncher.widget.WidgetSlot
+import androidx.compose.ui.semantics.Role
 import dev.delugelauncher.widget.WidgetSlotActions
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import dev.delugelauncher.R
@@ -253,6 +275,8 @@ fun HomeScreen(
     onReorderHome: (newFavoriteKeys: List<String>, newWidgetPosition: Int) -> Unit,
     onCommitPadding: (PaddingSlot, Int) -> Unit,
     onFavoritesBoundsChanged: (topPx: Float, bottomPx: Float) -> Unit,
+    /** The favorites emptied out, so the strip has nothing to point at any more. */
+    onFavoritesCleared: () -> Unit,
     nowPlayingHasContent: Boolean,
     contentColor: Color,
     showFavoriteLabels: Boolean,
@@ -285,6 +309,10 @@ fun HomeScreen(
      * and tap detection that waits on a second tap for no reason only delays the long
      * press that shares this detector.
      */
+    /** Keys hidden from the list: hidden everywhere, folders included. */
+    hiddenApps: Set<String> = emptySet(),
+    /** While true the list overlay covers home: BACK belongs to it, not to open folders. */
+    overlayOpen: Boolean = false,
     onDoubleTapBackground: (() -> Unit)?,
     onManageFavorites: () -> Unit,
     /** Hands the wallpaper to the system's own picker; nothing is drawn or stored here. */
@@ -297,10 +325,26 @@ fun HomeScreen(
     onOpenSettings: () -> Unit,
     /** The app a button in the bottom corner opens, or null when there is no button. */
     cornerButtonApp: AppInfo?,
-    onOpenCornerApp: (AppInfo) -> Unit,
     /** True when the corner opens the app list's search rather than launching anything. */
     cornerButtonIsSearch: Boolean,
-    onOpenCornerSearch: () -> Unit,
+    /** What a tap on the corner button does. */
+    cornerTapAction: CornerAction,
+    /** What hold-slide-up on the corner button does. */
+    cornerSwipeAction: CornerAction,
+    /** Runs the tap's chosen action; everything the tap can do funnels through here. */
+    onCornerAction: (CornerAction) -> Unit,
+    /** Runs the slide-up's chosen action, against its own target. */
+    onCornerSwipeAction: (CornerAction) -> Unit,
+    /** Where the button sits, or null until measured; stored values win over the default. */
+    cornerPos: Pair<Float, Float>?,
+    /** Persists a dragged position, in fractions over the room the button can move in. */
+    onSetCornerPos: (Float, Float) -> Unit,
+    /** The button's bounds in root pixels, so the edge zone can leave it alone. */
+    onCornerBoundsChanged: (Rect?) -> Unit,
+    /** Whether the slide-up has a target bound (an app, a shortcut, or the old search). */
+    cornerSwipeBound: Boolean,
+    /** The hold elapsed and the finger owns the button: the home swipe-up stands down. */
+    onCornerOwnershipChanged: (Boolean) -> Unit,
 ) {    // Appended at the point of showing rather than stored in the label, so a rename still
     // wins and turning this off needs no re-reading of every app. The disguise wins over
     // everything while it is on: a rename is exactly what must not show.
@@ -319,6 +363,11 @@ fun HomeScreen(
     var nowPlayingMenu by remember { mutableStateOf(false) }
     var nowPlayingMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
     var expandedFolders by remember { mutableStateOf(setOf<String>()) }
+    // BACK folds open folders before it leaves anything: popups dismiss themselves, an
+    // in-place expansion does not. Not while the list overlay covers home — BACK is its.
+    BackHandler(enabled = expandedFolders.isNotEmpty() && !overlayOpen) {
+        expandedFolders = emptySet()
+    }
     val touchPosition = remember { mutableStateOf(Offset.Zero) }
     // Live icon size while a pinch is in progress; the stored one until then, committed on
     // release so a continuous gesture is one write rather than one per frame.
@@ -327,14 +376,15 @@ fun HomeScreen(
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
-    // A stepped value shows immediately and is written at the same time; holding it locally
-    // as well means repeated taps compound instead of each one reading back the stale stored
-    // value while DataStore catches up.
     var backgroundMenu by remember { mutableStateOf(false) }
     var backgroundMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
 
-    var liveSlot by remember { mutableStateOf<PaddingSlot?>(null) }
-    var liveValue by remember { mutableIntStateOf(0) }
+    // A stepped value shows immediately and is written at the same time; holding them
+    // locally as well means repeated taps compound instead of each one reading back the
+    // stale stored value while DataStore catches up. One entry per slot: two steppers
+    // tapped in turn used to share a single slot, and the first one's uncommitted value
+    // flashed back to the stored one the moment the second was touched.
+    var livePaddings by remember { mutableStateOf(emptyMap<PaddingSlot, Int>()) }
 
     // On a fresh install the favorites are placed by measurement rather than by a stored
     // number: centered, which is where a thumb and the A-Z strip both want them. Landing at
@@ -343,10 +393,13 @@ fun HomeScreen(
     var centeredFavTopDp by remember { mutableIntStateOf(0) }
     var rootY by remember { mutableFloatStateOf(0f) }
 
-    fun padOf(slot: PaddingSlot): Int = when {
-        liveSlot == slot -> liveValue
-        centerFavorites && slot == PaddingSlot.FAVORITES_TOP && centeredFavTopDp > 0 -> centeredFavTopDp
-        else -> paddings[slot]
+    fun padOf(slot: PaddingSlot): Int {
+        livePaddings[slot]?.let { return it }
+        return if (centerFavorites && slot == PaddingSlot.FAVORITES_TOP && centeredFavTopDp > 0) {
+            centeredFavTopDp
+        } else {
+            paddings[slot]
+        }
     }
 
     fun setPadding(slot: PaddingSlot, value: Int) {
@@ -354,15 +407,14 @@ fun HomeScreen(
         // computed centre now, so adjusting anything else leaves the centre to recompute
         // around it — which is what "centered" should have meant all along. Writing the
         // computed top out on every other slider is what used to send them up the screen.
-        liveSlot = slot
-        liveValue = value
+        livePaddings = livePaddings + (slot to value)
         onCommitPadding(slot, value)
     }
 
 
     // The background drag is disabled while a padding is being adjusted; leaving edit mode
     // has to release that or the home screen stops scrolling entirely.
-    LaunchedEffect(editMode) { if (!editMode) liveSlot = null }
+    LaunchedEffect(editMode) { if (!editMode) livePaddings = emptyMap() }
 
     // Show the widget slot when a widget exists, and also in edit mode when there isn't one —
     // that placeholder is the only way back to the picker once a widget has been removed.
@@ -399,21 +451,6 @@ fun HomeScreen(
     val itemHeights = remember { HashMap<String, Int>() }
     val itemTops = remember { HashMap<String, Float>() }
 
-    val homeItems = remember(favorites, widgetPosition, showWidgetSlot) {
-        buildHomeItems(favorites, widgetPosition, showWidgetSlot)
-    }
-    val displayItems = dragOrder ?: homeItems
-    // Read by the drag handles rather than captured by them. A handle's pointerInput is keyed
-    // on its index and the list's size, so a reorder — same size, new order — never restarts
-    // it, and the block went on holding the list as it was when the handle was last built.
-    // Starting a second drag from that stale order moved a row other than the one under the
-    // finger and threw the rest around, which is exactly what #79 describes.
-    val currentItems = rememberUpdatedState(displayItems)
-
-    // Folders sit alongside apps in the favorites block, so both bound its padding.
-    val firstRowIndex = displayItems.indexOfFirst { it !is HomeItem.Widget }
-    val lastRowIndex = displayItems.indexOfLast { it !is HomeItem.Widget }
-
     /** What a row is called in the measurement maps, the widget slot included. */
     fun measureKey(item: HomeItem): String = when (item) {
         is HomeItem.Favorite -> item.app.key
@@ -428,6 +465,28 @@ fun HomeScreen(
             HomeItem.Widget -> null
         }
     }
+
+    val homeItems = remember(favorites, widgetPosition, showWidgetSlot) {
+        buildHomeItems(favorites, widgetPosition, showWidgetSlot)
+    }
+    // A dirty stored list can name the same row twice; two nodes under one key crash the
+    // list, so the second naming is dropped. Committing the drag writes back what is drawn,
+    // which heals the stored list as a side effect.
+    val displayItems = remember(dragOrder ?: homeItems) {
+        val src = dragOrder ?: homeItems
+        val seen = HashSet<String>()
+        src.filter { seen.add(measureKey(it)) }
+    }
+    // Read by the drag handles rather than captured by them. A handle's pointerInput is keyed
+    // on its index and the list's size, so a reorder — same size, new order — never restarts
+    // it, and the block went on holding the list as it was when the handle was last built.
+    // Starting a second drag from that stale order moved a row other than the one under the
+    // finger and threw the rest around, which is exactly what #79 describes.
+    val currentItems = rememberUpdatedState(displayItems)
+
+    // Folders sit alongside apps in the favorites block, so both bound its padding.
+    val firstRowIndex = displayItems.indexOfFirst { it !is HomeItem.Widget }
+    val lastRowIndex = displayItems.indexOfLast { it !is HomeItem.Widget }
 
     fun commitDragOrder() {
         val order = dragOrder
@@ -464,11 +523,17 @@ fun HomeScreen(
 
     // Both maps are keyed by position in the list, so an entry for a position that no longer
     // exists is a lie about a row that is gone. Removing a widget is exactly that: every row
-    // below it shifts up a place and the list ends one place shorter.
+    // below it shifts up a place and the list ends one place shorter. Same for a folder that
+    // was deleted while expanded: its id must not keep the expansion standing.
     LaunchedEffect(displayItems) {
         val present = displayItems.map { measureKey(it) }.toSet()
         itemHeights.keys.retainAll { it in present }
         itemTops.keys.retainAll { it in present }
+        val folderIds = displayItems
+            .mapNotNull { (it as? HomeItem.FolderItem)?.folder?.id }.toSet()
+        if (expandedFolders.any { it !in folderIds }) {
+            expandedFolders = expandedFolders.intersect(folderIds)
+        }
     }
 
     // Measured span of the favorites, handed up so the A-Z strip can match it.
@@ -497,6 +562,15 @@ fun HomeScreen(
         onFavoritesBoundsChanged(top, bottom)
     }
 
+    // An emptied list reports no rows, so the refresh above never runs for it: clear the
+    // bounds here or the strip keeps pointing at favorites that are gone.
+    LaunchedEffect(displayItems) {
+        if (displayItems.none { it !is HomeItem.Widget }) {
+            favBounds = null
+            onFavoritesCleared()
+        }
+    }
+
     val peekPullPx = with(density) { 30.dp.toPx() }
     val deepPullPx = with(density) { 200.dp.toPx() }
     val quickLaunchPx = with(density) { 80.dp.toPx() }
@@ -519,13 +593,63 @@ fun HomeScreen(
 
     // Free vertical drag with spring bounce at both ends, outside edit mode.
     val offsetY = remember { Animatable(0f) }
+    // Survives rotation and trips to settings: without it every return lands back on top,
+    // which on a long favorites list is losing your place for nothing.
+    var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
+    var offsetRestored by rememberSaveable { mutableStateOf(false) }
+    DisposableEffect(Unit) {
+        onDispose { savedOffsetY = offsetY.value }
+    }
     // One drag event per frame is already more than the animation can apply, so every event
     // launching its own snap meant each computed its landing from a value an earlier snap
     // had not written yet — a fast fling collapsed into roughly one delta, and no fast
     // gesture ever reached the end of a long favorites list. Slow drags worked, which is
     // why short lists never showed it. Serialized, every delta lands exactly once.
     val dragMutex = remember { Mutex() }
+    // Bumps whenever a gesture ends or a new one lands: snaps queued by an earlier gesture
+    // check it under the lock and skip, so a lifted finger stops moving the list.
+    var dragGeneration by remember { mutableIntStateOf(0) }
     var viewportHeight by remember { mutableIntStateOf(0) }
+    var viewportWidth by remember { mutableIntStateOf(0) }
+    // What the system bars keep, so the button never slides under them. Read once per
+    // composition rather than per frame: bars do not move mid-gesture.
+    val layoutDir = LocalLayoutDirection.current
+    val systemInsetLeftPx = maxOf(
+        WindowInsets.statusBars.getLeft(density, layoutDir),
+        WindowInsets.navigationBars.getLeft(density, layoutDir),
+    ).toFloat()
+    val systemInsetTopPx = maxOf(
+        WindowInsets.statusBars.getTop(density),
+        WindowInsets.navigationBars.getTop(density),
+    ).toFloat()
+    val systemInsetRightPx = maxOf(
+        WindowInsets.statusBars.getRight(density, layoutDir),
+        WindowInsets.navigationBars.getRight(density, layoutDir),
+    ).toFloat()
+    val systemInsetBottomPx = maxOf(
+        WindowInsets.statusBars.getBottom(density),
+        WindowInsets.navigationBars.getBottom(density),
+    ).toFloat()
+    // The button's placement frame and the spot it should be at: the stored value once
+    // there is one, otherwise the default. Computed, never stored, so a fresh install and
+    // a rotation both land somewhere sane.
+    val cornerFrame = if (viewportWidth > 0 && viewportHeight > 0) {
+        CornerFrame(
+            viewportW = viewportWidth.toFloat(),
+            viewportH = viewportHeight.toFloat(),
+            buttonPx = with(density) { CORNER_BUTTON_DP.dp.toPx() },
+            marginPx = with(density) { CORNER_EDGE_MARGIN_DP.dp.toPx() },
+            insetLeft = systemInsetLeftPx,
+            insetTop = systemInsetTopPx,
+            insetRight = systemInsetRightPx,
+            insetBottom = systemInsetBottomPx,
+        )
+    } else {
+        null
+    }
+    val cornerPosEffective = cornerPos ?: cornerFrame?.let {
+        CornerGeometry.defaultFractions(it, with(density) { CORNER_DEFAULT_MARGIN_DP.dp.toPx() })
+    }
     var contentHeight by remember { mutableIntStateOf(0) }
     // Where the drag stops. The old range ended where the content did, which put the last
     // favorite's bottom flush with the display edge and left it under the gesture bar. Three
@@ -554,12 +678,19 @@ fun HomeScreen(
     // landscape kept that offset when the screen went tall again, which left it sitting above
     // the top of the display with nothing on screen to drag it back down by.
     LaunchedEffect(minOffset) {
-        val settled = offsetY.value.coerceIn(minOffset, 0f)
-        if (settled != offsetY.value) offsetY.snapTo(settled)
+        // First run restores where the list was before the rebuild; after that the range
+        // only clamps whatever the finger left behind.
+        if (!offsetRestored) {
+            offsetRestored = true
+            if (savedOffsetY != 0f) offsetY.snapTo(savedOffsetY.coerceIn(minOffset, 0f))
+        } else {
+            val settled = offsetY.value.coerceIn(minOffset, 0f)
+            if (settled != offsetY.value) offsetY.snapTo(settled)
+        }
     }
     val editScrollState = rememberScrollState()
 
-    LaunchedEffect(centerFavorites, favBounds, viewportHeight, rootY) {
+    LaunchedEffect(centerFavorites, favBounds, viewportHeight, rootY, paddings) {
         val (top, bottom) = favBounds ?: return@LaunchedEffect
         if (!centerFavorites || viewportHeight <= 0 || bottom <= top) {
             return@LaunchedEffect
@@ -586,7 +717,10 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { viewportHeight = it.height }
+            .onSizeChanged {
+                viewportHeight = it.height
+                viewportWidth = it.width
+            }
             .onGloballyPositioned { rootY = it.positionInWindow().y }
             // Two fingers resize the icons; one finger is left entirely to the drag below,
             // which is why nothing is consumed until a second pointer is actually down.
@@ -595,6 +729,10 @@ fun HomeScreen(
                     Modifier.pointerInput(iconSizeDp) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false)
+                            // A tap is not a resize: only store when two fingers actually
+                            // moved the size, or every touch on the wallpaper writes the
+                            // store and restarts this very detector.
+                            var zoomed = false
                             while (true) {
                                 val event = awaitPointerEvent()
                                 if (event.changes.count { it.pressed } >= 2) {
@@ -603,12 +741,13 @@ fun HomeScreen(
                                         liveIconSize = (liveIconSize * zoom)
                                             .roundToInt()
                                             .coerceIn(MIN_ICON_DP, MAX_ICON_DP)
+                                        zoomed = true
                                     }
                                     event.changes.forEach { if (it.pressed) it.consume() }
                                 }
                                 if (event.changes.none { it.pressed }) break
                             }
-                            onSetIconSize(liveIconSize)
+                            if (zoomed) onSetIconSize(liveIconSize)
                         }
                     }
                 } else {
@@ -617,10 +756,14 @@ fun HomeScreen(
             )
             .draggable(
                 orientation = Orientation.Vertical,
-                enabled = !editMode && liveSlot == null,
+                enabled = !editMode && livePaddings.isEmpty(),
                 onDragStarted = {
                     // A settling fling from the last gesture must not still own the value
                     // when a new finger lands, or the fresh drags queue behind it.
+                    dragGeneration++
+                    // Backstop for a corner hold that never released ownership (the screen
+                    // went away mid-gesture): a new finger is a new gesture either way.
+                    onCornerOwnershipChanged(false)
                     offsetY.stop()
                     rawPullDown = 0f
                     rawPullUp = 0f
@@ -647,8 +790,10 @@ fun HomeScreen(
                         rawPullUp -= delta
                         onSwipeUpDrag(rawPullUp, -delta)
                     }
+                    val generation = dragGeneration
                     scope.launch {
                         dragMutex.withLock {
+                            if (generation != dragGeneration) return@withLock
                             val next = offsetY.value + delta
                             val outOfBounds = next > 0f || next < minOffset
                             val applied = if (outOfBounds) offsetY.value + delta * 0.4f else next
@@ -666,17 +811,23 @@ fun HomeScreen(
                     pullActionFired = false
                     peekFired = false
 
-                    val decay = exponentialDecay<Float>(frictionMultiplier = 1.6f)
-                    val target = decay.calculateTargetValue(offsetY.value, velocity)
-                        .coerceIn(minOffset, 0f)
-                    offsetY.animateTo(
-                        targetValue = target,
-                        initialVelocity = velocity,
-                        animationSpec = spring(
-                            dampingRatio = Spring.DampingRatioLowBouncy,
-                            stiffness = Spring.StiffnessMediumLow,
-                        ),
-                    )
+                    // Queued per-increment snaps must not keep landing after the finger lifts,
+                    // and the fling must not race them on the same value.
+                    dragGeneration++
+                    offsetY.stop()
+                    dragMutex.withLock {
+                        val decay = exponentialDecay<Float>(frictionMultiplier = 1.6f)
+                        val target = decay.calculateTargetValue(offsetY.value, velocity)
+                            .coerceIn(minOffset, 0f)
+                        offsetY.animateTo(
+                            targetValue = target,
+                            initialVelocity = velocity,
+                            animationSpec = spring(
+                                dampingRatio = Spring.DampingRatioLowBouncy,
+                                stiffness = Spring.StiffnessMediumLow,
+                            ),
+                        )
+                    }
                 },
             )
             .then(
@@ -748,10 +899,15 @@ fun HomeScreen(
                 // A row of one short name stretched over a tablet is mostly empty space, and
                 // the A-Z strip ends up a hand's width from the names it is scrubbing. The cap
                 // only bites on a screen wider than a phone held upright, so nothing moves on
-                // one that is not.
+                // one that is not. Tablets and unfolded foldables get a wider one, or the
+                // phone-sized middle strands the strip just as far away.
                 .widthIn(
                     max = if (LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE) {
-                        MAX_CONTENT_WIDTH_LANDSCAPE
+                        if (LocalConfiguration.current.smallestScreenWidthDp >= 700) {
+                            MAX_CONTENT_WIDTH_TABLET
+                        } else {
+                            MAX_CONTENT_WIDTH_LANDSCAPE
+                        }
                     } else {
                         MAX_CONTENT_WIDTH
                     }
@@ -853,12 +1009,10 @@ fun HomeScreen(
             }
 
             // With no widget on screen there is nothing above the favorites, so Now Playing
-            // takes that slot instead.
-            //
-            // Kept in edit layout whether or not anything is playing: it has a height and
-            // paddings to set, and silence is no reason to be unable to set them. It is most
-            // often adjusted when it is in the way, which is exactly when the music has stopped.
-            if (!hasWidget && (nowPlayingHasContent || (editMode && nowPlayingEnabled))) {
+            // takes that slot instead. Outside edit mode only: while editing, the widget
+            // placeholder below draws this same block with its own handles, and drawing it
+            // here too would show it twice sharing one menu.
+            if (!hasWidget && !editMode && nowPlayingHasContent) {
                 NowPlayingBlock(
                     editMode = editMode,
                     showPlaceholder = editMode,
@@ -985,14 +1139,13 @@ fun HomeScreen(
                             // gesture is taken away — and when that happens it says nothing:
                             // unlike its long-press sibling it does not catch cancellation,
                             // so neither end callback fires. Left alone, the held row's order
-                            // and offset outlive the drag that set them. Put back to what was
-                            // saved rather than kept, since nobody let go of it there.
-                            val held = draggingIndex?.let { dragOrder?.getOrNull(it) }
-                            if (held != null && measureKey(held) == itemKey) {
-                                dragOrder = null
-                                draggingIndex = null
-                                dragOffset = 0f
-                            }
+                            // and offset outlive the drag that set them. Always put back to
+                            // what was saved: conditioning this on the held row still being
+                            // where it started missed every drag that had already swapped a
+                            // neighbour, and the highlight stayed parked on the wrong row.
+                            dragOrder = null
+                            draggingIndex = null
+                            dragOffset = 0f
                         }
                     }
                 } else {
@@ -1019,25 +1172,30 @@ fun HomeScreen(
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onGloballyPositioned { coords ->
-                            val measured = measureKey(item)
-                            itemHeights[measured] = coords.size.height
-                            itemTops[measured] = coords.positionInWindow().y
-                            refreshFavBounds()
-                        }
-                        .zIndex(if (draggingIndex == index) 1f else 0f)
-                        .graphicsLayer {
-                            if (draggingIndex == index) {
-                                translationY = dragOffset
-                                scaleX = 1.03f
-                                scaleY = 1.03f
-                                alpha = 0.9f
-                            }
-                        }
-                ) {
+                        // Lifted by which row it is, not by where it sits: after a swap the
+                        // held row's index has already moved on to the neighbour.
+                        val heldKey = draggingIndex?.let { dragOrder?.getOrNull(it) }
+                            ?.let(::measureKey)
+                        val isHeld = heldKey != null && heldKey == itemKey
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coords ->
+                                    val measured = measureKey(item)
+                                    itemHeights[measured] = coords.size.height
+                                    itemTops[measured] = coords.positionInWindow().y
+                                    refreshFavBounds()
+                                }
+                                .zIndex(if (isHeld) 1f else 0f)
+                                .graphicsLayer {
+                                    if (isHeld) {
+                                        translationY = dragOffset
+                                        scaleX = 1.03f
+                                        scaleY = 1.03f
+                                        alpha = 0.9f
+                                    }
+                                },
+                        ) {
                     when (item) {
                         HomeItem.Widget -> Box {
                             // A widget lays out its own contents and most clocks center
@@ -1072,7 +1230,8 @@ fun HomeScreen(
                             compactTapArea = compactTapArea,
                             shortcutSwipe = shortcutSwipe,
                             folder = item.folder,
-                            members = item.folder.apps.mapNotNull { appsByKey[it] },
+                            members = item.folder.apps.mapNotNull { appsByKey[it] }
+                                .filterNot { it.key in hiddenApps },
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
                             dragHandle = dragHandle,
@@ -1115,6 +1274,7 @@ fun HomeScreen(
                             onMemberUnpin = onUnpinShortcut,
                             onMemberEditIconName = { member -> renameDialogFor = member },
                             onOpenSettings = onOpenSettings,
+                            dimPausedApps = dimPausedApps,
                         )
 
                         is HomeItem.Favorite -> FavoriteRow(
@@ -1213,10 +1373,12 @@ fun HomeScreen(
                     renderItem(pair[0].second, pair[0].first)
                 } else {
                     // Pulled together by one side padding: two rows side by side otherwise
-                    // double the gutter in the middle while the outer edges keep one.
+                    // double the gutter in the middle while the outer edges keep one. Mirrors
+                    // the (sidePadding - 8) the rows pad themselves with, so the middle gutter
+                    // lands on exactly one padding, never less and never overlapping.
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy((-sidePaddingDp).dp),
+                        horizontalArrangement = Arrangement.spacedBy((-(sidePaddingDp - 8).coerceAtLeast(0)).dp),
                     ) {
                         Box(Modifier.weight(1f)) { renderItem(pair[0].second, pair[0].first) }
                         Box(Modifier.weight(1f)) { renderItem(pair[1].second, pair[1].first) }
@@ -1226,44 +1388,26 @@ fun HomeScreen(
             }
         }
 
-        // A button in the corner nearest the thumb, for the one app reached often enough to
-        // deserve a target rather than a gesture. Nothing is drawn without an app chosen for
-        // it, and it steps aside in edit mode, where that corner belongs to Done.
-        if ((cornerButtonApp != null || cornerButtonIsSearch) && !editMode) {
-            val corner = if (alignment == HomeAlignment.RIGHT) Alignment.BottomStart else Alignment.BottomEnd
-            // A filled tonal button rather than a bare glyph: on a busy wallpaper a bare
-            // icon reads as wallpaper, and a 40dp padding box is not a touch target.
-            // Surface at high alpha for the same reason the edit-mode buttons carry one —
-            // half the wallpapers in the world match the content color on one side.
-            Box(
-                modifier = Modifier
-                    .align(corner)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
-                    .size(56.dp)
-                    .background(
-                        MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.92f),
-                        CircleShape,
-                    )
-                    .clip(CircleShape)
-                    .clickable {
-                        if (cornerButtonIsSearch) onOpenCornerSearch()
-                        else cornerButtonApp?.let { onOpenCornerApp(it) }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (cornerButtonIsSearch) {
-                    Icon(
-                        Icons.Filled.Search,
-                        contentDescription = stringResource(R.string.applist_search),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(24.dp),
-                    )
-                } else {
-                    cornerButtonApp?.let { AppIcon(app = it, sizeDp = liveIconSize) }
-                }
-            }
-        }
+        // The corner button: visible for any gesture with something to run, and always in
+        // edit layout, where it is the thing being moved. Placement lives in CornerGeometry.
+        val cornerTapLive = cornerTapAction != CornerAction.DO_NOTHING &&
+            (cornerTapAction.targetKind() == null || cornerButtonApp != null || cornerButtonIsSearch)
+        val cornerSwipeLive = cornerSwipeAction != CornerAction.DO_NOTHING &&
+            (cornerSwipeAction.targetKind() == null || cornerSwipeBound)
+        CornerButton(
+            visible = editMode || cornerTapLive || cornerSwipeLive,
+            storedPos = cornerPosEffective,
+            frame = cornerFrame,
+            editMode = editMode,
+            tapAction = cornerTapAction,
+            swipeAction = cornerSwipeAction,
+            hapticFeedback = hapticFeedback,
+            onTap = { onCornerAction(cornerTapAction) },
+            onSwipe = onCornerSwipeAction,
+            onOwnershipChanged = onCornerOwnershipChanged,
+            onCommitPos = onSetCornerPos,
+            onBoundsChanged = onCornerBoundsChanged,
+        )
 
         TouchAnchoredMenu(
             expanded = backgroundMenu,
@@ -1424,7 +1568,9 @@ private fun FavoriteRow(
                     AppIcon(
                         app = app,
                         sizeDp = iconSizeDp,
-                        modifier = if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier,
+                        modifier = Modifier
+                            .pressPop(interaction)
+                            .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
                     )
                 },
             ) { labelModifier ->
@@ -1575,6 +1721,8 @@ private fun FolderRow(
     onMemberUnpin: (AppInfo) -> Unit,
     onMemberEditIconName: (AppInfo) -> Unit,
     onOpenSettings: () -> Unit,
+    /** Whether a paused (suspended) app is shown greyed out, like outside folders. */
+    dimPausedApps: Boolean,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -1586,6 +1734,9 @@ private fun FolderRow(
     var memberShortcutFor by remember { mutableStateOf<String?>(null) }
 
     Column {
+        // An emptied folder keeps its row (deleting it silently would surprise), but there
+        // is nothing to open: no chevron, and a tap does nothing.
+        val canExpand = members.isNotEmpty()
         Box(Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -1604,7 +1755,7 @@ private fun FolderRow(
                                 .combinedClickable(
                                     interactionSource = interaction,
                                     indication = null,
-                                    onClick = onToggleExpanded,
+                                    onClick = { if (canExpand) onToggleExpanded() },
                                     onLongClick = {
                                         onOpenMenu(
                                             with(density) {
@@ -1624,7 +1775,11 @@ private fun FolderRow(
                     showLabel = showLabels,
                     iconSide = iconSide,
                     iconWidth = iconSizeDp.dp,
-                    icon = { FolderIcon(members, iconSizeDp, contentColor, folder.icon) },
+                    icon = {
+                        Box(Modifier.pressPop(interaction)) {
+                            FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                        }
+                    },
                 ) { labelModifier ->
                     Text(
                         folderDisguise[folder.id] ?: folder.name,
@@ -1636,8 +1791,8 @@ private fun FolderRow(
                 }
                 // What a bare row never says: whether tapping opens anything, and how
                 // much is inside. The chevron turns with the expansion so the state is
-                // visible without reading anything.
-                if (!editMode) {
+                // visible without reading anything. Nothing inside, nothing to open.
+                if (!editMode && canExpand) {
                     FolderChevron(expanded = expanded, count = members.size, contentColor = contentColor)
                 }
             }
@@ -1677,9 +1832,13 @@ private fun FolderRow(
         }
 
         // Members expand in place rather than opening a separate screen.
-        AnimatedVisibility(visible = expanded && !editMode) {
+        AnimatedVisibility(visible = expanded && !editMode && canExpand) {
             Column {
                 members.forEach { member ->
+                    // Keyed so each member keeps its own press state: an unkeyed remember in
+                    // a loop would hand one row's press to whichever row moved into its slot.
+                    key(member.key) {
+                    val memberPress = remember { MutableInteractionSource() }
                     Box {
                     Row(
                         modifier = Modifier
@@ -1699,6 +1858,8 @@ private fun FolderRow(
                             // screen it opens a menu. It opens one here too now, and removing
                             // is an item in it.
                             .combinedClickable(
+                                interactionSource = memberPress,
+                                indication = null,
                                 onClick = { onOpenApp(member) },
                                 onLongClick = {
                                     memberMenuOffset = with(density) {
@@ -1716,11 +1877,27 @@ private fun FolderRow(
                             iconSide = iconSide,
                             showLabel = showLabels,
                             iconWidth = (iconSizeDp * 0.8f).dp,
-                            icon = { AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt()) },
+                            icon = {
+                                // A paused app fades the same way a retired shortcut does, when
+                                // the setting asks; the icon goes with the name so the whole
+                                // row reads as set aside.
+                                val dimmed = member.disabled || (dimPausedApps && member.suspended)
+                                Box(
+                                    Modifier
+                                        .pressPop(memberPress)
+                                        .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
+                                ) {
+                                    AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt())
+                                }
+                            },
                         ) { labelModifier ->
                             Text(
                                 displayName(member),
-                                color = if (member.disabled) contentColor.copy(alpha = 0.5f) else contentColor,
+                                color = if (member.disabled || (dimPausedApps && member.suspended)) {
+                                    contentColor.copy(alpha = 0.5f)
+                                } else {
+                                    contentColor
+                                },
                                 fontSize = labelSizeSp.sp,
                                 modifier = labelModifier,
                                 textAlign = alignment.textAlign(),
@@ -1780,7 +1957,8 @@ private fun FolderRow(
                     }
                     }
                 }
-                if (members.isEmpty()) {
+                }
+                if (members.isEmpty() && (expanded || editMode)) {
                     Text(
                         stringResource(R.string.home_folder_empty),
                         color = contentColor.copy(alpha = 0.6f),
@@ -1985,6 +2163,9 @@ private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
  */
 /** How wide the home stack may run sideways, where two favorites share a row. */
 private val MAX_CONTENT_WIDTH_LANDSCAPE = 1000.dp
+
+/** Sideways on a tablet or an unfolded foldable, where the phone cap strands the middle. */
+private val MAX_CONTENT_WIDTH_TABLET = 1200.dp
 
 private val MAX_CONTENT_WIDTH = 600.dp
 

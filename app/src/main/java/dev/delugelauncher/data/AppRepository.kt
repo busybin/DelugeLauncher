@@ -656,7 +656,10 @@ class AppRepository(
     // label a second time through an English configuration, which is a whole resource table
     // per app — so it is only ever asked for a name that has no A-Z letter of its own, and the
     // answer is kept.
-    private val englishLabels = mutableMapOf<String, String?>()
+    // ConcurrentHashMap forbids null values, so a miss is stored as the empty string
+    // and mapped back to null on the way out. getOrPut with a null-returning lambda would
+    // throw NullPointerException instead of caching anything.
+    private val englishLabels = java.util.concurrent.ConcurrentHashMap<String, String>()
 
     /**
      * The app's name in English, or null if it has none or it is the name we already have.
@@ -666,20 +669,23 @@ class AppRepository(
      */
     fun englishLabel(app: AppInfo): String? {
         if (app.kind != EntryKind.APP) return null
-        return englishLabels.getOrPut(app.key) {
-            runCatching {
-                val info = pm.getActivityInfo(app.componentName, 0)
-                val labelRes = if (info.labelRes != 0) info.labelRes else info.applicationInfo.labelRes
-                if (labelRes == 0) return@runCatching null
-                val res = pm.getResourcesForApplication(info.applicationInfo)
-                val config = Configuration(res.configuration).apply { setLocale(Locale.ENGLISH) }
-                res.getString(labelRes).takeIf { it.isNotBlank() }?.let { english ->
-                    // The context-adjusted resources fall back to the default language when an app
-                    // ships no English, which just hands the same name back.
-                    Resources(res.assets, res.displayMetrics, config).getString(labelRes)
-                }
-            }.getOrNull()
-        }
+        englishLabels[app.key]?.let { return it.ifEmpty { null } }
+        val value = runCatching {
+            val info = pm.getActivityInfo(app.componentName, 0)
+            val labelRes = if (info.labelRes != 0) info.labelRes else info.applicationInfo.labelRes
+            if (labelRes == 0) return@runCatching null
+            val res = pm.getResourcesForApplication(info.applicationInfo)
+            val config = Configuration(res.configuration).apply { setLocale(Locale.ENGLISH) }
+            res.getString(labelRes).takeIf { it.isNotBlank() }?.let { english ->
+                // The context-adjusted resources fall back to the default language when an app
+                // ships no English, which just hands the same name back.
+                Resources(res.assets, res.displayMetrics, config).getString(labelRes)
+            }
+        }.getOrNull().orEmpty()
+        // putIfAbsent: two threads asking for the same app at once must not overwrite a
+        // real answer with each other's miss.
+        englishLabels.putIfAbsent(app.key, value)
+        return (englishLabels[app.key] ?: value).ifEmpty { null }
     }
 
     /** A closed padlock while the space is locked, an open one while it is not. */

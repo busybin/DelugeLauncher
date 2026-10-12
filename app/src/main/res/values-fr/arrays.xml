@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>Bouton de coin : l\'appui cède, tenir glisse pour exécuter ; toucher et glisser choisissent parmi neuf actions ; déplaçable partout en édition.</item>
+        <item>Les glissés sous les favoris offrent les mêmes neuf actions, un jeu par côté.</item>
+        <item>Le sombre auto suit des heures de nuit perso.</item>
+        <item>Chaque geste lie sa propre app ou raccourci, ajoute ne rien faire, et quitter le sélecteur sans choisir ne change rien.</item>
+        <item>Volet de notifs de retour ; météo après redémarrage ; comptes du widget justes.</item>
+        <item>Les sauvegardes écartent l\'app privée du bouton et gardent la langue.</item>
+        <item>La bande de lettres atterrit aussitôt ; le préchauffage partage les cœurs avec le doigt.</item>
+        <item>Plus de quinze correctifs d\'audit : boucle lampe, textes dossiers, estompage, classement recherche et plus.</item>
+        <item>Les 11 langues complètes.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>Accueil et liste en double colonne verticale/horizontale ; paires nivelées.</item>
         <item>Intensité : off/léger/moyen/fort.</item>

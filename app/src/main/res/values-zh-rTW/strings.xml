@@ -79,7 +79,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">在 設定 → 協助工具 中啟用 Deluge Launcher 以開啟通知</string>
-    <string name="toast_enable_accessibility_lock">在 設定 → 協助工具 中啟用 Deluge Launcher 以鎖定螢幕</string>
 
     <!-- Settings -->
     <string name="settings_title">Deluge 設定</string>
@@ -124,12 +123,15 @@
     <string name="settings_two_column_list_portrait_detail">直式時應用每列兩個。</string>
     <string name="settings_two_column_list_landscape">清單橫式雙欄</string>
     <string name="settings_two_column_list_landscape_detail">橫式時應用每列兩個。</string>
+    <string name="settings_two_column_needs_rotation">需先開啟「跟隨裝置旋轉」才會生效。</string>
     <string name="settings_developer_mode">開發者模式</string>
     <string name="settings_developer_mode_detail">將應用程式名稱與圖示偽裝以便截圖，並隱藏狀態列。</string>
     <string name="developer_unlocked">開發者模式已解鎖</string>
     <string name="settings_wallpaper_blur">桌布模糊</string>
     <string name="settings_auto_dark">深色主題（夜間自動）</string>
     <string name="settings_auto_dark_detail">傍晚自動切換為深色、早上切回，不跟隨系統。</string>
+    <string name="settings_night_start">夜間開始</string>
+    <string name="settings_night_end">夜間結束</string>
     <string name="settings_reduce_motion">減少動畫</string>
     <string name="settings_reduce_motion_detail">略過啟動器自己的轉場：開啟應用程式清單、淡化等立即完成。</string>
     <string name="settings_pinch_resize">雙指縮放圖示</string>
@@ -162,7 +164,6 @@
     <string name="settings_edge_side">開啟應用程式列表的邊緣</string>
     <string name="settings_double_tap_lock">輕點兩下鎖定螢幕</string>
     <string name="settings_double_tap_lock_detail">輕點字母列兩下</string>
-    <string name="settings_lock_needs_accessibility">需要在協助工具中啟用 Deluge Launcher。若該開關呈灰色，請先開啟應用程式資訊，並從 ⋮ 選單允許受限設定。</string>
     <string name="settings_az_visibility">在主畫面顯示字母列</string>
     <string name="az_visibility_never">永不</string>
     <string name="az_visibility_landscape">橫向</string>
@@ -170,6 +171,19 @@
     <string name="settings_always_show_az">一律顯示字母列</string>
     <string name="settings_show_alphabet">在應用程式列表中顯示字母列</string>
     <string name="applist_search_web">在網路上搜尋 \"%1$s\"</string>
+    <string name="applist_empty_search">沒有相符結果</string>
+    <string name="applist_empty_list">目前沒有內容</string>
+    <string name="corner_action_failed">這台手機上沒有能做這件事的應用</string>
+    <string name="torch_on">已開啟手電筒</string>
+    <string name="torch_off">已關閉手電筒</string>
+    <string name="settings_corner_tap">點擊按鈕時</string>
+    <string name="settings_corner_swipe">上滑按鈕時</string>
+    <string name="corner_action_app_list">開啟應用清單</string>
+    <string name="corner_action_search">開啟應用清單搜尋</string>
+    <string name="corner_action_camera">開啟相機</string>
+    <string name="corner_action_flashlight">切換手電筒</string>
+    <string name="corner_action_shade">開啟通知列</string>
+    <string name="corner_action_lock">鎖定螢幕</string>
     <string name="settings_web_search">提供網路搜尋</string>
     <string name="settings_web_search_detail">當列表中沒有任何項目符合你輸入的內容時，會出現一列，將你輸入的字詞送到瀏覽器。除非你輕點它，否則不會傳送任何資料</string>
     <string name="settings_swipe_up_search">向上滑動開啟搜尋</string>
@@ -460,4 +474,10 @@
     <string name="scheme_yellow">黃</string>
     <string name="scheme_pink">粉</string>
     <string name="scheme_teal">青</string>
+    <string name="settings_lock_setup">鎖屏需要一個權限</string>
+    <string name="settings_lock_setup_detail">鎖屏需要開啟無障礙。它不監視任何東西，只替你鎖屏。</string>
+    <string name="corner_action_open_app">開啟應用</string>
+    <string name="corner_action_open_shortcut">開啟捷徑</string>
+    <string name="corner_action_do_nothing">無動作</string>
+    <string name="slot_no_shortcuts">還沒有固定的捷徑</string>
 </resources>

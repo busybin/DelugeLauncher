@@ -252,9 +252,12 @@ fun NowPlayingWidget(
                 contentAlignment = Alignment.Center,
             ) {
                 val art = current.art
-                if (art != null) {
+                // Wrapped once per bitmap rather than per recomposition: the wrapper shares the
+                // buffer, but rebuilding it still re-issues the whole image draw.
+                val artImage = remember(art) { art?.asImageBitmap() }
+                if (artImage != null) {
                     Image(
-                        bitmap = art.asImageBitmap(),
+                        bitmap = artImage,
                         contentDescription = null,
                         // Cropped, not fitted: album art that isn't square used to letterbox
                         // inside its box and sit visibly smaller than the square it was given.

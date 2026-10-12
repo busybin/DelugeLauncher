@@ -137,6 +137,32 @@ class PrivateSpaceExportTest {
         assertEquals(a, stripPrivateSpaceFromExport("quick_launch_left_key", a, strip))
     }
 
+    // --- corner_button_key (a single key, or absent) ---------------------------------------
+
+    @Test
+    fun `a corner button holding a private key is left out entirely`() {
+        // The slot the audit caught missing: without this the button's private app went
+        // into the backup in clear text while the user was told nothing was omitted.
+        assertNull(stripPrivateSpaceFromExport(PREF_CORNER_BUTTON_KEY, bPrivate, strip))
+    }
+
+    @Test
+    fun `a corner button holding an ordinary key survives`() {
+        assertEquals(a, stripPrivateSpaceFromExport(PREF_CORNER_BUTTON_KEY, a, strip))
+    }
+
+    // --- corner_swipe_key (a single key, or absent) -----------------------------------------
+
+    @Test
+    fun `a corner slide-up holding a private key is left out entirely`() {
+        assertNull(stripPrivateSpaceFromExport(PREF_CORNER_SWIPE_KEY, bPrivate, strip))
+    }
+
+    @Test
+    fun `a corner slide-up holding an ordinary key survives`() {
+        assertEquals(a, stripPrivateSpaceFromExport(PREF_CORNER_SWIPE_KEY, a, strip))
+    }
+
     // --- cross-cutting behavior ---------------------------------------------------------------
 
     @Test

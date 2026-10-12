@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>Pulsante d\'angolo: preme e cede, tieni e scorri per eseguire; tocco e scorrimento scelgono fra nove azioni; trascinalo dove vuoi in modifica.</item>
+        <item>Gli scorrimenti sotto i preferiti offrono le stesse nove azioni, un set per lato.</item>
+        <item>Lo scuro auto segue ore notturne proprie.</item>
+        <item>Ogni gesto lega la sua app o scorciatoia, aggiunge non fare nulla, e uscire dal selettore senza scegliere non cambia nulla.</item>
+        <item>Tendina notifiche di nuovo; meteo dopo il riavvio; conteggi widget giusti.</item>
+        <item>I backup escludono l\'app privata del pulsante e tengono la lingua.</item>
+        <item>La banda lettere atterra subito; il preriscaldamento condivide i core col dito.</item>
+        <item>Oltre quindici fix di audit: loop torcia, testi cartelle, attenuazione, archiviazione ricerca e altro.</item>
+        <item>Tutte le 11 lingue complete.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>Home e lista con doppia colonna verticale/orizzontale; coppie livellate.</item>
         <item>Intensità: off/leggera/media/forte.</item>

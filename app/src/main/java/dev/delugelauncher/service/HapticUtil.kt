@@ -1,12 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.service
 
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.view.View
 import dev.delugelauncher.data.HapticFeedback
 
 object HapticUtil {
+    // Coalesces a scrub storm: crossing a letter per frame would queue dozens of binder
+    // round trips a second. Deliberate taps are far slower than this floor, so they feel
+    // exactly the same; only a fast slide stops buzzing per letter.
+    private const val MIN_TICK_INTERVAL_MS = 40L
+    private var lastTickMs = 0L
+
     /**
      * A short tap back as the finger crosses into a new letter on the A-Z strip.
      *
@@ -23,6 +30,9 @@ object HapticUtil {
             HapticFeedback.MEDIUM -> 25L to 140
             HapticFeedback.STRONG -> 40L to 220
         }
+        val now = SystemClock.uptimeMillis()
+        if (now - lastTickMs < MIN_TICK_INTERVAL_MS) return
+        lastTickMs = now
         val vibrator = runCatching {
             view.context.getSystemService(Vibrator::class.java)
         }.getOrNull() ?: return

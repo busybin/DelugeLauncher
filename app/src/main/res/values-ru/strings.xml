@@ -68,7 +68,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">Включите Deluge Launcher в Настройки → Специальные возможности, чтобы открывать уведомления</string>
-    <string name="toast_enable_accessibility_lock">Включите Deluge Launcher в Настройки → Специальные возможности, чтобы блокировать экран</string>
 
     <!-- Settings -->
     <string name="settings_title">Настройки Deluge</string>
@@ -130,7 +129,6 @@
     <string name="settings_edge_side">Какой край открывает список приложений</string>
     <string name="settings_double_tap_lock">Двойное нажатие блокирует экран</string>
     <string name="settings_double_tap_lock_detail">Нажмите по полосе A-Z дважды</string>
-    <string name="settings_lock_needs_accessibility">Нужно включить Deluge Launcher в разделе «Специальные возможности». Если переключатель недоступен, откройте «О приложении» и разрешите ограниченные настройки в меню ⋮.</string>
     <string name="settings_az_visibility">Показывать A-Z на домашнем экране</string>
     <string name="az_visibility_never">Никогда</string>
     <string name="az_visibility_landscape">Альбомный режим</string>
@@ -424,4 +422,70 @@
     <string name="prompt_default_skip">Позже</string>
     <string name="settings_changelog">Что нового</string>
     <string name="settings_changelog_detail">Что изменилось в каждой версии</string>
+    <string name="settings_corner_tap">Нажатие кнопки</string>
+    <string name="settings_corner_swipe">Свайп кнопки вверх</string>
+    <string name="settings_night_start">Ночь начинается</string>
+    <string name="settings_night_end">Ночь заканчивается</string>
+    <string name="settings_two_column_needs_rotation">Нужно включить «Поворот с устройством».</string>
+    <string name="applist_empty_search">Нет совпадений</string>
+    <string name="applist_empty_list">Нечего показать</string>
+    <string name="corner_action_failed">На этом телефоне это ничем не сделаешь</string>
+    <string name="corner_action_app_list">Открыть список приложений</string>
+    <string name="corner_action_search">Открыть поиск в списке</string>
+    <string name="corner_action_camera">Открыть камеру</string>
+    <string name="corner_action_flashlight">Включить/выключить фонарик</string>
+    <string name="corner_action_shade">Открыть шторку уведомлений</string>
+    <string name="corner_action_lock">Заблокировать экран</string>
+    <string name="torch_on">Фонарик включён</string>
+    <string name="torch_off">Фонарик выключен</string>
+    <string name="action_change_wallpaper">Сменить обои</string>
+    <string name="wallpaper_no_picker">Выбор обоев не найден</string>
+    <string name="action_lock_app">Заблокировать приложение</string>
+    <string name="action_unlock_app">Разблокировать приложение</string>
+    <string name="action_set_tag">Задать тег</string>
+    <string name="tag_label">Тег</string>
+    <string name="tag_new">Новый тег</string>
+    <string name="tag_selected_count">Выбрано: %1$d</string>
+    <string name="tag_remove">Убрать тег</string>
+    <string name="app_lock_title">Разблокируйте, чтобы открыть</string>
+    <string name="app_lock_prompt">Подтвердите блокировку экрана, чтобы открыть %1$s</string>
+    <string name="settings_color_scheme">Цветовая схема</string>
+    <string name="settings_color_scheme_detail">Синий Deluge, если не выбрано иное. Обои нужны с Android 12 и новее, ниже — синий.</string>
+    <string name="scheme_deluge_blue">Синий Deluge</string>
+    <string name="scheme_dynamic">Обои</string>
+    <string name="scheme_purple">Фиолетовый</string>
+    <string name="scheme_green">Зелёный</string>
+    <string name="scheme_red">Красный</string>
+    <string name="scheme_orange">Оранжевый</string>
+    <string name="scheme_yellow">Жёлтый</string>
+    <string name="scheme_pink">Розовый</string>
+    <string name="scheme_teal">Бирюзовый</string>
+    <string name="haptic_off">Выкл</string>
+    <string name="haptic_light">Слабый</string>
+    <string name="haptic_medium">Средний</string>
+    <string name="haptic_strong">Сильный</string>
+    <string name="settings_two_column_home_portrait">Домой в две колонки (портрет)</string>
+    <string name="settings_two_column_home_portrait_detail">Два избранных делят каждую строку вертикально.</string>
+    <string name="settings_two_column_home_landscape">Домой в две колонки (ландшафт)</string>
+    <string name="settings_two_column_home_landscape_detail">Два избранных делят каждую строку горизонтально.</string>
+    <string name="settings_two_column_list_portrait">Список в две колонки (портрет)</string>
+    <string name="settings_two_column_list_portrait_detail">Два приложения делят каждую строку вертикально.</string>
+    <string name="settings_two_column_list_landscape">Список в две колонки (ландшафт)</string>
+    <string name="settings_two_column_list_landscape_detail">Два приложения делят каждую строку горизонтально.</string>
+    <string name="settings_developer_mode">Режим разработчика</string>
+    <string name="settings_developer_mode_detail">Маскирует имена и значки для скриншотов и прячет строку состояния.</string>
+    <string name="developer_unlocked">Режим разработчика включён</string>
+    <string name="settings_auto_dark">Тёмная тема ночью</string>
+    <string name="settings_auto_dark_detail">Вечером переходит на тёмную, утром обратно, а не следует за системой.</string>
+    <string name="settings_reduce_motion">Уменьшить движение</string>
+    <string name="settings_reduce_motion_detail">Пропускает собственные переходы лаунчера; открытие списка и затухания происходят разом.</string>
+    <string name="settings_pinch_resize">Щипок для значков</string>
+    <string name="settings_pinch_resize_detail">Два пальца на домашнем экране меняют размер значков.</string>
+    <string name="hide_confirm_message">Скрыть %1$s из списка? Вернуть можно в Настройки > Приложения > Скрытые.</string>
+    <string name="settings_lock_setup">Блокировке нужно разрешение</string>
+    <string name="settings_lock_setup_detail">Блокировке нужны включённые спецвозможности. Они ничего не наблюдают, только блокируют.</string>
+    <string name="corner_action_open_app">Открыть приложение</string>
+    <string name="corner_action_open_shortcut">Открыть ярлык</string>
+    <string name="corner_action_do_nothing">Ничего не делать</string>
+    <string name="slot_no_shortcuts">Пока нет закреплённых ярлыков</string>
 </resources>

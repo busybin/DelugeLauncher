@@ -156,9 +156,11 @@ fun Modifier.swipeForShortcuts(
                 } else {
                     accX += dx
                     change.consume()
+                    // In slops, not pixels: touchSlop already scales with density, so the
+                    // same flick fires on a low- and a high-density screen alike.
                     val far = when (mode) {
-                        ShortcutSwipe.RIGHT -> accX > SWIPE_THRESHOLD_PX
-                        ShortcutSwipe.LEFT -> accX < -SWIPE_THRESHOLD_PX
+                        ShortcutSwipe.RIGHT -> accX > slop * SWIPE_THRESHOLD_SLOPS
+                        ShortcutSwipe.LEFT -> accX < -slop * SWIPE_THRESHOLD_SLOPS
                         ShortcutSwipe.OFF -> false
                     }
                     if (!fired && far) {
@@ -179,7 +181,7 @@ fun Modifier.swipeForShortcuts(
 private const val SWIPE_DOMINANCE = 2f
 
 /** Far enough not to fire on a tap that wandered, short enough to feel like a flick. */
-private const val SWIPE_THRESHOLD_PX = 90f
+private const val SWIPE_THRESHOLD_SLOPS = 4f
 
 /**
  * The shortcuts on their own, for the swipe. Renders nothing when the app publishes none, so

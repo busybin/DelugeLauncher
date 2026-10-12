@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The mark: a "D" drawn as one unbroken stroke, at the weight and corner rounding the
-     rest of the launcher uses for its own icons. It sits inside the 72dp safe zone so no
-     mask clips it. -->
+<!-- The mark: one unbroken D stroke, white on solid Deluge blue. Nothing else — the inner
+     arc read as decoration at launcher icon sizes, and the gradient read as a placeholder. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -20,12 +19,5 @@
         android:strokeWidth="13"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"
-        android:fillColor="#00000000" />
-    <!-- A quieter inner arc, so the letter reads as drawn rather than as a font. -->
-    <path
-        android:pathData="M52,45 A9,9 0 0 1 52,63"
-        android:strokeColor="#66FFFFFF"
-        android:strokeWidth="5"
-        android:strokeLineCap="round"
         android:fillColor="#00000000" />
 </vector>

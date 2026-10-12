@@ -140,8 +140,12 @@ import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.recordTouchPosition
 import dev.delugelauncher.ui.common.EditAppDialog
+import dev.delugelauncher.ui.common.pressPop
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
@@ -175,6 +179,9 @@ private val MAX_LIST_WIDTH = 600.dp
 
 /** How wide the list may run sideways, where two columns share it. */
 private val MAX_LIST_WIDTH_LANDSCAPE = 1000.dp
+
+/** Sideways on a tablet or an unfolded foldable, where the phone cap strands the middle. */
+private val MAX_LIST_WIDTH_TABLET = 1200.dp
 
 /** How far the list dissolves at each end. */
 private val FADE_HEIGHT = 56.dp
@@ -252,6 +259,8 @@ fun AppListScreen(
     allTags: List<String>,
     /** Tags by app key, so the picker can pre-check what the chosen apps already carry. */
     appTags: Map<String, Set<String>>,
+    /** Tags the picker refuses by hand: the auto-tagger's words in every language it wore. */
+    reservedTags: Set<String> = RESERVED_TAGS,
     /** Sets the chosen apps' tags to exactly this set — checked are applied, unchecked removed. */
     onAddTags: (List<AppInfo>, Set<String>) -> Unit,
     onMoveToFolder: (AppInfo) -> Unit,
@@ -297,6 +306,10 @@ fun AppListScreen(
     onWebSearch: (String) -> Unit,
     /** Whether the last letters can reach the same line as the first. */
     lastLetterToLine: Boolean,
+    /** English name for filing search results like the list files them; null when unknown. */
+    englishName: (AppInfo) -> String? = { null },
+    /** Whether the shown name was typed by hand, which files '#' as '#' itself. */
+    isRenamed: (AppInfo) -> Boolean = { false },
     searchEnabled: Boolean,
     searchAtBottom: Boolean,
     sectionTopPercent: Int,
@@ -332,12 +345,18 @@ fun AppListScreen(
 
     // Searching is a different mode from scrubbing: the letters shrink to whatever matched,
     // so the strip is hidden and placement stays out of it until the query is cleared.
+    // Filtered off the main thread with a short debounce: every keystroke used to scan the
+    // whole list (pinyin included) during composition, which dropped frames while typing.
     val searching = searchEnabled && query.isNotBlank()
-    val displayModel = remember(model, searchModel, query, searchEnabled) {
+    var displayModel by remember(model, searchModel, searchEnabled) { mutableStateOf(model) }
+    LaunchedEffect(model, searchModel, query, searchEnabled) {
         if (!searching) {
-            model
-        } else {
-            val term = query.trim()
+            displayModel = model
+            return@LaunchedEffect
+        }
+        delay(100)
+        val term = query.trim()
+        displayModel = withContext(Dispatchers.Default) {
             searchModel
                 .filtered { app ->
                     // The name it shows, its pinyin (微信 answers to "wx"), and — for a phone
@@ -346,7 +365,12 @@ fun AppListScreen(
                     PinyinSearch.rank(displayName(app), app.componentName.packageName, term) !=
                         PinyinSearch.NO_MATCH
                 }
-                .rankedBy { PinyinSearch.rank(displayName(it), it.componentName.packageName, term) }
+                .rankedBy(
+                    rank = { PinyinSearch.rank(displayName(it), it.componentName.packageName, term) },
+                    displayName = { displayName(it) },
+                    renamed = { isRenamed(it) },
+                    englishName = { englishName(it) },
+                )
         }
     }
     // What a search result underlines: the query, and only while it is actually a search.
@@ -359,6 +383,29 @@ fun AppListScreen(
     // The model as laid out. Everything below — scrub placement, spy, gaps, keys — reads
     // this rather than the model, so indices always mean laid-out rows.
     val cells = remember(displayModel, twoColumn) { displayModel.toCells(twoColumn) }
+    // Staying on the same app across the 1↔2 column switch: pairing halves the row count,
+    // so keeping the raw index would land somewhere unrelated. Anchored by app key instead.
+    var columnAnchorKey by remember { mutableStateOf<String?>(null) }
+    fun anchorOf(cell: CellRow): String? = when (cell) {
+        is CellRow.Header -> null
+        is CellRow.One -> cell.entry.app.key
+        is CellRow.Two -> cell.left.app.key
+    }
+    LaunchedEffect(cells) {
+        snapshotFlow { listState.firstVisibleItemIndex }
+            .collect { idx -> columnAnchorKey = cells.rows.getOrNull(idx)?.let(::anchorOf) }
+    }
+    LaunchedEffect(twoColumn) {
+        val key = columnAnchorKey ?: return@LaunchedEffect
+        val idx = cells.rows.indexOfFirst { cell ->
+            when (cell) {
+                is CellRow.Header -> false
+                is CellRow.One -> cell.entry.app.key == key
+                is CellRow.Two -> cell.left.app.key == key || cell.right?.app?.key == key
+            }
+        }
+        if (idx >= 0) listState.scrollToItem(idx)
+    }
     // The launcher's own transitions, collapsed to nothing when motion is reduced.
     val motionFast = if (reduceMotion) 0 else 180
     val motionSlow = if (reduceMotion) 0 else 240
@@ -532,7 +579,9 @@ fun AppListScreen(
     fun forwardRoom(): Float {
         val info = listState.layoutInfo
         val last = info.visibleItemsInfo.lastOrNull() ?: return Float.MAX_VALUE
-        if (last.index < cells.rows.size) return Float.MAX_VALUE
+        // The last row's index is size - 1: comparing against size is always true and the
+        // end is never reported as reached.
+        if (last.index < cells.rows.size - 1) return Float.MAX_VALUE
         val bottom = (last.offset - info.viewportStartOffset + last.size).toFloat()
         return bottom + idleBottomPaddingPx - viewportHeightPx
     }
@@ -546,7 +595,7 @@ fun AppListScreen(
     fun placementSettled(): Boolean {
         val items = listState.layoutInfo.visibleItemsInfo
         val first = items.firstOrNull() ?: return true
-        if (first.index == 0 && items.last().index >= cells.rows.size) return true
+        if (first.index == 0 && items.last().index >= cells.rows.size - 1) return true
         return topGapRemaining() <= 0f
     }
 
@@ -679,11 +728,34 @@ fun AppListScreen(
         if (compensate > 0f) listState.dispatchRawDelta(-compensate)
     }
 
-    LaunchedEffect(scrubRowIndex, scrubPlacement, displayModel) {
+    LaunchedEffect(scrubRowIndex, scrubPlacement, displayModel, scrub.active) {
         if (scrubRowIndex < 0) return@LaunchedEffect
         // The next letter's header ends this section. Walking the rows to find it copied the
         // whole tail of the list on every one of the ~26 letter changes in a gesture.
         val end = cells.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: cells.rows.size
+
+        // While the finger is down, scroll at once and measure nothing. The room-measure
+        // below awaits two frames per letter change, and fast movement restarts this effect
+        // before the scroll even runs — the list lags the finger and the whole drag
+        // stutters, then goes smooth once every row has been composed anyway. The room is
+        // still opened so the last letters can travel; it is measured when the finger lifts
+        // and this effect reruns with the finger gone.
+        // While the finger is down, scroll at once and measure nothing. The room is
+        // still opened so the last letters can travel; it is measured when the finger
+        // lifts and this effect reruns with the finger gone. No throttling here on
+        // purpose: delaying a scroll only lags the list behind the finger, and a lagging
+        // list reads as stutter. Superseded runs die to restarts instead, mid-scroll.
+        if (scrub.active) {
+            if (lastLetterToLine && !bottomRoomLive) bottomRoomLive = true
+            listState.scrollToItem(scrubRowIndex)
+            highlightRange = scrubRowIndex until end
+            // A fresh placement opens the room again; from here the ratchet only closes it.
+            gapCeilingPx = Float.MAX_VALUE
+            blankCeilingPx = Float.MAX_VALUE
+            // This placement is fresh, so the next drag is the one that retires it.
+            userDragged = false
+            return@LaunchedEffect
+        }
 
         // Room before the scroll, and a frame for it to land in. The scroll clamps against the
         // range as it stands when it runs, so asking for the room afterwards leaves the letter
@@ -1049,7 +1121,7 @@ fun AppListScreen(
     fun isOnListContent(y: Float): Boolean {
         val info = listState.layoutInfo
         val first = info.visibleItemsInfo.firstOrNull() ?: return false
-        val last = info.visibleItemsInfo.last()
+        val last = info.visibleItemsInfo.lastOrNull() ?: return false
         return y >= first.offset - info.viewportStartOffset &&
             y < last.offset + last.size - info.viewportStartOffset
     }
@@ -1120,7 +1192,17 @@ fun AppListScreen(
                 .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                 // Capped and held against the strip's own side, so on a wide screen the names
                 // stay next to the letters being scrubbed instead of a screen away from them.
-                .widthIn(max = if (twoColumn) MAX_LIST_WIDTH_LANDSCAPE else MAX_LIST_WIDTH)
+                // Tablets and unfolded foldables get a wider cap, or the phone-sized middle
+                // strands the strip just as far away.
+                .widthIn(
+                    max = if (!twoColumn) {
+                        MAX_LIST_WIDTH
+                    } else if (LocalConfiguration.current.smallestScreenWidthDp >= 700) {
+                        MAX_LIST_WIDTH_TABLET
+                    } else {
+                        MAX_LIST_WIDTH_LANDSCAPE
+                    }
+                )
                 // The capped column sits on the side the rows lean to: left-aligned names on the
                 // left, right-aligned on the right, centered centered. It used to follow the
                 // strip's own side, which parked a left-aligned list in the middle of a wide
@@ -1260,16 +1342,33 @@ fun AppListScreen(
                 }
             }
 
+            if (cells.rows.isEmpty() && !(searching && webSearchFallback)) {
+                item(key = "empty") {
+                    Text(
+                        text = stringResource(
+                            if (searching) R.string.applist_empty_search
+                            else R.string.applist_empty_list
+                        ),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 24.dp, vertical = 32.dp),
+                    )
+                }
+            }
+
             itemsIndexed(
                 items = cells.rows,
                 // Headers, singles and pairs lay out nothing alike; telling the list so lets
-                // it reuse each kind against its own pool while scrubbing.
+                // it reuse each kind against its own pool while scrubbing. A pair with an
+                // empty half lays out differently from a full one, so it gets its own.
                 key = { _, cell -> cellKey(cell) },
                 contentType = { _, cell ->
                     when (cell) {
                         is CellRow.Header -> 0
                         is CellRow.One -> 1
-                        is CellRow.Two -> 2
+                        is CellRow.Two -> if (cell.right == null) 3 else 2
                     }
                 },
             ) { index, cell ->
@@ -1336,9 +1435,16 @@ fun AppListScreen(
                 Box(
                     // Read in the draw phase on purpose: the scrub fade would otherwise
                     // recompose every visible row on every frame of the 180ms tween.
-                    modifier = Modifier.graphicsLayer {
-                        alpha = if (index in highlightRange) 1f else othersAlpha
-                    },
+                    // Placement animation only while searching (its original purpose, rows
+                    // sliding as a filter changes): during a scrub every jump would set
+                    // every visible row animating toward a position the next jump moves
+                    // again, so the list perpetually chases and never lands — which reads
+                    // as stutter.
+                    modifier = Modifier
+                        .then(if (searching) Modifier.animateItem() else Modifier)
+                        .graphicsLayer {
+                            alpha = if (index in highlightRange) 1f else othersAlpha
+                        },
                 ) {
                 when (cell) {
                     is CellRow.Header -> SectionHeader(cell.text, labelSizeSp, contentColor, alignment)
@@ -1500,18 +1606,18 @@ fun AppListScreen(
             val commonTags = selectedApps
                 .map { appTags[it.key] ?: emptySet<String>() }
                 .reduceOrNull { a, b -> a intersect b }
-                ?.minus(RESERVED_TAGS)
+                ?.minus(reservedTags)
                 ?: emptySet()
             // Whatever reserved tags the chosen apps already carry stay put: the picker can
             // neither show nor remove them, so confirming must not drop them either.
             val reservedKept = selectedApps
                 .flatMapTo(mutableSetOf()) { appTags[it.key] ?: emptySet() }
-                .intersect(RESERVED_TAGS)
+                .intersect(reservedTags)
             TagPickerDialog(
-                allTags = allTags - RESERVED_TAGS,
+                allTags = allTags - reservedTags,
                 initialChecked = commonTags,
                 onConfirm = { tags ->
-                    val blocked = tags.intersect(RESERVED_TAGS)
+                    val blocked = tags.intersect(reservedTags)
                     if (blocked.isNotEmpty()) {
                         Toast.makeText(
                             context,
@@ -1519,7 +1625,7 @@ fun AppListScreen(
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
-                    onAddTags(selectedApps, tags - RESERVED_TAGS + reservedKept)
+                    onAddTags(selectedApps, tags - reservedTags + reservedKept)
                     showTagPicker = false
                     selecting = false
                     selectedKeys = emptySet()
@@ -1816,7 +1922,9 @@ private fun AppRow(
             // screen: the name ending at the screen edge reads as the row running out
             // of room. The side setting still decides everywhere else.
             val side = if (alignment == HomeAlignment.RIGHT) IconSide.RIGHT else iconSide
-            val iconModifier = if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier
+            val iconModifier = Modifier
+                .pressPop(interaction)
+                .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier)
             if (side == IconSide.RIGHT) {
                 balance()
                 text()

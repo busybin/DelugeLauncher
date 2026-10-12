@@ -68,7 +68,6 @@
 
     <!-- Toasts -->
     <string name="toast_enable_accessibility_shade">通知を開くには、設定 → ユーザー補助でDeluge Launcherを有効にしてください</string>
-    <string name="toast_enable_accessibility_lock">画面をロックするには、設定 → ユーザー補助でDeluge Launcherを有効にしてください</string>
 
     <!-- Settings -->
     <string name="settings_title">Delugeの設定</string>
@@ -130,7 +129,6 @@
     <string name="settings_edge_side">アプリ一覧を開く画面の端</string>
     <string name="settings_double_tap_lock">ダブルタップで画面をロック</string>
     <string name="settings_double_tap_lock_detail">A-Zバーを2回タップします</string>
-    <string name="settings_lock_needs_accessibility">ユーザー補助でDeluge Launcherを有効にする必要があります。スイッチがグレーアウトしている場合は、アプリ情報を開き、⋮メニューから制限付き設定を許可してください。</string>
     <string name="settings_az_visibility">ホーム画面にA-Zバーを表示</string>
     <string name="az_visibility_never">しない</string>
     <string name="az_visibility_landscape">横向き</string>
@@ -416,4 +414,70 @@
     <string name="prompt_default_skip">後で</string>
     <string name="settings_changelog">変更履歴</string>
     <string name="settings_changelog_detail">各バージョンの変更点</string>
+    <string name="settings_corner_tap">ボタンをタップ</string>
+    <string name="settings_corner_swipe">ボタンを上にスワイプ</string>
+    <string name="settings_night_start">夜の開始</string>
+    <string name="settings_night_end">夜の終了</string>
+    <string name="settings_two_column_needs_rotation">「端末に合わせて回転」をオンにする必要があります。</string>
+    <string name="applist_empty_search">該当なし</string>
+    <string name="applist_empty_list">表示できるものはありません</string>
+    <string name="corner_action_failed">この端末ではできるものがありません</string>
+    <string name="corner_action_app_list">アプリ一覧を開く</string>
+    <string name="corner_action_search">アプリ一覧の検索を開く</string>
+    <string name="corner_action_camera">カメラを開く</string>
+    <string name="corner_action_flashlight">ライトを切り替え</string>
+    <string name="corner_action_shade">通知シェードを開く</string>
+    <string name="corner_action_lock">画面をロック</string>
+    <string name="torch_on">ライトオン</string>
+    <string name="torch_off">ライトオフ</string>
+    <string name="action_change_wallpaper">壁紙を変更</string>
+    <string name="wallpaper_no_picker">壁紙選択が見つかりません</string>
+    <string name="action_lock_app">アプリをロック</string>
+    <string name="action_unlock_app">アプリのロック解除</string>
+    <string name="action_set_tag">タグを設定</string>
+    <string name="tag_label">タグ</string>
+    <string name="tag_new">新しいタグ</string>
+    <string name="tag_selected_count">%1$d件選択中</string>
+    <string name="tag_remove">タグを外す</string>
+    <string name="app_lock_title">開くにはロック解除</string>
+    <string name="app_lock_prompt">%1$sを開くには画面ロックを認証してください</string>
+    <string name="settings_color_scheme">カラースキーム</string>
+    <string name="settings_color_scheme_detail">指定がなければDelugeブルー。壁紙はAndroid 12以降、それ未満はブルーになります。</string>
+    <string name="scheme_deluge_blue">Delugeブルー</string>
+    <string name="scheme_dynamic">壁紙</string>
+    <string name="scheme_purple">パープル</string>
+    <string name="scheme_green">グリーン</string>
+    <string name="scheme_red">レッド</string>
+    <string name="scheme_orange">オレンジ</string>
+    <string name="scheme_yellow">イエロー</string>
+    <string name="scheme_pink">ピンク</string>
+    <string name="scheme_teal">ティール</string>
+    <string name="haptic_off">オフ</string>
+    <string name="haptic_light">弱</string>
+    <string name="haptic_medium">中</string>
+    <string name="haptic_strong">強</string>
+    <string name="settings_two_column_home_portrait">ホーム2列（縦）</string>
+    <string name="settings_two_column_home_portrait_detail">縦向きで1行にお気に入りを2つ並べます。</string>
+    <string name="settings_two_column_home_landscape">ホーム2列（横）</string>
+    <string name="settings_two_column_home_landscape_detail">横向きで1行にお気に入りを2つ並べます。</string>
+    <string name="settings_two_column_list_portrait">一覧2列（縦）</string>
+    <string name="settings_two_column_list_portrait_detail">縦向きで1行にアプリを2つ並べます。</string>
+    <string name="settings_two_column_list_landscape">一覧2列（横）</string>
+    <string name="settings_two_column_list_landscape_detail">横向きで1行にアプリを2つ並べます。</string>
+    <string name="settings_developer_mode">開発者モード</string>
+    <string name="settings_developer_mode_detail">スクショ用にアプリ名とアイコンを偽装し、ステータスバーを隠します。</string>
+    <string name="developer_unlocked">開発者モードを有効化</string>
+    <string name="settings_auto_dark">夜間ダークテーマ</string>
+    <string name="settings_auto_dark_detail">システムに従わず、夜はダーク・朝はライトに切り替えます。</string>
+    <string name="settings_reduce_motion">モーション軽減</string>
+    <string name="settings_reduce_motion_detail">ランチャー独自の遷移を省き、一覧を開く動作とフェードを同時にします。</string>
+    <string name="settings_pinch_resize">ピンチでアイコンサイズ</string>
+    <string name="settings_pinch_resize_detail">ホームで2本指を動かすとアイコンサイズが変わります。</string>
+    <string name="hide_confirm_message">%1$sをアプリ一覧から隠しますか？設定＞アプリ＞隠したアプリから戻せます。</string>
+    <string name="settings_lock_setup">錠には権限が必要</string>
+    <string name="settings_lock_setup_detail">ロックにはユーザー補助の有効化が必要です。監視はせず、ロックするだけです。</string>
+    <string name="corner_action_open_app">アプリを開く</string>
+    <string name="corner_action_open_shortcut">ショートカットを開く</string>
+    <string name="corner_action_do_nothing">何もしない</string>
+    <string name="slot_no_shortcuts">ピン留めしたショートカットはまだありません</string>
 </resources>

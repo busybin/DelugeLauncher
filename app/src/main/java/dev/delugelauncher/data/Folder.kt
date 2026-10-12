@@ -48,7 +48,12 @@ internal fun foldersFromJson(json: String?): List<Folder> {
         val array = JSONArray(json)
         (0 until array.length()).mapNotNull { i ->
             val obj = array.optJSONObject(i) ?: return@mapNotNull null
-            val id = obj.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            // Folder ids travel inside route strings, so they are limited to what a route
+            // can carry: anything else (a hand-edited backup) is refused rather than
+            // stored, or "folder/" + id splits into the wrong number of segments.
+            val id = obj.optString("id").takeIf {
+                it.isNotBlank() && it.all { c -> c.isLetterOrDigit() || c == '-' || c == '_' }
+            } ?: return@mapNotNull null
             val appsArray = obj.optJSONArray("apps") ?: JSONArray()
             Folder(
                 id = id,

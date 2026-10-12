@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v22">
+        <item>Botón de esquina: pulsar cede, mantener desliza para ejecutar; toque y desliz eligen entre nueve acciones; arrástralo a donde quieras en edición.</item>
+        <item>Deslizar bajo favoritos ofrece las mismas nueve acciones, un juego por lado.</item>
+        <item>Oscuro auto sigue horas de noche propias.</item>
+        <item>Cada gesto enlaza su propia app o acceso, suma no hacer nada, y salir del selector sin elegir no cambia nada.</item>
+        <item>Barra de notificaciones de vuelta; el clima sobrevive reinicios; conteos del widget correctos.</item>
+        <item>Copias dejan fuera la app privada del botón y conservan el idioma.</item>
+        <item>La banda de letras aterriza al momento; el precalentado comparte núcleos con el dedo.</item>
+        <item>Más de quince arreglos de auditoría: bucle de linterna, textos de carpetas, atenuado, archivado de búsqueda y más.</item>
+        <item>Los 11 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v21">
         <item>Inicio y lista con doble columna vertical/horizontal; pares nivelados.</item>
         <item>Intensidad: off/suave/media/fuerte.</item>

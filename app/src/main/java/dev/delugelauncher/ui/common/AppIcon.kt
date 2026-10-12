@@ -43,6 +43,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.yield
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 /** Per-app icon overrides are stored either as a gallery `content://` URI or as `pack:<pkg>:<drawable>`. */
 const val ICON_PACK_OVERRIDE_PREFIX = "pack:"
@@ -77,11 +80,34 @@ private object IconCache {
     fun put(key: String, value: ImageBitmap) = cache.put(key, value)
 
     /**
+     * Marks a key most-recently-used without decoding anything: a [get] that drops its
+     * answer. The warm pass ends with this for the icons on screen, so the long tail it
+     * rasterised after them does not evict exactly those on a small heap.
+     */
+    fun touch(key: String) {
+        cache.get(key)
+    }
+
+    /**
      * Dropped wholesale when a package is added, removed or changed: an app that ships a new
      * icon in an update keeps none of the key's components, so nothing else would invalidate
      * the stale bitmap.
      */
     fun clear() = cache.evictAll()
+
+    /** Only one package's rows: a single update must not empty the whole cache. */
+    fun clearPackage(packageName: String) {
+        cache.snapshot().keys
+            .filter { cacheKeyPackage(it) == packageName }
+            .forEach { cache.remove(it) }
+    }
+}
+
+/** The package a cache key belongs to: the app key is `package/class`, before the first `|`. */
+private fun cacheKeyPackage(key: String): String {
+    val head = key.substringBefore('|')
+    if (head.startsWith("shortcut:")) return ""
+    return head.substringBefore('/')
 }
 
 fun clearIconCache() = IconCache.clear()
@@ -102,26 +128,52 @@ fun clearIconCache() = IconCache.clear()
  * the files it would save.
  */
 private object IconDiskCache {
-    private const val DIR = "icon_cache_v1"
+    private const val DIR = "icon_cache_v2"
+    private const val OLD_DIR = "icon_cache_v1"
     private const val MAX_BYTES = 48L * 1024L * 1024L
 
+    // One mkdir per process: the directory does not move under us.
+    private lateinit var dirFile: java.io.File
+
     private fun dir(context: Context): java.io.File {
-        return java.io.File(context.filesDir, DIR).apply { mkdirs() }
+        if (!::dirFile.isInitialized) {
+            dirFile = java.io.File(context.filesDir, DIR).apply { mkdirs() }
+            // Previous naming had no package prefix; drop it once rather than carrying
+            // unreachable files beside the new ones.
+            runCatching { java.io.File(context.filesDir, OLD_DIR).deleteRecursively() }
+        }
+        return dirFile
     }
 
-    private fun fileFor(context: Context, key: String): java.io.File {
-        val hex = runCatching {
+    // The hex of a key, memoized: warming a few hundred icons used to hash every key twice
+    // (once to read, once to write) plus a mkdir per lookup.
+    private val hexCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun hex(key: String): String = hexCache.getOrPut(key) {
+        if (hexCache.size > 4000) hexCache.clear()
+        runCatching {
             val digest = java.security.MessageDigest.getInstance("SHA-256")
             digest.digest(key.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
         }.getOrNull() ?: key.hashCode().toString()
-        return java.io.File(dir(context), "$hex.png")
     }
+
+    private fun packagePrefix(key: String): String =
+        cacheKeyPackage(key).replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+
+    private fun fileFor(context: Context, key: String): java.io.File {
+        return java.io.File(dir(context), "${packagePrefix(key)}_${hex(key)}.png")
+    }
+
+    // Touching the mtime on every hit is a write syscall per icon per warm; one in ten keeps
+    // the LRU honest for a tenth of the cost.
+    private val touchCounter = java.util.concurrent.atomic.AtomicInteger(0)
 
     fun get(context: Context, key: String): ImageBitmap? {
         val file = fileFor(context, key)
         if (!file.exists()) return null
         return runCatching {
-            file.setLastModified(System.currentTimeMillis())
+            if (touchCounter.incrementAndGet() % 10 == 0) {
+                file.setLastModified(System.currentTimeMillis())
+            }
             android.graphics.BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap()
         }.getOrNull()
     }
@@ -135,14 +187,32 @@ private object IconDiskCache {
     }
 
     fun clear(context: Context) {
-        runCatching { dir(context).deleteRecursively() }
+        runCatching { dir(context).deleteRecursively(); dir(context).mkdirs() }
     }
+
+    /** Only one package's files: names carry their package prefix for exactly this. */
+    fun clearPackage(context: Context, packageName: String) {
+        val safe = packageName.replace(Regex("[^A-Za-z0-9._-]"), "_").take(64)
+        runCatching {
+            dir(context).listFiles { file -> file.name.startsWith(safe + "_") }
+                ?.forEach { it.delete() }
+        }
+    }
+
+    // Throttled: a readdir+stat of a few hundred files every warm is pure overhead while the
+    // directory is nowhere near the cap. The cap is still enforced whenever it is checked.
+    private var lastSweepMs = 0L
 
     /** Drops the stalest files until the directory fits. Runs rarely; keep it simple. */
     fun sweep(context: Context) {
+        val now = System.currentTimeMillis()
         runCatching {
             val files = dir(context).listFiles() ?: return
             var total = files.sumOf { it.length() }
+            if (total <= MAX_BYTES) {
+                if (now - lastSweepMs < 12L * 60L * 60L * 1000L) return
+            }
+            lastSweepMs = now
             if (total <= MAX_BYTES) return
             files.sortedBy { it.lastModified() }.forEach { file ->
                 if (total <= MAX_BYTES) return
@@ -163,6 +233,17 @@ fun clearIconDiskCache(context: Context) {
     val app = context.applicationContext
     if (app is DelugeApp) app.offMain { IconDiskCache.clear(app) }
     else IconDiskCache.clear(context)
+}
+
+/**
+ * One package's icons, memory and disk, leaving the rest cached: an update or uninstall
+ * touches one app, and the next warm must not redraw the other three hundred.
+ */
+fun clearIconCacheForPackage(context: Context, packageName: String) {
+    IconCache.clearPackage(packageName)
+    val app = context.applicationContext
+    if (app is DelugeApp) app.offMain { IconDiskCache.clearPackage(app, packageName) }
+    else IconDiskCache.clearPackage(context, packageName)
 }
 
 // The class name is in here for the rows whose key alone cannot tell two pictures apart: the
@@ -189,6 +270,11 @@ data class IconStyle(
  * Memory, then disk, then the drawable, with the last two off the main thread. A decode costs
  * an order of magnitude less than a rasterise, and the order is what makes the second cold
  * start fast rather than merely warm.
+ *
+ * The disk and rasterise half runs behind [iconDecodeGate], shared with the warm pass:
+ * rasterising is CPU-bound, and a cold scrub used to fire one unbounded IO job per new row
+ * — dozens of them at once, every core saturated exactly when the finger needed them.
+ * The memory hit above stays outside the gate: it never blocks.
  */
 private suspend fun loadIconBitmap(
     context: Context,
@@ -199,28 +285,43 @@ private suspend fun loadIconBitmap(
     px: Int,
     style: IconStyle,
     key: String,
-): ImageBitmap? = withContext(Dispatchers.IO) {
-    IconCache.get(key)?.let { return@withContext it }
-    IconDiskCache.get(context, key)?.let {
-        IconCache.put(key, it)
-        return@withContext it
+): ImageBitmap? {
+    IconCache.get(key)?.let { return it }
+    return withContext(Dispatchers.IO) {
+        iconDecodeGate.withPermit {
+            IconDiskCache.get(context, key)?.let {
+                IconCache.put(key, it)
+                return@withPermit it
+            }
+            runCatching {
+                val drawable = resolveDrawable(context, delugeApp, app, iconPack, override)
+                val bitmap = renderIcon(drawable, px, style.shape, style.themed, style.background, style.foreground)
+                IconDiskCache.put(context, key, bitmap)
+                bitmap.asImageBitmap().also { IconCache.put(key, it) }
+            }.getOrNull()
+        }
     }
-    runCatching {
-        val drawable = resolveDrawable(context, delugeApp, app, iconPack, override)
-        val bitmap = renderIcon(drawable, px, style.shape, style.themed, style.background, style.foreground)
-        IconDiskCache.put(context, key, bitmap)
-        bitmap.asImageBitmap().also { IconCache.put(key, it) }
-    }.getOrNull()
 }
+
+/**
+ * How many icons rasterise at once, system-wide. Enough that a cold list fills in visibly;
+ * few enough that a cold scrub still has cores left for the finger. The warm pass and the
+ * rows' own loads share it, so their totals never stack.
+ */
+private val iconDecodeGate = Semaphore(3)
 /**
  * Decode every app's icon ahead of time, off the main thread. Without this the first open of
  * the A-Z list rasterises a screenful of icons synchronously during composition, which is
  * what made it take a beat to appear.
  *
- * Work is fanned out across the dispatcher rather than run one icon at a time, and
- * [priorityKeys] (favorites and folder members) go first so the home screen is covered before
- * the long tail of everything else installed. The disk cache is swept at the end, once per
- * enumeration rather than once per icon.
+ * Work fans out across the dispatcher but rasterises behind a shared three-permit gate
+ * (see [loadIconBitmap]): rasterising is CPU-bound, and one job per app used to saturate
+ * every core while the user was already scrubbing — the first gesture after install
+ * stuttered against the warm pass itself, then went smooth once the pass was done.
+ * Favorites and folder members go first
+ * so the home screen is covered before the long tail of everything else installed, and are
+ * touched again at the end so that tail does not evict them from the LRU on a small heap.
+ * The disk cache is swept at the end, once per enumeration rather than once per icon.
  */
 suspend fun warmIconCache(
     context: Context,
@@ -234,10 +335,14 @@ suspend fun warmIconCache(
     if (px <= 0 || apps.isEmpty()) return
     val delugeApp = context.applicationContext as DelugeApp
 
-    suspend fun warm(app: AppInfo) {
+    fun styledFor(app: AppInfo): Pair<String?, IconStyle> {
         val override = overrides[app.key]
         val styled = override == null && iconPack == null
-        val own = if (styled) style else style.copy(shape = IconShape.SYSTEM, themed = false)
+        return override to if (styled) style else style.copy(shape = IconShape.SYSTEM, themed = false)
+    }
+
+    suspend fun warm(app: AppInfo) {
+        val (override, own) = styledFor(app)
         val key = iconCacheKey(app, iconPack, override, px, own)
         loadIconBitmap(context, delugeApp, app, iconPack, override, px, own, key)
     }
@@ -246,11 +351,19 @@ suspend fun warmIconCache(
     // Explicitly off the caller's dispatcher: this is invoked from a LaunchedEffect, which
     // runs on Main, and coroutineScope/async would inherit it.
     withContext(Dispatchers.Default) {
+        // The loads themselves take the shared gate inside loadIconBitmap; fanning out here
+        // only queues them. Lets a frame's own work cut in between chunks rather than
+        // after the whole pass.
         for (group in listOf(first, rest)) {
             if (group.isEmpty()) continue
             group.chunked(CHUNK_SIZE)
                 .map { chunk -> async { chunk.forEach { warm(it) } } }
                 .awaitAll()
+            yield()
+        }
+        for (app in first) {
+            val (override, own) = styledFor(app)
+            IconCache.touch(iconCacheKey(app, iconPack, override, px, own))
         }
         IconDiskCache.sweep(context)
     }
@@ -383,8 +496,11 @@ private fun ScreenshotTile(name: String, sizeDp: Int, modifier: Modifier = Modif
 @Composable
 private fun notificationBadgeCount(app: AppInfo): Int {
     if (!LocalIconConfig.current.notificationBadges) return 0
-    val counts by NotificationCountBus.counts.collectAsState()
-    return counts[app.componentName.packageName] ?: 0
+    // Per package, not the whole map: any app's count changing used to recompose every
+    // visible row; this only emits when this package's own number moves.
+    val count by NotificationCountBus.countFor(app.componentName.packageName)
+        .collectAsState(initial = 0)
+    return count
 }
 
 /**
