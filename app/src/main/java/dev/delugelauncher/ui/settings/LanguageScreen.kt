@@ -46,9 +46,9 @@ private data class LanguageOption(val tag: String?, val label: String)
 private val LANGUAGES = listOf(
     LanguageOption(null, "System default"),
     LanguageOption("en", "English"),
-    LanguageOption("zh-CN", "简体中文"),
-    LanguageOption("zh-TW", "繁體中文"),
-    LanguageOption("ja", "日本語"),
+    LanguageOption("zh-CN", "Chinese (Simplified)"),
+    LanguageOption("zh-TW", "Chinese (Traditional)"),
+    LanguageOption("ja", "Japanese"),
     LanguageOption("ko", "한국어"),
     LanguageOption("de", "Deutsch"),
     LanguageOption("es", "Español"),

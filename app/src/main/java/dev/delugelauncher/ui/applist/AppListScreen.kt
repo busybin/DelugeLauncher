@@ -359,8 +359,6 @@ fun AppListScreen(
         displayModel = withContext(Dispatchers.Default) {
             searchModel
                 .filtered { app ->
-                    // The name it shows, its pinyin (微信 answers to "wx"), and — for a phone
-                    // that names everything in its own language, so Settings calls itself 設定
                     // — the package name, where the English word is still sitting.
                     PinyinSearch.rank(displayName(app), app.componentName.packageName, term) !=
                         PinyinSearch.NO_MATCH
@@ -1864,7 +1862,6 @@ private fun AppRow(
             val text: @Composable () -> Unit = {
                 // The name, with whatever the query matched picked out. A pinyin hit marks the
                 // characters it was read from, not the letters that were typed — typing "wx"
-                // underlines 微信 rather than leaving the row looking unmatched.
                 val shown = if (matched == null) {
                     AnnotatedString(label)
                 } else {

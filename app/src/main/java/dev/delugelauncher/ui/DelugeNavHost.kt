@@ -98,6 +98,9 @@ import dev.delugelauncher.ui.settings.LanguageScreen
 import dev.delugelauncher.ui.theme.DEFAULT_SHADOW_STRENGTH
 import dev.delugelauncher.ui.settings.ManageFavoritesScreen
 import dev.delugelauncher.ui.settings.SettingsScreen
+import dev.delugelauncher.ui.settings.SettingsScreenModel
+import dev.delugelauncher.ui.settings.SettingsActionsA
+import dev.delugelauncher.ui.settings.SettingsActionsB
 import dev.delugelauncher.ui.theme.rememberContentColor
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.widget.WidgetPickerActivity
@@ -113,7 +116,6 @@ import kotlinx.coroutines.withContext
  * Everything the destinations need is read here rather than in each screen, so the DataStore
  * is collected once per key instead of once per consumer.
  */
-/** How many of the most-used apps the 常用 tag covers. */
 private const val FREQUENT_TAG_COUNT = 5
 
 /**
@@ -620,7 +622,6 @@ fun DelugeNavHost(
     // named in this language stays put when the language changes.
     val frequentTag = stringResource(R.string.tag_frequent)
 
-    /** The keys that should carry the 常用 tag right now: five most-used non-favorites. */
     fun topFrequentKeys(): Set<String> = appsByKey.values
         .filter { it.kind == EntryKind.APP && it.key !in favoriteKeys && (launchCounts[it.key] ?: 0) > 0 }
         .sortedByDescending { launchCounts[it.key] ?: 0 }
@@ -632,7 +633,6 @@ fun DelugeNavHost(
     // the tag, whoever falls out loses it, other tags untouched. Keyed on everything that
     // decides membership but not on the tags themselves, so writing them does not loop.
     // A language switch changes the tag's own word: every other language's word is stripped
-    // first, or 常用 and Frequent stand side by side. Reserved words can only ever come from
     // here (the picker refuses them), so sweeping them all is safe. The recorded words cover
     // languages added after the static set was written.
     LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
@@ -1086,13 +1086,188 @@ fun DelugeNavHost(
                     }.getOrDefault(false)
                 }
             }
-            SettingsScreen(
+            @Composable
+            fun buildActionsA() = SettingsActionsA(
+                    onSetShowFavoriteIcons = { scope.launch { app.prefs.setShowFavoriteIcons(it) } },
+                    onSetTextShadowStrength = { scope.launch { app.prefs.setTextShadowStrength(it) } },
+                    onSetStayAfterPrivateUnlock = { scope.launch { app.prefs.setStayAfterPrivateUnlock(it) } },
+                    onSetCompactTapArea = { scope.launch { app.prefs.setCompactTapArea(it) } },
+                    onSetPrivateSpaceSection = { scope.launch { app.prefs.setPrivateSpaceSection(it) } },
+                    onSetRecentSection = { scope.launch { app.prefs.setRecentSection(it) } },
+                    onSetRecentSectionCount = { scope.launch { app.prefs.setRecentSectionCount(it) } },
+                    onSetTextShadow = { scope.launch { app.prefs.setTextShadow(it) } },
+                    onSetEdgeZoneInsetAuto = { scope.launch { app.prefs.setEdgeZoneInsetAuto(it) } },
+                    onSetEdgeZoneInsetDp = { scope.launch { app.prefs.setEdgeZoneInsetDp(it) } },
+                    onSetMarkWorkApps = { scope.launch { app.prefs.setMarkWorkApps(it) } },
+                    onSetDimOthersScrubbing = { scope.launch { app.prefs.setDimOthersScrubbing(it) } },
+                    onSetWebSearchFallback = { scope.launch { app.prefs.setWebSearchFallback(it) } },
+                    onSetSwipeUpOpensSearch = { scope.launch { app.prefs.setSwipeUpOpensSearch(it) } },
+                    onSetHoldScroll = { scope.launch { app.prefs.setHoldScroll(it) } },
+                    onSetHoldScrollSpeed = { scope.launch { app.prefs.setHoldScrollSpeed(it) } },
+                    onSetEdgeZoneBandOnly = { scope.launch { app.prefs.setEdgeZoneBandOnly(it) } },
+                    onSetShowSettingsRow = { scope.launch { app.prefs.setShowSettingsRow(it) } },
+                    onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
+                    onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
+                    onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
+                    onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
+                    onSetCornerTapAction = { scope.launch { app.prefs.setCornerTapAction(it) } },
+                    onSetCornerSwipeAction = { scope.launch { app.prefs.setCornerSwipeAction(it) } },
+                    onSetNightStartHour = { scope.launch { app.prefs.setNightStartHour(it) } },
+                    onSetNightEndHour = { scope.launch { app.prefs.setNightEndHour(it) } },
+                    onSetPinchToResize = { scope.launch { app.prefs.setPinchToResize(it) } },
+                    onSetReduceMotion = { scope.launch { app.prefs.setReduceMotion(it) } },
+                    onSetSectionTopPercent = { scope.launch { app.prefs.setSectionTopPercent(it) } },
+                    onSetCloseFolderOnLaunch = { scope.launch { app.prefs.setCloseFolderOnLaunch(it) } },
+                    onSetFavoritesSource = { scope.launch { app.prefs.setFavoritesSource(it) } },
+                    onSetFrequentCount = { scope.launch { app.prefs.setFrequentCount(it) } },
+                    onSetScreenshotMode = { scope.launch { app.prefs.setScreenshotMode(it) } },
+                    onSetIconPack = { scope.launch { app.prefs.setIconPackPackage(it) } },
+                    onSetShowAppIcons = { scope.launch { app.prefs.setShowAppIcons(it) } },
+                    onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
+                    onSetLabelSize = { scope.launch { app.prefs.setLabelSizeSp(it) } },
+                    onSetItemSpacing = { scope.launch { app.prefs.setItemSpacingDp(it) } },
+                    onSetFont = { scope.launch { app.prefs.setFont(it) } },
+                    onSetColorScheme = { scope.launch { app.prefs.setColorSchemeChoice(it) } },
+                    onSetHideStatusBar = { scope.launch { app.prefs.setHideStatusBar(it) } },
+                    onSetHideStatusBarAppList = { scope.launch { app.prefs.setHideStatusBarAppList(it) } },
+                    onSetStatusBarPeekSeconds = { scope.launch { app.prefs.setStatusBarPeekSeconds(it) } },
+                    onSetDimWallpaper = { scope.launch { app.prefs.setDimWallpaperAlpha(it) } },
+                    onSetWallpaperBlur = { scope.launch { app.prefs.setWallpaperBlurDp(it) } },
+            )
+
+            @Composable
+            fun buildActionsB() = SettingsActionsB(
+                    onSetHapticFeedback = { scope.launch { app.prefs.setHapticFeedback(it) } },
+                    onSetDimHome = { scope.launch { app.prefs.setDimHomeAlpha(it) } },
+                    onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
+                    onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
+                    onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
+                    onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
+                    onSetAllowRotation = { scope.launch { app.prefs.setAllowRotation(it) } },
+                    onSetShortcutSwipe = { scope.launch { app.prefs.setShortcutSwipe(it) } },
+                            onExportSettings = { exportLauncher.launch("deluge-launcher-settings.json") },
+                    onImportSettings = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
+                    onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
+                    // Copied in rather than referenced: a document URI is only as durable as the
+                    // file behind it, and a font picked from Downloads would break the moment it
+                    // was moved or cleaned up.
+                    //
+                    // A new name every time: the font on screen is mapped from its file, so
+                    // writing the next one over it garbled the text until a restart (#110).
+                    onPickFontFile = { uri ->
+                        scope.launch {
+                            val path = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    val out = java.io.File(context.filesDir, "custom_font_${System.currentTimeMillis()}")
+                                    context.contentResolver.openInputStream(uri)?.use { input ->
+                                        out.outputStream().use { input.copyTo(it) }
+                                    } ?: return@runCatching null
+                                    // Proves it parses before anything starts drawing with it.
+                                    runCatching { android.graphics.Typeface.createFromFile(out) }
+                                        .onFailure { out.delete() }.getOrThrow()
+                                    context.filesDir.listFiles()
+                                        ?.filter { it.name.startsWith("custom_font") && it != out }
+                                        ?.forEach { it.delete() }
+                                    out.absolutePath
+                                }.getOrNull()
+                            }
+                            if (path == null) {
+                                Toast.makeText(context, R.string.font_custom_failed, Toast.LENGTH_SHORT).show()
+                            } else {
+                                app.prefs.setFontFile(path)
+                                app.prefs.setFont(AppFont.CUSTOM)
+                            }
+                        }
+                    },
+                    onSetDoubleTapToLock = { scope.launch { app.prefs.setDoubleTapToLock(it) } },
+                    onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
+                    onSetEdgeZoneWidth = { scope.launch { app.prefs.setEdgeZoneWidthDp(it) } },
+                    onSetAzStripVisibility = { scope.launch { app.prefs.setAzStripVisibility(it) } },
+                    onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
+                    onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
+                    onSetTwoColumn = { slot, v -> scope.launch { app.prefs.setTwoColumn(slot, v) } },
+                    onSetAutoFrequentTag = {
+                        scope.launch {
+                            // Turning it off takes its tags back with it: they were its doing,
+                            // and leaving them would freeze a ranking that no longer updates.
+                            // Every language's word, in case the language moved since — plus
+                            // every word ever recorded, for languages added after the set.
+                            if (!it) {
+                                val reserved = RESERVED_TAGS + autoFrequentWords
+                                appsByKey.values.forEach { a ->
+                                    val current = appTags[a.key] ?: emptySet()
+                                    val stripped = current - reserved
+                                    if (stripped != current) app.prefs.setAppTags(a.key, stripped)
+                                }
+                            }
+                            app.prefs.setAutoFrequentTag(it)
+                        }
+                    },
+                    onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
+                    onSetAppListSearchBottom = { scope.launch { app.prefs.setAppListSearchBottom(it) } },
+                    onSetAppListSearchHidden = { scope.launch { app.prefs.setAppListSearchHidden(it) } },
+                    onSetSwipeUpOpensList = { scope.launch { app.prefs.setSwipeUpOpensList(it) } },
+                    onOpenSlotPicker = { slot, kind ->
+                        navController.navigate("slotpicker/" + slot.name + "/" + kind.name)
+                    },
+                    onSetQuickLaunchLeftAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.LEFT, it) } },
+                    onSetQuickLaunchRightAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.RIGHT, it) } },
+                    onSetLastLetterToLine = { scope.launch { app.prefs.setLastLetterToLine(it) } },
+                    onSetAutoKeyboard = { scope.launch { app.prefs.setAutoKeyboard(it) } },
+                    onSetAlignment = { scope.launch { app.prefs.setAlignment(it) } },
+                    onSetAppListAlignment = { scope.launch { app.prefs.setAppListAlignment(it) } },
+                    onSetIconSide = { scope.launch { app.prefs.setIconSide(it) } },
+                    onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
+                    onOpenAccessibilitySettings = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    onOpenAppInfo = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                .setData(Uri.fromParts("package", context.packageName, null))
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    onOpenHiddenApps = { navController.navigate("settings/hidden") },
+                    onOpenHomeSettings = {
+                        settingsTick++
+                        // The system screen, never a silent switch: which launcher runs is the
+                        // user's to say and Android asks them properly.
+                        val opened = runCatching {
+                            context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
+                            true
+                        }.getOrDefault(false)
+                        if (!opened) {
+                            runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
+                        }
+                    },
+                    onOpenFrequentExcluded = { navController.navigate("settings/frequentexcluded") },
+                    onOpenFavorites = { navController.navigate("favorites") },
+                    onOpenLanguage = { navController.navigate("settings/language") },
+                    onOpenChangelog = { navController.navigate("settings/changelog") },
+                    onCheckForUpdates = { checkForUpdates() },
+                    onOpenReleasePage = { openReleasePage() },
+                    onOpenNotificationSettings = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    },
+                    onBack = { navController.popBackStack() },
+            )
+
+            val actionsA = buildActionsA()
+            val actionsB = buildActionsB()
+            SettingsScreen(SettingsScreenModel(
                 hiddenCount = hiddenShownCount,
                 iconPacks = iconPacks,
                 iconPackPackage = iconPackPackage,
                 showAppIcons = showAppIcons,
                 showFavoriteIcons = showFavoriteIcons,
-                onSetShowFavoriteIcons = { scope.launch { app.prefs.setShowFavoriteIcons(it) } },
+                onSetShowFavoriteIcons = actionsA.onSetShowFavoriteIcons,
                 showListHeaders = showListHeaders,
                 showSettingsRow = showSettingsRow,
                 edgeZoneBandOnly = edgeZoneBandOnly,
@@ -1101,60 +1276,60 @@ fun DelugeNavHost(
                 markWorkApps = markWorkApps,
                 textShadow = textShadow,
                 textShadowStrength = textShadowStrength,
-                onSetTextShadowStrength = { scope.launch { app.prefs.setTextShadowStrength(it) } },
+                onSetTextShadowStrength = actionsA.onSetTextShadowStrength,
                 compactTapArea = compactTapArea,
                 stayAfterPrivateUnlock = stayAfterPrivateUnlock,
-                onSetStayAfterPrivateUnlock = { scope.launch { app.prefs.setStayAfterPrivateUnlock(it) } },
-                onSetCompactTapArea = { scope.launch { app.prefs.setCompactTapArea(it) } },
+                onSetStayAfterPrivateUnlock = actionsA.onSetStayAfterPrivateUnlock,
+                onSetCompactTapArea = actionsA.onSetCompactTapArea,
                 privateSpaceSection = privateSpaceSection,
-                onSetPrivateSpaceSection = { scope.launch { app.prefs.setPrivateSpaceSection(it) } },
+                onSetPrivateSpaceSection = actionsA.onSetPrivateSpaceSection,
                 recentSection = recentSection,
-                onSetRecentSection = { scope.launch { app.prefs.setRecentSection(it) } },
+                onSetRecentSection = actionsA.onSetRecentSection,
                 recentSectionCount = recentSectionCount,
-                onSetRecentSectionCount = { scope.launch { app.prefs.setRecentSectionCount(it) } },
-                onSetTextShadow = { scope.launch { app.prefs.setTextShadow(it) } },
+                onSetRecentSectionCount = actionsA.onSetRecentSectionCount,
+                onSetTextShadow = actionsA.onSetTextShadow,
                 edgeZoneInsetDp = edgeZoneInsetDp,
                 edgeZoneInsetAuto = edgeZoneInsetAuto,
-                onSetEdgeZoneInsetAuto = { scope.launch { app.prefs.setEdgeZoneInsetAuto(it) } },
-                onSetEdgeZoneInsetDp = { scope.launch { app.prefs.setEdgeZoneInsetDp(it) } },
-                onSetMarkWorkApps = { scope.launch { app.prefs.setMarkWorkApps(it) } },
-                onSetDimOthersScrubbing = { scope.launch { app.prefs.setDimOthersScrubbing(it) } },
+                onSetEdgeZoneInsetAuto = actionsA.onSetEdgeZoneInsetAuto,
+                onSetEdgeZoneInsetDp = actionsA.onSetEdgeZoneInsetDp,
+                onSetMarkWorkApps = actionsA.onSetMarkWorkApps,
+                onSetDimOthersScrubbing = actionsA.onSetDimOthersScrubbing,
                 webSearchFallback = webSearchFallback,
-                onSetWebSearchFallback = { scope.launch { app.prefs.setWebSearchFallback(it) } },
+                onSetWebSearchFallback = actionsA.onSetWebSearchFallback,
                 swipeUpOpensSearch = swipeUpOpensSearch,
-                onSetSwipeUpOpensSearch = { scope.launch { app.prefs.setSwipeUpOpensSearch(it) } },
-                onSetHoldScroll = { scope.launch { app.prefs.setHoldScroll(it) } },
+                onSetSwipeUpOpensSearch = actionsA.onSetSwipeUpOpensSearch,
+                onSetHoldScroll = actionsA.onSetHoldScroll,
                 holdScrollSpeed = holdScrollSpeed,
-                onSetHoldScrollSpeed = { scope.launch { app.prefs.setHoldScrollSpeed(it) } },
-                onSetEdgeZoneBandOnly = { scope.launch { app.prefs.setEdgeZoneBandOnly(it) } },
-                onSetShowSettingsRow = { scope.launch { app.prefs.setShowSettingsRow(it) } },
-                onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
+                onSetHoldScrollSpeed = actionsA.onSetHoldScrollSpeed,
+                onSetEdgeZoneBandOnly = actionsA.onSetEdgeZoneBandOnly,
+                onSetShowSettingsRow = actionsA.onSetShowSettingsRow,
+                onSetShowListHeaders = actionsA.onSetShowListHeaders,
                 notificationBadges = notificationBadges,
-                onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
+                onSetNotificationBadges = actionsA.onSetNotificationBadges,
                 dimPausedApps = dimPausedApps,
-                onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
+                onSetDimPausedApps = actionsA.onSetDimPausedApps,
                 autoDark = autoDark,
-                onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
+                onSetAutoDark = actionsA.onSetAutoDark,
                 cornerTapAction = cornerTapAction,
-                onSetCornerTapAction = { scope.launch { app.prefs.setCornerTapAction(it) } },
+                onSetCornerTapAction = actionsA.onSetCornerTapAction,
                 cornerSwipeAction = cornerSwipeAction,
-                onSetCornerSwipeAction = { scope.launch { app.prefs.setCornerSwipeAction(it) } },
+                onSetCornerSwipeAction = actionsA.onSetCornerSwipeAction,
                 nightStartHour = nightStartHour,
-                onSetNightStartHour = { scope.launch { app.prefs.setNightStartHour(it) } },
+                onSetNightStartHour = actionsA.onSetNightStartHour,
                 nightEndHour = nightEndHour,
-                onSetNightEndHour = { scope.launch { app.prefs.setNightEndHour(it) } },
+                onSetNightEndHour = actionsA.onSetNightEndHour,
                 pinchToResize = pinchToResize,
-                onSetPinchToResize = { scope.launch { app.prefs.setPinchToResize(it) } },
+                onSetPinchToResize = actionsA.onSetPinchToResize,
                 reduceMotion = reduceMotion,
-                onSetReduceMotion = { scope.launch { app.prefs.setReduceMotion(it) } },
+                onSetReduceMotion = actionsA.onSetReduceMotion,
                 sectionTopPercent = sectionTopPercent,
-                onSetSectionTopPercent = { scope.launch { app.prefs.setSectionTopPercent(it) } },
+                onSetSectionTopPercent = actionsA.onSetSectionTopPercent,
                 closeFolderOnLaunch = closeFolderOnLaunch,
-                onSetCloseFolderOnLaunch = { scope.launch { app.prefs.setCloseFolderOnLaunch(it) } },
+                onSetCloseFolderOnLaunch = actionsA.onSetCloseFolderOnLaunch,
                 favoritesSource = favoritesSource,
-                onSetFavoritesSource = { scope.launch { app.prefs.setFavoritesSource(it) } },
+                onSetFavoritesSource = actionsA.onSetFavoritesSource,
                 frequentCount = frequentCount,
-                onSetFrequentCount = { scope.launch { app.prefs.setFrequentCount(it) } },
+                onSetFrequentCount = actionsA.onSetFrequentCount,
                 previewApp = previewApp,
                 iconSizeDp = iconSizeDp,
                 labelSizeSp = labelSizeSp,
@@ -1169,7 +1344,7 @@ fun DelugeNavHost(
                 dimHomeAlpha = dimHomeAlpha,
                 showFavoriteLabels = showFavoriteLabels,
                 screenshotMode = screenshotMode,
-                onSetScreenshotMode = { scope.launch { app.prefs.setScreenshotMode(it) } },
+                onSetScreenshotMode = actionsA.onSetScreenshotMode,
                 textColorMode = textColorMode,
                 textColorCustom = textColorCustom,
                 dimColor = dimColor,
@@ -1193,108 +1368,60 @@ fun DelugeNavHost(
                 iconSide = iconSide,
                 nowPlayingEnabled = nowPlayingEnabled,
                 nowPlayingListenerEnabled = listenerEnabled,
-                onSetIconPack = { scope.launch { app.prefs.setIconPackPackage(it) } },
-                onSetShowAppIcons = { scope.launch { app.prefs.setShowAppIcons(it) } },
-                onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
-                onSetLabelSize = { scope.launch { app.prefs.setLabelSizeSp(it) } },
-                onSetItemSpacing = { scope.launch { app.prefs.setItemSpacingDp(it) } },
-                onSetFont = { scope.launch { app.prefs.setFont(it) } },
-                onSetColorScheme = { scope.launch { app.prefs.setColorSchemeChoice(it) } },
-                onSetHideStatusBar = { scope.launch { app.prefs.setHideStatusBar(it) } },
-                onSetHideStatusBarAppList = { scope.launch { app.prefs.setHideStatusBarAppList(it) } },
-                onSetStatusBarPeekSeconds = { scope.launch { app.prefs.setStatusBarPeekSeconds(it) } },
-                onSetDimWallpaper = { scope.launch { app.prefs.setDimWallpaperAlpha(it) } },
+                onSetIconPack = actionsA.onSetIconPack,
+                onSetShowAppIcons = actionsA.onSetShowAppIcons,
+                onSetIconSize = actionsA.onSetIconSize,
+                onSetLabelSize = actionsA.onSetLabelSize,
+                onSetItemSpacing = actionsA.onSetItemSpacing,
+                onSetFont = actionsA.onSetFont,
+                onSetColorScheme = actionsA.onSetColorScheme,
+                onSetHideStatusBar = actionsA.onSetHideStatusBar,
+                onSetHideStatusBarAppList = actionsA.onSetHideStatusBarAppList,
+                onSetStatusBarPeekSeconds = actionsA.onSetStatusBarPeekSeconds,
+                onSetDimWallpaper = actionsA.onSetDimWallpaper,
                 wallpaperBlurDp = wallpaperBlurDp,
-                onSetWallpaperBlur = { scope.launch { app.prefs.setWallpaperBlurDp(it) } },
-                onSetHapticFeedback = { scope.launch { app.prefs.setHapticFeedback(it) } },
-                onSetDimHome = { scope.launch { app.prefs.setDimHomeAlpha(it) } },
-                onSetShowFavoriteLabels = { scope.launch { app.prefs.setShowFavoriteLabels(it) } },
-                onSetTextColorMode = { scope.launch { app.prefs.setTextColorMode(it) } },
-                onSetTextColorCustom = { scope.launch { app.prefs.setTextColorCustom(it) } },
-                onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
-                onSetAllowRotation = { scope.launch { app.prefs.setAllowRotation(it) } },
-                onSetShortcutSwipe = { scope.launch { app.prefs.setShortcutSwipe(it) } },
-                        onExportSettings = { exportLauncher.launch("deluge-launcher-settings.json") },
-                onImportSettings = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
-                onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
-                // Copied in rather than referenced: a document URI is only as durable as the
-                // file behind it, and a font picked from Downloads would break the moment it
-                // was moved or cleaned up.
-                //
-                // A new name every time: the font on screen is mapped from its file, so
-                // writing the next one over it garbled the text until a restart (#110).
-                onPickFontFile = { uri ->
-                    scope.launch {
-                        val path = withContext(Dispatchers.IO) {
-                            runCatching {
-                                val out = java.io.File(context.filesDir, "custom_font_${System.currentTimeMillis()}")
-                                context.contentResolver.openInputStream(uri)?.use { input ->
-                                    out.outputStream().use { input.copyTo(it) }
-                                } ?: return@runCatching null
-                                // Proves it parses before anything starts drawing with it.
-                                runCatching { android.graphics.Typeface.createFromFile(out) }
-                                    .onFailure { out.delete() }.getOrThrow()
-                                context.filesDir.listFiles()
-                                    ?.filter { it.name.startsWith("custom_font") && it != out }
-                                    ?.forEach { it.delete() }
-                                out.absolutePath
-                            }.getOrNull()
-                        }
-                        if (path == null) {
-                            Toast.makeText(context, R.string.font_custom_failed, Toast.LENGTH_SHORT).show()
-                        } else {
-                            app.prefs.setFontFile(path)
-                            app.prefs.setFont(AppFont.CUSTOM)
-                        }
-                    }
-                },
-                onSetDoubleTapToLock = { scope.launch { app.prefs.setDoubleTapToLock(it) } },
-                onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
-                onSetEdgeZoneWidth = { scope.launch { app.prefs.setEdgeZoneWidthDp(it) } },
-                onSetAzStripVisibility = { scope.launch { app.prefs.setAzStripVisibility(it) } },
-                onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
-                onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
+                onSetWallpaperBlur = actionsA.onSetWallpaperBlur,
+                onSetHapticFeedback = actionsB.onSetHapticFeedback,
+                onSetDimHome = actionsB.onSetDimHome,
+                onSetShowFavoriteLabels = actionsB.onSetShowFavoriteLabels,
+                onSetTextColorMode = actionsB.onSetTextColorMode,
+                onSetTextColorCustom = actionsB.onSetTextColorCustom,
+                onSetDimColor = actionsB.onSetDimColor,
+                onSetAllowRotation = actionsB.onSetAllowRotation,
+                onSetShortcutSwipe = actionsB.onSetShortcutSwipe,
+                onExportSettings = actionsB.onExportSettings,
+                onImportSettings = actionsB.onImportSettings,
+                onSetIconShape = actionsB.onSetIconShape,
+                onSetThemedIcons = actionsB.onSetThemedIcons,
+                onPickFontFile = actionsB.onPickFontFile,
+                onSetDoubleTapToLock = actionsB.onSetDoubleTapToLock,
+                onSetEdgeSide = actionsB.onSetEdgeSide,
+                onSetEdgeZoneWidth = actionsB.onSetEdgeZoneWidth,
+                onSetAzStripVisibility = actionsB.onSetAzStripVisibility,
+                onSetShowAlphabet = actionsB.onSetShowAlphabet,
+                onSetSortByUsage = actionsB.onSetSortByUsage,
                 autoFrequentTag = autoFrequentTag,
                 homeTwoColumnPortrait = homeTwoColumnPortrait,
                 homeTwoColumnLandscape = homeTwoColumnLandscape,
                 listTwoColumnPortrait = listTwoColumnPortrait,
                 listTwoColumnLandscape = listTwoColumnLandscape,
-                onSetTwoColumn = { slot, v -> scope.launch { app.prefs.setTwoColumn(slot, v) } },
-                onSetAutoFrequentTag = {
-                    scope.launch {
-                        // Turning it off takes its tags back with it: they were its doing,
-                        // and leaving them would freeze a ranking that no longer updates.
-                        // Every language's word, in case the language moved since — plus
-                        // every word ever recorded, for languages added after the set.
-                        if (!it) {
-                            val reserved = RESERVED_TAGS + autoFrequentWords
-                            appsByKey.values.forEach { a ->
-                                val current = appTags[a.key] ?: emptySet()
-                                val stripped = current - reserved
-                                if (stripped != current) app.prefs.setAppTags(a.key, stripped)
-                            }
-                        }
-                        app.prefs.setAutoFrequentTag(it)
-                    }
-                },
-                onSetAppListSearch = { scope.launch { app.prefs.setAppListSearchEnabled(it) } },
-                onSetAppListSearchBottom = { scope.launch { app.prefs.setAppListSearchBottom(it) } },
-                onSetAppListSearchHidden = { scope.launch { app.prefs.setAppListSearchHidden(it) } },
-                onSetSwipeUpOpensList = { scope.launch { app.prefs.setSwipeUpOpensList(it) } },
+                onSetTwoColumn = actionsB.onSetTwoColumn,
+                onSetAutoFrequentTag = actionsB.onSetAutoFrequentTag,
+                onSetAppListSearch = actionsB.onSetAppListSearch,
+                onSetAppListSearchBottom = actionsB.onSetAppListSearchBottom,
+                onSetAppListSearchHidden = actionsB.onSetAppListSearchHidden,
+                onSetSwipeUpOpensList = actionsB.onSetSwipeUpOpensList,
                 quickLaunchLeftLabel = quickLaunchLeftKey?.let { key ->
                     appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
                 },
                 quickLaunchRightLabel = quickLaunchRightKey?.let { key ->
                     appsByKey[key]?.let { nameOverrides[it.key] ?: it.label }
                 },
-                onOpenSlotPicker = { slot, kind ->
-                    navController.navigate("slotpicker/" + slot.name + "/" + kind.name)
-                },
+                onOpenSlotPicker = actionsB.onOpenSlotPicker,
                 quickLaunchLeftAction = quickLaunchLeftAction,
-                onSetQuickLaunchLeftAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.LEFT, it) } },
+                onSetQuickLaunchLeftAction = actionsB.onSetQuickLaunchLeftAction,
                 quickLaunchRightAction = quickLaunchRightAction,
-                onSetQuickLaunchRightAction = { scope.launch { app.prefs.setQuickLaunchAction(QuickLaunchSlot.RIGHT, it) } },
+                onSetQuickLaunchRightAction = actionsB.onSetQuickLaunchRightAction,
                 cornerButtonLabel = when (cornerButtonKey) {
                     null -> null
                     EntryKeys.SEARCH -> stringResource(R.string.settings_corner_search)
@@ -1307,59 +1434,33 @@ fun DelugeNavHost(
                 },
                 autoKeyboard = autoKeyboard,
                 lastLetterToLine = lastLetterToLine,
-                onSetLastLetterToLine = { scope.launch { app.prefs.setLastLetterToLine(it) } },
-                onSetAutoKeyboard = { scope.launch { app.prefs.setAutoKeyboard(it) } },
-                onSetAlignment = { scope.launch { app.prefs.setAlignment(it) } },
-                onSetAppListAlignment = { scope.launch { app.prefs.setAppListAlignment(it) } },
-                onSetIconSide = { scope.launch { app.prefs.setIconSide(it) } },
-                onSetNowPlayingEnabled = { scope.launch { app.prefs.setNowPlayingEnabled(it) } },
+                onSetLastLetterToLine = actionsB.onSetLastLetterToLine,
+                onSetAutoKeyboard = actionsB.onSetAutoKeyboard,
+                onSetAlignment = actionsB.onSetAlignment,
+                onSetAppListAlignment = actionsB.onSetAppListAlignment,
+                onSetIconSide = actionsB.onSetIconSide,
+                onSetNowPlayingEnabled = actionsB.onSetNowPlayingEnabled,
                 shadeGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canExpandShade() },
                 lockGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canLockScreen() },
-                onOpenAccessibilitySettings = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                },
-                onOpenAppInfo = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-                            .setData(Uri.fromParts("package", context.packageName, null))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                },
-                onOpenHiddenApps = { navController.navigate("settings/hidden") },
+                onOpenAccessibilitySettings = actionsB.onOpenAccessibilitySettings,
+                onOpenAppInfo = actionsB.onOpenAppInfo,
+                onOpenHiddenApps = actionsB.onOpenHiddenApps,
                 isDefaultLauncher = isDefaultLauncher,
-                onOpenHomeSettings = {
-                    settingsTick++
-                    // The system screen, never a silent switch: which launcher runs is the
-                    // user's to say and Android asks them properly.
-                    val opened = runCatching {
-                        context.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
-                        true
-                    }.getOrDefault(false)
-                    if (!opened) {
-                        runCatching { context.startActivity(Intent(Settings.ACTION_SETTINGS)) }
-                    }
-                },
+                onOpenHomeSettings = actionsB.onOpenHomeSettings,
                 frequentExcludedCount = frequentExcluded.size,
                 frequentExcludedVisible = favoritesSource == FavoritesSource.FREQUENT,
-                onOpenFrequentExcluded = { navController.navigate("settings/frequentexcluded") },
-                onOpenFavorites = { navController.navigate("favorites") },
-                onOpenLanguage = { navController.navigate("settings/language") },
-                onOpenChangelog = { navController.navigate("settings/changelog") },
+                onOpenFrequentExcluded = actionsB.onOpenFrequentExcluded,
+                onOpenFavorites = actionsB.onOpenFavorites,
+                onOpenLanguage = actionsB.onOpenLanguage,
+                onOpenChangelog = actionsB.onOpenChangelog,
                 updateChecking = updateChecking,
                 updateResult = updateResult,
                 updateKnownVersion = updateKnownVersion,
-                onCheckForUpdates = { checkForUpdates() },
-                onOpenReleasePage = { openReleasePage() },
-                onOpenNotificationSettings = {
-                    context.startActivity(
-                        Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
-                },
-                onBack = { navController.popBackStack() },
-            )
+                onCheckForUpdates = actionsB.onCheckForUpdates,
+                onOpenReleasePage = actionsB.onOpenReleasePage,
+                onOpenNotificationSettings = actionsB.onOpenNotificationSettings,
+                onBack = actionsB.onBack,
+            ))
         }
 
         composable("favorites") {

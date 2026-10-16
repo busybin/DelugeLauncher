@@ -141,10 +141,7 @@ internal const val STRIP_LABEL_CHARS = 3
  * each locale: adding a language means adding its word here too, or the picker will let it
  * through by hand and fight the auto-tagger over it.
  */
-internal val RESERVED_TAGS = setOf(
-    "Frequent", "常用", "よく使う", "자주 쓰는", "Häufig",
-    "Frecuentes", "Fréquentes", "Frequenti", "Frequentes", "Частые",
-)
+internal val RESERVED_TAGS = setOf("Frequent")
 
 @Immutable
 sealed interface AppListRow {
@@ -326,7 +323,6 @@ fun buildAppListModel(
     /**
      * The app's name in English, asked for only when its own name has no letter to file under.
      *
-     * A Japanese phone calls an app ブルー, which lands in '#' along with everything else that
      * is not A-Z — so scrubbing to B, where its English name Blue would put it, finds nothing.
      */
     englishName: (AppInfo) -> String? = { null },
