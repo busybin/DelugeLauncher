@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -49,6 +50,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemGestures
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -102,6 +104,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -157,6 +160,7 @@ import dev.delugelauncher.widget.WidgetSlot
 import androidx.compose.ui.semantics.Role
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -609,6 +613,10 @@ fun HomeScreen(
     // Bumps whenever a gesture ends or a new one lands: snaps queued by an earlier gesture
     // check it under the lock and skip, so a lifted finger stops moving the list.
     var dragGeneration by remember { mutableIntStateOf(0) }
+    // The scroll a folder's expansion asks for. Held so a finger that lands on the list
+    // while it runs cancels it, rather than that gesture's first step waiting behind
+    // the animation the way it used to wait behind a fling.
+    var revealScroll by remember { mutableStateOf<Job?>(null) }
     var viewportHeight by remember { mutableIntStateOf(0) }
     var viewportWidth by remember { mutableIntStateOf(0) }
     // What the system bars keep, so the button never slides under them. Read once per
@@ -630,6 +638,17 @@ fun HomeScreen(
         WindowInsets.statusBars.getBottom(density),
         WindowInsets.navigationBars.getBottom(density),
     ).toFloat()
+    // Just the navigation bar's own share of the window: where the home list has to
+    // stop at the bottom of the screen. The max above folds in the status bar too,
+    // which says nothing about the bottom edge an expanded folder would hang past.
+    val navBarBottomPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+    // Android's back gesture owns the outer edge of the screen: a drag that starts inside it
+    // is claimed by the system and never reaches this app. The A-Z strip already steps inside
+    // this same measure (see edgeZoneInsetAuto); the edit-mode drag handle has to as well, or
+    // a reorder drag simply never starts on a gesture-navigated phone. Zero on the buttons.
+    val gestureInsetRightPx = WindowInsets.systemGestures.getRight(density, layoutDir).toFloat()
+    /** Where a grab handle at the end of a row sits: clear of the back gesture. */
+    val dragHandleInsetDp = with(density) { gestureInsetRightPx.toDp() } + EDIT_CONTROL_END_INSET
     // The button's placement frame and the spot it should be at: the stored value once
     // there is one, otherwise the default. Computed, never stored, so a fresh install and
     // a rotation both land somewhere sane.
@@ -765,6 +784,8 @@ fun HomeScreen(
                     // went away mid-gesture): a new finger is a new gesture either way.
                     onCornerOwnershipChanged(false)
                     offsetY.stop()
+                    revealScroll?.cancel()
+                    revealScroll = null
                     rawPullDown = 0f
                     rawPullUp = 0f
                     pullActionFired = false
@@ -1088,15 +1109,10 @@ fun HomeScreen(
                         }
                     }
                 }
+            // One row, drawn wherever its caller has keyed it. The key belongs to the loop
+            // below, which is where a row's identity has to live — see what it says about
+            // branching over the keyed groups.
             val renderItem: @Composable (Int, HomeItem) -> Unit = { index, item ->
-                // Identified by which row it is, not by where it sits. Without this, rows in a
-                // loop are matched up by position from one composition to the next: reordering
-                // feeds different data into the same node rather than moving the node. Two apps
-                // swapping is invisible that way, since their rows are interchangeable — a
-                // folder and an app swapping reuses each other's node, and the row keeps the
-                // size its previous occupant had, which draws the icon clear of the slot its
-                // own handle is still sitting in.
-                key(measureKey(item)) {
                 // Reordering hangs off a visible grab handle now. It used to be a long press
                 // anywhere on the row, which nothing on screen advertised and which fought
                 // every other thing a long press could mean.
@@ -1136,16 +1152,13 @@ fun HomeScreen(
                         }
                         } finally {
                             // detectDragGestures never returns, so this runs only when the
-                            // gesture is taken away — and when that happens it says nothing:
-                            // unlike its long-press sibling it does not catch cancellation,
-                            // so neither end callback fires. Left alone, the held row's order
-                            // and offset outlive the drag that set them. Always put back to
-                            // what was saved: conditioning this on the held row still being
-                            // where it started missed every drag that had already swapped a
-                            // neighbour, and the highlight stayed parked on the wrong row.
-                            dragOrder = null
-                            draggingIndex = null
-                            dragOffset = 0f
+                            // gesture is taken away without a release. Whatever the row had
+                            // been dragged to is what is on screen, so that is what gets
+                            // saved: dropping it here is what made a row snap back to where
+                            // it started the instant it swapped with its neighbour. The
+                            // highlight and offset go with the order either way, so nothing
+                            // is left standing on the screen.
+                            commitDragOrder()
                         }
                     }
                 } else {
@@ -1220,7 +1233,7 @@ fun HomeScreen(
                                     contentColor = contentColor,
                                     modifier = Modifier
                                         .align(Alignment.TopEnd)
-                                        .padding(end = EDIT_CONTROL_END_INSET)
+                                        .padding(end = dragHandleInsetDp)
                                         .then(dragHandle),
                                 )
                             }
@@ -1235,6 +1248,7 @@ fun HomeScreen(
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
                             dragHandle = dragHandle,
+                            handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
@@ -1252,6 +1266,36 @@ fun HomeScreen(
                                     expandedFolders - item.folder.id
                                 } else {
                                     expandedFolders + item.folder.id
+                                }
+                            },
+                            onExpandedContentBottom = { bottomWindowPx ->
+                                // A folder near the bottom of the screen would otherwise hang
+                                // its members off the edge, where dragging them into view is
+                                // a chore. The list scrolls itself up by whatever sticks
+                                // out past the gesture bar — the move a finger makes, only
+                                // animated and clamped the same way.
+                                revealScroll?.cancel()
+                                revealScroll = scope.launch {
+                                    try {
+                                        // The gesture bar's own strip of the window is where
+                                        // the list must stop, mirroring the column's bottom
+                                        // padding.
+                                        val limit = rootY + viewportHeight - navBarBottomPx
+                                        val overshoot = bottomWindowPx - limit
+                                        if (overshoot > 1f) {
+                                            offsetY.stop()
+                                            offsetY.animateTo(
+                                                targetValue = (offsetY.value - overshoot)
+                                                    .coerceIn(minOffset, 0f),
+                                                animationSpec = spring(
+                                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                                    stiffness = Spring.StiffnessMedium,
+                                                ),
+                                            )
+                                        }
+                                    } finally {
+                                        revealScroll = null
+                                    }
                                 }
                             },
                             onOpenMenu = { offset -> menuOffset = offset; folderMenuFor = item.folder.id },
@@ -1284,6 +1328,7 @@ fun HomeScreen(
                             label = displayName(item.app),
                             editMode = editMode,
                             dragHandle = dragHandle,
+                            handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
@@ -1366,12 +1411,34 @@ fun HomeScreen(
                 } else {
                     Spacer(Modifier.height(itemSpacingDp.dp))
                 }
-                }
             }
-            homeCells.forEach { pair ->
-                if (pair.size == 1) {
-                    renderItem(pair[0].second, pair[0].first)
-                } else {
+            // Each row is identified by which row it is, not by where it sits: without the
+            // key, a loop is matched up by position from one composition to the next, so
+            // reordering feeds different data into the same node rather than moving the node —
+            // two apps swapping is invisible that way, and a folder and an app swapping reuses
+            // each other's node, keeping the size the previous occupant had.
+            //
+            // And nothing branches over those keyed groups. A keyed group built inside a
+            // conditional cannot be moved when the order changes, so the row is built again
+            // instead of relocated — and a reorder drag running in that row goes with the
+            // rebuild, the instant it should swap with its neighbour: the order it had reached
+            // is left uncommitted and the row snaps back to where it started. One column (and
+            // edit layout is always one column) therefore has a loop of its own, with the key
+            // in it and no branch; two-column mode never reorders, so its branch can stay.
+            if (!homeTwoColumn) {
+                homeCells.forEach { pair ->
+                    key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                }
+            } else {
+                homeCells.forEach { pair ->
+                    // A widget, and an odd favorite left at the tail, have no neighbour to
+                    // take the other half: they stand alone at the full width. Dropping this
+                    // branch is how the two-column switches came to crash — a one-element
+                    // pair reached `pair[1]`. (Two columns never reorder, so branching around
+                    // the keys is safe here; see the note above.)
+                    if (pair.size == 1) {
+                        key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                    } else {
                     // Pulled together by one side padding: two rows side by side otherwise
                     // double the gutter in the middle while the outer edges keep one. Mirrors
                     // the (sidePadding - 8) the rows pad themselves with, so the middle gutter
@@ -1380,8 +1447,13 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy((-(sidePaddingDp - 8).coerceAtLeast(0)).dp),
                     ) {
-                        Box(Modifier.weight(1f)) { renderItem(pair[0].second, pair[0].first) }
-                        Box(Modifier.weight(1f)) { renderItem(pair[1].second, pair[1].first) }
+                        Box(Modifier.weight(1f)) {
+                            key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                        }
+                        Box(Modifier.weight(1f)) {
+                            key(measureKey(pair[1].first)) { renderItem(pair[1].second, pair[1].first) }
+                        }
+                    }
                     }
                 }
             }
@@ -1486,6 +1558,8 @@ private fun FavoriteRow(
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
+    /** How far in from the end the handle sits, clear of the system back gesture. */
+    handleInsetDp: Dp,
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
@@ -1552,7 +1626,7 @@ private fun FavoriteRow(
                             )
                     }
                 )
-                .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp), top = 4.dp, bottom = 4.dp),
+                .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = alignment.arrangement(),
         ) {
@@ -1605,11 +1679,13 @@ private fun FavoriteRow(
 
         // Outside the row's own layout so it sits against the screen edge rather than
         // wherever the alignment happens to leave the text, and so it never shifts the
-        // icon and label it belongs to.
+        // icon and label it belongs to. Held further in than the steppers by the back
+        // gesture's own width: a drag that starts in the system's edge zone is claimed
+        // by the system, and this handle would never hear of it (see HomeScreen's inset).
         if (dragHandle != null) {
             DragHandle(
                 contentColor,
-                Modifier.align(Alignment.CenterEnd).padding(end = EDIT_CONTROL_END_INSET).then(dragHandle),
+                Modifier.align(Alignment.CenterEnd).padding(end = handleInsetDp).then(dragHandle),
             )
         }
 
@@ -1695,6 +1771,8 @@ private fun FolderRow(
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
+    /** How far in from the end the handle sits, clear of the system back gesture. */
+    handleInsetDp: Dp,
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
@@ -1709,6 +1787,8 @@ private fun FolderRow(
     /** Folder cover names by folder id while the screenshot disguise is on; empty otherwise. */
     folderDisguise: Map<String, String>,
     onToggleExpanded: () -> Unit,
+    /** Reports where the expanded members end, in window pixels, once they have settled. */
+    onExpandedContentBottom: (Float) -> Unit,
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onManage: () -> Unit,
@@ -1732,6 +1812,10 @@ private fun FolderRow(
     var memberMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
     val memberTouch = remember { mutableStateOf(Offset.Zero) }
     var memberShortcutFor by remember { mutableStateOf<String?>(null) }
+    // Where the expanded members currently end, in window pixels like HomeScreen's own
+    // row measures. Written every layout pass and read only by the wait at the bottom
+    // of this composable, so no recomposition rides on it.
+    var membersBottomPx by remember { mutableFloatStateOf(Float.NaN) }
 
     Column {
         // An emptied folder keeps its row (deleting it silently would surprise), but there
@@ -1766,7 +1850,7 @@ private fun FolderRow(
                                 )
                         }
                     )
-                    .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp), top = 4.dp, bottom = 4.dp),
+                    .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = alignment.arrangement(),
             ) {
@@ -1798,11 +1882,12 @@ private fun FolderRow(
             }
 
             // Outside the row's own layout so it sits against the screen edge rather than
-            // wherever the alignment happens to leave the text.
+            // wherever the alignment happens to leave the text. Held in by the back
+            // gesture's own width as well — see HomeScreen's inset.
             if (dragHandle != null) {
                 DragHandle(
                 contentColor,
-                Modifier.align(Alignment.CenterEnd).padding(end = EDIT_CONTROL_END_INSET).then(dragHandle),
+                Modifier.align(Alignment.CenterEnd).padding(end = handleInsetDp).then(dragHandle),
             )
             }
 
@@ -1831,9 +1916,17 @@ private fun FolderRow(
             }
         }
 
-        // Members expand in place rather than opening a separate screen.
-        AnimatedVisibility(visible = expanded && !editMode && canExpand) {
-            Column {
+        // Members expand in place rather than opening a separate screen. The
+        // transition is held here rather than derived from `visible` so the wait
+        // below can ask it when it has finished.
+        val expansion = remember { MutableTransitionState(false) }
+        expansion.targetState = expanded && !editMode && canExpand
+        AnimatedVisibility(visibleState = expansion) {
+            Column(
+                modifier = Modifier.onGloballyPositioned { coords ->
+                    membersBottomPx = coords.positionInWindow().y + coords.size.height
+                },
+            ) {
                 members.forEach { member ->
                     // Keyed so each member keeps its own press state: an unkeyed remember in
                     // a loop would hand one row's press to whichever row moved into its slot.
@@ -1967,6 +2060,17 @@ private fun FolderRow(
                     )
                 }
             }
+        }
+
+        // The rows have to finish growing into place before there is a bottom to aim
+        // at: a half-grown one would scroll the list by half of what it needs. The
+        // screen scrolls them into view once they have landed.
+        LaunchedEffect(expanded) {
+            if (!expanded) return@LaunchedEffect
+            while (!expansion.isIdle) withFrameNanos {}
+            // One further frame lets the final layout land before the bottom is read.
+            withFrameNanos {}
+            if (!membersBottomPx.isNaN()) onExpandedContentBottom(membersBottomPx)
         }
     }
 }
@@ -2148,10 +2252,10 @@ private fun FolderIcon(
  * The handle is placed against the screen edge while this padding sits inside the row's own
  * side padding, so the side padding has to come back out of it.
  */
-private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int): Dp {
+private fun handleReserve(dragHandle: Modifier?, sidePaddingDp: Int, handleInset: Dp): Dp {
     if (dragHandle == null) return 8.dp
     val outerInset = (sidePaddingDp - 8).coerceAtLeast(0).dp
-    return (EDIT_CONTROL_END_INSET + EDIT_CONTROL_SIZE - outerInset).coerceAtLeast(8.dp)
+    return (handleInset + EDIT_CONTROL_SIZE - outerInset).coerceAtLeast(8.dp)
 }
 
 /**

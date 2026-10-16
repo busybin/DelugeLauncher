@@ -276,6 +276,24 @@
     <string name="settings_hidden_none">None hidden</string>
     <string name="settings_hidden_count">%1$d hidden</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_update_check">Check for updates</string>
+    <string name="settings_update_check_detail">Look for a newer release on GitHub</string>
+    <string name="settings_update_checking">Checking…</string>
+    <string name="settings_update_up_to_date">On the latest version (%1$s)</string>
+    <string name="settings_update_available">Version %1$s is available</string>
+    <string name="settings_update_get">Get %1$s</string>
+    <string name="settings_update_get_detail">Open the release page to download it</string>
+    <string name="update_dialog_title">Update available</string>
+    <string name="update_dialog_message">Version %1$s has been released. Open the release page to download it.</string>
+    <string name="update_dialog_open">Open release page</string>
+    <string name="update_dialog_later">Later</string>
+    <string name="update_error_network">No connection</string>
+    <string name="update_error_dns">Couldn\'t resolve the address</string>
+    <string name="update_error_tls">The secure connection failed</string>
+    <string name="update_error_restricted_mode">The phone\'s restricted networking mode is blocking this app, not the connection</string>
+    <string name="update_error_timeout">The check timed out</string>
+    <string name="update_error_server">GitHub answered with an error (%1$d)</string>
+    <string name="update_error_unexpected">Unexpected reply</string>
     <string name="settings_less">Less</string>
     <string name="settings_more">More</string>
 

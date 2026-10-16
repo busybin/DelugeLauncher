@@ -75,6 +75,12 @@ fun EdgeScrubber(
     side: EdgeSide,
     /** Sections with a row on screen while nobody is scrubbing, drawn enlarged. */
     spotlights: Set<String> = emptySet(),
+    /**
+     * A stretch of the band where letters are not drawn, because the corner button sits
+     * over it. Only a gap: the letters either side keep the positions a scrub maps a
+     * finger to, so the letter under the fingertip is the one that lights.
+     */
+    coveredPx: ClosedFloatingPointRange<Float>? = null,
     modifier: Modifier = Modifier,
 ) {
     if (letters.isEmpty()) return
@@ -98,6 +104,11 @@ fun EdgeScrubber(
             // Read once per composition, not per frame: the lit set changes per
             // section while the finger moves per pixel.
             val lit = c in spotlights
+            // Only the letters whose cell the button actually reaches go missing — the
+            // rest stay exactly where the scrub expects to find them.
+            val covered = coveredPx != null &&
+                centerY + spacingPx / 2f > coveredPx.start &&
+                centerY - spacingPx / 2f < coveredPx.endInclusive
             Box(
                 modifier = Modifier
                     .align(if (side == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
@@ -122,7 +133,7 @@ fun EdgeScrubber(
                         val s = if (lit) SPOTLIGHT_SCALE else 1f
                         scaleX = s
                         scaleY = s
-                        alpha = maxOf(0.55f + 0.45f * gain, if (lit) 1f else 0f)
+                        alpha = if (covered) 0f else maxOf(0.55f + 0.45f * gain, if (lit) 1f else 0f)
                     },
                 contentAlignment = Alignment.Center,
             ) {

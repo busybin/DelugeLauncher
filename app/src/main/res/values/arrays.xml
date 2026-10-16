@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>A folder that expands near the bottom scrolls its apps into view instead of leaving the last rows off-screen.</item>
+        <item>Settings &#8594; About can check the release page for a newer version. It reads, and sends nothing.</item>
+        <item>Edit layout: the grab handle sits clear of the system back gesture, so a reorder drag starts on a gesture-navigated phone, and a drag the system interrupts keeps the order you dragged it to.</item>
+        <item>The A-Z strip: the letter under your finger is the one that lights, and letters hidden by the corner button leave a gap instead of squeezing the rest away from your finger.</item>
+        <item>The clock, weather and agenda widget\'s settings open at once: apps, calendar and battery are read off the main thread, once, not every frame.</item>
+        <item>Pausing or resuming an app no longer empties the icon cache; backups leave out the icon cache and the notification counts.</item>
+        <item>Settings sliders follow your finger without writing to storage on every frame.</item>
+        <item>The flashlight switch keeps its state after you leave the home screen, and the clock widget no longer asks for a 30-minute idle wake-up it never uses.</item>
+        <item>All 11 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Corner button: press gives, hold slides up to run; tap and slide each pick from nine actions; drag it anywhere in edit layout.</item>
         <item>Swipes under the favorites offer the same nine actions, one set per side.</item>

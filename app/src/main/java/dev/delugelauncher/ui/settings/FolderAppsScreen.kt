@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.Folder
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.concealsStored
 import dev.delugelauncher.data.restoreConcealed
@@ -50,6 +51,7 @@ fun FolderAppsScreen(
     privateSpace: PrivateSpace,
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
+    hapticFeedback: HapticFeedback,
     onSetInFolder: (AppInfo, Boolean) -> Unit,
     /** Drops a key nothing can resolve any more; see the row that offers it. */
     onForget: (String) -> Unit,
@@ -100,6 +102,7 @@ fun FolderAppsScreen(
             item {
                 ReorderableRows(
                     keys = shownMembers,
+                    hapticFeedback = hapticFeedback,
                     // Put back what was left out, by the rule that left it out, or the first
                     // drag would drop it.
                     onReorder = { order -> onReorder(restoreConcealed(members, order, conceal)) },

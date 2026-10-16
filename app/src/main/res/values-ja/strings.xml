@@ -208,6 +208,24 @@
     <string name="settings_hidden_none">非表示はありません</string>
     <string name="settings_hidden_count">%1$d件を非表示</string>
     <string name="settings_version">バージョン %1$s</string>
+    <string name="settings_update_check">更新を確認</string>
+    <string name="settings_update_check_detail">GitHubで新しいリリースを確認します</string>
+    <string name="settings_update_checking">確認中…</string>
+    <string name="settings_update_up_to_date">最新バージョンです (%1$s)</string>
+    <string name="settings_update_available">バージョン%1$sを利用できます</string>
+    <string name="settings_update_get">%1$sを入手</string>
+    <string name="settings_update_get_detail">リリースページを開いてダウンロードします</string>
+    <string name="update_dialog_title">更新があります</string>
+    <string name="update_dialog_message">バージョン%1$sがリリースされました。リリースページを開いてダウンロードしてください。</string>
+    <string name="update_dialog_open">リリースページを開く</string>
+    <string name="update_dialog_later">後で</string>
+    <string name="update_error_network">接続がありません</string>
+    <string name="update_error_dns">アドレスを解決できませんでした</string>
+    <string name="update_error_tls">安全な接続に失敗しました</string>
+    <string name="update_error_restricted_mode">スマートフォンの制限付きネットワークモードがこのアプリをブロックしています。接続の問題ではありません</string>
+    <string name="update_error_timeout">確認がタイムアウトしました</string>
+    <string name="update_error_server">GitHubがエラーを返しました (%1$d)</string>
+    <string name="update_error_unexpected">予期しない応答</string>
     <string name="settings_less">少なく</string>
     <string name="settings_more">多く</string>
 

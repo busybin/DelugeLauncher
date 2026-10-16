@@ -47,6 +47,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -390,10 +391,12 @@ fun HomeRoute(
         floored.copy(topPx = floored.topPx.coerceAtLeast(minTop))
     }
 
-    // The idle strip stops above the corner button when they share a side: letters painted
-    // over the button read as broken. Only the idle strip is shortened — the band editor
-    // and the app list keep the true range. A top-corner button cuts the top instead: the
-    // strip starts under it rather than running through it.
+    // The corner button occupies a stretch of the idle strip when they share a side:
+    // letters painted over the button read as broken. Only the idle strip hides letters —
+    // the band editor, the app list and the touch zone all keep the true range, because
+    // the touch zone and the strip it is scrubbing are drawn by the same geometry and a
+    // second, shorter band leaves the lit letter wherever the squeeze put it rather than
+    // under the finger. A gap rather than a squeeze, for the same reason.
     // Mirrors the button's own visibility below: the strip yields exactly when the mark
     // is on screen.
     val cornerTapBound = cornerButtonApp != null || cornerButtonIsSearch
@@ -405,38 +408,22 @@ fun HomeRoute(
         (cornerSwipeAction != CornerAction.DO_NOTHING &&
             (cornerSwipeAction.targetKind() == null || cornerSwipeBound))
     val stripMarginPx = with(LocalDensity.current) { 12.dp.toPx() }
-    val stripBand = remember(
+    val stripCoveredPx = remember(
         band, cornerBounds, settings.alignment, cornerButtonOnScreen, viewportWidthPx,
         viewportHeightPx,
     ) {
         val bounds = cornerBounds
-        if (!cornerButtonOnScreen || bounds == null) {
-            band
-        } else {
-            val stripOnLeft = settings.alignment == HomeAlignment.RIGHT
-            // Measured, not stored: the button is dragged freely now, so which half it
-            // sits in is read off where it is.
-            val buttonOnLeft = viewportWidthPx <= 0 ||
-                bounds.center.x * 2f < viewportWidthPx.toFloat()
-            if (stripOnLeft != buttonOnLeft) {
-                band
-            } else {
-                val buttonOnTop = viewportHeightPx > 0 &&
-                    bounds.center.y * 2f < viewportHeightPx.toFloat()
-                if (buttonOnTop) {
-                    val minTop = bounds.bottom + stripMarginPx
-                    if (minTop >= band.bottomPx) band
-                    else band.copy(
-                        topPx = minTop.coerceAtMost(band.bottomPx),
-                        heightPx = (band.bottomPx - minTop).coerceAtLeast(0f),
-                    )
-                } else {
-                    val maxBottom = bounds.top - stripMarginPx
-                    if (maxBottom <= band.topPx) band
-                    else band.copy(heightPx = (maxBottom - band.topPx).coerceAtLeast(0f))
-                }
-            }
-        }
+        ScrubberGeometry.coveredSpan(
+            band = band,
+            buttonTopPx = bounds?.top ?: 0f,
+            buttonBottomPx = bounds?.bottom ?: 0f,
+            buttonCenterX = bounds?.center?.x ?: 0f,
+            buttonOnScreen = cornerButtonOnScreen && bounds != null,
+            viewportWidthPx = viewportWidthPx,
+            viewportHeightPx = viewportHeightPx,
+            stripOnLeft = settings.alignment == HomeAlignment.RIGHT,
+            marginPx = stripMarginPx,
+        )
     }
 
     // Portrait and landscape resolve apart, and only the stored value is passed down: the
@@ -560,7 +547,7 @@ fun HomeRoute(
             }
         }.getOrNull()
     }
-    var torchOn by remember { mutableStateOf(false) }
+    var torchOn by rememberSaveable { mutableStateOf(false) }
     var torchRetry by remember { mutableStateOf(false) }
     // What the granted permission is waiting to do. A state rather than a direct call because
     // the fun below is not in scope inside a launcher declared before it.
@@ -1437,9 +1424,10 @@ fun HomeRoute(
                 letters = listModel.letters,
                 scrubY = { null },
                 pullPx = { 0f },
-                band = stripBand,
+                band = band,
                 // Beside the empty end of the row, matching the app list: favorites aligned
                 // right leave their left side free, so that is where the strip goes.
+                coveredPx = stripCoveredPx,
                 side = if (settings.alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT,
                 modifier = Modifier.align(
                     if (settings.alignment == HomeAlignment.RIGHT) Alignment.CenterStart else Alignment.CenterEnd
@@ -1527,7 +1515,11 @@ fun HomeRoute(
                     widthDp = settings.edgeZoneWidthDp.dp,
                     insetDp = (if (side == EdgeSide.LEFT) insetLeftDp else insetRightDp).dp,
                     letters = listModel.letters,
-                    band = stripBand,
+                    // The true band, never the idle strip's shortened one: the app list's
+                    // strip — the one on screen while a finger is on this zone — draws the
+                    // letters over exactly this, so the letter under the fingertip is the
+                    // one that lights.
+                    band = band,
                     bandOnly = settings.edgeZoneBandOnly,
                     holdScroll = settings.holdScroll,
                     hapticFeedback = settings.hapticFeedback,

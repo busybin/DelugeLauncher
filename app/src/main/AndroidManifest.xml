@@ -3,6 +3,13 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- The one thing this app asks the network for: reading the release page to see whether a
+         newer version exists. Nothing is sent — no setting, no app list, no usage — and
+         data/UpdateChecker.kt is the only caller. Read-only, and an update is only ever
+         reported: the download and the install both happen outside this app, in the browser
+         and the system's own installer. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Tapping the clock widget opens the alarm app. Some OEM clocks gate their own
          SHOW_ALARMS activity behind this, and it is granted at install with no prompt. -->
     <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
@@ -28,8 +35,8 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Asked for at the moment the clock widget is set to show what is coming up, never at
-         install. Read only, and nothing read here leaves the phone: there is no network
-         permission to send it with. -->
+         install. Read only, and nothing read here leaves the phone: the app's one network
+         call goes the other way, reading the release page for a newer version. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <!-- The flashlight, asked for the first time the corner button is set to it rather than at

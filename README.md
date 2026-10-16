@@ -45,6 +45,9 @@ under a real finger. Everything else is upstream's design, kept as it was.
 - Settings has a changelog that follows the language, every row is searchable, and Back
   returns to the section it came from. A restored backup re-pins the shortcuts it names
   and covers every setting including the language.
+- **Settings → About checks for updates.** It reads the release page to see whether a newer
+  version exists and points you at it. That read is the app's only network call, and it
+  sends nothing — no setting, no app list, no usage.
 
 Plus a number of smaller fixes and additions along the way. The in-app changelog
 (Settings → About → Changelog) has the release-by-release list.

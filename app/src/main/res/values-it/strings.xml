@@ -208,6 +208,24 @@
     <string name="settings_hidden_none">Nessuna nascosta</string>
     <string name="settings_hidden_count">%1$d nascoste</string>
     <string name="settings_version">Versione %1$s</string>
+    <string name="settings_update_check">Controlla aggiornamenti</string>
+    <string name="settings_update_check_detail">Cerca una versione più recente su GitHub</string>
+    <string name="settings_update_checking">Controllo…</string>
+    <string name="settings_update_up_to_date">Hai l\'ultima versione (%1$s)</string>
+    <string name="settings_update_available">La versione %1$s è disponibile</string>
+    <string name="settings_update_get">Ottieni %1$s</string>
+    <string name="settings_update_get_detail">Apri la pagina della versione per scaricarla</string>
+    <string name="update_dialog_title">Aggiornamento disponibile</string>
+    <string name="update_dialog_message">La versione %1$s è stata pubblicata. Apri la pagina della versione per scaricarla.</string>
+    <string name="update_dialog_open">Apri la pagina della versione</string>
+    <string name="update_dialog_later">Più tardi</string>
+    <string name="update_error_network">Nessuna connessione</string>
+    <string name="update_error_dns">Impossibile risolvere l\'indirizzo</string>
+    <string name="update_error_tls">La connessione sicura non è riuscita</string>
+    <string name="update_error_restricted_mode">La modalità rete limitata del telefono sta bloccando questa app, non la connessione</string>
+    <string name="update_error_timeout">Il controllo è scaduto</string>
+    <string name="update_error_server">GitHub ha risposto con un errore (%1$d)</string>
+    <string name="update_error_unexpected">Risposta imprevista</string>
     <string name="settings_less">Meno</string>
     <string name="settings_more">Altro</string>
 
