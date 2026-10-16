@@ -2,40 +2,32 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// Release signing is read from a gitignored keystore.properties so a fresh clone
-// still builds: without it the release APK is simply left unsigned.
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val hasSigningConfig = keystoreProperties.getProperty("storeFile") != null
 
+fun baselineInt(key: String): Int = (rootProject.findProperty(key) as String).toInt()
+
 android {
     namespace = "dev.delugelauncher"
-    compileSdk = 35
+    compileSdk = baselineInt("baseline.compileSdk")
+    buildToolsVersion = rootProject.findProperty("baseline.buildTools") as String
 
     lint {
-        // Translations are contributed, so they arrive behind the strings they translate, and
-        // Android falls back to English for anything a locale is missing. A volunteer being a
-        // release behind is not a defect and must not be what stops a build.
         warning += "MissingTranslation"
     }
 
     defaultConfig {
         applicationId = "dev.delugelauncher"
-        minSdk = 26
-        targetSdk = 35
-        // One integer, shown as V<n>: V19, then V20, and only when a release is cut.
-        // versionCode carries the same number and is what the system compares, so both move
-        // together. A build with a lower number than the installed one is refused as a
-        // downgrade, which is why this pair is only ever raised.
+        minSdk = baselineInt("baseline.minSdk")
+        targetSdk = baselineInt("baseline.targetSdk")
         versionCode = 23
         versionName = "V23"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -52,8 +44,6 @@ android {
 
     buildTypes {
         release {
-            // R8 does the heavy lifting on size and startup: Compose ships several
-            // thousand vector icons and this app draws a few dozen.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -69,21 +59,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-        freeCompilerArgs += listOf(
-            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
-            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
-        )
-    }
-
     buildFeatures {
         compose = true
         buildConfig = true
     }
 
-    // Strips the Google dependency-metadata blob from the APK, which otherwise
-    // makes builds non-reproducible (F-Droid rejects it).
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false
@@ -102,40 +82,38 @@ android {
     }
 }
 
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.addAll(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api",
+            "-opt-in=androidx.compose.foundation.ExperimentalFoundationApi",
+        )
+    }
+}
+
 dependencies {
-    implementation("androidx.core:core-ktx:1.13.1")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
-    implementation("androidx.activity:activity-compose:1.9.2")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
 
-    implementation(platform("androidx.compose:compose-bom:2024.09.02"))
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.material3:material3")
+    implementation(platform(libs.androidx.compose.bom))
+    implementation(libs.androidx.compose.ui)
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.compose.material3)
+    implementation(libs.androidx.compose.material.icons.core)
 
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation(libs.androidx.datastore.preferences)
 
-    testImplementation("junit:junit:4.13.2")
-    // Real JSON on the unit-test classpath; the android.jar stub only throws.
-    testImplementation("org.json:json:20231013")
+    testImplementation(libs.junit)
+    testImplementation(libs.json)
 
-    // JVM-side gesture tests (Robolectric): the reorder drag lives in a modifier chain
-    // that only a real pointer stream can prove.
-    testImplementation(platform("androidx.compose:compose-bom:2024.09.02"))
-    testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("org.robolectric:robolectric:4.14.1")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
+    testImplementation(libs.robolectric)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // Black-box instrumented tests: UiAutomator so they can drive the home-screen role
-    // itself (set-default-home, system dialogs) rather than only what runs in-process.
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("androidx.test:rules:1.6.1")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
-
-    // Black-box instrumented tests: UiAutomator so they can drive the home-screen role
-    // itself (set-default-home, system dialogs) rather than only what runs in-process.
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test:runner:1.6.2")
-    androidTestImplementation("androidx.test:rules:1.6.1")
-    androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.uiautomator)
 }

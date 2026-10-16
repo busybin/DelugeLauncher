@@ -1,5 +1,4 @@
 New:
-* An app named in a script with no A-Z letter is filed under its English name instead of #, so an app called ブルー sits under B where you would look for it. Its name is still shown as it is.
 
 Fixed:
 * The color swatches offered in the picker and the color the Material text option gives you now come from the same palette. A light wallpaper under a dark system theme made them disagree.

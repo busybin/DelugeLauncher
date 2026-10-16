@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Pinyin matching for search, so a phone full of Chinese app names can be reached with a
- * latin keyboard: 微信 answers to "wx" and to "weixin", not only to its own characters.
  *
  * The romanization is ICU's, which ships with the platform, so no dictionary is carried. It is
  * done one character at a time and cached, because a query is answered on every keystroke and
@@ -36,13 +35,12 @@ internal object PinyinSearch {
             null
         } else {
             // Han-Latin is the specific one and reads a lone character best; Any-Latin covers it
-            // on the builds that ship the general table instead. Whichever answers for 中 is the
             // one kept, so a device whose ICU lacks both simply has no pinyin rather than a
             // matcher that quietly returns nothing.
             listOf("Han-Latin; Latin-ASCII", "Any-Latin; Latin-ASCII").firstNotNullOfOrNull { id ->
                 runCatching { Transliterator.getInstance(id) }
                     .getOrNull()
-                    ?.takeIf { it.transliterate("中").any(Char::isLetter) }
+                    ?.takeIf { it.transliterate("\u4e2d").any(Char::isLetter) }
             }
         }
     }
