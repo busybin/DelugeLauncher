@@ -29,10 +29,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -93,6 +96,27 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                 var config by remember { mutableStateOf(ClockWidgetConfig.read(this, widgetId)) }
                 var pickingWeatherApp by remember { mutableStateOf(false) }
                 var editingDateFormat by remember { mutableStateOf(false) }
+                // Apps to choose from, enumerated off the composition thread: hundreds of
+                // apps is hundreds of PackageManager calls, and the dialog's first frame
+                // used to wait for all of them.
+                var weatherApps by remember { mutableStateOf(emptyList<AppInfo>()) }
+                LaunchedEffect(pickingWeatherApp) {
+                    if (pickingWeatherApp) {
+                        weatherApps = withContext(Dispatchers.Default) { launchableApps() }
+                    }
+                }
+                // Preview values read once rather than on every frame: a calendar query, a
+                // sticky broadcast and a preferences read are not what a slider drag should
+                // repeat. Both are constant while this screen is open.
+                val batteryPercent = remember { ClockWidgetBattery.percent(this) }
+                val weatherNow = remember(config.weatherFahrenheit) {
+                    ClockWidgetWeather.current(this)
+                }
+                val agendaPreview = remember(config.agendaLookaheadHours, config.agendaRelative) {
+                    ClockWidgetAgenda
+                        .events(this, 1, config.agendaLookaheadHours, config.agendaRelative)
+                        .firstOrNull()?.text
+                }
                 // Asked for here rather than at install, and re-read on the way back so the
                 // section stops offering what has just been granted.
                 var calendarGranted by remember {
@@ -187,7 +211,7 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     opacityLabel = stringResource(R.string.widget_clock_battery_opacity),
                                     preview = stringResource(
                                         R.string.widget_clock_battery_percent,
-                                        ClockWidgetBattery.percent(this@ClockWidgetConfigActivity) ?: 100,
+                                        batteryPercent ?: 100,
                                     ),
                                     size = config.batterySizeSp,
                                     sizeRange = ClockWidgetConfig.DATE_SIZE_RANGE,
@@ -202,8 +226,7 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                 TextSection(
                                     sizeLabel = stringResource(R.string.widget_clock_weather_size),
                                     opacityLabel = stringResource(R.string.widget_clock_weather_opacity),
-                                    preview = ClockWidgetWeather
-                                        .current(this@ClockWidgetConfigActivity)
+                                    preview = weatherNow
                                         ?.let { ClockWidgetWeather.formatted(it, config.weatherFahrenheit) }
                                         ?: stringResource(R.string.widget_clock_weather_waiting),
                                     size = config.weatherSizeSp,
@@ -218,9 +241,7 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                 TextSection(
                                     sizeLabel = stringResource(R.string.widget_clock_agenda_size),
                                     opacityLabel = stringResource(R.string.widget_clock_agenda_opacity),
-                                    preview = ClockWidgetAgenda
-                                        .events(this@ClockWidgetConfigActivity, 1, config.agendaLookaheadHours, config.agendaRelative)
-                                        .firstOrNull()?.text
+                                    preview = agendaPreview
                                         ?: stringResource(R.string.widget_clock_agenda_empty),
                                     size = config.agendaSizeSp,
                                     sizeRange = ClockWidgetConfig.DATE_SIZE_RANGE,
@@ -259,7 +280,7 @@ class ClockWidgetConfigActivity : ComponentActivity() {
 
                             if (pickingWeatherApp) {
                                 WeatherAppDialog(
-                                    apps = remember { launchableApps() },
+                                    apps = weatherApps,
                                     selected = config.weatherPackage,
                                     onPick = {
                                         config = config.copy(weatherPackage = it)
@@ -299,10 +320,15 @@ class ClockWidgetConfigActivity : ComponentActivity() {
     }.getOrDefault(emptyList())
 
     private fun save(config: ClockWidgetConfig) {
+        val app = application as DelugeApp
         ClockWidgetConfig.write(this, widgetId, config)
         // Redrawn here rather than waiting for the system to ask: nothing else would, since
-        // this widget has no update interval of its own.
-        ClockWidgetProvider.render(this, AppWidgetManager.getInstance(this), widgetId)
+        // this widget has no update interval of its own. Off the main thread: with the
+        // agenda on, the render runs a calendar query.
+        val manager = AppWidgetManager.getInstance(this)
+        app.offMain {
+            ClockWidgetProvider.render(this@ClockWidgetConfigActivity, manager, widgetId)
+        }
         // Weather arrives by broadcast, and the receiver for it exists only while something
         // wants it. This is the moment that can have changed.
         ClockWidgetProvider.syncWeatherReceiver(this)
@@ -456,14 +482,14 @@ private fun TextSection(
             label = sizeLabel,
             value = size.toFloat(),
             range = sizeRange.first.toFloat()..sizeRange.last.toFloat(),
-            valueLabel = size.toString(),
+            valueLabel = { it.roundToInt().toString() },
             onValueChange = { onSize(it.roundToInt().coerceIn(sizeRange)) },
         )
         SliderRow(
             label = opacityLabel,
             value = opacity.toFloat(),
             range = opacityRange.first.toFloat()..opacityRange.last.toFloat(),
-            valueLabel = "$opacity%",
+            valueLabel = { "${it.roundToInt()}%" },
             onValueChange = { onOpacity(it.roundToInt().coerceIn(opacityRange)) },
         )
         // Boxed at a fixed height so the rest of the screen does not jump around as the slider
@@ -635,7 +661,7 @@ private fun AgendaSection(
                 value = config.agendaCount.toFloat(),
                 range = ClockWidgetConfig.AGENDA_COUNT_RANGE.first.toFloat()..
                     ClockWidgetConfig.AGENDA_COUNT_RANGE.last.toFloat(),
-                valueLabel = config.agendaCount.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onCount(it.toInt()) },
             )
             SliderRow(
@@ -643,7 +669,7 @@ private fun AgendaSection(
                 value = config.agendaLookaheadHours.toFloat(),
                 range = ClockWidgetConfig.AGENDA_HOURS_RANGE.first.toFloat()..
                     ClockWidgetConfig.AGENDA_HOURS_RANGE.last.toFloat(),
-                valueLabel = config.agendaLookaheadHours.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onHours(it.toInt()) },
             )
             Text(

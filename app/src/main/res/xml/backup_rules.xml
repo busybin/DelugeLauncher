@@ -10,4 +10,6 @@
 -->
 <full-backup-content>
     <exclude domain="file" path="datastore" />
+    <exclude domain="file" path="icon_cache_v2" />
+    <exclude domain="sharedpref" path="deluge_notification_counts" />
 </full-backup-content>

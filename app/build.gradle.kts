@@ -33,8 +33,8 @@ android {
         // versionCode carries the same number and is what the system compares, so both move
         // together. A build with a lower number than the installed one is refused as a
         // downgrade, which is why this pair is only ever raised.
-        versionCode = 22
-        versionName = "V22"
+        versionCode = 23
+        versionName = "V23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +89,12 @@ android {
         includeInBundle = false
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -111,6 +117,13 @@ dependencies {
     testImplementation("junit:junit:4.13.2")
     // Real JSON on the unit-test classpath; the android.jar stub only throws.
     testImplementation("org.json:json:20231013")
+
+    // JVM-side gesture tests (Robolectric): the reorder drag lives in a modifier chain
+    // that only a real pointer stream can prove.
+    testImplementation(platform("androidx.compose:compose-bom:2024.09.02"))
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     // Black-box instrumented tests: UiAutomator so they can drive the home-screen role
     // itself (set-default-home, system dialogs) rather than only what runs in-process.

@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>Ein Ordner, der unten aufklappt, scrollt seine Apps ins Bild, statt die letzten Zeilen unten abzuschneiden.</item>
+        <item>„Über“ kann die Release-Seite auf eine neuere Version prüfen. Es liest nur, gesendet wird nichts.</item>
+        <item>Layout bearbeiten: Der Griff liegt abseits der System-Zurückgeste, sodass ein Sortier-Zug auch auf Geräten mit Gestennavigation beginnt, und ein vom System unterbrochener Zug behält die Reihenfolge, die du gezogen hast.</item>
+        <item>Der A-Z-Streifen: Der Buchstabe unter dem Finger leuchtet, und Buchstaben, die die Ecktaste verdeckt, lassen eine Lücke, statt den Rest vom Finger wegzudrängen.</item>
+        <item>Die Einstellungen des Uhr-, Wetter- und Termin-Widgets öffnen sofort: Apps, Kalender und Akku werden einmal außerhalb des Hauptthreads gelesen, nicht in jedem Frame.</item>
+        <item>Pausieren oder Fortsetzen einer App leert den Icon-Cache nicht mehr; Backups lassen Icon-Cache und Benachrichtigungszähler aus.</item>
+        <item>Schieberegler in den Einstellungen folgen dem Finger, ohne in jedem Frame zu schreiben.</item>
+        <item>Der Taschenlampen-Schalter behält seinen Zustand, wenn du den Startbildschirm verlässt, und das Uhr-Widget fordert kein 30-minütiges Idle-Aufwachen mehr an, das es nie nutzt.</item>
+        <item>Alle 11 Sprachen vollständig.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Eck-Taste: Drücken gibt nach, Halten wischt hoch zum Ausführen; Tipp und Wisch wählen je aus neun Aktionen; in der Layout-Bearbeitung frei verschiebbar.</item>
         <item>Wischbewegungen unter den Favoriten bieten dieselben neun Aktionen, je eine Seite.</item>

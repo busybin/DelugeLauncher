@@ -9,8 +9,12 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="file" path="datastore" />
+        <exclude domain="file" path="icon_cache_v2" />
+        <exclude domain="sharedpref" path="deluge_notification_counts" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="file" path="datastore" />
+        <exclude domain="file" path="icon_cache_v2" />
+        <exclude domain="sharedpref" path="deluge_notification_counts" />
     </device-transfer>
 </data-extraction-rules>

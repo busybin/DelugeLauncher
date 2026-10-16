@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>Una cartella che si apre vicino al bordo inferiore scorre le sue app in vista invece di lasciare le ultime righe fuori schermo.</item>
+        <item>«Informazioni» può controllare la pagina delle versioni per una più recente. Legge soltanto, non invia nulla.</item>
+        <item>Modifica layout: la maniglia resta lontana dal gesto indietro di sistema, così il trascinamento per riordinare parte anche su un telefono a navigazione gestuale, e un trascinamento interrotto dal sistema mantiene l\'ordine dove l\'hai portato.</item>
+        <item>La striscia A-Z: la lettera sotto il dito è quella che si accende, e le lettere che il tasto d\'angolo copre lasciano uno spazio invece di spingere il resto lontano dal dito.</item>
+        <item>Le impostazioni del widget orologio, meteo e agenda si aprono subito: app, calendario e batteria vengono letti fuori dal thread principale, una volta, non a ogni frame.</item>
+        <item>Mettere in pausa o riprendere un\'app non svuota più la cache delle icone; i backup escludono la cache delle icone e i conteggi delle notifiche.</item>
+        <item>I cursori delle impostazioni seguono il dito senza scrivere su disco a ogni frame.</item>
+        <item>L\'interruttore della torcia mantiene lo stato quando lasci la schermata home, e il widget orologio non chiede più un risveglio di inattività di 30 minuti che non usa mai.</item>
+        <item>Tutte le 11 lingue complete.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Pulsante d\'angolo: preme e cede, tieni e scorri per eseguire; tocco e scorrimento scelgono fra nove azioni; trascinalo dove vuoi in modifica.</item>
         <item>Gli scorrimenti sotto i preferiti offrono le stesse nove azioni, un set per lato.</item>

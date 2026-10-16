@@ -53,6 +53,7 @@ val REORDER_ROW_HEIGHT = 60.dp
 @Composable
 fun ReorderableRows(
     keys: List<String>,
+    hapticFeedback: HapticFeedback,
     onReorder: (List<String>) -> Unit,
     row: @Composable RowScope.(key: String) -> Unit,
 ) {
@@ -95,7 +96,7 @@ fun ReorderableRows(
                                 onDragStart = {
                                     // The row does not move until the finger does, so a tick
                                     // is the only confirmation that the grab took.
-                                    HapticUtil.tick(view, HapticFeedback.MEDIUM)
+                                    HapticUtil.tick(view, hapticFeedback)
                                     draggingIndex = index
                                     dragOffset = 0f
                                 },
@@ -121,7 +122,7 @@ fun ReorderableRows(
                                         // is drawn at has to come back by as much.
                                         dragOffset -= (to - from) * rowPx
                                         draggingIndex = to
-                                        HapticUtil.tick(view, HapticFeedback.MEDIUM)
+                                        HapticUtil.tick(view, hapticFeedback)
                                     }
                                 }
                             }

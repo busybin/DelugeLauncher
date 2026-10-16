@@ -18,7 +18,10 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.runtime.Composable
@@ -41,6 +44,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import dev.delugelauncher.TypedKey
+import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.DelugeApp
 import android.widget.Toast
 import dev.delugelauncher.data.IconShape
@@ -61,6 +65,8 @@ import dev.delugelauncher.ui.applist.RESERVED_TAGS
 import dev.delugelauncher.ui.common.LocalScreenshotNames
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.data.ShortcutSwipe
+import dev.delugelauncher.data.UpdateChecker
+import dev.delugelauncher.data.UpdateResult
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.HomePaddings
@@ -110,6 +116,23 @@ import kotlinx.coroutines.withContext
 /** How many of the most-used apps the 常用 tag covers. */
 private const val FREQUENT_TAG_COUNT = 5
 
+/**
+ * How long between silent looks at the release page.
+ *
+ * Six hours: a release is noticed the same day without a request riding on every HOME press,
+ * and the row in About is always there to ask again on the spot.
+ */
+private const val UPDATE_CHECK_INTERVAL_MS = 6L * 60L * 60L * 1000L
+
+/**
+ * How long after a *failed* look before another.
+ *
+ * Fifteen minutes: long enough that an offline phone is not asking on every HOME press, short
+ * enough that whatever was wrong has a chance to have been fixed — being blocked by the phone
+ * itself, plugged back into the network — before anyone opens settings to wonder about it.
+ */
+private const val UPDATE_RETRY_INTERVAL_MS = 15L * 60L * 1000L
+
 @Composable
 fun DelugeNavHost(
     app: DelugeApp,
@@ -155,6 +178,46 @@ fun DelugeNavHost(
     // Reloads are started from half a dozen independent places and overlap; this is what keeps
     // the most recently read answer the one on screen. See [ReloadOrder].
     val reloadOrder = remember { ReloadOrder() }
+
+    // The version check: one read of the release page, now and then, plus whatever the last
+    // one left in the store. Held in memory as well so the settings row can show what a tap
+    // just found without the store having to be asked for it.
+    var updateChecking by remember { mutableStateOf(false) }
+    var updateResult by remember { mutableStateOf<UpdateResult?>(null) }
+    val updateKnownVersion by app.prefs.updateKnownVersion.collectAsState(initial = 0)
+    val updatePromptedVersion by app.prefs.updatePromptedVersion.collectAsState(initial = 0)
+
+    fun openReleasePage() {
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(UpdateChecker.RELEASES_URL))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    fun checkForUpdates() {
+        if (updateChecking) return
+        scope.launch {
+            updateChecking = true
+            val result = UpdateChecker.check(
+                context = context,
+                currentVersion = BuildConfig.VERSION_CODE,
+                userAgent = "DelugeLauncher/${BuildConfig.VERSION_NAME}",
+            )
+            updateChecking = false
+            updateResult = result
+            app.prefs.recordUpdateCheck(
+                knownVersion = when (result) {
+                    is UpdateResult.Available -> result.version
+                    is UpdateResult.UpToDate -> result.version
+                    is UpdateResult.Failed -> 0
+                },
+                nowMillis = System.currentTimeMillis(),
+                failed = result is UpdateResult.Failed,
+            )
+        }
+    }
 
     /**
      * [known] is the state to enumerate against when the caller already has one it trusts more
@@ -217,9 +280,27 @@ fun DelugeNavHost(
     // means "this is a first run" when it is read.
     LaunchedEffect(Unit) { app.prefs.ensureInstallMarker() }
 
+    // A silent look at the release page now and then. A launcher is opened many times a day,
+    // so the interval is what keeps this from being a request per launch; the row in About is
+    // how to ask again sooner. A check that failed is worth repeating sooner than one that
+    // answered — a phone that was offline, or whose system was refusing this app a moment ago,
+    // must not be left saying so until tomorrow. After the install marker and asking for it
+    // again: the check writes to the store, and that marker reads "the store is empty" to tell
+    // a first run from an upgrade — a write of ours landing first would make a new install
+    // look like an old one.
+    LaunchedEffect(Unit) {
+        app.prefs.ensureInstallMarker()
+        val failed = app.prefs.lastUpdateCheckFailed.first()
+        val since = System.currentTimeMillis() - app.prefs.lastUpdateCheck.first()
+        if (since < if (failed) UPDATE_RETRY_INTERVAL_MS else UPDATE_CHECK_INTERVAL_MS) {
+            return@LaunchedEffect
+        }
+        checkForUpdates()
+    }
+
     DisposableEffect(Unit) {
         val launcherApps = context.getSystemService(LauncherApps::class.java)
-        fun refresh(packageName: String? = null) {
+        fun refresh(packageName: String? = null, clearIcons: Boolean = true) {
             // Before the reload, so the widget pages re-read their provider even when the
             // enumeration below finds the same apps: freeze and unfreeze change no id.
             widgetTick++
@@ -234,8 +315,12 @@ fun DelugeNavHost(
                 // An app that ships a new icon in an update changes none of the cache
                 // key's components, so nothing else would invalidate the stale bitmap.
                 // Scoped to the package that changed: one update must not empty the cache
-                // for the other three hundred apps.
-                if (packageName != null) clearIconCacheForPackage(context, packageName)
+                // for the other three hundred apps. Pausing an app changes no icon at
+                // all, so those passes skip the invalidation entirely rather than
+                // paying the whole cold path for it.
+                if (!clearIcons) {
+                    // Nothing to invalidate: the pictures did not change.
+                } else if (packageName != null) clearIconCacheForPackage(context, packageName)
                 else clearIconDiskCache(context)
                 reloadApps(state, pass)
             }
@@ -256,8 +341,8 @@ fun DelugeNavHost(
             // Pausing or resuming an app changes no package, so no package callback fires for
             // it. Without these a paused app only went grey the next time something else
             // happened to reload. No icon invalidation: the picture did not change.
-            override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
-            override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh()
+            override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh(clearIcons = false)
+            override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh(clearIcons = false)
             // A shortcut can be added, renamed, re-iconed or switched off while we are
             // showing it, none of which is a package change. The enumeration itself comes
             // from the shortcutChanges flow below, which fires for the same event — so this
@@ -513,7 +598,7 @@ fun DelugeNavHost(
             runCatching { app.widgetHost.deleteAppWidgetId(id) }
             return@LaunchedEffect
         }
-        ClockWidgetProvider.render(context, manager, id)
+        withContext(Dispatchers.IO) { ClockWidgetProvider.render(context, manager, id) }
         app.prefs.addWidgetId(id)
         // The provider is known here, at bind time — see widgetProviders on why it is written.
         app.prefs.setWidgetProvider(id, ClockWidgetProvider.componentName(context).packageName)
@@ -896,8 +981,10 @@ fun DelugeNavHost(
                 // qualifies.
                 showWelcome = layoutDefaultsVersion == 1 && !welcomeSeen,
                 // Asked again every time HOME is pressed, since changing it is done outside
-                // this app and the answer moves while the card is on screen.
-                showDefaultPrompt = !defaultPromptDismissed && !isDefaultHome(context),
+                // this app and the answer moves while the card is on screen. isRoleHeld is
+                // a binder call, so it is keyed to the HOME tick rather than run per frame.
+                showDefaultPrompt = !defaultPromptDismissed &&
+                    !remember(homeIntentTick) { isDefaultHome(context) },
                 onDismissDefaultPrompt = { scope.launch { app.prefs.dismissDefaultPrompt() } },
                 onOpenHomeSettings = {
                     settingsTick++
@@ -969,6 +1056,36 @@ fun DelugeNavHost(
                 onDispose { settingsLifecycle.lifecycle.removeObserver(observer) }
             }
             val listenerEnabled = remember(homeIntentTick, settingsResumeTick) { isListenerEnabled(context) }
+            // The Settings app rather than whatever happens to sort first: a stable,
+            // recognizable icon to judge a size against on every device. Resolved off the
+            // composition thread: resolveActivity is a binder call.
+            var previewApp by remember { mutableStateOf<AppInfo?>(null) }
+            LaunchedEffect(allApps) {
+                previewApp = withContext(Dispatchers.Default) {
+                    val settingsPkg = runCatching {
+                        @Suppress("DEPRECATION")
+                        context.packageManager.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)
+                            ?.activityInfo?.packageName
+                    }.getOrNull()
+                    allApps.firstOrNull { it.packageName == settingsPkg }
+                        ?: allApps.firstOrNull { it.packageName == "com.android.settings" }
+                        ?: allApps.firstOrNull()
+                }
+            }
+            // Asked again whenever the launcher is returned to, since changing it is the
+            // whole point of the row and the answer changes outside this app. Resolved off
+            // the composition thread: resolveActivity is a binder call.
+            var isDefaultLauncher by remember { mutableStateOf(false) }
+            LaunchedEffect(homeIntentTick, settingsTick) {
+                isDefaultLauncher = withContext(Dispatchers.Default) {
+                    runCatching {
+                        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+                        context.packageManager
+                            .resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)
+                            ?.activityInfo?.packageName == context.packageName
+                    }.getOrDefault(false)
+                }
+            }
             SettingsScreen(
                 hiddenCount = hiddenShownCount,
                 iconPacks = iconPacks,
@@ -1038,18 +1155,7 @@ fun DelugeNavHost(
                 onSetFavoritesSource = { scope.launch { app.prefs.setFavoritesSource(it) } },
                 frequentCount = frequentCount,
                 onSetFrequentCount = { scope.launch { app.prefs.setFrequentCount(it) } },
-                // The Settings app rather than whatever happens to sort first: a stable,
-                // recognizable icon to judge a size against on every device.
-                previewApp = remember(allApps) {
-                    val settingsPkg = runCatching {
-                        @Suppress("DEPRECATION")
-                        context.packageManager.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)
-                            ?.activityInfo?.packageName
-                    }.getOrNull()
-                    allApps.firstOrNull { it.packageName == settingsPkg }
-                        ?: allApps.firstOrNull { it.packageName == "com.android.settings" }
-                        ?: allApps.firstOrNull()
-                },
+                previewApp = previewApp,
                 iconSizeDp = iconSizeDp,
                 labelSizeSp = labelSizeSp,
                 itemSpacingDp = itemSpacingDp,
@@ -1222,16 +1328,7 @@ fun DelugeNavHost(
                     )
                 },
                 onOpenHiddenApps = { navController.navigate("settings/hidden") },
-                // Asked again whenever the launcher is returned to, since changing it is the
-                // whole point of the row and the answer changes outside this app.
-                isDefaultLauncher = remember(homeIntentTick, settingsTick) {
-                    runCatching {
-                        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
-                        context.packageManager
-                            .resolveActivity(home, PackageManager.MATCH_DEFAULT_ONLY)
-                            ?.activityInfo?.packageName == context.packageName
-                    }.getOrDefault(false)
-                },
+                isDefaultLauncher = isDefaultLauncher,
                 onOpenHomeSettings = {
                     settingsTick++
                     // The system screen, never a silent switch: which launcher runs is the
@@ -1250,6 +1347,11 @@ fun DelugeNavHost(
                 onOpenFavorites = { navController.navigate("favorites") },
                 onOpenLanguage = { navController.navigate("settings/language") },
                 onOpenChangelog = { navController.navigate("settings/changelog") },
+                updateChecking = updateChecking,
+                updateResult = updateResult,
+                updateKnownVersion = updateKnownVersion,
+                onCheckForUpdates = { checkForUpdates() },
+                onOpenReleasePage = { openReleasePage() },
                 onOpenNotificationSettings = {
                     context.startActivity(
                         Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
@@ -1268,6 +1370,7 @@ fun DelugeNavHost(
                 privateSpace = privateSpace,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
+                hapticFeedback = hapticFeedback,
                 onReorder = { keys -> scope.launch { app.prefs.setFavorites(keys) } },
                 onSetFavorite = { appInfo, add ->
                     scope.launch {
@@ -1292,6 +1395,7 @@ fun DelugeNavHost(
                 privateSpace = privateSpace,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
+                hapticFeedback = hapticFeedback,
                 onSetInFolder = { appInfo, inFolder ->
                     scope.launch {
                         if (inFolder) {
@@ -1451,6 +1555,34 @@ fun DelugeNavHost(
                 onBack = { navController.popBackStack() },
             )
         }
+    }
+
+    // Only once per release: a launcher that greeted every HOME press with the same news would
+    // be a reason to turn the check off. "Later" is remembered as firmly as opening the page —
+    // the row in About still says an update is there, so nothing is lost but the interruption.
+    val updateToOffer = updateKnownVersion
+        .takeIf { it > BuildConfig.VERSION_CODE && it > updatePromptedVersion }
+    if (updateToOffer != null) {
+        val offeredVersion = "V$updateToOffer"
+        fun dismissOffer() {
+            scope.launch { app.prefs.markUpdatePrompted(updateToOffer) }
+        }
+        AlertDialog(
+            onDismissRequest = { dismissOffer() },
+            title = { Text(stringResource(R.string.update_dialog_title)) },
+            text = { Text(stringResource(R.string.update_dialog_message, offeredVersion)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    openReleasePage()
+                    dismissOffer()
+                }) { Text(stringResource(R.string.update_dialog_open)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { dismissOffer() }) {
+                    Text(stringResource(R.string.update_dialog_later))
+                }
+            },
+        )
     }
 }
 

@@ -11,6 +11,8 @@ import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.SlotKind
 import dev.delugelauncher.data.SlotTarget
+import dev.delugelauncher.data.UpdateError
+import dev.delugelauncher.data.UpdateResult
 import dev.delugelauncher.data.targetKind
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -27,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -72,6 +76,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import android.net.Uri
@@ -326,6 +332,15 @@ fun SettingsScreen(
     onOpenLanguage: () -> Unit,
     /** Opens the release notes. */
     onOpenChangelog: () -> Unit,
+    /** Whether a look at the release page is in flight right now. */
+    updateChecking: Boolean,
+    /** What the last look in this process found, or null if none has run yet. */
+    updateResult: UpdateResult?,
+    /** The newest release any look has seen, however long ago that was. */
+    updateKnownVersion: Int,
+    onCheckForUpdates: () -> Unit,
+    /** Opens the release page in the browser; the page itself, never a file. */
+    onOpenReleasePage: () -> Unit,
     onOpenNotificationSettings: () -> Unit,
     onBack: () -> Unit,
 ) {
@@ -424,14 +439,20 @@ fun SettingsScreen(
 
 
     // Only after a crash, so there is nothing here to explain the rest of the time.
-    // Read once up front: the entry below only shows while there is one.
-    val crashText = remember { CrashLog.read(context) }
+    // Read once up front, off the composition thread: the log is up to 64KB of file.
+    var crashText by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        crashText = withContext(Dispatchers.IO) { CrashLog.read(context) }
+    }
     var crashCleared by remember { mutableStateOf(false) }
 
     // Every row of settings as one list: what it is called, what else it answers to, the
     // section it belongs in, and the control itself. One list rather than a block per section
     // because the rows have to serve two readers — someone walking a section, and someone
     // typing at the search box — and a row written twice is a row that drifts.
+    // Resolved once, so the row that reports an update and the row that opens the page can
+    // never disagree about which release they mean.
+    val updateState = updateRowState(updateChecking, updateResult, updateKnownVersion)
     val entries = listOf(
         // Language first: it is the one row that changes what every other row says.
         SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_language), "language locale translate") {
@@ -467,7 +488,7 @@ fun SettingsScreen(
                 // Down to where an icon is still a recognisable shape. A list of names wants
                 // the icon as a marker, not a picture, and how small is the reader's call.
                 value = iconSizeDp.toFloat(), range = 12f..96f,
-                valueLabel = "${iconSizeDp}dp",
+                valueLabel = { "${it.roundToInt()}dp" },
                 onValueChange = { onSetIconSize(it.toInt()) },
             )
         },
@@ -475,7 +496,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_text_size),
                 value = labelSizeSp.toFloat(), range = 10f..28f,
-                valueLabel = "${labelSizeSp}sp",
+                valueLabel = { "${it.roundToInt()}sp" },
                 onValueChange = { onSetLabelSize(it.toInt()) },
             )
         },
@@ -483,7 +504,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_favorite_spacing),
                 value = itemSpacingDp.toFloat(), range = 0f..40f,
-                valueLabel = "${itemSpacingDp}dp",
+                valueLabel = { "${it.roundToInt()}dp" },
                 onValueChange = { onSetItemSpacing(it.toInt()) },
             )
         },
@@ -518,7 +539,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_wallpaper_blur),
                 value = wallpaperBlurDp.toFloat(),
                 range = 0f..80f,
-                valueLabel = "${wallpaperBlurDp}dp",
+                valueLabel = { "${it.roundToInt()}dp" },
                 onValueChange = { onSetWallpaperBlur(it.roundToInt()) },
                 step = 1f,
             )
@@ -538,7 +559,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_night_start),
                 value = nightStartHour.toFloat(),
                 range = 0f..23f,
-                valueLabel = String.format("%02d:00", nightStartHour),
+                valueLabel = { String.format("%02d:00", it.roundToInt()) },
                 onValueChange = { onSetNightStartHour(it.roundToInt()) },
                 step = 1f,
             )
@@ -551,7 +572,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_night_end),
                 value = nightEndHour.toFloat(),
                 range = 0f..23f,
-                valueLabel = String.format("%02d:00", nightEndHour),
+                valueLabel = { String.format("%02d:00", it.roundToInt()) },
                 onValueChange = { onSetNightEndHour(it.roundToInt()) },
                 step = 1f,
             )
@@ -585,7 +606,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_status_bar_timeout),
                 value = statusBarPeekSeconds.toFloat(), range = 1f..30f,
-                valueLabel = "${statusBarPeekSeconds}s",
+                valueLabel = { "${it.roundToInt()}s" },
                 onValueChange = { onSetStatusBarPeekSeconds(it.roundToInt()) },
             )
         },
@@ -593,7 +614,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_dim_home),
                 value = dimHomeAlpha, range = 0f..0.85f,
-                valueLabel = "${(dimHomeAlpha * 100).roundToInt()}%",
+                valueLabel = { "${(it * 100).roundToInt()}%" },
                 // Rounded to whole percent, so dragging lands where the buttons do.
                 onValueChange = {
                     val next = (it * 100).roundToInt() / 100f
@@ -757,7 +778,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_recent_section_count),
                 value = recentSectionCount.toFloat(),
                 range = RECENT_SECTION_RANGE.first.toFloat()..RECENT_SECTION_RANGE.last.toFloat(),
-                valueLabel = recentSectionCount.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onSetRecentSectionCount(it.toInt()) },
             )
         },
@@ -790,7 +811,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_hold_scroll_speed),
                 value = holdScrollSpeed.toFloat(),
                 range = HOLD_SCROLL_RANGE.first.toFloat()..HOLD_SCROLL_RANGE.last.toFloat(),
-                valueLabel = holdScrollSpeed.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onSetHoldScrollSpeed(it.toInt()) },
             )
         },
@@ -816,7 +837,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_edge_inset),
                 value = edgeZoneInsetDp.toFloat(),
                 range = EDGE_ZONE_INSET_RANGE.first.toFloat()..EDGE_ZONE_INSET_RANGE.last.toFloat(),
-                valueLabel = edgeZoneInsetDp.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onSetEdgeZoneInsetDp(it.toInt()) },
             )
         },
@@ -824,7 +845,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_edge_zone_width),
                 value = edgeZoneWidthDp.toFloat(), range = 32f..96f,
-                valueLabel = "${edgeZoneWidthDp}dp",
+                valueLabel = { "${it.roundToInt()}dp" },
                 onValueChange = { edgePreviewTick++; onSetEdgeZoneWidth(it.roundToInt()) },
             )
         },
@@ -840,7 +861,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_section_top),
                 value = sectionTopPercent.toFloat(),
                 range = SECTION_TOP_RANGE.first.toFloat()..SECTION_TOP_RANGE.last.toFloat(),
-                valueLabel = "$sectionTopPercent%",
+                valueLabel = { "${it.roundToInt()}%" },
                 onValueChange = { sectionPreviewTick++; onSetSectionTopPercent(it.toInt()) },
             )
         },
@@ -854,7 +875,7 @@ fun SettingsScreen(
             SliderRow(
                 label = stringResource(R.string.settings_dim_applist),
                 value = dimWallpaperAlpha, range = 0f..0.85f,
-                valueLabel = "${(dimWallpaperAlpha * 100).roundToInt()}%",
+                valueLabel = { "${(it * 100).roundToInt()}%" },
                 onValueChange = {
                     val next = (it * 100).roundToInt() / 100f
                     dimPreviewValue = next
@@ -1104,7 +1125,7 @@ fun SettingsScreen(
                 label = stringResource(R.string.settings_text_shadow_strength),
                 value = textShadowStrength.toFloat(),
                 range = SHADOW_STRENGTH_RANGE.first.toFloat()..SHADOW_STRENGTH_RANGE.last.toFloat(),
-                valueLabel = textShadowStrength.toString(),
+                valueLabel = { it.roundToInt().toString() },
                 onValueChange = { onSetTextShadowStrength(it.toInt()) },
             )
         },
@@ -1198,6 +1219,29 @@ fun SettingsScreen(
                 value = stringResource(R.string.settings_changelog_detail),
                 onClick = onOpenChangelog,
                 leading = Icons.Filled.Info,
+            )
+        },
+        // Beside the changelog: the two answer the same question from either end — what this
+        // build holds, and whether there is a newer one.
+        SettingsEntry(
+            SettingsSection.ABOUT, stringResource(R.string.settings_update_check),
+            "update upgrade version newer release download latest",
+        ) {
+            UpdateRow(state = updateState, onCheck = onCheckForUpdates)
+        },
+        // Only while there is something to get: a second row that means "go and fetch it"
+        // rather than leaving the check row to mean two different things depending on state.
+        SettingsEntry(
+            SettingsSection.ABOUT,
+            stringResource(R.string.settings_update_get, updateState.versionLabel()),
+            "update upgrade download release github",
+            visible = updateState is UpdateRowState.Available,
+        ) {
+            QuickLaunchRow(
+                label = stringResource(R.string.settings_update_get, updateState.versionLabel()),
+                value = stringResource(R.string.settings_update_get_detail),
+                onClick = onOpenReleasePage,
+                leading = Icons.Filled.KeyboardArrowDown,
             )
         },
         // A launcher draws other apps' widgets with their own code, so the trace is often
@@ -1498,15 +1542,49 @@ private fun SwitchRowWithDetail(
 
 /** Slider plus a pair of steppers, since dragging to an exact value is fiddly. */
 /** Shared with the clock widget's own settings, so a size is set the same way everywhere. */
+/**
+ * The value under the finger belongs to the row, not to the store. Every movement of a drag
+ * used to be handed straight upstream — a preferences write per frame, each one answered with
+ * a fresh set of settings and a rebuild of the whole screen holding the slider. The row now
+ * follows the finger itself and hands upstream at most one value per [SLIDER_COMMIT_MS], plus
+ * whatever the finger lands on when it lifts. [valueLabel] follows the finger either way.
+ */
 @Composable
 internal fun SliderRow(
     label: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
-    valueLabel: String,
+    valueLabel: (Float) -> String,
     onValueChange: (Float) -> Unit,
     step: Float = 1f,
 ) {
+    val send = rememberUpdatedState(onValueChange)
+    // What the row draws. The finger is the authority while it is down.
+    var local by remember { mutableFloatStateOf(value) }
+    // The last value this row handed upstream, so its echo is recognised as an answer rather
+    // than as news. A value that is not the one we sent came from somewhere else — an import,
+    // a reset, the stepper on another row — and is adopted.
+    var written by remember { mutableStateOf<Float?>(null) }
+    var dragging by remember { mutableStateOf(false) }
+
+    fun hand(v: Float) {
+        written = v
+        local = v
+        send.value(v)
+    }
+
+    LaunchedEffect(value) {
+        if (value != written) local = value
+    }
+    LaunchedEffect(dragging) {
+        if (!dragging) return@LaunchedEffect
+        // Trailing edge only: where the finger is, never where it has been.
+        while (true) {
+            delay(SLIDER_COMMIT_MS)
+            if (local != written) hand(local)
+        }
+    }
+
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1515,31 +1593,42 @@ internal fun SliderRow(
         ) {
             Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             IconButton(
-                onClick = { onValueChange((value - step).coerceIn(range)) },
-                enabled = value > range.start,
+                onClick = { hand((local - step).coerceIn(range)) },
+                enabled = local > range.start,
             ) {
                 Icon(DelugeIcons.Remove, contentDescription = stringResource(R.string.settings_less))
             }
             Text(
-                valueLabel,
+                valueLabel(local),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
             IconButton(
-                onClick = { onValueChange((value + step).coerceIn(range)) },
-                enabled = value < range.endInclusive,
+                onClick = { hand((local + step).coerceIn(range)) },
+                enabled = local < range.endInclusive,
             ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.settings_more))
             }
         }
         Slider(
-            value = value,
-            onValueChange = onValueChange,
+            value = local,
+            onValueChange = {
+                dragging = true
+                local = it
+            },
+            onValueChangeFinished = {
+                dragging = false
+                // The floor has to be the last thing stored, whatever the throttle last sent.
+                if (local != written) hand(local)
+            },
             valueRange = range,
             colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary),
         )
     }
 }
+
+/** How often a dragged slider is allowed to reach the store. */
+private const val SLIDER_COMMIT_MS = 120L
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -2296,6 +2385,111 @@ private fun QuickLaunchRow(
     }
 }
 
+/**
+ * What the update row has to say, resolved away from the composable that says it.
+ *
+ * [Idle] covers both "nothing has been asked yet" and "the last answer was that there is
+ * nothing newer": the row reads the same either way, and the difference is not the user's.
+ */
+private sealed interface UpdateRowState {
+    data object Idle : UpdateRowState
+    data object Checking : UpdateRowState
+    data object UpToDate : UpdateRowState
+    data class Available(val version: Int) : UpdateRowState
+
+    /** @param code the HTTP status, meaningful for a server error and 0 otherwise. */
+    data class Failed(
+        val reason: UpdateError,
+        val code: Int,
+        val blockedBySystem: Boolean,
+    ) : UpdateRowState
+
+    /** "V24", for the rows that name the release rather than describe it. */
+    fun versionLabel(): String = if (this is Available) "V$version" else ""
+}
+
+/**
+ * What the row shows, from what the last check found and what is remembered from earlier ones.
+ *
+ * [knownVersion] is what makes this survive a restart: the check itself is throttled, so on
+ * most launches nothing runs at all and the row has only what an earlier one left behind.
+ * A failure is only ever reported for a check that ran in this process — an old one being
+ * told about every time settings is opened would be a complaint with nothing behind it.
+ */
+private fun updateRowState(
+    checking: Boolean,
+    result: UpdateResult?,
+    knownVersion: Int,
+): UpdateRowState = when {
+    checking -> UpdateRowState.Checking
+    result is UpdateResult.Failed ->
+        UpdateRowState.Failed(result.reason, result.code, result.blockedBySystem)
+    knownVersion > BuildConfig.VERSION_CODE -> UpdateRowState.Available(knownVersion)
+    result is UpdateResult.UpToDate -> UpdateRowState.UpToDate
+    else -> UpdateRowState.Idle
+}
+
+/** The update row's own line under the label, one per state. */
+@Composable
+private fun updateDetail(state: UpdateRowState): String = when (state) {
+    UpdateRowState.Checking -> stringResource(R.string.settings_update_checking)
+    UpdateRowState.UpToDate ->
+        stringResource(R.string.settings_update_up_to_date, BuildConfig.VERSION_NAME)
+    is UpdateRowState.Available ->
+        stringResource(R.string.settings_update_available, state.versionLabel())
+    is UpdateRowState.Failed -> when {
+        // Before the reason: it is the answer to "why", and the reason on its own reads as the
+        // app's fault when nothing this app did or was asked is involved.
+        state.blockedBySystem -> stringResource(R.string.update_error_restricted_mode)
+        state.reason == UpdateError.DNS -> stringResource(R.string.update_error_dns)
+        state.reason == UpdateError.TIMEOUT -> stringResource(R.string.update_error_timeout)
+        state.reason == UpdateError.TLS -> stringResource(R.string.update_error_tls)
+        state.reason == UpdateError.SERVER ->
+            stringResource(R.string.update_error_server, state.code)
+        state.reason == UpdateError.UNEXPECTED ->
+            stringResource(R.string.update_error_unexpected)
+        else -> stringResource(R.string.update_error_network)
+    }
+    UpdateRowState.Idle -> stringResource(R.string.settings_update_check_detail)
+}
+
+/**
+ * Asks the release page whether there is a newer build.
+ *
+ * A tap checks; a check in flight is not worth a second request, so taps are ignored while
+ * one runs. The spinner is the only thing that ever moves on this row.
+ */
+@Composable
+private fun UpdateRow(state: UpdateRowState, onCheck: () -> Unit) {
+    val busy = state is UpdateRowState.Checking
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !busy, onClick = onCheck)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RowLeadingIcon(Icons.Filled.Refresh)
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_update_check), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                updateDetail(state),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            )
+        }
+        if (busy) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+        } else {
+            Icon(
+                DelugeIcons.ArrowForwardIos,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+            )
+        }
+    }
+}
+
 @Composable
 private fun AlignmentRow(label: String, selected: HomeAlignment, onSelect: (HomeAlignment) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
@@ -2358,7 +2552,7 @@ private fun FavoritesSourceRow(
             label = stringResource(R.string.settings_frequent_count),
             value = count.toFloat(),
             range = FREQUENT_RANGE.first.toFloat()..FREQUENT_RANGE.last.toFloat(),
-            valueLabel = count.toString(),
+            valueLabel = { it.roundToInt().toString() },
             onValueChange = { onSetCount(it.toInt()) },
         )
     }

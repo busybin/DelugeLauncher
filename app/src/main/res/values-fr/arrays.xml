@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>Un dossier qui se déploie en bas de l\'écran fait défiler ses applis dans la vue au lieu de laisser les dernières lignes hors écran.</item>
+        <item>« À propos » peut consulter la page des versions pour en trouver une plus récente. Il lit seulement, rien n\'est envoyé.</item>
+        <item>Modifier la disposition : la poignée reste à l\'écart du geste retour du système, donc un glisser de réorganisation démarre sur un téléphone à navigation gestuelle, et un glisser interrompu par le système garde l\'ordre où tu l\'as amené.</item>
+        <item>La bande A-Z : la lettre sous ton doigt est celle qui s\'allume, et les lettres que le bouton d\'angle recouvre laissent un vide au lieu d\'écarter les autres de ton doigt.</item>
+        <item>Les réglages du widget horloge, météo et agenda s\'ouvrent tout de suite : applis, calendrier et batterie sont lus hors du thread principal, une fois, pas à chaque image.</item>
+        <item>Mettre une appli en pause ou la reprendre ne vide plus le cache d\'icônes ; les sauvegardes laissent de côté le cache d\'icônes et les compteurs de notifications.</item>
+        <item>Les curseurs des réglages suivent le doigt sans écrire dans le stockage à chaque image.</item>
+        <item>L\'interrupteur de la lampe garde son état quand tu quittes l\'écran d\'accueil, et le widget horloge ne demande plus un réveil d\'inactivité de 30 minutes qu\'il n\'utilise jamais.</item>
+        <item>Les 11 langues complètes.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Bouton de coin : l\'appui cède, tenir glisse pour exécuter ; toucher et glisser choisissent parmi neuf actions ; déplaçable partout en édition.</item>
         <item>Les glissés sous les favoris offrent les mêmes neuf actions, un jeu par côté.</item>

@@ -208,6 +208,24 @@
     <string name="settings_hidden_none">Aucune masquée</string>
     <string name="settings_hidden_count">%1$d masquées</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_update_check">Rechercher les mises à jour</string>
+    <string name="settings_update_check_detail">Chercher une version plus récente sur GitHub</string>
+    <string name="settings_update_checking">Vérification…</string>
+    <string name="settings_update_up_to_date">À la dernière version (%1$s)</string>
+    <string name="settings_update_available">La version %1$s est disponible</string>
+    <string name="settings_update_get">Obtenir %1$s</string>
+    <string name="settings_update_get_detail">Ouvrir la page de la version pour la télécharger</string>
+    <string name="update_dialog_title">Mise à jour disponible</string>
+    <string name="update_dialog_message">La version %1$s est sortie. Ouvrez la page de la version pour la télécharger.</string>
+    <string name="update_dialog_open">Ouvrir la page de la version</string>
+    <string name="update_dialog_later">Plus tard</string>
+    <string name="update_error_network">Aucune connexion</string>
+    <string name="update_error_dns">Impossible de résoudre l\'adresse</string>
+    <string name="update_error_tls">La connexion sécurisée a échoué</string>
+    <string name="update_error_restricted_mode">Le mode réseau restreint du téléphone bloque cette appli, pas la connexion</string>
+    <string name="update_error_timeout">Le délai de vérification est dépassé</string>
+    <string name="update_error_server">GitHub a répondu par une erreur (%1$d)</string>
+    <string name="update_error_unexpected">Réponse inattendue</string>
     <string name="settings_less">Moins</string>
     <string name="settings_more">Plus</string>
 

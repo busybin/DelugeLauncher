@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>Una carpeta que se despliega cerca del borde inferior desplaza sus apps a la vista en vez de dejar las últimas filas fuera.</item>
+        <item>«Acerca de» puede consultar la página de versiones en busca de una más nueva. Solo lee, no envía nada.</item>
+        <item>Editar diseño: el asa queda libre del gesto de volver del sistema, así el arrastre de reordenar empieza en un móvil con navegación por gestos, y un arrastre que el sistema interrumpe conserva el orden al que lo llevaste.</item>
+        <item>La tira A-Z: la letra bajo tu dedo es la que se enciende, y las letras que tapa el botón de esquina dejan un hueco en vez de empujar el resto lejos del dedo.</item>
+        <item>Los ajustes del widget de reloj, clima y agenda abren de inmediato: apps, calendario y batería se leen fuera del hilo principal, una vez, no en cada fotograma.</item>
+        <item>Pausar o reanudar una app ya no vacía la caché de iconos; las copias de seguridad dejan fuera la caché de iconos y los recuentos de notificaciones.</item>
+        <item>Los deslizadores de ajustes siguen el dedo sin escribir en el almacenamiento en cada fotograma.</item>
+        <item>El interruptor de la linterna conserva su estado al salir de la pantalla de inicio, y el widget de reloj ya no pide un despertar inactivo de 30 minutos que nunca usa.</item>
+        <item>Los 11 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Botón de esquina: pulsar cede, mantener desliza para ejecutar; toque y desliz eligen entre nueve acciones; arrástralo a donde quieras en edición.</item>
         <item>Deslizar bajo favoritos ofrece las mismas nueve acciones, un juego por lado.</item>

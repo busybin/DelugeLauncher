@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v23">
+        <item>Uma pasta que se abre perto da borda inferior rola seus apps para a tela em vez de deixar as últimas linhas de fora.</item>
+        <item>O «Sobre» pode consultar a página de versões em busca de uma mais nova. Só lê, não envia nada.</item>
+        <item>Editar layout: a alça fica longe do gesto de voltar do sistema, então o arrasto de reordenar começa em celular com navegação por gestos, e um arrasto interrompido pelo sistema mantém a ordem para onde você o levou.</item>
+        <item>A faixa A-Z: a letra sob o seu dedo é a que acende, e as letras que o botão de canto cobre deixam um vão em vez de empurrar o resto para longe do dedo.</item>
+        <item>As configurações do widget de relógio, clima e agenda abrem na hora: apps, calendário e bateria são lidos fora da thread principal, uma vez, não a cada quadro.</item>
+        <item>Pausar ou retomar um app não esvazia mais o cache de ícones; os backups deixam de fora o cache de ícones e as contagens de notificações.</item>
+        <item>Os controles deslizantes das configurações seguem o dedo sem gravar no armazenamento a cada quadro.</item>
+        <item>O interruptor da lanterna mantém o estado ao sair da tela inicial, e o widget de relógio não pede mais um despertar ocioso de 30 minutos que nunca usa.</item>
+        <item>Todos os 11 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v22">
         <item>Botão de canto: apertar cede, segurar desliza para executar; toque e deslize escolhem entre nove ações; arraste para onde quiser na edição.</item>
         <item>Deslizar sob favoritos oferece as mesmas nove ações, um jogo por lado.</item>

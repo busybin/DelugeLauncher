@@ -97,6 +97,48 @@ object ScrubberGeometry {
         val spacing = heightPx / count
         return topPx + index * spacing + spacing / 2f
     }
+
+    /**
+     * The stretch of [band] where no letter is drawn, because the corner button sits over it.
+     *
+     * A gap rather than a squeeze. The letters either side keep the positions [indexForY]
+     * maps a finger to, so the letter under the fingertip is the one that lights and the one
+     * that swells. Squeezing the alphabet into what is left of the band instead moves every
+     * letter below the squeeze away from the finger — which is what the touch zone used to
+     * suffer whenever the button shared the strip's side, since it scrubbed through the
+     * squeezed band while the app list went on drawing the true one.
+     *
+     * Null when the button is off screen, on the far side from the strip, or clear of the
+     * band altogether.
+     */
+    fun coveredSpan(
+        band: ScrubBand,
+        /** The button's span in the same space as [band]; ignored when [buttonOnScreen] is false. */
+        buttonTopPx: Float,
+        buttonBottomPx: Float,
+        /** Where the button sits across the screen, which is what says which half it is in. */
+        buttonCenterX: Float,
+        buttonOnScreen: Boolean,
+        viewportWidthPx: Int,
+        viewportHeightPx: Int,
+        /** Which side the strip is drawn on, so only a button sharing it is kept clear of. */
+        stripOnLeft: Boolean,
+        /** The daylight kept between the button and the nearest letter. */
+        marginPx: Float,
+    ): ClosedFloatingPointRange<Float>? {
+        if (!buttonOnScreen || band.heightPx <= 0f) return null
+        // Measured, not stored: the button is dragged freely now, so which half it sits in
+        // is read off where it is.
+        val buttonOnLeft = viewportWidthPx <= 0 || buttonCenterX * 2f < viewportWidthPx.toFloat()
+        if (stripOnLeft != buttonOnLeft) return null
+        val buttonOnTop = viewportHeightPx > 0 &&
+            (buttonTopPx + buttonBottomPx) < viewportHeightPx.toFloat()
+        val cut = if (buttonOnTop) buttonBottomPx + marginPx else buttonTopPx - marginPx
+        // Clear of the band: a button above it or below it covers nothing, and one that
+        // swallows the whole band leaves no room for letters whichever end it is judged from.
+        if (cut <= band.topPx || cut >= band.bottomPx) return null
+        return if (buttonOnTop) band.topPx..cut else cut..band.bottomPx
+    }
 }
 
 /** The vertical band the strip is laid out in, in screen pixels. */

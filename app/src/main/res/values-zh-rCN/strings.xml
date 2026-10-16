@@ -257,6 +257,24 @@
     <string name="settings_hidden_none">没有隐藏</string>
     <string name="settings_hidden_count">已隐藏 %1$d 个</string>
     <string name="settings_version">版本 %1$s</string>
+    <string name="settings_update_check">检查更新</string>
+    <string name="settings_update_check_detail">到 GitHub 上查看是否有新版本</string>
+    <string name="settings_update_checking">正在检查…</string>
+    <string name="settings_update_up_to_date">已是最新版本（%1$s）</string>
+    <string name="settings_update_available">版本 %1$s 已发布</string>
+    <string name="settings_update_get">获取 %1$s</string>
+    <string name="settings_update_get_detail">打开发布页面以下载</string>
+    <string name="update_dialog_title">有可用更新</string>
+    <string name="update_dialog_message">版本 %1$s 已发布。打开发布页面以下载。</string>
+    <string name="update_dialog_open">打开发布页面</string>
+    <string name="update_dialog_later">稍后</string>
+    <string name="update_error_network">无网络连接</string>
+    <string name="update_error_dns">无法解析该地址</string>
+    <string name="update_error_tls">安全连接失败</string>
+    <string name="update_error_restricted_mode">手机的受限网络模式阻止了此应用，而不是连接问题</string>
+    <string name="update_error_timeout">检查超时</string>
+    <string name="update_error_server">GitHub 返回错误（%1$d）</string>
+    <string name="update_error_unexpected">意外的回复</string>
     <string name="settings_less">较少</string>
     <string name="settings_more">更多</string>
 

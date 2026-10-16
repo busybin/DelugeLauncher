@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.Folder
+import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.concealsStored
 import dev.delugelauncher.data.folderIdFromToken
@@ -56,6 +57,7 @@ fun ManageFavoritesScreen(
     privateSpace: PrivateSpace,
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
+    hapticFeedback: HapticFeedback,
     onSetFavorite: (AppInfo, Boolean) -> Unit,
     /**
      * Unticks a key nothing can resolve right now; see the row that offers it. Only ever drops
@@ -114,6 +116,7 @@ fun ManageFavoritesScreen(
             item {
                 ReorderableRows(
                     keys = shownKeys,
+                    hapticFeedback = hapticFeedback,
                     // What was left out goes back where it was, by the rule that left it
                     // out. The screen writes back the whole list it was given, so without this
                     // the first drag would delete every favorite this screen is hiding.

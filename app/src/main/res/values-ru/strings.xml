@@ -208,6 +208,24 @@
     <string name="settings_hidden_none">Ничего не скрыто</string>
     <string name="settings_hidden_count">Скрыто: %1$d</string>
     <string name="settings_version">Версия %1$s</string>
+    <string name="settings_update_check">Проверить обновления</string>
+    <string name="settings_update_check_detail">Искать более свежую версию на GitHub</string>
+    <string name="settings_update_checking">Проверка…</string>
+    <string name="settings_update_up_to_date">Установлена последняя версия (%1$s)</string>
+    <string name="settings_update_available">Доступна версия %1$s</string>
+    <string name="settings_update_get">Получить %1$s</string>
+    <string name="settings_update_get_detail">Откройте страницу выпуска, чтобы скачать её</string>
+    <string name="update_dialog_title">Доступно обновление</string>
+    <string name="update_dialog_message">Вышла версия %1$s. Откройте страницу выпуска, чтобы скачать её.</string>
+    <string name="update_dialog_open">Открыть страницу выпуска</string>
+    <string name="update_dialog_later">Позже</string>
+    <string name="update_error_network">Нет подключения</string>
+    <string name="update_error_dns">Не удалось разрешить адрес</string>
+    <string name="update_error_tls">Не удалось установить защищённое соединение</string>
+    <string name="update_error_restricted_mode">Режим ограниченной сети на телефоне блокирует это приложение, а не соединение</string>
+    <string name="update_error_timeout">Время проверки истекло</string>
+    <string name="update_error_server">GitHub ответил ошибкой (%1$d)</string>
+    <string name="update_error_unexpected">Неожиданный ответ</string>
     <string name="settings_less">Меньше</string>
     <string name="settings_more">Больше</string>
 

@@ -1,8 +1,9 @@
 # Architecture
 
 Deluge Launcher is a single-module Android home-screen launcher: Kotlin, Jetpack
-Compose, `minSdk 26`, `compileSdk`/`targetSdk 35`. No network permission, no
-analytics, no ads, no accounts.
+Compose, `minSdk 26`, `compileSdk`/`targetSdk 35`. No analytics, no ads, no accounts;
+the one thing it asks the network for is the release page, read to see whether a newer
+version exists.
 
 ## Package layout (`dev.delugelauncher`)
 
@@ -16,6 +17,7 @@ data/
   Prefs.kt                      DataStore<Preferences>: every setting, hidden apps, favorites
   Folder.kt                     folder model + JSON persistence + favorites token encoding
   HomePaddings.kt               per-block top/bottom spacing set in edit mode
+  UpdateChecker.kt              the one network call: reads the release page for a newer version
 ui/
   DelugeNavHost.kt            collects settings once, hosts the navigation graph
   home/HomeRoute.kt             home destination: home screen, app-list overlay, edge zones
@@ -85,10 +87,16 @@ Two deliberate choices keep scrubbing off the main thread's back:
 
 ## Permissions
 
-The app requests **no `INTERNET` permission**. It cannot phone home.
+The only thing the app talks to the network for is the release page: one read of
+`api.github.com/.../releases/latest`, to tell the user whether a newer version exists
+(`data/UpdateChecker.kt`). It is a `GET` with nothing attached but a user agent naming
+the app. No setting, app list, usage count or anything else ever leaves the device, and
+the download and install both happen outside the app — in the browser, and in the
+system's own installer.
 
 | Permission | Why | Optional? |
 |---|---|---|
+| `INTERNET` | Reading the release page for the version check above. Nothing is ever sent. | Yes — the check is the only feature it serves, and the app is fully usable without it |
 | `QUERY_ALL_PACKAGES` | A launcher must enumerate every installed app, icon pack and widget provider. Without it `PackageManager` filters almost everything out on Android 11+. | No |
 | `VIBRATE` | The haptic tick as the finger crosses a letter. Respects the system touch-feedback setting, and can be turned off in Settings. | No |
 | Accessibility service | The only sanctioned way to open the notification shade or lock the screen — neither has a public API. The service ignores every event it receives and reads nothing. | Yes — the swipe-down and double-tap-to-lock gestures simply report that they need it |
@@ -100,11 +108,6 @@ whichever app is the current Home.
 
 ## Known gaps
 
-- No search in the A-Z list; the edge scrubber is the only way to find an app.
-- Work-profile apps are invisible. `AppRepository` uses `PackageManager` rather than
-  `LauncherApps`, and `AppInfo` carries no `UserHandle`. Fixing this changes
-  `AppInfo.key`, which is the persisted favorites key, so it needs a data migration.
-- Double-tap-to-lock works only in the app list, not on the home screen.
 - No Baseline Profile. Generating one needs a device or emulator; it is the largest
   remaining first-launch win.
 - Unit tests cover only framework-free logic. Anything touching `PackageManager`,

@@ -144,7 +144,16 @@ private const val EXPORT_FORMAT = 1
 private const val PREF_LANGUAGE = "language"
 
 /** Store keys that are modes, not settings, and must never travel in a backup. */
-private val NEVER_EXPORT = setOf("screenshot_mode")
+private val NEVER_EXPORT = setOf(
+    "screenshot_mode",
+    // Records of what this device has already asked the release page and been told. A setting
+    // moved to another phone says nothing about that phone's build, so restoring them there
+    // would suppress an update prompt that is still owed.
+    "last_update_check",
+    "last_update_check_failed",
+    "update_known_version",
+    "update_prompted_version",
+)
 
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
 data class ExportResult(val json: String, val omittedPrivateSpace: Boolean)
@@ -277,6 +286,10 @@ class Prefs(private val context: Context) {
         val STATUS_BAR_PEEK_SECONDS = intPreferencesKey("status_bar_peek_seconds")
         val AZ_BAND_TOP_FRACTION = floatPreferencesKey("az_band_top_fraction")
         val AZ_BAND_HEIGHT_FRACTION = floatPreferencesKey("az_band_height_fraction")
+        val LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
+        val LAST_UPDATE_CHECK_FAILED = booleanPreferencesKey("last_update_check_failed")
+        val UPDATE_KNOWN_VERSION = intPreferencesKey("update_known_version")
+        val UPDATE_PROMPTED_VERSION = intPreferencesKey("update_prompted_version")
     }
 
     /** Every padding a user can set by hand; their presence is what retires the first-run layout. */
@@ -672,6 +685,56 @@ class Prefs(private val context: Context) {
 
     suspend fun dismissDefaultPrompt() {
         context.dataStore.edit { it[Keys.DEFAULT_PROMPT_DISMISSED] = true }
+    }
+
+    /** When the release page was last asked, or 0 before this device has ever asked. */
+    val lastUpdateCheck: Flow<Long> =
+        data.map { it[Keys.LAST_UPDATE_CHECK] ?: 0L }.distinctUntilChanged()
+
+    /**
+     * Whether that last ask came back with nothing.
+     *
+     * What the interval is measured against: a check that answered is not worth repeating for
+     * hours, one that did not is worth repeating the next time the launcher is opened.
+     */
+    val lastUpdateCheckFailed: Flow<Boolean> =
+        data.map { it[Keys.LAST_UPDATE_CHECK_FAILED] ?: false }.distinctUntilChanged()
+
+    /**
+     * The newest release any check has seen, or 0 while none has answered.
+     *
+     * Kept rather than only held in memory: a launcher is restarted often, and a check is
+     * throttled, so without this the knowledge that an update exists would be forgotten
+     * between launches and the row would go back to saying nothing.
+     */
+    val updateKnownVersion: Flow<Int> =
+        data.map { it[Keys.UPDATE_KNOWN_VERSION] ?: 0 }.distinctUntilChanged()
+
+    /** The newest release the user has already been told about, so it is only said once. */
+    val updatePromptedVersion: Flow<Int> =
+        data.map { it[Keys.UPDATE_PROMPTED_VERSION] ?: 0 }.distinctUntilChanged()
+
+    /**
+     * Records that a check ran just now, and what it saw.
+     *
+     * The timestamp is written whether or not the check answered, so an unreachable release
+     * page is not retried on every one of the many times a launcher is opened in a day; [failed]
+     * is what shortens the wait to the next one, so a phone that was offline or blocked for a
+     * minute is not stuck saying so for the rest of the day. The version only ever moves
+     * forward: a check that saw an older one — the answer to a comparison that is still "up to
+     * date" — must not erase what a previous one found.
+     */
+    suspend fun recordUpdateCheck(knownVersion: Int, nowMillis: Long, failed: Boolean) {
+        context.dataStore.edit { pref ->
+            pref[Keys.LAST_UPDATE_CHECK] = nowMillis
+            pref[Keys.LAST_UPDATE_CHECK_FAILED] = failed
+            val seen = maxOf(pref[Keys.UPDATE_KNOWN_VERSION] ?: 0, knownVersion)
+            if (seen > 0) pref[Keys.UPDATE_KNOWN_VERSION] = seen
+        }
+    }
+
+    suspend fun markUpdatePrompted(version: Int) {
+        context.dataStore.edit { it[Keys.UPDATE_PROMPTED_VERSION] = version }
     }
 
     /**

@@ -6,7 +6,6 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:updatePeriodMillis="1800000"
     android:initialLayout="@layout/widget_clock"
     android:previewLayout="@layout/widget_clock"
     android:configure="dev.delugelauncher.widget.ClockWidgetConfigActivity"
