@@ -1,7 +1,0 @@
-New:
-* Export and import your settings, under a new Backup section.
-* The icon picker opens on the app's own name and searches every icon pack at once. Pick a pack to narrow it.
-
-Fixed:
-* The Now Playing card could not connect at all. The same fault stopped the accessibility service binding, which is what swipe down for notifications needs.
-* Typing on a hardware keyboard no longer drops characters when typed quickly, backspace works, and so does the space in an app name.

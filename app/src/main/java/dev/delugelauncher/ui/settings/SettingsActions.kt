@@ -128,7 +128,6 @@ import dev.delugelauncher.data.UpdateError
 import dev.delugelauncher.data.UpdateResult
 import dev.delugelauncher.data.targetKind
 import dev.delugelauncher.service.HapticUtil
-import dev.delugelauncher.ui.applist.PinyinSearch
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE

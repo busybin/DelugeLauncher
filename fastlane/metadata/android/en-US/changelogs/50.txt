@@ -1,8 +1,0 @@
-* The app list opens the instant you touch the edge, instead of fading in.
-* Tapping a row launches it — a tap beside a label no longer closes the list.
-* Rows show a press highlight, and follow the right-aligned layout setting.
-* Both ends of the list stretch and settle the same way, and either can be pulled to close the list.
-* Returning to the home screen fades in rather than cutting.
-* Launching an app no longer flashes the home screen first.
-* The Now Playing card opens whatever is playing when tapped, and no longer draws its own background.
-* Album art keeps its rounded corners and fills its square instead of letterboxing.

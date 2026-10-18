@@ -10,9 +10,17 @@ reaching the app list and a letter with one thumb — icons cached on disk, unne
 dependencies dropped, and the A-Z strip, edge gestures and row swipes made to behave
 under a real finger. Everything else is upstream's design, kept as it was.
 
-| Home | App list | Scrubbing | Long-press menu |
-| ---- | -------- | --------- | --------------- |
-| ![Home](screenshots/home.png) | ![App list](screenshots/app-list.png) | ![Scrubbing](screenshots/scrub.png) | ![Long-press menu](screenshots/menu.png) |
+| Home | App list | Scrubbing the A-Z strip | Long-press menu |
+| ---- | -------- | ----------------------- | --------------- |
+| ![Home](screenshots/home.jpg) | ![App list](screenshots/app-list.jpg) | ![Scrubbing the A-Z strip](screenshots/scrub.jpg) | ![Long-press menu](screenshots/menu.jpg) |
+| Folder | Search | Edit layout | A-Z strip range |
+| ![Folder](screenshots/folder.jpg) | ![Search](screenshots/search.jpg) | ![Edit layout](screenshots/edit-layout.jpg) | ![A-Z strip range](screenshots/a-z-range.jpg) |
+| Edit icon & name | Settings | Gestures | Corner button |
+| ![Edit icon and name](screenshots/icon-edit.jpg) | ![Settings](screenshots/settings.jpg) | ![Gestures](screenshots/gestures.jpg) | ![Corner button](screenshots/corner-button.jpg) |
+
+Taken on an Android 14 emulator at 1080×2400. Wallpaper: *Dystopian cyberpunk city* by
+Matankic (DALL·E) — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0), via
+Wikimedia Commons.
 
 ## What this fork changes
 
@@ -26,7 +34,7 @@ under a real finger. Everything else is upstream's design, kept as it was.
   started at an angle scrolls the list instead of opening a shortcut menu. Overscrolling
   the bottom springs back instead of closing the list.
 - **Search speaks pinyin.** Initials and full spelling both find the app, with the match
-  highlighted.
+  sits under Z, not under the A of its English name — here, in the pickers, and in settings.
 - **Tags across the alphabet.** Group apps by what they are for, scrub them from the
   strip, and let the Frequent tag follow usage on its own.
 - **A lock per app.** Opening one asks for the screen lock; the long-press menu also
@@ -83,11 +91,26 @@ Deluge set as your default home app.
 
 ## Build
 
-You need JDK 17 and an Android SDK with platform 35.
+You need JDK 17 and an Android SDK with platform 37 (the version numbers come from
+[`the build skeleton`](https://github.com/busybin/the build skeleton), which this repository is
+built against; see `gradle.properties`).
 
 ```sh
 ./gradlew assembleDebug
 ```
+
+A release build is signed from a git-ignored `keystore.properties`:
+
+```properties
+storeFile=app/keys_release.jks
+storePassword=***
+keyAlias=deluge
+keyPassword=***
+```
+
+Without it, `assembleRelease` produces an **unsigned** APK (it prints a warning) — that is
+deliberate, and it must not be published. See [fdroid/README.md](fdroid/README.md) for the
+signing key, the release checklist and the F-Droid / IzzyOnDroid situation.
 
 Translations are welcome — see [TRANSLATING.md](docs/TRANSLATING.md).
 [CONTRIBUTING.md](docs/CONTRIBUTING.md) has the full build notes, and

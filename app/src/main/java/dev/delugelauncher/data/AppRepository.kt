@@ -178,7 +178,10 @@ class AppRepository(
             // happens to be answering at this instant.
             .filterNot { privateSpace.conceals(it.key) }
             .distinctBy { it.key }
-            .sortedBy { it.label.lowercase() }
+            // By pinyin on a Chinese phone: this is the order every list of app names starts
+            // from — the pickers, the favourites and the hidden ones — and leaving it at the
+            // The app list re-files and re-orders the same apps by its own letters.
+            .sortedBy { if (Pinyin.ordering()) Pinyin.latin(it.label) else it.label.lowercase() }
             // After the own-package filter, which would otherwise drop it: the row is ours.
             .plus(privateSpaceRow(privateSpace))
     }

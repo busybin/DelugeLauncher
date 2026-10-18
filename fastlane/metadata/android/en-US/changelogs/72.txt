@@ -1,8 +1,0 @@
-New:
-* Shortcuts pinned from a browser's "Add to Home screen" now land in Deluge. They can be renamed, given an icon, hidden, foldered or used for a quick launch, contributed by lennygatorsandghosts.
-* Settings open on a list of sections instead of one long page.
-
-Fixed:
-* Pulling down for notifications works again over a widget that has nothing to scroll; only a widget that can scroll now takes the gesture.
-* An A-Z strip set to always show no longer sits on top of the home screen content.
-* The settings header is shorter, so it fits beside a camera cutout in longer languages.

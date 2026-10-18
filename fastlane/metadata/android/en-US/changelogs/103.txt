@@ -1,2 +1,0 @@
-Fixed:
-* The launcher crashed in a loop with the "Recently installed" section turned on. A recent app also appears under its own letter, and the list could not tell the two entries apart.

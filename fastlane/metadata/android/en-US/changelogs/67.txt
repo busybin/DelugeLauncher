@@ -1,6 +1,0 @@
-New:
-* The A-Z strip on the home screen is now Never, Landscape or Always, instead of on or off.
-
-Fixed:
-* Turning the phone back to portrait could leave the home screen stuck above the top of the display.
-* Favorites and the app list no longer run under the camera cutout in landscape.

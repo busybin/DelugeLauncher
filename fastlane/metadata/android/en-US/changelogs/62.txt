@@ -1,8 +1,0 @@
-New:
-* German translation, contributed by dev-inside.
-* The wallpaper dim can be any color, and the color picker offers your wallpaper's own palette.
-* Tablets can rotate, and neither the home screen nor the app list stretches past a readable width on a large screen. Phones stay upright: this layout needs more height than a phone on its side has.
-
-Fixed:
-* Removing a widget could leave the favorites aligned to the layout they had before it went.
-* A hidden app found by searching offered to hide itself again instead of to show itself, and now appears dimmed so you can tell.

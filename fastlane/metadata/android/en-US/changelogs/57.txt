@@ -1,8 +1,0 @@
-New:
-* Favorites and the apps in a folder can be dragged into the order you want them, from their screens in settings.
-* Favorites, folders and hidden apps now list what you have already chosen at the top, with everything else below to add from. Hidden apps shows icons and renamed names like the others.
-* Apps inside an expanded folder have a menu of their own on a long press: app info, edit icon and name, manage folder, remove from folder.
-
-Fixed:
-* A long press on an app inside a folder no longer removes it from the folder outright. Removing is an item in its menu now.
-* Closing the app list no longer flashes the undimmed wallpaper before the home screen's own dim arrives, and the dim no longer pulls away from the edges of the screen during the closing animation.

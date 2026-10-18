@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.delugelauncher.DelugeApp
+import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.ui.theme.DelugeTheme
 import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
@@ -63,16 +64,21 @@ class WidgetPickerActivity : ComponentActivity() {
             DelugeTheme {
                 val providers = remember { appWidgetManager.installedProviders }
                 val groups = remember(providers) {
+                    // A Chinese launcher sorts these by pinyin like the app list does; a group
+                    val pinyin = Pinyin.ordering()
+                    fun keyOf(name: String) =
+                        if (pinyin) Pinyin.latin(name) else name.lowercase()
+
                     providers.groupBy { it.provider.packageName }
                         .map { (pkg, widgets) ->
                             val appInfo = runCatching { packageManager.getApplicationInfo(pkg, 0) }.getOrNull()
                             AppGroup(
                                 label = appInfo?.loadLabel(packageManager)?.toString() ?: pkg,
                                 icon = appInfo?.loadIcon(packageManager),
-                                widgets = widgets.sortedBy { it.loadLabel(packageManager) },
+                                widgets = widgets.sortedBy { keyOf(it.loadLabel(packageManager).toString()) },
                             )
                         }
-                        .sortedBy { it.label.lowercase() }
+                        .sortedBy { keyOf(it.label) }
                 }
 
                 Surface(modifier = Modifier.fillMaxSize()) {

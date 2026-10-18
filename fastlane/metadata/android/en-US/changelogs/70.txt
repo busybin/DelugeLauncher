@@ -1,2 +1,0 @@
-Fixed:
-* Swiping between widgets stopped working in 0.61.1. Only up and down drags now go to the widget; sideways swipes move between them again.

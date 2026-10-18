@@ -1,1 +1,0 @@
-* Search also matches an app's package name, so an app that names itself in your device's language can still be found by its English name.

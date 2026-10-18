@@ -1,14 +1,5 @@
 Update check, smoother settings, and fixes.
 
-New:
-* A folder that expands near the bottom scrolls its apps into view instead of leaving the last rows off-screen.
-* Settings -> About can check the release page for a newer version. It reads, and sends nothing.
+New: a folder near the bottom of the home screen now expands and scrolls its apps into view. Settings -> About can check the release page for a newer version (it reads, and sends nothing).
 
-Fixed and tuned:
-* Edit layout: the grab handle sits clear of the system back gesture, so a reorder drag starts on a gesture-navigated phone, and a drag the system interrupts keeps the order you dragged it to.
-* The A-Z strip: the letter under your finger is the one that lights, and letters hidden by the corner button leave a gap instead of squeezing the rest away from your finger.
-* The clock, weather and agenda widget's settings open at once: apps, calendar and battery are read off the main thread, once, not every frame.
-* Pausing or resuming an app no longer empties the icon cache; backups leave out the icon cache and the notification counts.
-* Settings sliders follow your finger without writing to storage on every frame.
-* The flashlight switch keeps its state after you leave the home screen, and the clock widget no longer asks for a 30-minute idle wake-up it never uses.
-* All 11 languages complete.
+Fixed: a reorder drag now starts on gesture-navigation phones and keeps the order you dragged it to; the A-Z strip lights the letter under your finger; the clock/weather/agenda widget's settings read apps, calendar and battery off the main thread; pausing or resuming an app no longer empties the icon cache; settings sliders no longer write to storage on every frame; the flashlight switch keeps its state and the clock widget drops an unused wake-up. All 11 languages complete.

@@ -1,3 +1,0 @@
-Fixed:
-* Widgets with a setup screen could not be added and could crash the launcher. GitHub, Obsidian and weather widgets are the ones this was reported for.
-* A widget that fails to draw now leaves an empty slot instead of taking the launcher down with it.

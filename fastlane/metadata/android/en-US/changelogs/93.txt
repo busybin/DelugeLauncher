@@ -1,5 +1,0 @@
-New:
-* Tapping the weather on the clock widget opens an app of your choosing, picked in the widget's own settings.
-
-Fixed:
-* The weather sat tight against the date.

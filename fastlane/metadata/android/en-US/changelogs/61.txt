@@ -1,4 +1,0 @@
-Fixed:
-* Themed icons and icon shapes did nothing at all in 0.56.0. The setting was stored and read correctly but never reached the icons.
-* App names in Cyrillic and Greek are filed under the letter they romanize to — Калькулятор under K — instead of all landing in #.
-* The text color setting no longer prints "Custom" one letter per line.

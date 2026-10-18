@@ -1,5 +1,0 @@
-New:
-* Use your own font. Pick any .ttf or .otf file and it is copied into the launcher, so it keeps working if the file moves.
-* Text color can be a color you pick, or taken from your Material palette.
-* Themed icons, for apps that ship the monochrome icon Android 13 added. Apps that do not keep their own icon.
-* Icon shapes: circle, rounded or square. Only applies to adaptive icons; older ones have no margin to cut into.

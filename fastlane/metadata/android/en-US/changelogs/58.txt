@@ -1,6 +1,0 @@
-New:
-* Russian translation, contributed by SkullGamer205.
-* Widgets can be moved left and right from edit layout, so a widget that centers its own contents — most clocks do — can be put where you want it.
-
-Fixed:
-* Apps whose names start with kanji, hangul, Cyrillic or any other non-Latin script are now filed under # instead of each character getting its own entry on the A-Z strip. Accented names still file under their own letter.

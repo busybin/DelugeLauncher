@@ -1,2 +1,0 @@
-Fixed:
-* Widgets that scroll can be scrolled. A drag that starts on a widget now goes to the widget, so it no longer pulls the notification shade down instead. The shade still comes down from anywhere else on the home screen.

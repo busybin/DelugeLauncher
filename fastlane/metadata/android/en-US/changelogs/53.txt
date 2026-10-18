@@ -1,9 +1,0 @@
-New:
-* Padding and height in edit layout can now be typed outright by tapping the number, or held down to run up quickly, as well as stepped one at a time.
-
-Fixed:
-* Back on the home screen no longer closed the launcher and revealed whichever launcher you used before.
-* Pressing the A-Z strip above or below the letters no longer jumps to A. A tap there closes the app list, the same as tapping the space above it.
-* Edit layout's grab handles now line up with the steppers instead of sitting against the screen edge, and can no longer overlap a long app name.
-* The edge swipe width setting moves one step at a time.
-* "Show names under favorites" now says what it does.

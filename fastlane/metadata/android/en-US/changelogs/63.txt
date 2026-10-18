@@ -1,4 +1,0 @@
-New:
-
-Fixed:
-* The color swatches offered in the picker and the color the Material text option gives you now come from the same palette. A light wallpaper under a dark system theme made them disagree.

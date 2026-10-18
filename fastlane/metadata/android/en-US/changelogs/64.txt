@@ -1,7 +1,0 @@
-New:
-* Typing on a hardware keyboard opens the app list and searches for what you typed. Needs the search bar turned on.
-* Rotation is now a setting. Off on phones, on by default on tablets.
-
-Fixed:
-* Favorites could shiver in place, worse after removing a widget.
-* The A-Z bulge now reaches past your fingertip instead of stopping underneath it, and the letter bubble moves out with it.

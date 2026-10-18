@@ -1,1 +1,0 @@
-* Fixed: an icon set to the opposite side from the row's alignment was pushed to the far edge of the screen instead of staying next to the app's name.

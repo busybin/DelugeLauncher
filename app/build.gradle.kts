@@ -27,7 +27,7 @@ android {
         minSdk = baselineInt("baseline.minSdk")
         targetSdk = baselineInt("baseline.targetSdk")
         versionCode = 23
-        versionName = "V23"
+        versionName = "23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -50,7 +50,12 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            signingConfig = if (hasSigningConfig) signingConfigs.getByName("release") else null
+            signingConfig = if (hasSigningConfig) {
+                signingConfigs.getByName("release")
+            } else {
+                logger.warn("WARNING: keystore.properties not found — this release build will be UNSIGNED.")
+                null
+            }
         }
     }
 

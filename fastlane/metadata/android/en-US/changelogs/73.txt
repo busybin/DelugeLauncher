@@ -1,2 +1,0 @@
-New:
-* Long-press an app to reach the shortcuts it publishes — a browser's new tab, a mail app's compose, and so on.

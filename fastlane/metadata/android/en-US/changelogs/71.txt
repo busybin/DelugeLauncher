@@ -1,2 +1,0 @@
-Fixed:
-* Another try at scrolling inside a widget: the widget now gets the gesture from the moment you touch it, and only gives it back for a sideways swipe between widgets.
