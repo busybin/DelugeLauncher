@@ -23,3 +23,5 @@ MEMORY.md
 # OS
 .DS_Store
 Thumbs.db
+
+*.bak.*

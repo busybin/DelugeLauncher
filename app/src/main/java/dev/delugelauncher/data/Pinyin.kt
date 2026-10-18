@@ -1,23 +1,37 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-package dev.delugelauncher.ui.applist
+package dev.delugelauncher.data
 
 import android.icu.text.Transliterator
 import android.os.Build
 import java.text.Normalizer
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * Pinyin matching for search, so a phone full of Chinese app names can be reached with a
+ * keyboard ("wx", "weixin"), and ordering, so it is filed under W and sorted among the W names.
  *
  * The romanization is ICU's, which ships with the platform, so no dictionary is carried. It is
  * done one character at a time and cached, because a query is answered on every keystroke and
  * a scan of two hundred apps per letter would be felt. Below Android 10 the transliterator is
  * not available and matching quietly falls back to the name and package alone.
+ *
+ * Here in `data` rather than beside the app list it was written for: the order every list of
+ * app names starts from is decided in [AppRepository], and the app list, the pickers and the
+ * settings screens all have to agree on what that order is.
  */
-internal object PinyinSearch {
+internal object Pinyin {
 
     /** Not a match. Above every real rank, so `rank(...) == NO_MATCH` reads plainly. */
     const val NO_MATCH = Int.MAX_VALUE
+
+    /**
+     * Whether the launcher's own language is Chinese, which is when a list of Han names is
+     * ordered by pinyin rather than by an English name the user never sees.
+     *
+     * The chosen language reaches the process default through [LanguagePrefs], so this answers
+     * for the launcher's language and not for the phone's.
+     */
+    fun ordering(): Boolean = Locale.getDefault().language == "zh"
 
     /**
      * A name in latin letters.
@@ -64,6 +78,21 @@ internal object PinyinSearch {
             }
         }
         Key(full.toString(), initials.toString(), source.toIntArray())
+    }
+
+    /**
+     * The latin reading of [name], character by character, for ordering.
+     *
+     * Han comes back as its pinyin and latin as itself, which is what lets a Chinese list put
+     * [key], separators are kept: "Call of Duty" has to sort before "Callout". A character the
+     * romanizer cannot read (kana, hangul, or any Han on a device without the transliterator)
+     * stays as it is, so those names keep the order they had.
+     */
+    fun latin(name: String): String = buildString(name.length) {
+        name.forEach { ch ->
+            val reading = romanize(ch)
+            append(if (reading.isEmpty()) ch.lowercaseChar() else reading)
+        }
     }
 
     /** The latin letters one character answers to: its pinyin when it is Han, else itself. */

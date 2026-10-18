@@ -290,6 +290,7 @@ class Prefs(private val context: Context) {
         val LAST_UPDATE_CHECK_FAILED = booleanPreferencesKey("last_update_check_failed")
         val UPDATE_KNOWN_VERSION = intPreferencesKey("update_known_version")
         val UPDATE_PROMPTED_VERSION = intPreferencesKey("update_prompted_version")
+        val UPDATE_AUTO_CHECK = booleanPreferencesKey("update_auto_check")
     }
 
     /** Every padding a user can set by hand; their presence is what retires the first-run layout. */
@@ -713,6 +714,23 @@ class Prefs(private val context: Context) {
     /** The newest release the user has already been told about, so it is only said once. */
     val updatePromptedVersion: Flow<Int> =
         data.map { it[Keys.UPDATE_PROMPTED_VERSION] ?: 0 }.distinctUntilChanged()
+
+    /**
+     * Whether the release page may be asked on its own, without being asked first.
+     *
+     * **Off by default.** The manual "check for updates" in Settings always works; this only
+     * decides whether the launcher may make that request by itself at startup. A home screen
+     * that reads a network page unasked is one more thing its user has to trust, and a version
+     * check nobody opted into is what F-Droid labels as tracking — so the request happens only
+     * after someone turns this on. The check itself reads the public release page and sends
+     * nothing else; see [UpdateChecker].
+     */
+    val updateAutoCheck: Flow<Boolean> =
+        data.map { it[Keys.UPDATE_AUTO_CHECK] ?: false }.distinctUntilChanged()
+
+    suspend fun setUpdateAutoCheck(value: Boolean) {
+        context.dataStore.edit { it[Keys.UPDATE_AUTO_CHECK] = value }
+    }
 
     /**
      * Records that a check ran just now, and what it saw.

@@ -102,6 +102,7 @@ import dev.delugelauncher.ui.applist.ScrubState
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
+import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.ui.common.FolderPickerDialog
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.Dispatchers
@@ -210,6 +211,9 @@ fun HomeRoute(
             context.packageManager.resolveActivity(Intent(Intent.ACTION_WEB_SEARCH), 0) != null
         }.getOrDefault(false)
     }
+    // A Chinese launcher files and orders Chinese app names by their pinyin, which is how a
+    // Alipay. Asked once rather than per app: switching language recreates the activity.
+    val pinyinSort = remember { Pinyin.ordering() }
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
@@ -264,6 +268,7 @@ fun HomeRoute(
                 { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
                 counts,
                 englishName = { app.appRepository.englishLabel(it) },
+                pinyin = pinyinSort,
                 showHeaders = settings.showListHeaders,
                 renamed = { it.key in nameOverrides },
                 privateSectionLabel = privateSectionLabel,
@@ -293,6 +298,7 @@ fun HomeRoute(
                     { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
                     counts,
                     englishName = { app.appRepository.englishLabel(it) },
+                    pinyin = pinyinSort,
                     showHeaders = settings.showListHeaders,
                     renamed = { it.key in nameOverrides },
                     privateSectionLabel = privateSectionLabel,
@@ -1294,6 +1300,7 @@ fun HomeRoute(
                 model = listModel,
                 nameOverrides = nameOverrides,
                 englishName = { app.appRepository.englishLabel(it) },
+                pinyinSort = pinyinSort,
                 isRenamed = { it.key in nameOverrides },
                 scrub = scrub,
                 iconSizeDp = settings.iconSizeDp,

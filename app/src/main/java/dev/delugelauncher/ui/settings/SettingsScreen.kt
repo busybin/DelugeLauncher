@@ -106,7 +106,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import dev.delugelauncher.service.HapticUtil
 import dev.delugelauncher.data.CrashLog
-import dev.delugelauncher.ui.applist.PinyinSearch
+import dev.delugelauncher.data.Pinyin
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
@@ -340,6 +340,9 @@ class SettingsScreenModel(
     val updateResult: UpdateResult?,
     /** The newest release any look has seen, however long ago that was. */
     val updateKnownVersion: Int,
+    /** Whether the launcher may look on its own at startup. Off by default — see Prefs. */
+    val updateAutoCheck: Boolean,
+    val onSetUpdateAutoCheck: (Boolean) -> Unit,
     val onCheckForUpdates: () -> Unit,
     /** Opens the release page in the browser; the page itself, never a file. */
     val onOpenReleasePage: () -> Unit,
@@ -1229,6 +1232,17 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         // Beside the changelog: the two answer the same question from either end — what this
+        SettingsEntry(
+            SettingsSection.ABOUT, stringResource(R.string.settings_update_auto_check),
+            "update upgrade version newer release automatic check auto",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_update_auto_check),
+                detail = stringResource(R.string.settings_update_auto_check_detail),
+                checked = updateAutoCheck,
+                onCheckedChange = onSetUpdateAutoCheck,
+            )
+        },
         // build holds, and whether there is a newer one.
         SettingsEntry(
             SettingsSection.ABOUT, stringResource(R.string.settings_update_check),
@@ -2010,7 +2024,7 @@ private class SettingsEntry(
         if (title.contains(q, ignoreCase = true) || keywords.contains(q, ignoreCase = true)) {
             return true
         }
-        return PinyinSearch.rank(title, keywords, q) != PinyinSearch.NO_MATCH
+        return Pinyin.rank(title, keywords, q) != Pinyin.NO_MATCH
     }
 }
 
@@ -2411,8 +2425,8 @@ private sealed interface UpdateRowState {
         val blockedBySystem: Boolean,
     ) : UpdateRowState
 
-    /** "V24", for the rows that name the release rather than describe it. */
-    fun versionLabel(): String = if (this is Available) "V$version" else ""
+    /** "24", for the rows that name the release rather than describe it. */
+    fun versionLabel(): String = if (this is Available) "$version" else ""
 }
 
 /**

@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.applist
 
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.data.Pinyin
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -308,6 +309,8 @@ fun AppListScreen(
     lastLetterToLine: Boolean,
     /** English name for filing search results like the list files them; null when unknown. */
     englishName: (AppInfo) -> String? = { null },
+    /** Whether the launcher is in Chinese, so Han names file under their pinyin like the list. */
+    pinyinSort: Boolean = false,
     /** Whether the shown name was typed by hand, which files '#' as '#' itself. */
     isRenamed: (AppInfo) -> Boolean = { false },
     searchEnabled: Boolean,
@@ -360,14 +363,15 @@ fun AppListScreen(
             searchModel
                 .filtered { app ->
                     // — the package name, where the English word is still sitting.
-                    PinyinSearch.rank(displayName(app), app.componentName.packageName, term) !=
-                        PinyinSearch.NO_MATCH
+                    Pinyin.rank(displayName(app), app.componentName.packageName, term) !=
+                        Pinyin.NO_MATCH
                 }
                 .rankedBy(
-                    rank = { PinyinSearch.rank(displayName(it), it.componentName.packageName, term) },
+                    rank = { Pinyin.rank(displayName(it), it.componentName.packageName, term) },
                     displayName = { displayName(it) },
                     renamed = { isRenamed(it) },
                     englishName = { englishName(it) },
+                    pinyin = pinyinSort,
                 )
         }
     }
@@ -1857,7 +1861,7 @@ private fun AppRow(
             // beside it; a plain weight spans the row and pins the icon to the far edge.
             val labelModifier = Modifier.weight(1f, fill = false)
             val matched = remember(label, highlightTerm) {
-                if (highlightTerm.isEmpty()) null else PinyinSearch.highlight(label, highlightTerm)
+                if (highlightTerm.isEmpty()) null else Pinyin.highlight(label, highlightTerm)
             }
             val text: @Composable () -> Unit = {
                 // The name, with whatever the query matched picked out. A pinyin hit marks the

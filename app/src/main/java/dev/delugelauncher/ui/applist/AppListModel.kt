@@ -3,6 +3,7 @@ package dev.delugelauncher.ui.applist
 
 import androidx.compose.runtime.Immutable
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.Pinyin
 import android.icu.text.Transliterator
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -219,14 +220,24 @@ fun AppListModel.alphabetEnd(): Int {
  * '#'. Renaming an app to 4PDA and finding it still under F was this fallback handing back the
  * very name that had just been replaced.
  */
-internal fun filingLetter(shown: String, renamed: Boolean, english: () -> String?): Char {
-    val own = indexLetter(shown)
+internal fun filingLetter(
+    shown: String,
+    renamed: Boolean,
+    pinyin: Boolean = false,
+    english: () -> String?,
+): Char {
+    val own = indexLetter(shown, pinyin)
     if (own != '#') return own
     if (renamed) return '#'
-    return english()?.let { indexLetter(it) } ?: '#'
+    return english()?.let { indexLetter(it, pinyin) } ?: '#'
 }
 
-internal fun indexLetter(name: String): Char {
+/**
+ * The letter a name files under, with [pinyin] for a list whose language is Chinese.
+ *
+ * A for Alipay. Without it a Han name still has no A-Z letter of its own.
+ */
+internal fun indexLetter(name: String, pinyin: Boolean = false): Char {
     val first = name.firstOrNull() ?: return '#'
     val folded = Normalizer.normalize(first.toString(), Normalizer.Form.NFKD)
         .firstOrNull()
@@ -234,7 +245,16 @@ internal fun indexLetter(name: String): Char {
         ?: return '#'
     if (folded in 'A'..'Z') return folded
     LATIN_STANDALONE[folded]?.let { return it }
-    return romanize(folded) ?: '#'
+    romanize(folded)?.let { return it }
+    // Only Han comes back from here, and only where ICU answers: kana and hangul read
+    // differently from the same characters in Chinese, so they stay '#' and keep the English
+    // fallback that filingLetter applies to them.
+    if (pinyin) {
+        Pinyin.latin(name).firstOrNull()?.uppercaseChar()?.takeIf { it in 'A'..'Z' }?.let {
+            return it
+        }
+    }
+    return '#'
 }
 
 /**
@@ -242,7 +262,8 @@ internal fun indexLetter(name: String): Char {
  *
  * Each of these has a letter-for-letter romanization, so К lands on K the way a reader of the
  * script would expect. Han and kana do not: romanizing those needs to know the word, and the
- * same character reads differently in Japanese and Chinese — so they keep '#'.
+ * same character reads differently in Japanese and Chinese — so they keep '#' unless the list
+ * asks for pinyin (see [indexLetter]).
  */
 private val ROMANIZABLE = setOf(
     Character.UnicodeScript.CYRILLIC,
@@ -327,6 +348,11 @@ fun buildAppListModel(
      */
     englishName: (AppInfo) -> String? = { null },
     /**
+     * and ordered by zhifubao, where its English name Alipay would put it under A and sort it
+     * among latin names. The English fallback still applies to what pinyin cannot read.
+     */
+    pinyin: Boolean = false,
+    /**
      * Whether each letter gets a heading row of its own. Without them the letters are still
      * indexed — at the first app of each instead of at its heading — so the strip still knows
      * where to send the list.
@@ -352,6 +378,13 @@ fun buildAppListModel(
     val visible = if (privateSectionLabel == null) all else all.filterNot { it.privateProfile }
     val rows = mutableListOf<AppListRow>()
     val letterIndex = mutableListOf<Pair<String, Int>>()
+
+    // What the apps inside a letter are ordered by: the name as the user reads it, which for a
+    // codepoints come first. A latin name reads as itself either way.
+    val orderKey: (AppInfo) -> String = { app ->
+        val name = displayName(app)
+        if (pinyin) Pinyin.latin(name) else name.lowercase(java.util.Locale.ROOT)
+    }
 
     // Tag groups first, above the alphabet. A tag is a heading of its own and the apps under it
     // are the same apps that are in the alphabet — the point being to find an app by what it is
@@ -379,14 +412,14 @@ fun buildAppListModel(
             }
             rows += AppListRow.Header(label)
             shown.sortedWith(
-                compareBy({ displayName(it).lowercase(java.util.Locale.ROOT) }, { it.key })
+                compareBy(orderKey, { it.key })
             ).forEach { rows += AppListRow.Entry(it, section = tagSectionToken(label)) }
         }
     }
     val alphabetStart = rows.size
 
     val byLetter = visible.groupBy { app ->
-        filingLetter(displayName(app), renamed(app)) { englishName(app) }
+        filingLetter(displayName(app), renamed(app), pinyin) { englishName(app) }
     }
 
     byLetter.toSortedMap().forEach { (letter, list) ->
@@ -394,7 +427,7 @@ fun buildAppListModel(
         if (showHeaders) rows += AppListRow.Header(letter.toString())
         list.sortedWith(
             compareByDescending<AppInfo> { launchCounts[it.key] ?: 0 }
-                .thenBy { displayName(it).lowercase(java.util.Locale.ROOT) }
+                .thenBy(orderKey)
                 .thenBy { it.key }
         ).forEach { rows += AppListRow.Entry(it) }
     }
@@ -407,7 +440,7 @@ fun buildAppListModel(
         if (privateApps.isNotEmpty()) {
             rows += AppListRow.Header(label)
             privateApps.sortedWith(
-                compareBy({ displayName(it).lowercase(java.util.Locale.ROOT) }, { it.key })
+                compareBy(orderKey, { it.key })
             ).forEach { rows += AppListRow.Entry(it, section = PRIVATE_SECTION) }
         }
     }
@@ -488,6 +521,7 @@ fun AppListModel.rankedBy(
     displayName: (AppInfo) -> String = { it.label },
     renamed: (AppInfo) -> Boolean = { false },
     englishName: (AppInfo) -> String? = { null },
+    pinyin: Boolean = false,
 ): AppListModel {
     val entries = rows.filterIsInstance<AppListRow.Entry>()
     val sorted = entries.sortedBy { rank(it.app) }
@@ -496,11 +530,14 @@ fun AppListModel.rankedBy(
     // result is not a letter's worth of apps anyway. Indexed by the shown name, not the
     // package label: a rename files the row where it is drawn.
     val letterIndex = sorted.mapIndexedNotNull { index, row ->
-        val letter = filingLetter(displayName(row.app), renamed(row.app)) { englishName(row.app) }
+        val letter = filingLetter(displayName(row.app), renamed(row.app), pinyin) {
+            englishName(row.app)
+        }
         letter.takeIf {
             index == 0 || it != filingLetter(
                 displayName(sorted[index - 1].app),
                 renamed(sorted[index - 1].app),
+                pinyin,
             ) { englishName(sorted[index - 1].app) }
         }?.let { it.toString() to index }
     }

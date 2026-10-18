@@ -313,10 +313,10 @@ class ClockWidgetConfigActivity : ComponentActivity() {
      */
     private fun launchableApps(): List<AppInfo> = runCatching {
         // No install times: this picker is a list of names, and gathering them costs the
-        // slowest PackageManager pass there is.
+        // slowest PackageManager pass there is. The order comes with the list: the repository
+        // already sorts by name, which on a Chinese phone is the pinyin.
         (application as DelugeApp).appRepository.queryAllApps(withInstallTimes = false)
             .filter { it.kind == EntryKind.APP }
-            .sortedBy { it.label.lowercase() }
     }.getOrDefault(emptyList())
 
     private fun save(config: ClockWidgetConfig) {

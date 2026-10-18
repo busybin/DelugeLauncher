@@ -188,6 +188,7 @@ fun DelugeNavHost(
     var updateResult by remember { mutableStateOf<UpdateResult?>(null) }
     val updateKnownVersion by app.prefs.updateKnownVersion.collectAsState(initial = 0)
     val updatePromptedVersion by app.prefs.updatePromptedVersion.collectAsState(initial = 0)
+    val updateAutoCheck by app.prefs.updateAutoCheck.collectAsState(initial = false)
 
     fun openReleasePage() {
         runCatching {
@@ -292,6 +293,7 @@ fun DelugeNavHost(
     // look like an old one.
     LaunchedEffect(Unit) {
         app.prefs.ensureInstallMarker()
+        if (!app.prefs.updateAutoCheck.first()) return@LaunchedEffect
         val failed = app.prefs.lastUpdateCheckFailed.first()
         val since = System.currentTimeMillis() - app.prefs.lastUpdateCheck.first()
         if (since < if (failed) UPDATE_RETRY_INTERVAL_MS else UPDATE_CHECK_INTERVAL_MS) {
@@ -1456,6 +1458,11 @@ fun DelugeNavHost(
                 updateChecking = updateChecking,
                 updateResult = updateResult,
                 updateKnownVersion = updateKnownVersion,
+                updateAutoCheck = updateAutoCheck,
+                onSetUpdateAutoCheck = { enabled ->
+                    scope.launch { app.prefs.setUpdateAutoCheck(enabled) }
+                    if (enabled) checkForUpdates()
+                },
                 onCheckForUpdates = actionsB.onCheckForUpdates,
                 onOpenReleasePage = actionsB.onOpenReleasePage,
                 onOpenNotificationSettings = actionsB.onOpenNotificationSettings,
@@ -1662,9 +1669,9 @@ fun DelugeNavHost(
     // be a reason to turn the check off. "Later" is remembered as firmly as opening the page —
     // the row in About still says an update is there, so nothing is lost but the interruption.
     val updateToOffer = updateKnownVersion
-        .takeIf { it > BuildConfig.VERSION_CODE && it > updatePromptedVersion }
+        .takeIf { updateAutoCheck && it > BuildConfig.VERSION_CODE && it > updatePromptedVersion }
     if (updateToOffer != null) {
-        val offeredVersion = "V$updateToOffer"
+        val offeredVersion = "$updateToOffer"
         fun dismissOffer() {
             scope.launch { app.prefs.markUpdatePrompted(updateToOffer) }
         }
