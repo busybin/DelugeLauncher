@@ -46,6 +46,7 @@ private data class LanguageOption(val tag: String?, val label: String)
 /**
  * The eight languages the fork keeps in sync, ordered by how many people speak them
  * worldwide (English, Mandarin, Spanish, French, Arabic, Portuguese, Russian, Japanese),
+ * plus the system default.
  */
 private val LANGUAGES = listOf(
     LanguageOption(null, "System default"),

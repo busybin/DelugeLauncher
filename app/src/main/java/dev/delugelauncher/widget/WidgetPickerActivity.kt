@@ -65,6 +65,7 @@ class WidgetPickerActivity : ComponentActivity() {
                 val providers = remember { appWidgetManager.installedProviders }
                 val groups = remember(providers) {
                     // A Chinese launcher sorts these by pinyin like the app list does; a group
+                    // named shizhong belongs under S, not wherever its codepoint lands.
                     val pinyin = Pinyin.ordering()
                     fun keyOf(name: String) =
                         if (pinyin) Pinyin.latin(name) else name.lowercase()

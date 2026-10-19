@@ -146,10 +146,11 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE
 
-// ============================================================================
-//
-//
-// ============================================================================
+// SettingsScreen's state holder. Not 186 flat parameters: the Compose compiler emits a $changed
+// mask per @Composable parameter and the call site blows the JVM's 64 KB per-method limit
+// ("Method too large: ...DelugeNavHost$lambda$..."). One object keeps the call site at a single
+// argument while `with(model)` puts the properties back in scope. A plain class, not a data
+// class, so no componentN/copy is generated.
 class SettingsScreenModel(
     val hiddenCount: Int,
     val iconPacks: List<IconPackRepository.IconPackInfo>,
@@ -1232,6 +1233,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         // Beside the changelog: the two answer the same question from either end — what this
+        // build is now and what is available. Auto-check is opt-in and off by default.
         SettingsEntry(
             SettingsSection.ABOUT, stringResource(R.string.settings_update_auto_check),
             "update upgrade version newer release automatic check auto",
@@ -2024,6 +2026,7 @@ private class SettingsEntry(
         if (title.contains(q, ignoreCase = true) || keywords.contains(q, ignoreCase = true)) {
             return true
         }
+        // Pinyin too, so a latin keyboard reaches a Chinese row ("yuyan" finds it).
         return Pinyin.rank(title, keywords, q) != Pinyin.NO_MATCH
     }
 }

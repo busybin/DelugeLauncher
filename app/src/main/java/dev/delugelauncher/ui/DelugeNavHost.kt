@@ -116,6 +116,7 @@ import kotlinx.coroutines.withContext
  * Everything the destinations need is read here rather than in each screen, so the DataStore
  * is collected once per key instead of once per consumer.
  */
+/** How many of the most-used apps the "frequently used" tag covers. */
 private const val FREQUENT_TAG_COUNT = 5
 
 /**
@@ -188,6 +189,8 @@ fun DelugeNavHost(
     var updateResult by remember { mutableStateOf<UpdateResult?>(null) }
     val updateKnownVersion by app.prefs.updateKnownVersion.collectAsState(initial = 0)
     val updatePromptedVersion by app.prefs.updatePromptedVersion.collectAsState(initial = 0)
+    // Off by default: until the user opts in, this machine sends no requests of its own
+    // (see Prefs.updateAutoCheck).
     val updateAutoCheck by app.prefs.updateAutoCheck.collectAsState(initial = false)
 
     fun openReleasePage() {
@@ -293,6 +296,7 @@ fun DelugeNavHost(
     // look like an old one.
     LaunchedEffect(Unit) {
         app.prefs.ensureInstallMarker()
+        // Opt-in and off by default (see Prefs.updateAutoCheck): nothing is asked unprompted.
         if (!app.prefs.updateAutoCheck.first()) return@LaunchedEffect
         val failed = app.prefs.lastUpdateCheckFailed.first()
         val since = System.currentTimeMillis() - app.prefs.lastUpdateCheck.first()
@@ -624,6 +628,7 @@ fun DelugeNavHost(
     // named in this language stays put when the language changes.
     val frequentTag = stringResource(R.string.tag_frequent)
 
+    /** The keys that should carry the "frequently used" tag right now: five most-used non-favorites. */
     fun topFrequentKeys(): Set<String> = appsByKey.values
         .filter { it.kind == EntryKind.APP && it.key !in favoriteKeys && (launchCounts[it.key] ?: 0) > 0 }
         .sortedByDescending { launchCounts[it.key] ?: 0 }
@@ -635,6 +640,7 @@ fun DelugeNavHost(
     // the tag, whoever falls out loses it, other tags untouched. Keyed on everything that
     // decides membership but not on the tags themselves, so writing them does not loop.
     // A language switch changes the tag's own word: every other language's word is stripped
+    // first, or the localised and English words stand side by side. Reserved words can only ever come from
     // here (the picker refuses them), so sweeping them all is safe. The recorded words cover
     // languages added after the static set was written.
     LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
@@ -1088,6 +1094,8 @@ fun DelugeNavHost(
                     }.getOrDefault(false)
                 }
             }
+            // Split out to stay under the JVM's 64 KB per-method limit; a local @Composable
+            // function lets Kotlin pass captured variables itself.
             @Composable
             fun buildActionsA() = SettingsActionsA(
                     onSetShowFavoriteIcons = { scope.launch { app.prefs.setShowFavoriteIcons(it) } },
@@ -1137,6 +1145,8 @@ fun DelugeNavHost(
                     onSetWallpaperBlur = { scope.launch { app.prefs.setWallpaperBlurDp(it) } },
             )
 
+            // Split out to stay under the JVM's 64 KB per-method limit; a local @Composable
+            // function lets Kotlin pass captured variables itself.
             @Composable
             fun buildActionsB() = SettingsActionsB(
                     onSetHapticFeedback = { scope.launch { app.prefs.setHapticFeedback(it) } },
@@ -1461,6 +1471,8 @@ fun DelugeNavHost(
                 updateAutoCheck = updateAutoCheck,
                 onSetUpdateAutoCheck = { enabled ->
                     scope.launch { app.prefs.setUpdateAutoCheck(enabled) }
+                    // Checked right away on enabling: the user asked, so this is not the
+                    // unprompted kind of request.
                     if (enabled) checkForUpdates()
                 },
                 onCheckForUpdates = actionsB.onCheckForUpdates,

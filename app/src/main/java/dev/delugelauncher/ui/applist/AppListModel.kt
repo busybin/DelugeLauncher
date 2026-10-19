@@ -235,7 +235,9 @@ internal fun filingLetter(
 /**
  * The letter a name files under, with [pinyin] for a list whose language is Chinese.
  *
- * A for Alipay. Without it a Han name still has no A-Z letter of its own.
+ * With [pinyin] the Han characters are read as pinyin, so a Chinese name files under W and
+ * Alipay's under Z — the name on the screen rather than the English one the app stores, which
+ * puts Alipay under A. Without it a Han name still has no A-Z letter of its own.
  */
 internal fun indexLetter(name: String, pinyin: Boolean = false): Char {
     val first = name.firstOrNull() ?: return '#'
@@ -344,11 +346,13 @@ fun buildAppListModel(
     /**
      * The app's name in English, asked for only when its own name has no letter to file under.
      *
-     * is not A-Z — so scrubbing to B, where its English name Blue would put it, finds nothing.
+     * A Japanese phone names an app in katakana, which lands in '#' along with everything else
+     * that is not A-Z — so scrubbing to B, where its English name would put it, finds nothing.
      */
     englishName: (AppInfo) -> String? = { null },
     /**
-     * and ordered by zhifubao, where its English name Alipay would put it under A and sort it
+     * Whether the list is in Chinese, which reads Han names as pinyin: a Chinese name is filed
+     * under its pinyin letter and ordered by it, where the English name would put it under A
      * among latin names. The English fallback still applies to what pinyin cannot read.
      */
     pinyin: Boolean = false,
@@ -380,7 +384,8 @@ fun buildAppListModel(
     val letterIndex = mutableListOf<Pair<String, Int>>()
 
     // What the apps inside a letter are ordered by: the name as the user reads it, which for a
-    // codepoints come first. A latin name reads as itself either way.
+    // Chinese list is its pinyin. Otherwise weibo would sort behind weixin, whose codepoints
+    // come first. A latin name reads as itself either way.
     val orderKey: (AppInfo) -> String = { app ->
         val name = displayName(app)
         if (pinyin) Pinyin.latin(name) else name.lowercase(java.util.Locale.ROOT)

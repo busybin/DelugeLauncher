@@ -1,5 +1,4 @@
-// ============================================================================
-// ============================================================================
+// Shared build settings; regenerate rather than hand-edit.
 pluginManagement {
     repositories {
         google()

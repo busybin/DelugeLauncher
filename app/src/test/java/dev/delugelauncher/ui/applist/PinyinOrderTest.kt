@@ -16,8 +16,8 @@ import org.robolectric.annotation.Config
 /**
  * A Chinese launcher orders the apps by pinyin.
  *
- * Filing used to reach for the name the app carries in English, which is what put 支付宝 under A
- * for Alipay — a name nobody in the list is looking for. The English name is still there for
+ * Filing used to reach for the name the app carries in English, which put Alipay's Chinese name
+ * under A — a name nobody in the list is looking for. The English name is still there for
  * what pinyin cannot read (a Japanese or Korean name has no pinyin to give), and the list in
  * any other language is unchanged.
  *
@@ -53,8 +53,8 @@ class PinyinOrderTest {
 
     @Test
     fun `the pinyin wins over the english name the app carries`() {
-        // 微信 = weixin → W either way; 支付宝 is what tells the two apart: Alipay would file
-        // it under A, which is not where a reader of the list would look.
+        // weixin is W either way; Alipay's Chinese name is what tells the two apart: its English
+        // name would file it under A, which is not where a reader of the list would look.
         assertEquals('W', filingLetter("微信", renamed = false, pinyin = true) { "WeChat" })
         assertEquals('Z', filingLetter("支付宝", renamed = false, pinyin = true) { "Alipay" })
         assertEquals('A', filingLetter("支付宝", renamed = false, pinyin = false) { "Alipay" })
@@ -105,16 +105,15 @@ class PinyinOrderTest {
 
         val chinese = build(pinyin = true)
         assertEquals(listOf("W", "Z"), chinese.letters)
-        // 微博 (weibo) before 微信 (weixin): by codepoint it would be the other way round.
+        // weibo before weixin: by codepoint it would be the other way round.
         assertEquals(
             listOf("微博", "微信", "支付宝"),
             chinese.rows.filterIsInstance<AppListRow.Entry>().map { it.app.label },
         )
 
         // And without pinyin the same three file by their English names, which is the report.
-        // 微博 and 微信 share the one letter, and there they are ordered by codepoint — 信
-        // (U+4FE1) before 博 (U+535A) — which is exactly what pinyin gets right and this
-        // cannot.
+        // weibo and weixin share the one letter, and there they are ordered by codepoint — U+4FE1
+        // before U+535A — which is exactly what pinyin gets right and this cannot.
         val byEnglish = build(pinyin = false)
         assertEquals(listOf("A", "W"), byEnglish.letters)
         assertEquals(
