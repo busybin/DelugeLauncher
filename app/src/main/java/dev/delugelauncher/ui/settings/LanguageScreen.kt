@@ -43,19 +43,20 @@ import dev.delugelauncher.data.LanguagePrefs
  */
 private data class LanguageOption(val tag: String?, val label: String)
 
+/**
+ * The eight languages the fork keeps in sync, ordered by how many people speak them
+ * worldwide (English, Mandarin, Spanish, French, Arabic, Portuguese, Russian, Japanese),
+ */
 private val LANGUAGES = listOf(
     LanguageOption(null, "System default"),
     LanguageOption("en", "English"),
     LanguageOption("zh-CN", "Chinese (Simplified)"),
-    LanguageOption("zh-TW", "Chinese (Traditional)"),
-    LanguageOption("ja", "Japanese"),
-    LanguageOption("ko", "한국어"),
-    LanguageOption("de", "Deutsch"),
     LanguageOption("es", "Español"),
     LanguageOption("fr", "Français"),
-    LanguageOption("it", "Italiano"),
+    LanguageOption("ar", "العربية"),
     LanguageOption("pt-BR", "Português (Brasil)"),
     LanguageOption("ru", "Русский"),
+    LanguageOption("ja", "Japanese"),
 )
 
 /** The tag currently in force, or null while the system's own language is being used. */

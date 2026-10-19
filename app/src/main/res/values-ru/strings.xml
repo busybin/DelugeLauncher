@@ -210,6 +210,8 @@
     <string name="settings_version">Версия %1$s</string>
     <string name="settings_update_check">Проверить обновления</string>
     <string name="settings_update_check_detail">Искать более свежую версию на GitHub</string>
+    <string name="settings_update_auto_check">Проверять обновления автоматически</string>
+    <string name="settings_update_auto_check_detail">По умолчанию выключено. Пока это выключено, Deluge заглядывает на страницу релизов только когда вы нажимаете «Проверить обновления» ниже — больше ничего не отправляется.</string>
     <string name="settings_update_checking">Проверка…</string>
     <string name="settings_update_up_to_date">Установлена последняя версия (%1$s)</string>
     <string name="settings_update_available">Доступна версия %1$s</string>
