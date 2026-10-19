@@ -24,4 +24,5 @@ MEMORY.md
 .DS_Store
 Thumbs.db
 
+# Local backups only, never commit.
 *.bak.*

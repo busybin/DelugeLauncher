@@ -140,9 +140,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-// ============================================================================
-//
-// ============================================================================
+// SettingsScreen's callbacks, deliberately split in two. The call site is a composable lambda,
+// and Compose emits ~600 bytes of memoisation bookkeeping per lambda argument: ~90 of them
+// would exceed the JVM's 64 KB per-method limit. Parameter types mirror SettingsScreenModel,
+// still the single source of truth.
 
 class SettingsActionsA(
     val onSetShowFavoriteIcons: (Boolean) -> Unit,

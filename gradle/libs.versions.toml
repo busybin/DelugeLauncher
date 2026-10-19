@@ -1,8 +1,8 @@
-# ============================================================================
-#
-# ============================================================================
+# Third-party libraries only; Gradle / AGP / Kotlin / compileSdk are managed by the shared
+# build baseline.
 
 [versions]
+# Pinned to the last Compose release that works with compileSdk 36 (Compose 1.12 requires 37).
 composeBom = "2026.06.01"
 coreKtx = "1.19.1"
 lifecycleRuntimeKtx = "2.11.0"
@@ -30,6 +30,8 @@ androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", versi
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+# material3 1.4 no longer depends on this transitively (the library is frozen at 1.7.8, the
+# version still coming from the BOM), so it has to be declared.
 androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }

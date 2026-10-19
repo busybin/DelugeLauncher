@@ -212,7 +212,8 @@ fun HomeRoute(
         }.getOrDefault(false)
     }
     // A Chinese launcher files and orders Chinese app names by their pinyin, which is how a
-    // Alipay. Asked once rather than per app: switching language recreates the activity.
+    // reader of the language expects to find Alipay — under Z, not under the A of its English
+    // name. Asked once rather than per app: switching language recreates the activity.
     val pinyinSort = remember { Pinyin.ordering() }
     val view = LocalView.current
     val scope = rememberCoroutineScope()

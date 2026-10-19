@@ -362,7 +362,9 @@ fun AppListScreen(
         displayModel = withContext(Dispatchers.Default) {
             searchModel
                 .filtered { app ->
-                    // — the package name, where the English word is still sitting.
+                    // The name it shows, its pinyin (a Chinese name answers to "wx"), and — for
+                    // a phone that names everything in its own language, so Settings calls itself
+                    // by a local name — the package name, where the English word is still sitting.
                     Pinyin.rank(displayName(app), app.componentName.packageName, term) !=
                         Pinyin.NO_MATCH
                 }
@@ -1866,6 +1868,7 @@ private fun AppRow(
             val text: @Composable () -> Unit = {
                 // The name, with whatever the query matched picked out. A pinyin hit marks the
                 // characters it was read from, not the letters that were typed — typing "wx"
+                // underlines the Chinese name rather than leaving the row looking unmatched.
                 val shown = if (matched == null) {
                     AnnotatedString(label)
                 } else {
