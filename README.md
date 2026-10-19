@@ -91,9 +91,8 @@ Deluge set as your default home app.
 
 ## Build
 
-You need JDK 17 and an Android SDK with platform 37 (the version numbers come from
-[`the build skeleton`](https://github.com/busybin/the build skeleton), which this repository is
-built against; see `gradle.properties`).
+You need JDK 17 and an Android SDK with platform 37 (the exact versions are the
+`baseline.*` keys in `gradle.properties`).
 
 ```sh
 ./gradlew assembleDebug
