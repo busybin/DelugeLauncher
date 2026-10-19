@@ -10,5 +10,5 @@ Fixed and tuned:
 * Swipe-down shade restored; torch permission loop fixed; weather survives reboot; widget notification counts stay true.
 * Backups leave the corner button's private app out, refuse smuggled modes, and round-trip the language.
 * App-list scrubbing lands at once and rows stop chasing; icon warmup shares cores with the finger.
-* A full audit's worth of fixes: empty-folder text, folder dimming, search filing, startup races, and more.
+* Empty-folder text, folder dimming, search filing and startup races fixed.
 * All 11 languages complete.

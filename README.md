@@ -57,8 +57,8 @@ Wikimedia Commons.
   version exists and points you at it. That read is the app's only network call, and it
   sends nothing — no setting, no app list, no usage.
 
-Plus a number of smaller fixes and additions along the way. The in-app changelog
-(Settings → About → Changelog) has the release-by-release list.
+The in-app changelog (Settings → About → Changelog) has the release-by-release
+list.
 
 ## Install
 
