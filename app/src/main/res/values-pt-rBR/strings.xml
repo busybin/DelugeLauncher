@@ -210,6 +210,8 @@
     <string name="settings_version">Versão %1$s</string>
     <string name="settings_update_check">Verificar atualizações</string>
     <string name="settings_update_check_detail">Procurar uma versão mais recente no GitHub</string>
+    <string name="settings_update_auto_check">Verificar atualizações automaticamente</string>
+    <string name="settings_update_auto_check_detail">Desativado por padrão. Enquanto estiver desativado, o Deluge só acessa a página de versões quando você toca em «Verificar atualizações» abaixo — nada é enviado além disso.</string>
     <string name="settings_update_checking">Verificando…</string>
     <string name="settings_update_up_to_date">Você está na versão mais recente (%1$s)</string>
     <string name="settings_update_available">A versão %1$s está disponível</string>

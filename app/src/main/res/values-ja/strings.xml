@@ -210,6 +210,8 @@
     <string name="settings_version">バージョン %1$s</string>
     <string name="settings_update_check">更新を確認</string>
     <string name="settings_update_check_detail">GitHubで新しいリリースを確認します</string>
+    <string name="settings_update_auto_check">更新を自動的に確認</string>
+    <string name="settings_update_auto_check_detail">既定ではオフです。オフの間は、下の「更新を確認」をタップしたときだけ Deluge がリリースページを読みます — それ以外は何も送信しません。</string>
     <string name="settings_update_checking">確認中…</string>
     <string name="settings_update_up_to_date">最新バージョンです (%1$s)</string>
     <string name="settings_update_available">バージョン%1$sを利用できます</string>

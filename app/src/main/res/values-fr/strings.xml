@@ -210,6 +210,8 @@
     <string name="settings_version">Version %1$s</string>
     <string name="settings_update_check">Rechercher les mises à jour</string>
     <string name="settings_update_check_detail">Chercher une version plus récente sur GitHub</string>
+    <string name="settings_update_auto_check">Rechercher les mises à jour automatiquement</string>
+    <string name="settings_update_auto_check_detail">Désactivé par défaut. Tant que c\'est désactivé, Deluge ne consulte sa page de versions que lorsque vous touchez « Rechercher les mises à jour » ci-dessous — rien n\'est envoyé sinon.</string>
     <string name="settings_update_checking">Vérification…</string>
     <string name="settings_update_up_to_date">À la dernière version (%1$s)</string>
     <string name="settings_update_available">La version %1$s est disponible</string>
