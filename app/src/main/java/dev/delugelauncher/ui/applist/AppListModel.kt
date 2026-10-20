@@ -2,12 +2,16 @@
 package dev.delugelauncher.ui.applist
 
 import androidx.compose.runtime.Immutable
+import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.Pinyin
+import android.content.Context
+import android.content.res.Configuration
 import android.icu.text.Transliterator
 import android.os.Build
 import androidx.annotation.RequiresApi
 import java.text.Normalizer
+import java.util.Locale
 
 /** Section tags, which only have to be distinct from each other and from no tag at all. */
 internal const val PRIVATE_SECTION = "private"
@@ -137,12 +141,18 @@ internal fun tagStripLabel(label: String): String =
 /** How many characters of a tag the strip shows. Three reads, one does not. */
 internal const val STRIP_LABEL_CHARS = 3
 
-/**
- * Tags the usage auto-tagger owns, in every language shipped. Kept beside `tag_frequent` in
- * each locale: adding a language means adding its word here too, or the picker will let it
- * through by hand and fight the auto-tagger over it.
- */
-internal val RESERVED_TAGS = setOf("Frequent")
+/** The auto-tagger's word in every shipped language, read from `tag_frequent`. */
+internal fun autoTagWords(context: Context): Set<String> {
+    val base = context.resources.configuration
+    return AUTO_TAG_LOCALES.mapNotNull { tag ->
+        runCatching {
+            val config = Configuration(base).apply { setLocale(Locale.forLanguageTag(tag)) }
+            context.createConfigurationContext(config).getString(R.string.tag_frequent)
+        }.getOrNull()
+    }.toSet()
+}
+
+private val AUTO_TAG_LOCALES = listOf("en", "zh-CN", "es", "fr", "ar", "pt-BR", "ru", "ja")
 
 @Immutable
 sealed interface AppListRow {

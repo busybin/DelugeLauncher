@@ -67,7 +67,7 @@ import dev.delugelauncher.data.FreezeSourceFilter
 import dev.delugelauncher.data.FreezeStateFilter
 import dev.delugelauncher.data.needsTimes
 import dev.delugelauncher.data.FavoritesSource
-import dev.delugelauncher.ui.applist.RESERVED_TAGS
+import dev.delugelauncher.ui.applist.autoTagWords
 import dev.delugelauncher.ui.common.LocalScreenshotNames
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.data.ShortcutSwipe
@@ -675,21 +675,16 @@ fun DelugeNavHost(
         .map { it.key }
         .toSet()
 
-    // Follows the counts the way the usage sort does: whoever newly enters the top five gains
-    // the tag, whoever falls out loses it, other tags untouched. Keyed on everything that
-    // decides membership but not on the tags themselves, so writing them does not loop.
-    // A language switch changes the tag's own word: every other language's word is stripped
-    // first, or the localised and English words stand side by side. Reserved words can only ever come from
-    // here (the picker refuses them), so sweeping them all is safe. The recorded words cover
-    // languages added after the static set was written.
+    // Follows the counts: whoever enters the top five gains the tag, whoever leaves loses it.
+    // Keyed on what decides membership, not on the tags themselves, so writing them does not
+    // loop. Strips every language's word first, or a language switch leaves two tags behind.
     LaunchedEffect(autoFrequentTag, launchCounts, favoriteKeys, frequentTag) {
         if (!autoFrequentTag) return@LaunchedEffect
         app.prefs.recordAutoFrequentWord(frequentTag)
         val top = topFrequentKeys()
-        // One edit for the whole pass: per-app writes fanned out a DataStore write per app on
-        // every launch count change, each waking every collector on this screen.
+        // One edit for the whole pass: per-app writes fanned out a DataStore write per app.
         val current = appTags
-        val reserved = RESERVED_TAGS + autoFrequentWords
+        val reserved = autoTagWords(context) + autoFrequentWords
         var changed = false
         val next = HashMap<String, Set<String>>(current)
         appsByKey.values.forEach { a ->
@@ -1255,7 +1250,7 @@ fun DelugeNavHost(
                             // Every language's word, in case the language moved since — plus
                             // every word ever recorded, for languages added after the set.
                             if (!it) {
-                                val reserved = RESERVED_TAGS + autoFrequentWords
+                                val reserved = autoTagWords(context) + autoFrequentWords
                                 appsByKey.values.forEach { a ->
                                     val current = appTags[a.key] ?: emptySet()
                                     val stripped = current - reserved

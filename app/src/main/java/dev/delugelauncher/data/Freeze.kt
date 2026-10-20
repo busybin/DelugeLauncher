@@ -996,10 +996,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
 }
 
 /**
- * The freeze screen's order, kept out of the composable so the rule can be pinned by a test.
+ * The freeze screen's order, kept out of the composable so a test can pin the rule.
  *
- * [nameOf] is the name to sort by, which the screen resolves from its renames; [pinyin] makes
- * codepoint.
+ * [nameOf] is the name to sort by, resolved from renames by the screen; [pinyin] sorts Chinese
+ * names by their romanised form, so ZhiFuBao lands under Z rather than at its codepoint.
  */
 object FreezeListing {
 

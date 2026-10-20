@@ -197,7 +197,7 @@ class AppRepository(
             // After the dedupe: these are the frozen apps LauncherApps stopped returning.
             .let { rows -> rows + frozenRows(frozen, rows.map { it.packageName }.toSet()) }
             // By pinyin on a Chinese phone: this is the order every list of app names starts
-            // from — the pickers, the favourites and the hidden ones — and leaving it at the
+            // from, and codepoint order would put ZhiFuBao where no reader looks for it.
             // The app list re-files and re-orders the same apps by its own letters.
             .sortedBy { if (Pinyin.ordering()) Pinyin.latin(it.label) else it.label.lowercase() }
             // After the own-package filter, which would otherwise drop it: the row is ours.

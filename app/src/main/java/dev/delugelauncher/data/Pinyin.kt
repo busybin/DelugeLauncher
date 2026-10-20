@@ -8,16 +8,10 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * keyboard ("wx", "weixin"), and ordering, so it is filed under W and sorted among the W names.
- *
- * The romanization is ICU's, which ships with the platform, so no dictionary is carried. It is
- * done one character at a time and cached, because a query is answered on every keystroke and
- * a scan of two hundred apps per letter would be felt. Below Android 10 the transliterator is
- * not available and matching quietly falls back to the name and package alone.
- *
- * Here in `data` rather than beside the app list it was written for: the order every list of
- * app names starts from is decided in [AppRepository], and the app list, the pickers and the
- * settings screens all have to agree on what that order is.
+ * Pinyin for Chinese app names: matching (Weixin is found by typing "wx") and ordering (filed
+ * under W). ICU ships the romanization; characters are converted one at a time and cached,
+ * because a query runs on every keystroke over every installed app. Below Android 10 there is
+ * no transliterator and matching falls back to the label and package.
  */
 internal object Pinyin {
 
@@ -48,9 +42,9 @@ internal object Pinyin {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
             null
         } else {
-            // Han-Latin is the specific one and reads a lone character best; Any-Latin covers it
-            // one kept, so a device whose ICU lacks both simply has no pinyin rather than a
-            // matcher that quietly returns nothing.
+            // Han-Latin reads a lone character best; Any-Latin covers builds that only ship the
+            // general table. Probed with U+4E2D, so an ICU without either means no pinyin rather
+            // than a matcher that silently returns nothing.
             listOf("Han-Latin; Latin-ASCII", "Any-Latin; Latin-ASCII").firstNotNullOfOrNull { id ->
                 runCatching { Transliterator.getInstance(id) }
                     .getOrNull()
@@ -81,12 +75,9 @@ internal object Pinyin {
     }
 
     /**
-     * The latin reading of [name], character by character, for ordering.
-     *
-     * Han comes back as its pinyin and latin as itself, which is what lets a Chinese list put
-     * [key], separators are kept: "Call of Duty" has to sort before "Callout". A character the
-     * romanizer cannot read (kana, hangul, or any Han on a device without the transliterator)
-     * stays as it is, so those names keep the order they had.
+     * Latin reading of [name] for ordering: Han becomes pinyin, so Weixin sorts next to WeChat
+     * under W instead of by codepoint. Unlike [key], separators are kept ("Call of Duty" before
+     * "Callout"). Unreadable characters (kana, hangul, Han without a transliterator) stay as is.
      */
     fun latin(name: String): String = buildString(name.length) {
         name.forEach { ch ->

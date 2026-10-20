@@ -230,8 +230,8 @@ fun HomeRoute(
     // The auto tag in any language it ever wore: the picker refuses these by hand and keeps
     // them through a confirm, exactly like the static set.
     val autoFrequentWords by app.prefs.autoFrequentWords.collectAsState(initial = emptySet<String>())
-    val reservedTags = remember(autoFrequentWords) {
-        dev.delugelauncher.ui.applist.RESERVED_TAGS + autoFrequentWords
+    val reservedTags = remember(autoFrequentWords, context) {
+        dev.delugelauncher.ui.applist.autoTagWords(context) + autoFrequentWords
     }
     // Tags gathered into groups for the list's own sections. Built here rather than in the
     // background model because it is a handful of apps, not the whole alphabet.
