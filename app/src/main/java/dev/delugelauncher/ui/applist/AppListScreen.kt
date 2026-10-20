@@ -270,7 +270,7 @@ fun AppListScreen(
     /** Tags by app key, so the picker can pre-check what the chosen apps already carry. */
     appTags: Map<String, Set<String>>,
     /** Tags the picker refuses by hand: the auto-tagger's words in every language it wore. */
-    reservedTags: Set<String> = RESERVED_TAGS,
+    reservedTags: Set<String> = autoTagWords(LocalContext.current),
     /** Sets the chosen apps' tags to exactly this set — checked are applied, unchecked removed. */
     onAddTags: (List<AppInfo>, Set<String>) -> Unit,
     onMoveToFolder: (AppInfo) -> Unit,

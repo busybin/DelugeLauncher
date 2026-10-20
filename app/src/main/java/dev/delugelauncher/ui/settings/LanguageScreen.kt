@@ -4,6 +4,7 @@ package dev.delugelauncher.ui.settings
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import java.util.Locale
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,22 +44,24 @@ import dev.delugelauncher.data.LanguagePrefs
  */
 private data class LanguageOption(val tag: String?, val label: String)
 
-/**
- * The eight languages the fork keeps in sync, ordered by how many people speak them
- * worldwide (English, Mandarin, Spanish, French, Arabic, Portuguese, Russian, Japanese),
- * plus the system default.
- */
+/** The eight languages kept in sync, in order, plus the system default. */
 private val LANGUAGES = listOf(
     LanguageOption(null, "System default"),
-    LanguageOption("en", "English"),
-    LanguageOption("zh-CN", "Chinese (Simplified)"),
-    LanguageOption("es", "Español"),
-    LanguageOption("fr", "Français"),
-    LanguageOption("ar", "العربية"),
-    LanguageOption("pt-BR", "Português (Brasil)"),
-    LanguageOption("ru", "Русский"),
-    LanguageOption("ja", "Japanese"),
+    LanguageOption("en", endonym("en")),
+    LanguageOption("zh-CN", endonym("zh-CN")),
+    LanguageOption("es", endonym("es")),
+    LanguageOption("fr", endonym("fr")),
+    LanguageOption("ar", endonym("ar")),
+    LanguageOption("pt-BR", endonym("pt-BR")),
+    LanguageOption("ru", endonym("ru")),
+    LanguageOption("ja", endonym("ja")),
 )
+
+/** A language's name in its own script. */
+private fun endonym(tag: String): String {
+    val locale = Locale.forLanguageTag(tag)
+    return locale.getDisplayLanguage(locale).replaceFirstChar { it.uppercase() }
+}
 
 /** The tag currently in force, or null while the system's own language is being used. */
 fun currentLanguageTag(context: Context): String? = LanguagePrefs.read(context)

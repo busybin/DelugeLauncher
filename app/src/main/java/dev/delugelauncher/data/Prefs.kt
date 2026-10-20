@@ -1049,6 +1049,7 @@ class Prefs(private val context: Context) {
     val reduceMotion: Flow<Boolean> =
         data.map { it[Keys.REDUCE_MOTION] ?: false }.distinctUntilChanged()
 
+    /** Whether the top-used apps carry the Frequent tag on their own, following the counts. */
     val autoFrequentTag: Flow<Boolean> =
         data.map { it[Keys.AUTO_FREQUENT_TAG] ?: false }.distinctUntilChanged()
 
