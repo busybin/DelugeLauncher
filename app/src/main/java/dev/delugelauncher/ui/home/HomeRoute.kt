@@ -14,6 +14,7 @@ import android.hardware.camera2.CameraMetadata
 import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import dev.delugelauncher.data.CornerAction
+import dev.delugelauncher.data.FreezeOutcome
 import dev.delugelauncher.data.targetKind
 import android.graphics.Rect
 import android.widget.Toast
@@ -104,6 +105,8 @@ import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.ui.common.FolderPickerDialog
+import dev.delugelauncher.ui.common.FreezeActions
+import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -319,10 +322,74 @@ fun HomeRoute(
     // tap on the button reaches the button, and the strip stops above it. Reported by the
     // button itself, nulled when it leaves.
     var cornerBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    // The app list's search button sits in the same corner the edge strip runs through; the
+    // strip is told where it is, so a tap there belongs to the button.
+    var appListSearchBounds by remember { mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
     val cornerTapAction by app.prefs.cornerTapAction.collectAsState(initial = CornerAction.OPEN_APP)
     val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
+    // Everything freeze-shaped is hidden while the feature is off.
+    val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
     // The slide-up's own target; the tap keeps the button key and never shares it.
     val cornerSwipeKey by app.prefs.cornerSwipeKey.collectAsState(initial = null)
+    // The freeze list, so a row menu can put an app back under the method it remembers.
+    val freezeActions = remember {
+        fun fail(res: Int, label: String) {
+            Toast.makeText(context, context.getString(res, label), Toast.LENGTH_SHORT).show()
+        }
+        fun outcome(result: FreezeOutcome, label: String, failed: Int) {
+            when (result) {
+                FreezeOutcome.DONE -> Unit
+                FreezeOutcome.NO_ACCESS -> Toast.makeText(
+                    context, context.getString(R.string.freeze_needs_access), Toast.LENGTH_LONG,
+                ).show()
+                FreezeOutcome.SYSTEM_APPS_OFF -> Toast.makeText(
+                    context, context.getString(R.string.freeze_system_off_blocked), Toast.LENGTH_LONG,
+                ).show()
+                else -> fail(failed, label)
+            }
+        }
+        FreezeActions(
+            add = { target, method ->
+                scope.launch {
+                    val result = app.freezeManager.addToPlan(target.packageName, method)
+                    if (result == FreezeOutcome.SYSTEM_APPS_OFF) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.freeze_system_off_blocked),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+            },
+            freezeNow = { target ->
+                scope.launch {
+                    outcome(
+                        app.freezeManager.freeze(target.packageName),
+                        target.label,
+                        R.string.freeze_failed,
+                    )
+                }
+            },
+            unfreeze = { target ->
+                scope.launch {
+                    outcome(
+                        app.freezeManager.unfreeze(target.packageName),
+                        target.label,
+                        R.string.freeze_unfreeze_failed,
+                    )
+                }
+            },
+            remove = { target ->
+                scope.launch {
+                    outcome(
+                        app.freezeManager.removeFromPlan(target.packageName),
+                        target.label,
+                        R.string.freeze_unfreeze_failed,
+                    )
+                }
+            },
+        )
+    }
     // Portrait and landscape each keep their own position and never share: turning the
     // phone must not drag the button somewhere it was never put.
     val cornerPosPortrait by app.prefs.cornerPosPortrait.collectAsState(initial = null)
@@ -442,19 +509,23 @@ fun HomeRoute(
 
     /** Locking is a strip gesture now, so the toast that explains it lives with the strip. */
     fun lockOrExplain() {
-        if (SystemUi.lockScreen()) return
-        // No way to lock: straight to the page that grants one rather than a toast about
-        // it. The toast below is only for the launch itself failing.
-        runCatching {
-            context.startActivity(
-                Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-        }.onFailure {
-            Toast.makeText(
-                context,
-                context.getString(R.string.settings_lock_setup),
-                Toast.LENGTH_SHORT,
-            ).show()
+        if (SystemUi.lockScreenNow()) return
+        // No accessibility grant. Root or Shizuku can press the sleep key instead, which is
+        // the route most users of this launcher already have; the settings page is only for
+        // the case where neither answers.
+        scope.launch {
+            if (withContext(Dispatchers.IO) { SystemUi.lockScreenElevated(context) }) return@launch
+            runCatching {
+                context.startActivity(
+                    Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }.onFailure {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.settings_lock_setup),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
         }
     }
 
@@ -673,15 +744,14 @@ fun HomeRoute(
         else -> app.appRepository.launch(entry)
     }
 
-    // A locked app asks for the device's own lock screen before it opens. Unlocked once per run
-    // of the launcher rather than once per tap: the point is to keep someone out who picked the
-    // phone up, not to ask the owner again every time they open it.
+    // A locked app asks for the device's own lock screen before it opens, every time it is
+    // opened. Holding an unlock for the run of the launcher let anyone who picked the phone
+    // up after the first successful prompt straight into every locked app afterwards.
     // Null until the store answers: while loading, a tap is asked for credentials rather than
     // waved through, so the first frame cannot be timed to skip the lock.
     val lockedAppsOrNull by app.prefs.lockedApps.collectAsState(initial = null)
     val lockedApps = lockedAppsOrNull ?: emptySet()
     val lockLoaded = lockedAppsOrNull != null
-    var sessionUnlocked by remember { mutableStateOf(emptySet<String>()) }
     var pendingLaunch by remember { mutableStateOf<AppInfo?>(null) }
     val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
     val confirmLaunch = rememberLauncherForActivityResult(
@@ -690,7 +760,6 @@ fun HomeRoute(
         val pending = pendingLaunch
         pendingLaunch = null
         if (pending != null && result.resultCode == Activity.RESULT_OK) {
-            sessionUnlocked = sessionUnlocked + pending.key
             // A locked app that is also paused cannot start until it is un-paused, so the two
             // are lifted together: unlocking it and then doing nothing would read as broken.
             // Off the main thread: it is a binder round trip that is refused on most phones.
@@ -702,9 +771,9 @@ fun HomeRoute(
     }
 
     fun launchEntry(entry: AppInfo): Boolean {
-        if (entry.kind == EntryKind.APP && entry.key !in sessionUnlocked &&
-            (!lockLoaded || entry.key in lockedApps)
-        ) {
+        // A shortcut row points into its publisher's app, so the two are gated alike.
+        val enterable = entry.kind == EntryKind.APP || entry.kind == EntryKind.SHORTCUT
+        if (enterable && (!lockLoaded || entry.lockedBy(lockedApps))) {
             // No secure lock on the phone means there is nothing to ask for; the app opens as
             // usual rather than becoming unreachable.
             val prompt = runCatching {
@@ -776,6 +845,26 @@ fun HomeRoute(
             CornerAction.FLASHLIGHT -> setTorchWanted(!torchOn)
             CornerAction.SHADE -> expandShade()
             CornerAction.LOCK -> lockOrExplain()
+            // The list's own two verbs, run off the main thread by the manager: this is
+            // several shell commands per app, and the button must not wait for them.
+            CornerAction.FREEZE_ALL -> if (freezeEnabled) scope.launch {
+                FreezeToast.progress(context, R.string.freeze_working)
+                val result = app.freezeManager.freezeAll()
+                if (result.noAccess) {
+                    FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+                } else {
+                    FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
+                }
+            }
+            CornerAction.UNFREEZE_ALL -> if (freezeEnabled) scope.launch {
+                FreezeToast.progress(context, R.string.unfreeze_working)
+                val result = app.freezeManager.unfreezeAll()
+                if (result.noAccess) {
+                    FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+                } else {
+                    FreezeToast.result(context, context.getString(R.string.freeze_all_done))
+                }
+            }
             CornerAction.DO_NOTHING -> Unit
         }
     }
@@ -1046,6 +1135,42 @@ fun HomeRoute(
                     }
                 },
                 cornerSwipeBound = cornerSwipeBound,
+                freezeEnabled = freezeEnabled,
+                freezeActions = if (freezeEnabled) freezeActions else null,
+                onFreezeAll = {
+                    scope.launch {
+                        FreezeToast.progress(context, R.string.freeze_working)
+                        val result = app.freezeManager.freezeAll()
+                        if (result.noAccess) {
+                            FreezeToast.result(
+                                context,
+                                context.getString(R.string.freeze_needs_access),
+                                long = true,
+                            )
+                        } else {
+                            FreezeToast.result(
+                                context,
+                                context.getString(R.string.freeze_many_done, result.done),
+                            )
+                        }
+                    }
+                },
+                onUnfreezeAll = {
+                    scope.launch {
+                        FreezeToast.progress(context, R.string.unfreeze_working)
+                        val result = app.freezeManager.unfreezeAll()
+                        if (result.noAccess) {
+                            FreezeToast.result(
+                                context,
+                                context.getString(R.string.freeze_needs_access),
+                                long = true,
+                            )
+                        } else {
+                            FreezeToast.result(context, context.getString(R.string.freeze_all_done))
+                        }
+                    }
+                },
+                onOpenFreezeList = { onNavigate("settings/freeze") },
                 favoritesReorderable = settings.favoritesSource == FavoritesSource.MANUAL,
                 shortcutSwipe = settings.shortcutSwipe,
                 favorites = favorites,
@@ -1153,7 +1278,7 @@ fun HomeRoute(
                 pinchToResize = settings.pinchToResize,
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 lockedApps = lockedApps,
-                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, it.key !in lockedApps) } },
+                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, !it.lockedBy(lockedApps)) } },
                 alignment = settings.alignment,
                 iconSide = settings.iconSide,
                 editMode = homeEditMode,
@@ -1360,7 +1485,8 @@ fun HomeRoute(
                 dimPausedApps = settings.dimPausedApps,
                 reduceMotion = settings.reduceMotion,
                 lockedApps = lockedApps,
-                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, it.key !in lockedApps) } },
+                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, !it.lockedBy(lockedApps)) } },
+                freezeActions = if (freezeEnabled) freezeActions else null,
                 appTags = appTags,
                 allTags = allTags,
                 reservedTags = reservedTags,
@@ -1403,6 +1529,12 @@ fun HomeRoute(
                 lastLetterToLine = lastLetterToLine,
                 searchEnabled = settings.appListSearch || forceSearch,
                 searchAtBottom = settings.appListSearchBottom,
+                onSearchRequest = {
+                    forceSearch = true
+                    appListQuery = ""
+                    searchFocusTick++
+                },
+                onCornerButtonPositioned = { appListSearchBounds = it },
                 sectionTopPercent = settings.sectionTopPercent,
                 listState = appListState,
                 // Distance still to travel, which is exactly what the collapse transform
@@ -1534,8 +1666,9 @@ fun HomeRoute(
                     state = scrub,
                     listOpen = appListVisible,
                     // The corner button's rect in root pixels: a press starting inside it
-                    // belongs to the button, so the zone lets it through untouched.
-                    exclusion = cornerBounds,
+                    // belongs to the button, so the zone lets it through untouched. With the
+                    // list open, the button is the list's own search button instead.
+                    exclusion = if (appListVisible) appListSearchBounds else cornerBounds,
                     onDismiss = { closeAppList() },
                     onOpen = {
                         appListVisible = true

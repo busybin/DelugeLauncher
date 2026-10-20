@@ -55,9 +55,19 @@ Version 2.0:
     androidx.savedstate, androidx.tracing, androidx.graphics, androidx.window)
   * Kotlin standard library and kotlinx-coroutines
 
-The Apache License 2.0 is compatible with the GNU GPL version 3, and the full text of
-both licences is available from the Free Software Foundation and the Apache Software
-Foundation respectively.
+It also bundles the Shizuku API and provider (dev.rikka.shizuku:api,
+dev.rikka.shizuku:provider), by Rikka, under the MIT License. They are used to run
+shell commands with the privileges the user has granted through Shizuku.
+
+The app-freezing feature follows the approach and command layer of Hail
+(https://github.com/aistra0528/Hail), which is licensed under the GNU GPL version 3.
+Hail's implementation was studied and its command semantics reimplemented here; no
+source file was copied. Deluge Launcher itself is GPL-3.0-or-later, so the two are
+licence-compatible either way.
+
+The Apache License 2.0 and the MIT License are compatible with the GNU GPL version 3,
+and the full text of each licence is available from the Free Software Foundation, the
+Apache Software Foundation and the Open Source Initiative respectively.
 
 Development and test-only dependencies, which are not part of any distributed
 application, include JUnit (Eclipse Public License 1.0), org.json (the JSON licence),

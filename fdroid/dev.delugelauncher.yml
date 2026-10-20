@@ -30,8 +30,8 @@ AutoUpdateMode: Version
 UpdateCheckMode: Tags .*[0-9]$
 # versionCode lives in app/build.gradle.kts (the default only looks at build.gradle).
 UpdateCheckData: app/build.gradle.kts|versionCode\s*=\s*(\d+)|.|versionName\s*=\s*"([^"]+)"
-CurrentVersion: '23'
-CurrentVersionCode: 23
+CurrentVersion: '24'
+CurrentVersionCode: 24
 
 # No anti-features: the release-page check is opt-in and off by default, and the app itself
 # needs no network service.

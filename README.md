@@ -10,11 +10,11 @@ reaching the app list and a letter with one thumb — icons cached on disk, unne
 dependencies dropped, and the A-Z strip, edge gestures and row swipes made to behave
 under a real finger. Everything else is upstream's design, kept as it was.
 
-| Home | App list | Scrubbing the A-Z strip | Long-press menu |
-| ---- | -------- | ----------------------- | --------------- |
-| ![Home](screenshots/home.jpg) | ![App list](screenshots/app-list.jpg) | ![Scrubbing the A-Z strip](screenshots/scrub.jpg) | ![Long-press menu](screenshots/menu.jpg) |
-| Folder | Search | Edit layout | A-Z strip range |
-| ![Folder](screenshots/folder.jpg) | ![Search](screenshots/search.jpg) | ![Edit layout](screenshots/edit-layout.jpg) | ![A-Z strip range](screenshots/a-z-range.jpg) |
+| Home | App list | App freezing | Long-press menu |
+| ---- | -------- | ------------ | --------------- |
+| ![Home](screenshots/home.jpg) | ![App list](screenshots/app-list.jpg) | ![App freezing](screenshots/freeze.jpg) | ![Long-press menu](screenshots/menu.jpg) |
+| Folder | Search | Edit layout | Scrubbing the A-Z strip |
+| ![Folder](screenshots/folder.jpg) | ![Search](screenshots/search.jpg) | ![Edit layout](screenshots/edit-layout.jpg) | ![Scrubbing the A-Z strip](screenshots/scrub.jpg) |
 | Edit icon & name | Settings | Gestures | Corner button |
 | ![Edit icon and name](screenshots/icon-edit.jpg) | ![Settings](screenshots/settings.jpg) | ![Gestures](screenshots/gestures.jpg) | ![Corner button](screenshots/corner-button.jpg) |
 
@@ -39,20 +39,31 @@ Wikimedia Commons.
   strip, and let the Frequent tag follow usage on its own.
 - **A lock per app.** Opening one asks for the screen lock; the long-press menu also
   uninstalls, hides with confirmation, and paused apps grey out live.
+- **Freeze apps with root or Shizuku.** One tab per method — Stop, Suspend, Disable, Hide —
+  each with what it costs. The screen says whether root (and which root: Magisk, KernelSU,
+  APatch) or Shizuku is answering. Picking apps only builds a list; a trigger does the
+  freezing. System apps stay out of it unless you turn them on, with the warning that belongs
+  to that. The idea follows Hail, credited in the NOTICE file.
+- **Freezing has triggers, not a switch.** Freeze all, the corner button, a shortcut on the
+  launcher's own icon, or the automatic freeze a while after the screen goes off. The automatic
+  one steps around the app on screen, apps with notifications and a phone on a charger, all read
+  through root or Shizuku rather than by asking for more permissions. Unfreezing keeps an app on
+  the list so the next trigger puts it back; select all and invert fill or empty the list in one
+  go, and the long-press menu does it a row at a time.
 - **Favorites reach the edge.** The home list runs full-bleed like the app list and
   scrolls fully into view. Either one can pair rows into two columns, upright or sideways.
 - Folder rows say how many apps they hold and whether they are open.
-- **A corner button with nine actions.** Tap it, or hold and slide up; each gesture
+- **A corner button with more than ten actions.** Tap it, or hold and slide up; each gesture
   opens an app or a shortcut, the list, search, the camera, the flashlight, the
-  shade, locks the screen, or does nothing — and the button parks in any corner.
-  The swipes under the favorites offer the same list, one set per side.
+  shade, locks the screen, freezes or unfreezes the freeze list, or does nothing — and the
+  button parks in any corner. The swipes under the favorites offer the same list, one per side.
 - Widget height follows the widget itself, unless you set it by hand. Widgets refresh
   when their app freezes and unfreezes, and a frozen one is never cleaned away.
 - Night dark theme, wallpaper blur, pinch-to-resize icons, reduced motion. Auto-dark
   follows custom night hours you set yourself.
-- Settings has a changelog that follows the language, every row is searchable, and Back
-  returns to the section it came from. A restored backup re-pins the shortcuts it names
-  and covers every setting including the language.
+- Settings is a two-column grid with a search box over every row, a changelog that follows the
+  language, and Back that returns to the section it came from. A restored backup re-pins the
+  shortcuts it names and covers every setting including the language.
 - **Settings → About checks for updates.** It reads the release page to see whether a newer
   version exists and points you at it. That read is the app's only network call, and it
   sends nothing — no setting, no app list, no usage.
@@ -75,7 +86,9 @@ The home screen starts almost empty on purpose — everything on it is put there
 - **Swipe in from either edge** for the A-Z list, then slide along the letters to jump to
   one. Tap the edge and let go to just open it.
 - **Long-press any app**, on either screen, to rename it, change its icon, tag it,
-  lock it, hide it, uninstall it, or file it in a folder.
+  lock it, freeze it, hide it, uninstall it, or file it in a folder.
+- **Settings → Apps → App freezing** builds the freeze list and owns its triggers. It needs
+  root or Shizuku; on its own the list freezes nothing.
 - **Edit layout** gives you drag handles for the order and steppers for every gap, height
   and margin.
 
@@ -84,7 +97,8 @@ Everything else lives in Settings, which has a search box over the whole of it.
 Two things are worth knowing. Double-tapping the A-Z strip to lock the screen needs an
 accessibility service, and if that toggle is greyed out you have to allow restricted
 settings from App info first — Android blocks it for anything installed outside a store.
-And **Export settings** is how you keep your setup.
+And **Export settings** is how you keep your setup: it covers every setting, the language,
+and re-pins the shortcuts it names when you import it.
 
 Work profiles are picked up automatically. A private space needs Android 15 or later and
 Deluge set as your default home app.

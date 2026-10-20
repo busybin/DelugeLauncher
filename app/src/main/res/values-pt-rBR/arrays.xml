@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v24">
+        <item>Congele apps com root ou Shizuku: Parar, Suspender, Desativar ou Ocultar, uma aba por método, cada uma com o que custa. A tela diz se quem responde é o root (e qual: Magisk, KernelSU, APatch) ou o Shizuku.</item>
+        <item>O congelamento tem gatilhos, não um interruptor: Congelar tudo, o botão de canto, um atalho no ícone do launcher ou congelamento automático um tempo depois de a tela apagar. O automático deixa em paz o app na tela, apps com notificações e um celular carregando.</item>
+        <item>Apps do sistema ficam fora da lista até você ativá-los. Selecionar tudo e inverter preenchem ou esvaziam a lista de uma vez, e os dois menus de toque longo congelam ou descongelam um app.</item>
+        <item>As configurações são uma grade de duas colunas, com a busca sobre todas as linhas.</item>
+        <item>Exportar configurações agora cobre todas as configurações, o idioma, e refixa os atalhos que nomeia. O estado de congelamento e os registros de verificação de atualização ficam no aparelho.</item>
+        <item>Ícones distintos para cada direção: um floco congela e um sol descongela, um cadeado fechado bloqueia e um cadeado aberto desbloqueia. Desinstalar é vermelho nos dois menus.</item>
+        <item>Widgets são atualizados quando o app congela ou descongela, e um widget congelado nunca é removido.</item>
+        <item>Os comandos de congelamento vão por um único shell, então uma lista longa não espera mais um comando por vez.</item>
+        <item>A reconciliação limpa uma marca de congelado que o sistema não informa mais, em vez de deixar um app cinza para sempre.</item>
+        <item>Os 8 idiomas estão completos.</item>
+    </string-array>
     <string-array name="changelog_v23">
         <item>Uma pasta que se abre perto da borda inferior rola seus apps para a tela em vez de deixar as últimas linhas de fora.</item>
         <item>O «Sobre» pode consultar a página de versões em busca de uma mais nova. Só lê, não envia nada.</item>

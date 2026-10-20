@@ -6,7 +6,9 @@ import dev.delugelauncher.ui.common.DelugeIcons
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -36,9 +38,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -52,8 +56,11 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import dev.delugelauncher.DelugeApp
+import dev.delugelauncher.data.FreezeMethod
+import dev.delugelauncher.data.FreezeOutcome
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -266,18 +273,55 @@ private fun WidgetPage(
     var slotSizeDp by remember { mutableStateOf(0 to 0) }
     var reportedSizeDp by remember(widgetId) { mutableStateOf(0 to 0) }
 
+    val frozenApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
+    val frozenMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
+    val widgetProviders by app.prefs.widgetProviders.collectAsState(initial = emptyMap())
+    val scope = rememberCoroutineScope()
+    // A dead provider names no package, so the mapping written at bind time answers instead.
+    val providerPackage = providerInfo?.provider?.packageName ?: widgetProviders[widgetId]
+    // A stopped app starts again on a tap, so only the methods that hold it need the lift.
+    val frozen = providerPackage != null &&
+        providerPackage in frozenApplied &&
+        frozenMethods[providerPackage] != FreezeMethod.STOP
+
+    fun lift(open: Boolean) {
+        val packageName = providerPackage ?: return
+        scope.launch {
+            when (app.freezeManager.unfreeze(packageName)) {
+                FreezeOutcome.DONE -> if (open) runCatching {
+                    context.packageManager.getLaunchIntentForPackage(packageName)?.let {
+                        context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }
+                }
+                FreezeOutcome.NO_ACCESS -> Toast.makeText(
+                    context,
+                    context.getString(R.string.freeze_needs_access),
+                    Toast.LENGTH_LONG,
+                ).show()
+                else -> Toast.makeText(
+                    context,
+                    context.getString(R.string.freeze_unfreeze_failed, packageName),
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
+
     if (providerInfo == null) {
         // The provider is gone — its app was uninstalled or disabled. Draw something that
         // still takes a long press, or this page is a blank gap with no way to remove it.
         // A tap opens the same menu: a dead widget with only a hidden gesture guarding its
-        // removal reads as a home screen that cannot be fixed.
+        // removal reads as a home screen that cannot be fixed. A frozen one is the exception:
+        // the tap lifts the freeze, which is the only way this page ever comes back.
         Surface(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(8.dp)
-                .pointerInput(widgetId) {
+                .pointerInput(widgetId, frozen) {
                     detectTapGestures(
-                        onTap = { offset -> onPressAndHold(offset.x, offset.y) },
+                        onTap = { offset ->
+                            if (frozen) lift(open = false) else onPressAndHold(offset.x, offset.y)
+                        },
                         onLongPress = { offset -> onPressAndHold(offset.x, offset.y) },
                     )
                 },
@@ -289,7 +333,10 @@ private fun WidgetPage(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text(stringResource(R.string.widget_unavailable), color = Color.White.copy(alpha = 0.8f))
+                Text(
+                    stringResource(if (frozen) R.string.freeze_menu_unfreeze else R.string.widget_unavailable),
+                    color = Color.White.copy(alpha = 0.8f),
+                )
             }
         }
         return
@@ -316,6 +363,8 @@ private fun WidgetPage(
             LongPressFrameLayout(ctx).apply {
                 hostView?.let { addView(it) }
                 onLongPress = { x, y -> onPressAndHold(x, y) }
+                isFrozen = { frozen }
+                onFrozenTap = { lift(open = true) }
             }
         },
         update = { container ->
@@ -345,6 +394,8 @@ private fun WidgetPage(
                 hostView.updateAppWidgetSize(options, wDp, hDp, wDp, hDp)
             }
             container.onLongPress = { x, y -> onPressAndHold(x, y) }
+            container.isFrozen = { frozen }
+            container.onFrozenTap = { lift(open = true) }
         },
     )
 }

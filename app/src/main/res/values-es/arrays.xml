@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v24">
+        <item>Congela apps con root o Shizuku: Detener, Suspender, Deshabilitar u Ocultar, una pestaña por método, cada una con lo que cuesta. La pantalla indica si responde root (y cuál: Magisk, KernelSU, APatch) o Shizuku.</item>
+        <item>La congelación se dispara, no es un interruptor: Congelar todo, el botón de la esquina, un atajo en el icono del lanzador o congelación automática un rato después de apagar la pantalla. La automática deja en paz la app en pantalla, las apps con notificaciones y un teléfono cargando.</item>
+        <item>Las apps del sistema quedan fuera de la lista hasta que las actives. Seleccionar todo e invertir llenan o vacían la lista de una vez, y ambos menús de pulsación larga congelan o descongelan una app.</item>
+        <item>Los ajustes son una cuadrícula de dos columnas, con el buscador sobre todas las filas.</item>
+        <item>Exportar ajustes ahora cubre todos los ajustes, el idioma, y vuelve a fijar los atajos que nombra. El estado de congelación y los registros de actualización se quedan en el dispositivo.</item>
+        <item>Iconos distintos para cada dirección: un copo congela y un sol descongela, un candado cerrado bloquea y un grillete abierto desbloquea. Desinstalar va en rojo en ambos menús.</item>
+        <item>Los widgets se actualizan al congelar o descongelar su app, y un widget congelado nunca se elimina.</item>
+        <item>Los comandos de congelación se agrupan en un solo shell, así que una lista larga ya no espera un comando cada vez.</item>
+        <item>Reconciliar borra una marca de congelado que el sistema ya no informa, en vez de dejar una app en gris para siempre.</item>
+        <item>Los 8 idiomas están completos.</item>
+    </string-array>
     <string-array name="changelog_v23">
         <item>Una carpeta que se despliega cerca del borde inferior desplaza sus apps a la vista en vez de dejar las últimas filas fuera.</item>
         <item>«Acerca de» puede consultar la página de versiones en busca de una más nueva. Solo lee, no envía nada.</item>

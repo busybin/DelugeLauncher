@@ -1,0 +1,16 @@
+The largest update since the fork: freeze apps, a new settings screen, and backups that cover everything.
+
+New:
+* Freeze apps with root or Shizuku: Stop, Suspend, Disable or Hide, one tab per method, each with its own advantage and drawback. The screen reports which root (Magisk, KernelSU, APatch) or Shizuku is answering.
+* Freezing has triggers, not a switch: Freeze all, the corner button, a shortcut on the launcher's own icon, or automatic freezing a while after the screen goes off. The automatic run leaves the app on screen, apps with notifications and a phone on a charger alone.
+* System apps stay out of the freeze list unless you turn them on; select all and invert fill or empty the list in one go, and both long-press menus freeze or unfreeze a single app.
+* Settings is a two-column grid, with the search box still over every row.
+* Export settings now covers every setting, the language, and re-pins the shortcuts it names. Freeze state and update-check records stay on the device.
+* Distinct icons for each direction: a snowflake to freeze and a sun to unfreeze, a closed lock to lock and an open shackle to unlock. Uninstall is red in both menus.
+
+Fixed and tuned:
+* Widgets refresh when their app freezes or unfreezes, and a frozen widget is never cleaned away.
+* Freeze commands are batched through one shell, so a long list no longer waits a command at a time.
+* Reconcile clears a frozen mark the system no longer reports, instead of leaving an app greyed out forever.
+
+All 8 languages complete.

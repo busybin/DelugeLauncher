@@ -60,6 +60,12 @@ import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.EntryKeys
+import dev.delugelauncher.data.FreezeMethod
+import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.FreezeSort
+import dev.delugelauncher.data.FreezeSourceFilter
+import dev.delugelauncher.data.FreezeStateFilter
+import dev.delugelauncher.data.needsTimes
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.ui.applist.RESERVED_TAGS
 import dev.delugelauncher.ui.common.LocalScreenshotNames
@@ -84,6 +90,7 @@ import dev.delugelauncher.ui.common.IconStyle
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.clearIconCache
 import dev.delugelauncher.ui.common.clearIconCacheForPackage
+import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.clearIconDiskCache
 import dev.delugelauncher.ui.common.encodePackOverride
 import dev.delugelauncher.ui.common.warmIconCache
@@ -92,6 +99,7 @@ import dev.delugelauncher.ui.home.HomeRoute
 import dev.delugelauncher.ui.home.HomeSettings
 import dev.delugelauncher.ui.settings.AppPickerScreen
 import dev.delugelauncher.ui.settings.FolderAppsScreen
+import dev.delugelauncher.ui.settings.FreezeAppsScreen
 import dev.delugelauncher.ui.settings.HiddenAppsScreen
 import dev.delugelauncher.ui.settings.ChangelogScreen
 import dev.delugelauncher.ui.settings.LanguageScreen
@@ -241,8 +249,19 @@ fun DelugeNavHost(
             // that gathers them is the slowest call in here. Asked of the store rather
             // than taken from the caller's flows, which are collected further down and
             // may still be at their initial value on the first reload of a cold start.
-            val withTimes = app.prefs.recentSection.first()
-            state to app.appRepository.queryAllApps(state, withInstallTimes = withTimes)
+            // The freeze screen's install/update orders need them too.
+            val withTimes = app.prefs.recentSection.first() || app.prefs.freezeSort.first().needsTimes()
+            // What the user chose, and which of those are frozen right now. Only the second
+            // is what rows should draw as frozen; the first is what a trigger works from.
+            val plan = app.prefs.freezeMethodsNow()
+            val applied = app.prefs.freezeAppliedNow()
+            val frozen = plan.filterKeys { it in applied }
+            state to app.appRepository.queryAllApps(
+                state,
+                withInstallTimes = withTimes,
+                frozen = frozen,
+                planned = plan.keys,
+            )
         }
         // Overtaken while it ran: this list was enumerated against a state that is no longer
         // the newest thing known about the device, and publishing it would put a locked
@@ -257,7 +276,12 @@ fun DelugeNavHost(
     // A shortcut pinned through the confirm screen, or unpinned from a menu, changes what
     // there is to list without any package changing — so nothing here would otherwise notice.
     val shortcutChanges by app.appRepository.shortcutChanges.collectAsState()
-    LaunchedEffect(shortcutChanges) { reloadApps(known = null, pass = reloadOrder.begin()) }
+    // Freezing changes which rows exist and how they draw, without any package broadcast
+    // necessarily arriving (a disable or a hide is not one).
+    val freezeChanges by app.freezeManager.changes.collectAsState()
+    LaunchedEffect(shortcutChanges, freezeChanges) {
+        reloadApps(known = null, pass = reloadOrder.begin())
+    }
 
     /**
      * Takes a state that has just been resolved and acts on what it conceals at once, on the
@@ -429,6 +453,21 @@ fun DelugeNavHost(
     }
 
     val hiddenApps by app.prefs.hiddenApps.collectAsState(initial = emptySet())
+    val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
+    val freezeMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
+    val freezeApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
+    val freezeAutoEnabled by app.prefs.freezeAutoEnabled.collectAsState(initial = false)
+    val freezeAutoDelay by app.prefs.freezeAutoDelaySeconds.collectAsState(initial = 60)
+    val freezeUnfreezeOnUnlock by app.prefs.freezeUnfreezeOnUnlock.collectAsState(initial = true)
+    val freezeSystemApps by app.prefs.freezeSystemApps.collectAsState(initial = false)
+    val freezeSkipCharging by app.prefs.freezeAutoSkipCharging.collectAsState(initial = true)
+    val freezeSkipForeground by app.prefs.freezeAutoSkipForeground.collectAsState(initial = true)
+    val freezeSkipNotifications by app.prefs.freezeAutoSkipNotifications.collectAsState(initial = true)
+    val freezeSourceFilter by app.prefs.freezeSourceFilter.collectAsState(initial = FreezeSourceFilter.USER)
+    val freezeStateFilter by app.prefs.freezeStateFilter.collectAsState(initial = FreezeStateFilter.ALL)
+    val freezeSort by app.prefs.freezeSort.collectAsState(initial = FreezeSort.NAME_ASC)
+    val freezeQuery by app.prefs.freezeQuery.collectAsState(initial = "")
+    val freezeStatus by app.freezeManager.status.collectAsState()
     val favoriteKeys by app.prefs.favorites.collectAsState(initial = emptyList())
     val frequentExcluded by app.prefs.frequentExcluded.collectAsState(initial = emptySet())
     val favoritesEverSet by app.prefs.favoritesEverSet.collectAsState(initial = true)
@@ -669,6 +708,16 @@ fun DelugeNavHost(
     // set: that screen lists rows, and a hidden app inside a locked private space has no row.
     // Counting the stored set in the subtitle says out loud how many apps are in there.
     val hiddenShownCount = remember(allApps, hiddenApps) { allApps.count { it.key in hiddenApps } }
+    val frozenShownCount = remember(allApps, freezeApplied) {
+        // What is frozen right now, not the size of the list: a whole list can be waiting to
+        // be triggered, and saying "twelve frozen" then would be a lie. Counted by package:
+        // one frozen app can have a row of its own and a pinned shortcut beside it.
+        allApps.asSequence()
+            .map { it.packageName }
+            .filter { it in freezeApplied }
+            .distinct()
+            .count()
+    }
     val foldersById = remember(folders) { folders.associateBy { it.id } }
 
     // A favorites row is an app or a folder; both come out of the same ordered token list.
@@ -1244,6 +1293,7 @@ fun DelugeNavHost(
                         )
                     },
                     onOpenHiddenApps = { navController.navigate("settings/hidden") },
+                    onOpenFreezeApps = { navController.navigate("settings/freeze") },
                     onOpenHomeSettings = {
                         settingsTick++
                         // The system screen, never a silent switch: which launcher runs is the
@@ -1273,8 +1323,35 @@ fun DelugeNavHost(
 
             val actionsA = buildActionsA()
             val actionsB = buildActionsB()
+            // Root and Shizuku are probed off the composition thread: `su` can block on a
+            // prompt. Only asked while double-tap locking is on, which is the only case the
+            // settings row reports on.
+            var lockGestureReady by remember { mutableStateOf(true) }
+            LaunchedEffect(settingsResumeTick, doubleTapToLock) {
+                lockGestureReady = if (!doubleTapToLock) true else withContext(Dispatchers.IO) {
+                    SystemUi.canLockScreen(context)
+                }
+            }
             SettingsScreen(SettingsScreenModel(
                 hiddenCount = hiddenShownCount,
+                frozenCount = frozenShownCount,
+                freezeEnabled = freezeEnabled,
+                onOpenFreezeApps = { navController.navigate("settings/freeze") },
+                onSetFreezeEnabled = { enabled ->
+                    scope.launch {
+                        val result = app.freezeManager.setEnabled(enabled)
+                        val message = when {
+                            result.noAccess -> context.getString(R.string.freeze_needs_access)
+                            result.failed > 0 ->
+                                context.getString(R.string.freeze_disable_failed, result.failed)
+                            !enabled -> context.getString(R.string.freeze_disabled_done, result.done)
+                            else -> null
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
                 iconPacks = iconPacks,
                 iconPackPackage = iconPackPackage,
                 showAppIcons = showAppIcons,
@@ -1453,7 +1530,7 @@ fun DelugeNavHost(
                 onSetIconSide = actionsB.onSetIconSide,
                 onSetNowPlayingEnabled = actionsB.onSetNowPlayingEnabled,
                 shadeGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canExpandShade() },
-                lockGestureReady = remember(homeIntentTick, settingsResumeTick) { SystemUi.canLockScreen() },
+                lockGestureReady = lockGestureReady,
                 onOpenAccessibilitySettings = actionsB.onOpenAccessibilitySettings,
                 onOpenAppInfo = actionsB.onOpenAppInfo,
                 onOpenHiddenApps = actionsB.onOpenHiddenApps,
@@ -1617,6 +1694,196 @@ fun DelugeNavHost(
                 onToggleHidden = { appInfo, hidden ->
                     scope.launch { app.prefs.setHidden(appInfo.key, hidden) }
                 },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("settings/freeze") {
+            FreezeAppsScreen(
+                allApps = allApps,
+                freezeMethods = freezeMethods,
+                freezeApplied = freezeApplied,
+                nameOverrides = nameOverrides,
+                iconSizeDp = iconSizeDp,
+                status = freezeStatus,
+                systemAppsEnabled = freezeSystemApps,
+                sourceFilter = freezeSourceFilter,
+                stateFilter = freezeStateFilter,
+                sort = freezeSort,
+                query = freezeQuery,
+                autoEnabled = freezeAutoEnabled,
+                autoDelaySeconds = freezeAutoDelay,
+                unfreezeOnUnlock = freezeUnfreezeOnUnlock,
+                autoSkipCharging = freezeSkipCharging,
+                autoSkipForeground = freezeSkipForeground,
+                autoSkipNotifications = freezeSkipNotifications,
+                onRefreshAccess = { scope.launch { app.freezeManager.refreshAccess() } },
+                onOpenShizuku = {
+                    if (!app.freezeManager.openShizuku()) {
+                        Toast.makeText(context, R.string.freeze_shizuku_missing, Toast.LENGTH_SHORT).show()
+                    }
+                },
+                onAddToPlan = { appInfo, method ->
+                    scope.launch {
+                        val result = app.freezeManager.addToPlan(appInfo.packageName, method)
+                        if (result == FreezeOutcome.SYSTEM_APPS_OFF) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.freeze_system_off_blocked),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    }
+                },
+                onAddManyToPlan = { apps, method ->
+                    scope.launch {
+                        val added = app.freezeManager.addManyToPlan(apps.map { it.packageName }, method)
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.freeze_added_done, added),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+                onInvertSelection = { joining, leaving, method ->
+                    scope.launch {
+                        val result = app.freezeManager.invertPlan(
+                            (joining + leaving).map { it.packageName },
+                            method,
+                        )
+                        val message = when {
+                            result.noAccess -> context.getString(R.string.freeze_needs_access)
+                            result.failed > 0 -> context.getString(
+                                R.string.freeze_invert_failed,
+                                result.failed,
+                            )
+                            else -> null
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                onSetApplied = { appInfo, freeze ->
+                    scope.launch {
+                        val result = if (freeze) {
+                            app.freezeManager.freeze(appInfo.packageName)
+                        } else {
+                            app.freezeManager.unfreeze(appInfo.packageName)
+                        }
+                        val message = when (result) {
+                            FreezeOutcome.DONE -> null
+                            FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
+                            FreezeOutcome.SYSTEM_APPS_OFF ->
+                                context.getString(R.string.freeze_system_off_blocked)
+                            else -> context.getString(
+                                if (freeze) R.string.freeze_failed else R.string.freeze_unfreeze_failed,
+                                appInfo.label,
+                            )
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                onRemoveFromPlan = { appInfo ->
+                    scope.launch {
+                        val result = app.freezeManager.removeFromPlan(appInfo.packageName)
+                        val message = when (result) {
+                            FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
+                            FreezeOutcome.FAILED -> context.getString(
+                                R.string.freeze_unfreeze_failed,
+                                appInfo.label,
+                            )
+                            else -> null
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                onFreezeAll = {
+                    scope.launch {
+                        FreezeToast.progress(context, R.string.freeze_working)
+                        val result = app.freezeManager.freezeAll()
+                        withContext(Dispatchers.Main) {
+                            FreezeToast.result(
+                                context,
+                                if (result.noAccess) {
+                                    context.getString(R.string.freeze_needs_access)
+                                } else {
+                                    context.getString(R.string.freeze_many_done, result.done)
+                                },
+                                long = result.noAccess,
+                            )
+                        }
+                    }
+                },
+                onUnfreezeAll = {
+                    scope.launch {
+                        FreezeToast.progress(context, R.string.unfreeze_working)
+                        val result = app.freezeManager.unfreezeAll()
+                        withContext(Dispatchers.Main) {
+                            FreezeToast.result(
+                                context,
+                                if (result.noAccess) {
+                                    context.getString(R.string.freeze_needs_access)
+                                } else {
+                                    context.getString(R.string.freeze_all_done)
+                                },
+                                long = result.noAccess,
+                            )
+                        }
+                    }
+                },
+                onSetAutoEnabled = { enabled -> scope.launch { app.prefs.setFreezeAutoEnabled(enabled) } },
+                onSetAutoDelay = { seconds -> scope.launch { app.prefs.setFreezeAutoDelaySeconds(seconds) } },
+                onSetUnfreezeOnUnlock = { enabled ->
+                    scope.launch { app.prefs.setFreezeUnfreezeOnUnlock(enabled) }
+                },
+                onSetAutoSkipCharging = { enabled ->
+                    scope.launch { app.prefs.setFreezeAutoSkipCharging(enabled) }
+                },
+                onSetAutoSkipForeground = { enabled ->
+                    scope.launch { app.prefs.setFreezeAutoSkipForeground(enabled) }
+                },
+                onSetAutoSkipNotifications = { enabled ->
+                    scope.launch { app.prefs.setFreezeAutoSkipNotifications(enabled) }
+                },
+                onSetSystemAppsEnabled = { enabled ->
+                    scope.launch {
+                        val result = app.freezeManager.setSystemAppsEnabled(enabled)
+                        val message = when {
+                            result.noAccess -> context.getString(R.string.freeze_needs_access)
+                            result.failed > 0 -> context.getString(
+                                R.string.freeze_system_unfreeze_failed,
+                                result.failed,
+                            )
+                            !enabled -> context.getString(R.string.freeze_system_disabled_done, result.done)
+                            else -> null
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
+                },
+                onSetSourceFilter = { filter -> scope.launch { app.prefs.setFreezeSourceFilter(filter) } },
+                onSetStateFilter = { filter -> scope.launch { app.prefs.setFreezeStateFilter(filter) } },
+                onSetSort = { sort ->
+                    scope.launch {
+                        // Install/update times are only read when a screen asks for them. A
+                        // sort picked after the list was built needs one more pass, or every
+                        // timestamp is zero and both orders silently fall back to the name.
+                        val previous = app.prefs.freezeSort.first()
+                        app.prefs.setFreezeSort(sort)
+                        if (sort.needsTimes() && !previous.needsTimes()) {
+                            reloadApps(known = null, pass = reloadOrder.begin())
+                        }
+                    }
+                },
+                onSetQuery = { query -> scope.launch { app.prefs.setFreezeQuery(query) } },
                 onBack = { navController.popBackStack() },
             )
         }

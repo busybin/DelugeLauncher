@@ -112,6 +112,10 @@ enum class CornerAction {
     FLASHLIGHT,
     SHADE,
     LOCK,
+    /** Puts every app in the freeze list back under its chosen method. */
+    FREEZE_ALL,
+    /** Pauses everything in the freeze list; the list itself is left alone. */
+    UNFREEZE_ALL,
     /** Nothing at all. */
     DO_NOTHING,
 }
@@ -135,10 +139,32 @@ enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
 /** How hard the launcher taps back: silent, or three strengths. */
 enum class HapticFeedback { OFF, LIGHT, MEDIUM, STRONG }
 
+/** Whether the freeze screen is showing user apps or system apps. */
+enum class FreezeSourceFilter { USER, SYSTEM }
+
+/** The second freeze-screen filter: everything, or only what is frozen, or only what is not. */
+enum class FreezeStateFilter { ALL, FROZEN, UNFROZEN }
+
+/** How the freeze screen orders what it shows. */
+enum class FreezeSort {
+    NAME_ASC,
+    NAME_DESC,
+    /** Newest install first. */
+    INSTALLED,
+    /** Most recently updated first. */
+    UPDATED,
+}
+
+/** Whether this order needs each package's install and update times, which are read in one pass. */
+fun FreezeSort.needsTimes(): Boolean = this == FreezeSort.INSTALLED || this == FreezeSort.UPDATED
+
 private val Context.dataStore by preferencesDataStore(name = "deluge_prefs")
 
 /** Bumped only if the shape of an exported file changes, so an old one can be refused. */
 private const val EXPORT_FORMAT = 1
+
+/** A minute of screen-off before the automatic freeze runs, until the user says otherwise. */
+private const val DEFAULT_FREEZE_DELAY_SECONDS = 60
 
 /** The backup's language entry, which lives outside the store — see exportJson. */
 private const val PREF_LANGUAGE = "language"
@@ -153,6 +179,11 @@ private val NEVER_EXPORT = setOf(
     "last_update_check_failed",
     "update_known_version",
     "update_prompted_version",
+    // Which apps this device has frozen is a fact about this device, not a preference:
+    // restored elsewhere it would grey out apps that were never touched.
+    "freeze_methods",
+    // Which of them are frozen right now is even more of a device fact.
+    "freeze_applied",
 )
 
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
@@ -291,6 +322,20 @@ class Prefs(private val context: Context) {
         val UPDATE_KNOWN_VERSION = intPreferencesKey("update_known_version")
         val UPDATE_PROMPTED_VERSION = intPreferencesKey("update_prompted_version")
         val UPDATE_AUTO_CHECK = booleanPreferencesKey("update_auto_check")
+        val FREEZE_ENABLED = booleanPreferencesKey("freeze_enabled")
+        val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
+        val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
+        val FREEZE_AUTO_ENABLED = booleanPreferencesKey("freeze_auto_enabled")
+        val FREEZE_AUTO_DELAY_SECONDS = intPreferencesKey("freeze_auto_delay_seconds")
+        val FREEZE_UNFREEZE_ON_UNLOCK = booleanPreferencesKey("freeze_unfreeze_on_unlock")
+        val FREEZE_SYSTEM_APPS = booleanPreferencesKey("freeze_system_apps")
+        val FREEZE_AUTO_SKIP_CHARGING = booleanPreferencesKey("freeze_auto_skip_charging")
+        val FREEZE_AUTO_SKIP_FOREGROUND = booleanPreferencesKey("freeze_auto_skip_foreground")
+        val FREEZE_AUTO_SKIP_NOTIFICATIONS = booleanPreferencesKey("freeze_auto_skip_notifications")
+        val FREEZE_SOURCE_FILTER = stringPreferencesKey("freeze_source_filter")
+        val FREEZE_STATE_FILTER = stringPreferencesKey("freeze_state_filter")
+        val FREEZE_SORT = stringPreferencesKey("freeze_sort")
+        val FREEZE_QUERY = stringPreferencesKey("freeze_query")
     }
 
     /** Every padding a user can set by hand; their presence is what retires the first-run layout. */
@@ -445,7 +490,19 @@ class Prefs(private val context: Context) {
         }.getOrNull() ?: return false
 
         context.dataStore.edit { store ->
+            // Device facts and modes are not carried in a backup, but they are also not
+            // something a restore should wipe: which apps are frozen, which version this
+            // build last checked, whether the screenshot disguise is on. They are read out
+            // here and put back, so restoring settings does not strand a frozen app with no
+            // record of it or pretend a fresh install on a phone that has been running.
+            val kept = store.asMap().entries
+                .filter { (key, _) -> key.name in NEVER_EXPORT }
+                .map { (key, value) -> Pair(key as Preferences.Key<Any>, value) }
             store.clear()
+            kept.forEach { (key, value) ->
+                @Suppress("UNCHECKED_CAST")
+                store[key as Preferences.Key<Any>] = value
+            }
             parsed.forEach { (key, value) ->
                 @Suppress("UNCHECKED_CAST")
                 store[key as Preferences.Key<Any>] = value
@@ -489,6 +546,87 @@ class Prefs(private val context: Context) {
 
     val hiddenApps: Flow<Set<String>> =
         data.map { it[Keys.HIDDEN_APPS] ?: emptySet() }.distinctUntilChanged()
+
+    /** Package name to the method chosen for it. Empty when the list is empty. */
+    /**
+     * Whether app freezing is offered at all.
+     *
+     * Turning it off is not just a hidden switch: the manager lifts every frozen app and
+     * empties the list first, so no app is left disabled with no screen to bring it back.
+     * On by default for installations that already have the feature.
+     */
+    val freezeEnabled: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_ENABLED] ?: true }.distinctUntilChanged()
+
+    suspend fun freezeEnabledNow(): Boolean = freezeEnabled.first()
+
+    val freezeMethods: Flow<Map<String, FreezeMethod>> = data.map { pref ->
+        jsonToMap(pref[Keys.FREEZE_METHODS]).mapNotNull { (packageName, name) ->
+            val method = runCatching { FreezeMethod.valueOf(name) }.getOrNull()
+                ?: return@mapNotNull null
+            packageName to method
+        }.toMap()
+    }.distinctUntilChanged()
+
+    suspend fun freezeMethodsNow(): Map<String, FreezeMethod> = freezeMethods.first()
+
+    /**
+     * Packages from the list that are frozen at the moment.
+     *
+     * Choosing an app and freezing it are two steps: the list is what the user wants, this is
+     * what has actually been applied, and a trigger — Freeze all, the corner button, the
+     * automatic freeze — moves the whole list into it. Unfreezing takes an app back out and
+     * leaves it in the list, which is what makes the next trigger put it back.
+     */
+    val freezeApplied: Flow<Set<String>> =
+        data.map { it[Keys.FREEZE_APPLIED] ?: emptySet() }.distinctUntilChanged()
+
+    suspend fun freezeAppliedNow(): Set<String> = freezeApplied.first()
+
+    val freezeAutoEnabled: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_AUTO_ENABLED] ?: false }.distinctUntilChanged()
+
+    /** Seconds the screen must stay off before the automatic freeze runs. */
+    val freezeAutoDelaySeconds: Flow<Int> =
+        data.map { it[Keys.FREEZE_AUTO_DELAY_SECONDS] ?: DEFAULT_FREEZE_DELAY_SECONDS }
+            .distinctUntilChanged()
+
+    // On by default: an app frozen for the lock screen has to be usable again the moment the
+    // screen is back, or freezing looks like the launcher broke it.
+    val freezeUnfreezeOnUnlock: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_UNFREEZE_ON_UNLOCK] ?: true }.distinctUntilChanged()
+
+    val freezeSystemApps: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_SYSTEM_APPS] ?: false }.distinctUntilChanged()
+
+    suspend fun freezeSystemAppsNow(): Boolean = freezeSystemApps.first()
+
+    val freezeAutoSkipCharging: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_AUTO_SKIP_CHARGING] ?: true }.distinctUntilChanged()
+
+    suspend fun freezeAutoSkipChargingNow(): Boolean = freezeAutoSkipCharging.first()
+
+    val freezeAutoSkipForeground: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_AUTO_SKIP_FOREGROUND] ?: true }.distinctUntilChanged()
+
+    suspend fun freezeAutoSkipForegroundNow(): Boolean = freezeAutoSkipForeground.first()
+
+    val freezeAutoSkipNotifications: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_AUTO_SKIP_NOTIFICATIONS] ?: true }.distinctUntilChanged()
+
+    suspend fun freezeAutoSkipNotificationsNow(): Boolean = freezeAutoSkipNotifications.first()
+
+    /** Filters, order and query of the freeze screen: view state, but backed up like a setting. */
+    val freezeSourceFilter: Flow<FreezeSourceFilter> =
+        readEnum(Keys.FREEZE_SOURCE_FILTER, FreezeSourceFilter.USER)
+
+    val freezeStateFilter: Flow<FreezeStateFilter> =
+        readEnum(Keys.FREEZE_STATE_FILTER, FreezeStateFilter.ALL)
+
+    val freezeSort: Flow<FreezeSort> = readEnum(Keys.FREEZE_SORT, FreezeSort.NAME_ASC)
+
+    val freezeQuery: Flow<String> =
+        data.map { it[Keys.FREEZE_QUERY] ?: "" }.distinctUntilChanged()
 
     val favorites: Flow<List<String>> =
         data.map { pref -> readFavorites(pref) }.distinctUntilChanged()
@@ -1165,6 +1303,152 @@ class Prefs(private val context: Context) {
         }
     }
 
+    /** Adds or moves an app in the freeze list, or drops it when [method] is null. */
+    suspend fun setFreezeMethod(packageName: String, method: FreezeMethod?) {
+        context.dataStore.edit { pref ->
+            val current = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
+            if (method == null) current.remove(packageName) else current[packageName] = method.name
+            pref[Keys.FREEZE_METHODS] = mapToJson(current)
+        }
+    }
+
+    /** Adds or moves a whole batch in one write, so Select all is one store pass. */
+    suspend fun setFreezeMethods(entries: Map<String, FreezeMethod>) {
+        context.dataStore.edit { pref ->
+            val current = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
+            entries.forEach { (packageName, method) -> current[packageName] = method.name }
+            pref[Keys.FREEZE_METHODS] = mapToJson(current)
+        }
+    }
+
+    /** Drops an app from the list entirely, applied state included. */
+    suspend fun removeFreezeTarget(packageName: String) {
+        context.dataStore.edit { pref ->
+            val current = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
+            current.remove(packageName)
+            pref[Keys.FREEZE_METHODS] = mapToJson(current)
+            pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packageName
+        }
+    }
+
+    /** Drops a whole batch from the list and from the applied set in one write. */
+    suspend fun removeFreezeTargets(packages: Collection<String>) {
+        if (packages.isEmpty()) return
+        context.dataStore.edit { pref ->
+            val current = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
+            packages.forEach { current.remove(it) }
+            pref[Keys.FREEZE_METHODS] = mapToJson(current)
+            pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packages.toSet()
+        }
+    }
+
+    /** Empties the freeze list and its applied set; used when the feature is turned off. */
+    suspend fun clearFreezePlan() {
+        context.dataStore.edit { pref ->
+            pref.remove(Keys.FREEZE_METHODS)
+            pref.remove(Keys.FREEZE_APPLIED)
+            pref[Keys.FREEZE_AUTO_ENABLED] = false
+            pref[Keys.FREEZE_SYSTEM_APPS] = false
+        }
+    }
+
+    suspend fun setFreezeEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_ENABLED] = enabled }
+    }
+
+    /**
+     * Turns off the two gesture actions that only exist for freezing.
+     *
+     * Leaving one selected while its option is gone would keep freezing apps from a button
+     * the user can no longer explain.
+     */
+    suspend fun clearFreezeActionBindings() {
+        val freezeActions = setOf(CornerAction.FREEZE_ALL.name, CornerAction.UNFREEZE_ALL.name)
+        context.dataStore.edit { pref ->
+            listOf(
+                Keys.QUICK_LAUNCH_LEFT_ACTION,
+                Keys.QUICK_LAUNCH_RIGHT_ACTION,
+                Keys.CORNER_TAP_ACTION,
+                Keys.CORNER_SWIPE_ACTION,
+            ).forEach { key ->
+                if (pref[key] in freezeActions) pref[key] = CornerAction.DO_NOTHING.name
+            }
+        }
+    }
+
+    /** Marks packages as actually frozen, or no longer, with [applied] saying which. */
+    suspend fun setFreezeApplied(packages: Set<String>, applied: Boolean) {
+        context.dataStore.edit { pref ->
+            val current = pref[Keys.FREEZE_APPLIED] ?: emptySet()
+            pref[Keys.FREEZE_APPLIED] = if (applied) current + packages else current - packages
+        }
+    }
+
+    /**
+     * One-time carry-over from the build that recorded the apps *let out* rather than the ones
+     * frozen. The list is unchanged and the other set is its complement, so an app that was
+     * frozen stays frozen and one that was lifted stays lifted.
+     *
+     * Returns whether it wrote anything, so the caller only reloads when the answer changed.
+     */
+    suspend fun migrateFreezeApplied(): Boolean {
+        var wrote = false
+        context.dataStore.edit { pref ->
+            if (pref.contains(Keys.FREEZE_APPLIED)) return@edit
+            val plan = jsonToMap(pref[Keys.FREEZE_METHODS]).keys
+            val lifted = pref[stringSetPreferencesKey("freeze_lifted")] ?: emptySet()
+            pref[Keys.FREEZE_APPLIED] = plan - lifted
+            wrote = plan.isNotEmpty()
+        }
+        return wrote
+    }
+
+    suspend fun setFreezeAutoEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_AUTO_ENABLED] = enabled }
+    }
+
+    suspend fun setFreezeAutoDelaySeconds(seconds: Int) {
+        context.dataStore.edit { it[Keys.FREEZE_AUTO_DELAY_SECONDS] = seconds }
+    }
+
+    suspend fun setFreezeUnfreezeOnUnlock(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_UNFREEZE_ON_UNLOCK] = enabled }
+    }
+
+    suspend fun setFreezeSystemApps(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_SYSTEM_APPS] = enabled }
+    }
+
+    suspend fun setFreezeAutoSkipCharging(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_AUTO_SKIP_CHARGING] = enabled }
+    }
+
+    suspend fun setFreezeAutoSkipForeground(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_AUTO_SKIP_FOREGROUND] = enabled }
+    }
+
+    suspend fun setFreezeAutoSkipNotifications(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_AUTO_SKIP_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun setFreezeSourceFilter(filter: FreezeSourceFilter) {
+        context.dataStore.edit { it[Keys.FREEZE_SOURCE_FILTER] = filter.name }
+    }
+
+    suspend fun setFreezeStateFilter(filter: FreezeStateFilter) {
+        context.dataStore.edit { it[Keys.FREEZE_STATE_FILTER] = filter.name }
+    }
+
+    suspend fun setFreezeSort(sort: FreezeSort) {
+        context.dataStore.edit { it[Keys.FREEZE_SORT] = sort.name }
+    }
+
+    suspend fun setFreezeQuery(query: String) {
+        context.dataStore.edit {
+            if (query.isEmpty()) it.remove(Keys.FREEZE_QUERY) else it[Keys.FREEZE_QUERY] = query
+        }
+    }
+
     suspend fun setFavorites(list: List<String>) {
         context.dataStore.edit { it.writeFavorites(list) }
     }
@@ -1709,7 +1993,7 @@ class Prefs(private val context: Context) {
     suspend fun setAppLocked(key: String, locked: Boolean) {
         context.dataStore.edit { pref ->
             val current = pref[Keys.LOCKED_APPS] ?: emptySet()
-            pref[Keys.LOCKED_APPS] = if (locked) current + key else current - key
+            pref[Keys.LOCKED_APPS] = EntryKeys.withAppLocked(current, key, locked)
         }
     }
 
@@ -1796,8 +2080,15 @@ class Prefs(private val context: Context) {
         }
     }
 
-    private fun readCornerAction(key: Preferences.Key<String>, default: CornerAction): Flow<CornerAction> =
-        data.map { pref ->
+    /** A stored enum by name, with a default for anything unrecognised. */
+    private inline fun <reified T : Enum<T>> readEnum(
+        key: Preferences.Key<String>,
+        default: T,
+    ): Flow<T> = data.map { pref ->
+        pref[key]?.let { stored -> runCatching { enumValueOf<T>(stored) }.getOrNull() } ?: default
+    }.distinctUntilChanged()
+
+    private fun readCornerAction(key: Preferences.Key<String>, default: CornerAction): Flow<CornerAction> =        data.map { pref ->
             pref[key]?.let { stored ->
                 // The combined option was split in two: an old binding opens whatever it
                 // points at, which is what opening an app does.

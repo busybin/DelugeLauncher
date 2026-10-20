@@ -231,6 +231,7 @@ class SettingsActionsB(
     val onOpenAccessibilitySettings: () -> Unit,
     val onOpenAppInfo: () -> Unit,
     val onOpenHiddenApps: () -> Unit,
+    val onOpenFreezeApps: () -> Unit,
     val onOpenHomeSettings: () -> Unit,
     val onOpenFrequentExcluded: () -> Unit,
     val onOpenFavorites: () -> Unit,

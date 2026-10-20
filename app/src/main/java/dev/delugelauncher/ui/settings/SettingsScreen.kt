@@ -4,9 +4,11 @@ package dev.delugelauncher.ui.settings
 import dev.delugelauncher.ui.common.DelugeIcons
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.SlotKind
@@ -31,10 +33,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.material.icons.filled.Add
@@ -88,6 +90,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TextButton
 import dev.delugelauncher.ui.theme.fontFamilyOf
 import dev.delugelauncher.ui.theme.rememberWallpaperPalette
@@ -323,6 +327,13 @@ class SettingsScreenModel(
     val onOpenAccessibilitySettings: () -> Unit,
     val onOpenAppInfo: () -> Unit,
     val onOpenHiddenApps: () -> Unit,
+    /** How many apps this device has frozen, for the count on the settings row. */
+    val frozenCount: Int,
+    /** Whether app freezing is offered at all. Off also means its rows and actions are gone. */
+    val freezeEnabled: Boolean,
+    val onOpenFreezeApps: () -> Unit,
+    /** Turning this off unfreezes and empties the list; the manager refuses a half-finished job. */
+    val onSetFreezeEnabled: (Boolean) -> Unit,
     /** Whether this launcher is the one the system opens on HOME. */
     val isDefaultLauncher: Boolean,
     val onOpenHomeSettings: () -> Unit,
@@ -456,6 +467,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
         crashText = withContext(Dispatchers.IO) { CrashLog.read(context) }
     }
     var crashCleared by remember { mutableStateOf(false) }
+    // Turning the freeze feature off is a one-way cleanup: every frozen app is lifted and the
+    // list is emptied, so it gets a confirmation rather than a switch that just flips.
+    var disablingFreeze by remember { mutableStateOf(false) }
 
     // Every row of settings as one list: what it is called, what else it answers to, the
     // section it belongs in, and the control itself. One list rather than a block per section
@@ -949,6 +963,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 },
                 // What it opens, under the action's own name, once there is something picked.
                 picked = quickLaunchLeftLabel,
+                freezeEnabled = freezeEnabled,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_quick_launch_right), "swipe launch right") {
@@ -961,6 +976,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     } ?: onSetQuickLaunchRightAction(action)
                 },
                 picked = quickLaunchRightLabel,
+                freezeEnabled = freezeEnabled,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_tap), "button shortcut corner tap") {
@@ -973,6 +989,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     } ?: onSetCornerTapAction(action)
                 },
                 picked = cornerButtonLabel,
+                freezeEnabled = freezeEnabled,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_swipe), "button shortcut corner slide up") {
@@ -985,6 +1002,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     } ?: onSetCornerSwipeAction(action)
                 },
                 picked = cornerSwipeLabel,
+                freezeEnabled = freezeEnabled,
             )
         },
         SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_double_tap_lock), "lock screen") {
@@ -1169,6 +1187,33 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 leading = DelugeIcons.VisibilityOff,
             )
         },
+        // Beside hiding, which is the launcher's own idea of hidden; this one is the system's.
+        // The master switch stays visible when off, since it is the only way back on.
+        SettingsEntry(
+            SettingsSection.APPS, stringResource(R.string.settings_freeze_enable),
+            "freeze frozen disable hide suspend stop root shizuku enable feature",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_freeze_enable),
+                detail = stringResource(R.string.settings_freeze_enable_detail),
+                checked = freezeEnabled,
+                onCheckedChange = { enabled ->
+                    if (enabled) onSetFreezeEnabled(true) else disablingFreeze = true
+                },
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPS, stringResource(R.string.settings_freeze_apps),
+            "freeze frozen disable hide suspend stop root shizuku", visible = freezeEnabled,
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_freeze_apps),
+                detail = if (frozenCount == 0) stringResource(R.string.settings_freeze_none)
+                    else stringResource(R.string.settings_freeze_count, frozenCount),
+                onClick = onOpenFreezeApps,
+                leading = Icons.Filled.Lock,
+            )
+        },
         // These live as entries rather than as hand-drawn items in the list below, so the
         // search box can find them: a row written straight into the LazyColumn is invisible to
         // the search, which only ever looks at the entries.
@@ -1232,8 +1277,13 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 leading = Icons.Filled.Info,
             )
         },
-        // Beside the changelog: the two answer the same question from either end — what this
-        // build is now and what is available. Auto-check is opt-in and off by default.
+        SettingsEntry(
+            SettingsSection.ABOUT, stringResource(R.string.settings_update_check),
+            "update upgrade version newer release download latest",
+        ) {
+            UpdateRow(state = updateState, onCheck = onCheckForUpdates)
+        },
+        // Right after the check: auto-check is opt-in and off by default.
         SettingsEntry(
             SettingsSection.ABOUT, stringResource(R.string.settings_update_auto_check),
             "update upgrade version newer release automatic check auto",
@@ -1244,13 +1294,6 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = updateAutoCheck,
                 onCheckedChange = onSetUpdateAutoCheck,
             )
-        },
-        // build holds, and whether there is a newer one.
-        SettingsEntry(
-            SettingsSection.ABOUT, stringResource(R.string.settings_update_check),
-            "update upgrade version newer release download latest",
-        ) {
-            UpdateRow(state = updateState, onCheck = onCheckForUpdates)
         },
         // Only while there is something to get: a second row that means "go and fetch it"
         // rather than leaving the check row to mean two different things depending on state.
@@ -1314,7 +1357,11 @@ fun SettingsScreen(model: SettingsScreenModel) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(openSection?.labelRes ?: R.string.settings_title))
+                    Text(
+                        stringResource(openSection?.labelRes ?: R.string.settings_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = { if (openSection != null) openSection = null else onBack() }) {
@@ -1339,7 +1386,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 // Filled, not outlined: a launcher's settings search sits against a
                 // wallpaper-tinted surface, and a floating outlined box over it reads as a
                 // form field pasted in rather than as part of the screen.
-                OutlinedTextField(
+                TextField(
                     value = query,
                     onValueChange = { query = it },
                     singleLine = true,
@@ -1355,56 +1402,34 @@ fun SettingsScreen(model: SettingsScreenModel) {
                             }
                         }
                     },
-                    shape = RoundedCornerShape(28.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    shape = RoundedCornerShape(20.dp),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent,
                     ),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             if (openSection == null && query.isBlank()) {
-                items(SettingsSection.entries) { section ->
-                    // One row per section, with its own mark in a tonal circle: a flat list of
-                    // eight equal lines gives the eye nothing to land on when it comes back.
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
+                SettingsSection.entries.chunked(2).forEach { line ->
+                    item {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { openSection = section }
-                                .padding(horizontal = 14.dp, vertical = 14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    section.icon,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(20.dp),
+                            line.forEach { section ->
+                                SectionCard(
+                                    section = section,
+                                    count = entries.count { it.section == section },
+                                    onClick = { openSection = section },
+                                    modifier = Modifier.weight(1f),
                                 )
                             }
-                            Spacer(Modifier.width(14.dp))
-                            Text(
-                                stringResource(section.labelRes),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f),
-                            )
-                            Icon(
-                                DelugeIcons.ArrowForwardIos,
-                                contentDescription = null,
-                                modifier = Modifier.padding(4.dp),
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            )
+                            if (line.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
@@ -1412,7 +1437,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
 
             entriesToShow.forEach { (section, rows) ->
                 item {
-                    Section(stringResource(section.labelRes)) {
+                    Section(section, rows.size) {
                         rows.forEachIndexed { index, entry ->
                             if (index > 0) RowDivider()
                             entry.content()
@@ -1473,19 +1498,139 @@ fun SettingsScreen(model: SettingsScreenModel) {
             }
         }
     }
+
+    if (disablingFreeze) {
+        AlertDialog(
+            onDismissRequest = { disablingFreeze = false },
+            title = { Text(stringResource(R.string.freeze_disable_title)) },
+            text = { Text(stringResource(R.string.freeze_disable_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    disablingFreeze = false
+                    onSetFreezeEnabled(false)
+                }) {
+                    Text(stringResource(R.string.freeze_disable_confirm))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { disablingFreeze = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
     }
 }
 
 @Composable
-private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+private fun SectionCard(
+    section: SettingsSection,
+    count: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val (container, content) = sectionColors(section)
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
+        modifier = modifier
+            .heightIn(min = 132.dp)
+            .clickable(onClick = onClick),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(container, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    section.icon,
+                    contentDescription = null,
+                    tint = content,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                stringResource(section.labelRes),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                stringResource(R.string.settings_section_count, count),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            )
+        }
+    }
+}
+
+/** One tonal pair per section, so the top menu reads as a set rather than eight grey cards. */
+@Composable
+private fun sectionColors(section: SettingsSection): Pair<Color, Color> {
+    val colors = MaterialTheme.colorScheme
+    return when (section) {
+        SettingsSection.APPEARANCE, SettingsSection.APPS ->
+            colors.primaryContainer to colors.onPrimaryContainer
+        SettingsSection.HOME, SettingsSection.GESTURES ->
+            colors.primaryContainer.copy(alpha = 0.72f) to colors.onPrimaryContainer
+        SettingsSection.APP_LIST, SettingsSection.NOTIFICATIONS, SettingsSection.BACKUP ->
+            colors.surfaceContainerHighest to colors.onSurfaceVariant
+        SettingsSection.ABOUT ->
+            colors.surfaceContainerHigh to colors.onSurfaceVariant
+    }
+}
+
+@Composable
+private fun Section(
+    section: SettingsSection,
+    count: Int,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val (container, contentColor) = sectionColors(section)
     Column {
-        SectionLabel(title)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, end = 8.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .background(container, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    section.icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(
+                stringResource(section.labelRes).uppercase(),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 1.sp,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                stringResource(R.string.settings_section_count, count),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+            )
+        }
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            // surfaceContainer, not a translucent variant: a card that lets the wallpaper
-            // through behind every row was the reason long options looked like they were
-            // floating on top of the screen rather than grouped in it.
+            shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceContainer,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Column(content = content)
@@ -1494,21 +1639,10 @@ private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) 
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
-        text.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.SemiBold,
-        modifier = Modifier.padding(start = 12.dp, bottom = 8.dp),
-    )
-}
-
-@Composable
 private fun RowDivider() {
     HorizontalDivider(
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-        modifier = Modifier.padding(horizontal = 16.dp),
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+        modifier = Modifier.padding(horizontal = 20.dp),
     )
 }
 
@@ -2105,6 +2239,8 @@ internal fun CornerActionRow(
     onSelect: (CornerAction) -> Unit,
     /** The app or shortcut this slot opens, shown when that is what the action is. */
     picked: String? = null,
+    /** Freeze actions are only offered while the freeze feature is on. */
+    freezeEnabled: Boolean = true,
 ) {
     var picking by remember { mutableStateOf(false) }
     Row(
@@ -2142,7 +2278,11 @@ internal fun CornerActionRow(
             title = { Text(summary) },
             text = {
                 Column {
-                CornerAction.entries.forEach { action ->
+                CornerAction.entries
+                    .filter {
+                        freezeEnabled || (it != CornerAction.FREEZE_ALL && it != CornerAction.UNFREEZE_ALL)
+                    }
+                    .forEach { action ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -2176,6 +2316,8 @@ private fun CornerAction.labelRes(): Int = when (this) {
     CornerAction.FLASHLIGHT -> R.string.corner_action_flashlight
     CornerAction.SHADE -> R.string.corner_action_shade
     CornerAction.LOCK -> R.string.corner_action_lock
+    CornerAction.FREEZE_ALL -> R.string.corner_action_freeze_all
+    CornerAction.UNFREEZE_ALL -> R.string.corner_action_unfreeze_all
     CornerAction.DO_NOTHING -> R.string.corner_action_do_nothing
 }
 

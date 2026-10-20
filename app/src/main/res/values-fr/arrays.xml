@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v24">
+        <item>Congelez des applis avec root ou Shizuku : Arrêt, Suspension, Désactivation ou Masquage, un onglet par méthode, avec ce que chacune coûte. L\'écran indique qui répond : root (Magisk, KernelSU, APatch) ou Shizuku.</item>
+        <item>La congélation se déclenche : Tout congeler, le bouton d\'angle, un raccourci sur l\'icône du lanceur, ou la congélation automatique un moment après l\'extinction de l\'écran. L\'automatique épargne l\'appli affichée, les applis avec notifications et un téléphone en charge.</item>
+        <item>Les applis système restent hors de la liste tant que vous ne les activez pas. Tout sélectionner et inverser remplissent ou vident la liste d\'un coup, et les deux menus d\'appui long congèlent ou décongèlent une appli.</item>
+        <item>Les réglages sont une grille à deux colonnes, le champ de recherche reste au-dessus de chaque ligne.</item>
+        <item>L\'export des réglages couvre désormais tous les réglages, la langue, et réépingle les raccourcis qu\'il nomme. L\'état de congélation et les traces de mise à jour restent sur l\'appareil.</item>
+        <item>Une icône par action : un flocon congèle, un soleil décongèle, un cadenas fermé verrouille, un cadenas ouvert déverrouille. Désinstaller est en rouge dans les deux menus.</item>
+        <item>Les widgets se rafraîchissent quand leur appli est gelée ou dégelée, et un widget gelé n\'est jamais supprimé.</item>
+        <item>Les commandes de congélation passent par un seul shell : une longue liste n\'attend plus une commande à la fois.</item>
+        <item>La réconciliation efface une marque de gel que le système ne signale plus, au lieu de laisser une appli grisée pour toujours.</item>
+        <item>Les 8 langues sont complètes.</item>
+    </string-array>
     <string-array name="changelog_v23">
         <item>Un dossier qui se déploie en bas de l\'écran fait défiler ses applis dans la vue au lieu de laisser les dernières lignes hors écran.</item>
         <item>« À propos » peut consulter la page des versions pour en trouver une plus récente. Il lit seulement, rien n\'est envoyé.</item>

@@ -35,8 +35,8 @@ android {
         targetSdk = baselineInt("baseline.targetSdk")
         // Plain integers, no "V" prefix, only ever raised, and always kept equal: the system
         // compares versionCode, and a lower number is rejected as a downgrade.
-        versionCode = 23
-        versionName = "23"
+        versionCode = 24
+        versionName = "24"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -124,6 +124,12 @@ dependencies {
     implementation(libs.androidx.compose.material.icons.core)
 
     implementation(libs.androidx.datastore.preferences)
+
+    // Freezing apps needs either root or a Shizuku-authorized shell.
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
+    // One binder call per app online through Shizuku beats forking `pm` per command.
+    implementation(libs.hiddenapi.bypass)
 
     testImplementation(libs.junit)
     // Real JSON on the unit-test classpath; the android.jar stubs only throw.
