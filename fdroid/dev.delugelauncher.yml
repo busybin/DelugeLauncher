@@ -18,7 +18,7 @@ Builds:
   # Fill in on release: the tag is plain digits (= versionCode), the commit is the full hash.
   - versionName: '24'
     versionCode: 24
-    commit: 2b3ad74c1786ec60e0ba2b8a78cd1d87de7a2d33
+    commit: fd3f46af21bff0c146984333535cca11ad06d6d8
     gradle: yes
 
 # Releases are signed by us. F-Droid re-signs with its own key unless reproducible builds are
