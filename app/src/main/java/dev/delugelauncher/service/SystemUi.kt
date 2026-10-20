@@ -8,11 +8,16 @@ import android.provider.Settings
 import android.widget.Toast
 import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.R
+import dev.delugelauncher.data.FreezeAccess
+import dev.delugelauncher.data.FreezeShell
 
 object SystemUi {
     /** Set once reflection has actually opened the shade on this device; see below. */
     @Volatile
     private var reflectionWorked = false
+
+    /** Probes root once per process; a refused prompt is retried by FreezeShell. */
+    private var shell: FreezeShell? = null
 
     /**
      * Pulls down the notification shade.
@@ -47,10 +52,31 @@ object SystemUi {
      */
     fun canExpandShade(): Boolean = DelugeAccessibilityService.isConnected || reflectionWorked
 
-    /** Locking has no fallback: the accessibility action is the only way to do it at all. */
-    fun canLockScreen(): Boolean = DelugeAccessibilityService.isConnected
+    /**
+     * Whether the gesture has a way through; drives the prompt in settings. Probing root may
+     * block on a prompt, so this is meant to be called off the main thread.
+     */
+    fun canLockScreen(context: Context): Boolean =
+        DelugeAccessibilityService.isConnected || elevatedReady(context)
 
-    fun lockScreen(): Boolean = DelugeAccessibilityService.lockScreen()
+    /** The accessibility action is instant and needs no shell grant. */
+    fun lockScreenNow(): Boolean = DelugeAccessibilityService.lockScreen()
+
+    /**
+     * Locks the screen through root or Shizuku by pressing the sleep key. Shell access can
+     * wait on a root prompt, so call this off the main thread.
+     */
+    fun lockScreenElevated(context: Context): Boolean =
+        shell(context).run(LOCK_SCREEN_COMMAND)
+
+    private fun elevatedReady(context: Context): Boolean = runCatching {
+        shell(context).status().access != FreezeAccess.NONE
+    }.getOrDefault(false)
+
+    private fun shell(context: Context): FreezeShell =
+        shell ?: synchronized(this) {
+            shell ?: FreezeShell(context.applicationContext).also { shell = it }
+        }
 
     /**
      * Heals the accessibility binding after an update, and nags once when the grant itself
@@ -127,4 +153,7 @@ object SystemUi {
     private const val A11Y_SEEN_FILE = "deluge_a11y_seen"
     private const val A11Y_SEEN_KEY = "seen"
     private const val A11Y_NUDGED_KEY = "nudged_for"
+
+    /** KEYCODE_SLEEP: turns the screen off without toggling it back on if already dark. */
+    private const val LOCK_SCREEN_COMMAND = "input keyevent 223"
 }

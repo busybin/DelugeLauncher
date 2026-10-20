@@ -30,6 +30,7 @@ import dev.delugelauncher.service.StatusBarFader
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.ui.DelugeNavHost
 import dev.delugelauncher.ui.common.IconConfig
+import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.theme.DelugeTheme
 import androidx.lifecycle.lifecycleScope
@@ -80,6 +81,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Before the content: a shortcut that starts the app has the work already under way.
+        handleShortcut(intent)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         allowDrawingBehindTheCutout()
         // Portrait until told otherwise on a phone, free on a tablet: this is a list down the
@@ -266,8 +269,47 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (handleShortcut(intent)) return
         // Pressing HOME re-delivers the intent to us; treat it as "go back to the home screen".
         homeIntentTick++
+    }
+
+    /**
+     * Runs one of the launcher's own icon shortcuts, or reports that this intent was not one.
+     *
+     * The freeze list belongs to the app, not to any screen, so the two verbs are handed
+     * straight to the manager and answered with a toast — the shortcut may well be pressed
+     * from another launcher, where nothing of ours is on screen at all.
+     */
+    private fun handleShortcut(intent: Intent?): Boolean {
+        val freeze = when (intent?.action) {
+            ACTION_FREEZE_ALL -> true
+            ACTION_UNFREEZE_ALL -> false
+            else -> return false
+        }
+        // Consumed here: a configuration change hands the same intent to onCreate again, and
+        // freezing the whole list twice for one tap is not what the shortcut meant.
+        intent.action = null
+        val app = application as DelugeApp
+        lifecycleScope.launch {
+            // A stale shortcut pressed after the feature was switched off must do nothing.
+            if (!app.prefs.freezeEnabledNow()) return@launch
+            FreezeToast.progress(
+                this@MainActivity,
+                if (freeze) R.string.freeze_working else R.string.unfreeze_working,
+            )
+            val toast = if (freeze) {
+                val result = app.freezeManager.freezeAll()
+                if (result.noAccess) getString(R.string.freeze_needs_access)
+                else getString(R.string.freeze_many_done, result.done)
+            } else {
+                val result = app.freezeManager.unfreezeAll()
+                if (result.noAccess) getString(R.string.freeze_needs_access)
+                else getString(R.string.freeze_all_done)
+            }
+            FreezeToast.result(this@MainActivity, toast)
+        }
+        return true
     }
 
     // One widget refresh in flight at most: rapid background/foreground hops used to queue
@@ -307,6 +349,12 @@ class MainActivity : ComponentActivity() {
         // The fader holds a static controller for this window; don't outlive the Activity.
         StatusBarFader.release()
         super.onStop()
+    }
+
+    companion object {
+        /** What the launcher's own dynamic shortcuts send back in; see FreezeShortcuts. */
+        const val ACTION_FREEZE_ALL = "dev.delugelauncher.action.FREEZE_ALL"
+        const val ACTION_UNFREEZE_ALL = "dev.delugelauncher.action.UNFREEZE_ALL"
     }
 }
 

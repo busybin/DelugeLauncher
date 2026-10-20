@@ -39,6 +39,14 @@
          call goes the other way, reading the release page for a newer version. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- The automatic freeze needs to hear the screen go off, which is a broadcast only a
+         registered receiver is given. That means a service that stays up, and a foreground
+         service is the only kind the system leaves alone long enough to be worth anything.
+         It runs only while the user has turned the feature on, and says so with a
+         notification the whole time. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
     <!-- The flashlight, asked for the first time the corner button is set to it rather than at
          install: setTorchMode holds the camera open for as long as the light is on. Nothing is
          captured, and no picture ever leaves the device. Declared even though most launchers
@@ -78,6 +86,12 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <!-- Actions the dynamic freeze shortcuts send; see FreezeShortcuts. -->
+            <intent-filter>
+                <action android:name="dev.delugelauncher.action.FREEZE_ALL" />
+                <action android:name="dev.delugelauncher.action.UNFREEZE_ALL" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
@@ -159,6 +173,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Shizuku hands its binder to apps through this provider. Exported because the
+             Shizuku app must reach it; the permission makes it callable only by a process
+             holding INTERACT_ACROSS_USERS_FULL, which is Shizuku itself. -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
         <service
             android:name=".media.NowPlayingListenerService"
             android:exported="true"
@@ -167,6 +191,17 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+        </service>
+
+        <!-- Up only while the user has automatic freezing on. Not exported: nothing outside
+             the app has any business starting or stopping it. -->
+        <service
+            android:name=".service.FreezeAutoService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Watches for the screen going off to apply the user's freeze list." />
         </service>
 
     </application>

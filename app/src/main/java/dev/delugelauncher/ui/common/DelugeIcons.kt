@@ -115,6 +115,30 @@ object DelugeIcons {
         fill("M8.2,10m-1.7,0a1.7,1.7 0,1 1,3.4 0a1.7,1.7 0,1 1,-3.4 0")
         fill("M4,17.5l5.5,-5.5l3.5,3.5l3,-3l4,4v3.5z")
     }
+
+    /** Three crossing arms; the freeze list reads it at a glance beside a name. */
+    val Freeze: ImageVector = vector("VicFreeze") {
+        stroke("M12,3v18", 2f)
+        stroke("M4.2,7.5l15.6,9", 2f)
+        stroke("M19.8,7.5l-15.6,9", 2f)
+        stroke("M9,4.6l3,2.3M15,4.6l-3,2.3M9,19.4l3,-2.3M15,19.4l-3,-2.3", 1.6f)
+    }
+
+    /** The sun that takes the snowflake away: unfreezing, not deleting. */
+    val Thaw: ImageVector = vector("VicThaw") {
+        fill("M12,12m-4,0a4,4 0,1 1,8 0a4,4 0,1 1,-8 0")
+        stroke(
+            "M12,2v2.6M12,19.4V22M2,12h2.6M19.4,12H22M4.9,4.9l1.8,1.8M17.3,17.3l1.8,1.8M19.1,4.9l-1.8,1.8M6.7,17.3l-1.8,1.8",
+            2f,
+        )
+    }
+
+    /** An open shackle, so the row that lets an app out does not look like the one that locks it. */
+    val LockOpen: ImageVector = vector("VicLockOpen") {
+        stroke("M8,11V7a4,4 0 0 1 7.4,-1.8", 2f)
+        stroke("M5,11h14a1,1 0 0 1 1,1v8a1,1 0 0 1 -1,1H5a1,1 0 0 1 -1,-1v-8a1,1 0 0 1 1,-1z", 2f)
+        fill("M12,14.5m-1.6,0a1.6,1.6 0 1 1,3.2 0a1.6,1.6 0 1 1,-3.2 0")
+    }
 }
 
 /** The Material icon size, so one of these sits right beside a `material-icons-core` icon. */

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v24">
+        <item>Freeze apps with root or Shizuku: Stop, Suspend, Disable or Hide, one tab per method, each with what it costs. The screen says whether root (and which root: Magisk, KernelSU, APatch) or Shizuku is answering.</item>
+        <item>Freezing has triggers, not a switch: Freeze all, the corner button, a shortcut on the launcher\'s own icon, or automatic freezing a while after the screen goes off. The automatic run leaves the app on screen, apps with notifications and a phone on a charger alone.</item>
+        <item>System apps stay out of the freeze list until you turn them on. Select all and invert fill or empty the list in one go, and both long-press menus freeze or unfreeze a single app.</item>
+        <item>Settings is a two-column grid, with the search box still over every row.</item>
+        <item>Export settings now covers every setting, the language, and re-pins the shortcuts it names. Freeze state and update-check records stay on the device.</item>
+        <item>Distinct icons for each direction: a snowflake to freeze and a sun to unfreeze, a closed lock to lock and an open shackle to unlock. Uninstall is red in both menus.</item>
+        <item>Widgets refresh when their app freezes or unfreezes, and a frozen widget is never cleaned away.</item>
+        <item>Freeze commands are batched through one shell, so a long list no longer waits a command at a time.</item>
+        <item>Reconcile clears a frozen mark the system no longer reports, instead of leaving an app greyed out forever.</item>
+        <item>All 8 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v23">
         <item>A folder that expands near the bottom scrolls its apps into view instead of leaving the last rows off-screen.</item>
         <item>Settings &#8594; About can check the release page for a newer version. It reads, and sends nothing.</item>

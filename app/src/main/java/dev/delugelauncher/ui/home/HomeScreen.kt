@@ -150,6 +150,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.AppShortcutMenu
+import dev.delugelauncher.ui.common.FreezeActions
+import dev.delugelauncher.ui.common.FreezeMenuItems
+import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.EditAppDialog
@@ -349,6 +352,16 @@ fun HomeScreen(
     cornerSwipeBound: Boolean,
     /** The hold elapsed and the finger owns the button: the home swipe-up stands down. */
     onCornerOwnershipChanged: (Boolean) -> Unit,
+    /** Freeze-list actions a row's long-press menu offers; null where freezing is not set up. */
+    freezeActions: FreezeActions? = null,
+    /** Whether the freeze feature is on; its entries disappear from the background menu too. */
+    freezeEnabled: Boolean = true,
+    /** Puts every app in the freeze list back. Runs from the background long-press menu. */
+    onFreezeAll: () -> Unit = {},
+    /** Pauses everything in the freeze list. */
+    onUnfreezeAll: () -> Unit = {},
+    /** Opens the freeze screen itself from the same menu. */
+    onOpenFreezeList: () -> Unit = {},
 ) {    // Appended at the point of showing rather than stored in the label, so a rename still
     // wins and turning this off needs no re-reading of every app. The disguise wins over
     // everything while it is on: a rename is exactly what must not show.
@@ -1348,11 +1361,12 @@ fun HomeScreen(
                             onAppInfo = { menuForKey = null; onAppInfo(item.app) },
                             onUninstall = { menuForKey = null; onUninstall(item.app) },
                             onToggleLock = { menuForKey = null; onToggleLock(item.app) },
-                            isLocked = item.app.key in lockedApps,
+                            isLocked = item.app.lockedBy(lockedApps),
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
                             onEditIconName = { menuForKey = null; renameDialogFor = item.app },
                             onOpenSettings = { menuForKey = null; onOpenSettings() },
+                            freezeActions = freezeActions,
                         )
                     }
                 }
@@ -1507,6 +1521,24 @@ fun HomeScreen(
                 onClick = { backgroundMenu = false; onChangeWallpaper() },
             )
             HorizontalDivider()
+            if (freezeEnabled) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.freeze_open_list)) },
+                    leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                    onClick = { backgroundMenu = false; onOpenFreezeList() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.freeze_freeze_all)) },
+                    leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                    onClick = { backgroundMenu = false; onFreezeAll() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.freeze_unfreeze_all)) },
+                    leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
+                    onClick = { backgroundMenu = false; onUnfreezeAll() },
+                )
+                HorizontalDivider()
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open_settings)) },
                 leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
@@ -1584,11 +1616,15 @@ private fun FavoriteRow(
     onRemove: () -> Unit,
     onEditIconName: () -> Unit,
     onOpenSettings: () -> Unit,
+    freezeActions: FreezeActions?,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
     var shortcutMenu by remember { mutableStateOf(false) }
+    // The freeze entry has to pick a method before it can do anything, and the dialog has to
+    // outlive the menu it was opened from, so the state sits with the row.
+    var freezeChoosing by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxWidth()) {
         Row(
@@ -1632,7 +1668,7 @@ private fun FavoriteRow(
         ) {
             // A paused app fades the same way a retired shortcut does, when the setting asks;
             // the icon goes with the name so the whole row reads as set aside.
-            val dimmed = app.disabled || (dimPausedApps && app.suspended)
+            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
@@ -1713,7 +1749,12 @@ private fun FavoriteRow(
                     onClick = onAppInfo,
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_uninstall)) },
+                    text = {
+                        Text(
+                            stringResource(R.string.action_uninstall),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                     onClick = onUninstall,
                 )
@@ -1725,8 +1766,19 @@ private fun FavoriteRow(
                             )
                         )
                     },
-                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            if (isLocked) DelugeIcons.LockOpen else Icons.Filled.Lock,
+                            contentDescription = null,
+                        )
+                    },
                     onClick = onToggleLock,
+                )
+                FreezeMenuItems(
+                    app = app,
+                    actions = freezeActions,
+                    onDismissMenu = onDismissMenu,
+                    onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                 )
             }
             // Distinct from Remove below, which only takes it off the home screen: this hands
@@ -1756,6 +1808,16 @@ private fun FavoriteRow(
                 onClick = onOpenSettings,
             )
         }
+
+        FreezeMethodDialog(
+            app = if (freezeChoosing) app else null,
+            label = label,
+            onDismiss = { freezeChoosing = false },
+            onPick = { method ->
+                freezeChoosing = false
+                freezeActions?.add(app, method)
+            },
+        )
     }
 }
 
@@ -1974,7 +2036,8 @@ private fun FolderRow(
                                 // A paused app fades the same way a retired shortcut does, when
                                 // the setting asks; the icon goes with the name so the whole
                                 // row reads as set aside.
-                                val dimmed = member.disabled || (dimPausedApps && member.suspended)
+                                val dimmed = member.disabled || member.frozen != null ||
+                                    (dimPausedApps && member.suspended)
                                 Box(
                                     Modifier
                                         .pressPop(memberPress)
@@ -1986,7 +2049,9 @@ private fun FolderRow(
                         ) { labelModifier ->
                             Text(
                                 displayName(member),
-                                color = if (member.disabled || (dimPausedApps && member.suspended)) {
+                                color = if (member.disabled || member.frozen != null ||
+                                    (dimPausedApps && member.suspended)
+                                ) {
                                     contentColor.copy(alpha = 0.5f)
                                 } else {
                                     contentColor

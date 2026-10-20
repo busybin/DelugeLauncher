@@ -41,6 +41,7 @@ class AppRepository(
     private val context: Context,
     private val prefs: Prefs,
     private val scope: CoroutineScope,
+    private val freezeManager: FreezeManager,
 ) {
 
     private val pm: PackageManager get() = context.packageManager
@@ -122,6 +123,10 @@ class AppRepository(
          * here, so it is skipped whenever nothing on screen can show the answer.
          */
         withInstallTimes: Boolean = true,
+        /** Package name to freeze method, so frozen rows stay listed and say so. */
+        frozen: Map<String, FreezeMethod> = emptyMap(),
+        /** Packages in the freeze list, frozen or merely paused, so rows can offer the right thing. */
+        planned: Set<String> = emptySet(),
     ): List<AppInfo> {
         val profiles = runCatching { userManager.userProfiles }.getOrNull().orEmpty()
         val mainUser = Process.myUserHandle()
@@ -129,7 +134,7 @@ class AppRepository(
         // single slowest PackageManager call here, and every profile needs
         // the same map. It used to sit inside the flatMap below, paying that
         // cost once per profile on every reload and every cold start.
-        val installTimes = if (withInstallTimes) installTimes() else emptyMap()
+        val installTimes = if (withInstallTimes) installTimes() else emptyMap<String, Pair<Long, Long>>()
         return profiles
             .flatMap { user ->
                 val serial = listableSerial(user, mainUser) ?: return@flatMap emptyList()
@@ -150,13 +155,24 @@ class AppRepository(
                             userSerial = serial,
                             work = work,
                             privateProfile = privateProfile,
-                            installedAt = installTimes[info.componentName.packageName] ?: 0L,
+                            system = runCatching {
+                                info.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM != 0
+                            }.getOrDefault(false),
+                            installedAt = installTimes[info.componentName.packageName]?.first ?: 0L,
+                            updatedAt = installTimes[info.componentName.packageName]?.second ?: 0L,
                             // isPackageSuspended rather than the ApplicationInfo flag: the flag
                             // is not reliably carried on a LauncherActivityInfo, so a paused
                             // app kept looking normal.
                             suspended = runCatching {
                                 context.packageManager.isPackageSuspended(info.componentName.packageName)
                             }.getOrDefault(false),
+                            // A disabled or hidden app is not listed by LauncherApps at all,
+                            // and whether it is frozen is the manager's own record rather than
+                            // anything re-derived here: the platform's answer for a suspended
+                            // app is not reliable, and a wrong one showed a frozen app as if it
+                            // still had to be frozen.
+                            planned = info.componentName.packageName in planned,
+                            frozen = frozen[info.componentName.packageName],
                         )
                     }
             }
@@ -169,7 +185,7 @@ class AppRepository(
             // own launcher activity corrupts the HOME task, which says nothing about a
             // shortcut, and one we published ourselves is started through LauncherApps like
             // any other.
-            .plus(queryPinnedShortcuts())
+            .plus(queryPinnedShortcuts(frozen, planned))
             // Belt as well as braces, and after the shortcuts so that it covers them too. The
             // profiles above are read one call at a time, so the lock can be granted between
             // the state this list was asked for and the quiet mode read here — and it is
@@ -178,12 +194,56 @@ class AppRepository(
             // happens to be answering at this instant.
             .filterNot { privateSpace.conceals(it.key) }
             .distinctBy { it.key }
+            // After the dedupe: these are the frozen apps LauncherApps stopped returning.
+            .let { rows -> rows + frozenRows(frozen, rows.map { it.packageName }.toSet()) }
             // By pinyin on a Chinese phone: this is the order every list of app names starts
             // from — the pickers, the favourites and the hidden ones — and leaving it at the
             // The app list re-files and re-orders the same apps by its own letters.
             .sortedBy { if (Pinyin.ordering()) Pinyin.latin(it.label) else it.label.lowercase() }
             // After the own-package filter, which would otherwise drop it: the row is ours.
             .plus(privateSpaceRow(privateSpace))
+    }
+
+    /**
+     * Rows for frozen apps the launcher no longer returns because they are disabled or hidden.
+     *
+     * Only those two methods remove an app from LauncherApps; suspended and force-stopped
+     * apps are still listed there and are marked on their ordinary rows instead. The component
+     * is recovered so the row keeps the same key as the app had before it was frozen, which is
+     * what favorites, hidden entries and launch counts are stored under.
+     */
+    private fun frozenRows(
+        frozen: Map<String, FreezeMethod>,
+        present: Set<String>,
+    ): List<AppInfo> = frozen.mapNotNull { (packageName, method) ->
+        if (packageName in present) return@mapNotNull null
+        val info = FreezeState.applicationInfo(context, packageName) ?: return@mapNotNull null
+        if (info.flags and ApplicationInfo.FLAG_INSTALLED == 0) return@mapNotNull null
+        // Hidden apps are absent from the launcher by definition; a disabled one must still
+        // report disabled, or the user re-enabled it themselves and this entry is stale.
+        if (method == FreezeMethod.DISABLE && info.enabled) return@mapNotNull null
+        AppInfo(
+            componentName = launcherComponent(packageName)
+                ?: ComponentName(packageName, packageName),
+            label = runCatching { pm.getApplicationLabel(info).toString() }
+                .getOrDefault(packageName),
+            user = Process.myUserHandle(),
+            system = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
+            frozen = method,
+            planned = true,
+        )
+    }
+
+    private fun launcherComponent(packageName: String): ComponentName? {
+        pm.getLaunchIntentForPackage(packageName)?.component?.let { return it }
+        return runCatching {
+            pm.queryIntentActivities(
+                Intent(Intent.ACTION_MAIN)
+                    .addCategory(Intent.CATEGORY_LAUNCHER)
+                    .setPackage(packageName),
+                PackageManager.MATCH_DISABLED_COMPONENTS or PackageManager.MATCH_UNINSTALLED_PACKAGES,
+            ).firstOrNull()?.activityInfo?.let { ComponentName(packageName, it.name) }
+        }.getOrNull()
     }
 
     /**
@@ -205,9 +265,11 @@ class AppRepository(
     /** LauncherUserInfo.PRIVATE_SPACE_ENTRYPOINT_HIDDEN, by its documented value. */
     private val PRIVATE_SPACE_ENTRYPOINT_HIDDEN = "private_space_entrypoint_hidden"
 
-    /** First-install time per package, read in one pass. */
-    private fun installTimes(): Map<String, Long> = runCatching {
-        pm.getInstalledPackages(0).associate { it.packageName to it.firstInstallTime }
+    /** First-install and last-update time per package, read in one pass. */
+    private fun installTimes(): Map<String, Pair<Long, Long>> = runCatching {
+        pm.getInstalledPackages(0).associate {
+            it.packageName to (it.firstInstallTime to it.lastUpdateTime)
+        }
     }.getOrDefault(emptyMap())
 
     /**
@@ -410,7 +472,10 @@ class AppRepository(
     }
 
     /** Every pinned shortcut, as an ordinary row. */
-    private fun queryPinnedShortcuts(): List<AppInfo> = pinnedShortcuts()
+    private fun queryPinnedShortcuts(
+        frozen: Map<String, FreezeMethod>,
+        planned: Set<String>,
+    ): List<AppInfo> = pinnedShortcuts()
         // An id that would corrupt the newline-joined favorites list (CR-4) is not something
         // this store can hold at all, so such a shortcut never becomes a row in the first
         // place — PinShortcutActivity applies the same check before it can ever be pinned.
@@ -432,6 +497,10 @@ class AppRepository(
                 kind = EntryKind.SHORTCUT,
                 shortcutId = info.id,
                 disabled = !info.isEnabled,
+                // A shortcut points into an app, so it is unusable while that app is frozen.
+                // Carrying the state here is what lets pressing it lift the freeze first.
+                frozen = frozen[info.`package`],
+                planned = info.`package` in planned,
             )
         }
 
@@ -463,8 +532,40 @@ class AppRepository(
         return found.filter { it.isEnabled }.sortedBy { it.rank }
     }
 
-    /** Starts one of [appShortcuts]; the publisher's own Intent is never touched. */
-    fun startAppShortcut(shortcut: ShortcutInfo): Boolean = runCatching {
+    /**
+     * Starts one of [appShortcuts]; the publisher's own Intent is never touched.
+     *
+     * [app] is the row the menu was opened on: a shortcut into a frozen app cannot start until
+     * that app is lifted, exactly like pressing the app itself.
+     */
+    fun startAppShortcut(app: AppInfo, shortcut: ShortcutInfo): Boolean {
+        // A shortcut points into its publisher's app, and a pinned shortcut row carries that
+        // app's state too, so the row kind does not matter here.
+        if (app.frozen != null) {
+            scope.launch {
+                val lifted = freezeManager.unfreeze(app.packageName)
+                withContext(Dispatchers.Main) {
+                    when (lifted) {
+                        FreezeOutcome.DONE -> startAppShortcutNow(shortcut)
+                        FreezeOutcome.NO_ACCESS -> Toast.makeText(
+                            context,
+                            context.getString(R.string.freeze_needs_access),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        else -> Toast.makeText(
+                            context,
+                            context.getString(R.string.freeze_unfreeze_failed, app.label),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            }
+            return true
+        }
+        return startAppShortcutNow(shortcut)
+    }
+
+    private fun startAppShortcutNow(shortcut: ShortcutInfo): Boolean = runCatching {
         launcherApps.startShortcut(shortcut, null, null)
         true
     }.getOrDefault(false)
@@ -702,6 +803,37 @@ class AppRepository(
      * Returns false if the app could not be started, so callers can undo whatever they hid.
      */
     fun launch(app: AppInfo): Boolean {
+        // A shortcut points into its publisher's app, so it is just as unusable while that app
+        // is frozen as the app's own row is.
+        val enterable = app.kind == EntryKind.APP || app.kind == EntryKind.SHORTCUT
+        if (enterable && app.frozen != null) {
+            // Lifting the freeze is several shell commands; the tap is answered at once and
+            // the app comes forward when they finish. It stays on the freeze list, so the
+            // next trigger puts it back.
+            scope.launch {
+                val lifted = freezeManager.unfreeze(app.packageName)
+                withContext(Dispatchers.Main) {
+                    when (lifted) {
+                        FreezeOutcome.DONE -> launchNow(app)
+                        FreezeOutcome.NO_ACCESS -> Toast.makeText(
+                            context,
+                            context.getString(R.string.freeze_needs_access),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        else -> Toast.makeText(
+                            context,
+                            context.getString(R.string.freeze_unfreeze_failed, app.label),
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                }
+            }
+            return true
+        }
+        return launchNow(app)
+    }
+
+    private fun launchNow(app: AppInfo): Boolean {
         if (app.kind == EntryKind.SHORTCUT) return launchShortcut(app)
         // Only an app has an activity to start. The private space row is opened by the screen
         // that knows what it is, and arriving here means it was routed wrongly — which must not
@@ -722,7 +854,15 @@ class AppRepository(
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                 )
                 true
-            }.getOrDefault(false)
+            }.getOrElse {
+                // A row rebuilt after a hide/disable may have no exact activity name, and the
+                // package's own launcher intent is then the reliable way in.
+                runCatching {
+                    val intent = pm.getLaunchIntentForPackage(app.packageName) ?: return@runCatching false
+                    context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    true
+                }.getOrDefault(false)
+            }
         }
         if (started) {
             // Counted whether or not the usage sort is on, so switching it on later has a

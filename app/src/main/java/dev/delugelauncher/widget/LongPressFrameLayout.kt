@@ -28,6 +28,17 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
     /** x/y are the press position in this view's local pixel coordinates. */
     var onLongPress: ((x: Float, y: Float) -> Unit)? = null
 
+    /**
+     * Called on a tap while [isFrozen] answers true.
+     *
+     * The tap still reaches the widget, but a frozen app cannot act on it, so the launcher
+     * lifts the freeze here and opens the app itself once it can start.
+     */
+    var onFrozenTap: (() -> Unit)? = null
+
+    /** Read at the tap, not on every event: the freeze state changes between recompositions. */
+    var isFrozen: () -> Boolean = { false }
+
     private var longPressFired = false
 
     /** Where the current gesture began, so its direction can be judged as it moves. */
@@ -50,6 +61,11 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
             override fun onLongPress(e: MotionEvent) {
                 longPressFired = true
                 onLongPress?.invoke(e.x, e.y)
+            }
+
+            override fun onSingleTapUp(e: MotionEvent): Boolean {
+                if (isFrozen()) onFrozenTap?.invoke()
+                return false
             }
         },
     )

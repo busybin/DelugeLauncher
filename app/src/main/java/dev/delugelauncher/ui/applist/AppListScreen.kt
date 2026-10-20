@@ -23,6 +23,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -81,6 +83,7 @@ import dev.delugelauncher.ui.theme.launcherTextShadow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.MutableState
@@ -102,6 +105,7 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.focus.FocusRequester
@@ -137,6 +141,9 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.AppShortcutMenu
+import dev.delugelauncher.ui.common.FreezeActions
+import dev.delugelauncher.ui.common.FreezeMenuItems
+import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.recordTouchPosition
@@ -256,6 +263,8 @@ fun AppListScreen(
     /** Keys that ask for the device lock before opening. */
     lockedApps: Set<String>,
     onToggleLock: (AppInfo) -> Unit,
+    /** Freeze-list actions a row's long-press menu offers; null where freezing is not set up. */
+    freezeActions: FreezeActions? = null,
     /** Every tag in use, offered by the picker. */
     allTags: List<String>,
     /** Tags by app key, so the picker can pre-check what the chosen apps already carry. */
@@ -315,7 +324,13 @@ fun AppListScreen(
     isRenamed: (AppInfo) -> Boolean = { false },
     searchEnabled: Boolean,
     searchAtBottom: Boolean,
-    sectionTopPercent: Int,
+    /** Tapping the floating search button: ask for the field and the cursor. */
+    onSearchRequest: () -> Unit,
+    /**
+     * Where the floating button in the list's bottom corner ended up, so the edge strip
+     * drawn over that corner can let taps through to it. Null when there is no such button.
+     */
+    onCornerButtonPositioned: (Rect?) -> Unit = {},    sectionTopPercent: Int,
     query: String,
     onQueryChange: (String) -> Unit,
     alignment: HomeAlignment,
@@ -1430,10 +1445,11 @@ fun AppListScreen(
                         },
                         isHidden = entry.app.key in hiddenApps,
                         dimPausedApps = dimPausedApps,
-                        isLocked = entry.app.key in lockedApps,
+                        isLocked = entry.app.lockedBy(lockedApps),
                         onToggleLock = { onToggleLock(entry.app) },
                         onEditTag = { selecting = true; selectedKeys = setOf(entry.app.key) },
                         onMoveToFolder = { onMoveToFolder(entry.app) },
+                        freezeActions = freezeActions,
                     )
                 }
                 Box(
@@ -1578,9 +1594,37 @@ fun AppListScreen(
             }
             FloatingActionButton(
                 onClick = { showTagPicker = true },
-                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .onGloballyPositioned { onCornerButtonPositioned(it.boundsInRoot()) },
             ) {
                 Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.action_set_tag))
+            }
+            DisposableEffect(Unit) {
+                onDispose { onCornerButtonPositioned(null) }
+            }
+        }
+
+        // The home screen's corner button turns into this in the list: the same bottom-right
+        // reach, but its one job here is to put the cursor in the search field.
+        if (!selecting) {
+            FloatingActionButton(
+                onClick = onSearchRequest,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = if (searchAtBottom) 88.dp else 16.dp)
+                    // The edge strip runs over this corner of the screen; it is told where
+                    // the button is so a tap here is the button's, not the strip's.
+                    .onGloballyPositioned { onCornerButtonPositioned(it.boundsInRoot()) },
+            ) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = stringResource(R.string.applist_search_button),
+                )
+            }
+            DisposableEffect(Unit) {
+                onDispose { onCornerButtonPositioned(null) }
             }
         }
 
@@ -1803,6 +1847,7 @@ private fun AppRow(
     onEditTag: () -> Unit,
     /** True while picking apps to tag and this one is picked. */
     selected: Boolean,
+    freezeActions: FreezeActions?,
 ) {
     // Same press treatment as the home screen: the stock ripple all but vanishes against a
     // wallpaper, and without any feedback a tap that did register reads as one that didn't.
@@ -1810,9 +1855,12 @@ private fun AppRow(
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
     var shortcutMenu by remember { mutableStateOf(false) }
+    // The method has to be picked before the app can be added to the freeze list, and that
+    // dialog has to outlive the menu it was opened from.
+    var freezeChoosing by remember { mutableStateOf(false) }
     // A paused app fades the way a hidden one does, when the setting asks; the icon goes with
     // the name so the whole row reads as set aside.
-    val dimmed = isHidden || app.disabled || (dimPausedApps && app.suspended)
+    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
 
     Box {
         Row(
@@ -1976,7 +2024,12 @@ private fun AppRow(
                     onClick = { onDismissMenu(); onAppInfo() },
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_uninstall)) },
+                    text = {
+                        Text(
+                            stringResource(R.string.action_uninstall),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    },
                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                     onClick = { onDismissMenu(); onUninstall() },
                 )
@@ -1988,13 +2041,24 @@ private fun AppRow(
                             )
                         )
                     },
-                    leadingIcon = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                    leadingIcon = {
+                        Icon(
+                            if (isLocked) DelugeIcons.LockOpen else Icons.Filled.Lock,
+                            contentDescription = null,
+                        )
+                    },
                     onClick = { onDismissMenu(); onToggleLock() },
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_set_tag)) },
                     leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     onClick = { onDismissMenu(); onEditTag() },
+                )
+                FreezeMenuItems(
+                    app = app,
+                    actions = freezeActions,
+                    onDismissMenu = onDismissMenu,
+                    onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                 )
             }
             // Hands the shortcut back to the app that pinned it, which is the only way one
@@ -2028,6 +2092,16 @@ private fun AppRow(
                 onClick = { onDismissMenu(); onHide() },
             )
         }
+
+        FreezeMethodDialog(
+            app = if (freezeChoosing) app else null,
+            label = label,
+            onDismiss = { freezeChoosing = false },
+            onPick = { method ->
+                freezeChoosing = false
+                freezeActions?.add(app, method)
+            },
+        )
     }
 }
 

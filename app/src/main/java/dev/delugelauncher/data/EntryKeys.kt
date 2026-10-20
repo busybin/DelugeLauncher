@@ -50,6 +50,23 @@ object EntryKeys {
     fun shortcut(packageName: String, shortcutId: String, userSerial: Long = 0L): String =
         app("$SHORTCUT_PREFIX$packageName/$shortcutId", userSerial)
 
+    /**
+     * [current] with this row's app locked or unlocked.
+     *
+     * A frozen app comes back under whichever launcher activity the package manager names, so
+     * its key can differ from the one it was locked as. Every other key of the same app in the
+     * same profile is dropped when this one changes; other apps, other profiles and shortcuts
+     * keep theirs.
+     */
+    fun withAppLocked(current: Set<String>, key: String, locked: Boolean): Set<String> {
+        val others = current.filterNot { other ->
+            other == key || (!isShortcut(key) && !isShortcut(other) &&
+                other.substringBefore('/') == key.substringBefore('/') &&
+                userSerial(other) == userSerial(key))
+        }.toSet()
+        return if (locked) others + key else others
+    }
+
     fun isShortcut(key: String): Boolean = key.startsWith(SHORTCUT_PREFIX)
 
     fun isSearch(key: String): Boolean = key == SEARCH
