@@ -1,11 +1,13 @@
-Deluge Launcher is a minimal, list-based Android home screen, and an open source alternative to Niagara Launcher.
+Deluge Launcher is a minimal, list-based Android home screen that can freeze apps — and, as far as we can tell, the first launcher to build freezing in rather than leave it to a separate app.
+
+Every other freezer is a second app standing beside your launcher, with a list of its own to keep in sync. Here the freeze list is the home screen: an app you put to sleep keeps its row, its folder, its favorite slot and its tag, greyed out, and a tap wakes it and opens it. There are four methods — Stop, Suspend, Disable and Hide — one tab each, with what each one does and what it breaks. Freezing has triggers, not a switch: freeze all, the corner button, a shortcut on the launcher's own icon, or automatic freezing a while after the screen goes off, stepping around the app in front of you, apps with notifications and a phone on a charger. Unfreezing to open an app is temporary, so the next trigger puts it back. It needs root (Magisk, KernelSU or APatch) or Shizuku, whichever you have; Shizuku works without root.
 
 The home screen holds a short list of favorites and nothing you did not put there. Everything else lives in an alphabetical app list you reach by swiping in from the edge of the screen, with an A-Z strip for jumping straight to a letter.
 
 A clock and date widget is included and any other widget can be added. Favorites can be folders, or the apps you open most, kept for you.
 
-Layout, alignment, icon pack, icon and text size, spacing, font and colors are all adjustable, and the settings screen has a search box over the whole of it. There is an optional search box in the app list, optional notification counts on icons, optional Now Playing controls, and per-app renaming, icons and hiding.
+Layout, alignment, icon pack, icon and text size, spacing, font and colors are all adjustable, and the settings screen has a search box over the whole of it. There is an optional search box in the app list, optional notification counts on icons, optional Now Playing controls, and per-app renaming, icons, locking, freezing and hiding.
 
 Work profiles are picked up automatically, and Android 15's private space is supported.
 
-No ads, no tracking, and no network access — the app holds no internet permission at all.
+No ads, no tracking. The app makes one network call: it reads the release page to see whether a newer version exists, and sends nothing — no setting, no app list, no usage.
