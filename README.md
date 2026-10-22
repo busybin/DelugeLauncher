@@ -1,5 +1,9 @@
 # Deluge Launcher
 
+<p align="center">
+  <a href="https://buymeacoffee.com/busybin"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="56"></a>
+</p>
+
 A minimal, list-based Android launcher that can freeze apps.
 
 Apps are frozen from the home screen instead of from a second app with a second list to keep in
