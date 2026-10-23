@@ -21,8 +21,8 @@
 
 ## Self-hosted F-Droid repo
 
-One repository hosts several apps (Deluge, GitRehub, Leftover, IRL Noob) and keeps every APK
-signature: only the index is signed with a separate repo key. Point the F-Droid client at the
+One shared repository will host all four apps (Deluge, GitRehub, Leftover, IRL Noob) and
+keeps every APK signature: only the index is signed with a separate repo key. Point the F-Droid client at the
 repository URL and it can install and update any of them.
 
 ## F-Droid main repo (optional)
