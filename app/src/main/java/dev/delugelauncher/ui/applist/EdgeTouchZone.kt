@@ -62,6 +62,19 @@ private const val MAX_PULL_DP = 400f
 /** How close two taps on the strip have to be to count as one gesture. */
 private const val DOUBLE_TAP_WINDOW_MS = 300L
 
+/** A strip thinner than this is a line nobody can hit, so the reach grows instead. */
+private const val MIN_ZONE_WIDTH_DP = 12f
+
+/**
+ * How wide the zone itself is, given how far it reaches from the screen edge.
+ *
+ * The setting names the reach, not the zone: the outermost pixels belong to the system's own
+ * back gesture, so the zone starts inside them and that much of the reach is spent before it
+ * begins. Counting it as extra width is what put the strip over the leftmost icons on a
+ * gesture-navigation phone, where the edge alone is a thumb's width.
+ */
+fun edgeZoneWidth(reach: Dp, inset: Dp): Dp = (reach - inset).coerceAtLeast(MIN_ZONE_WIDTH_DP.dp)
+
 /**
  * The invisible strip along a screen edge that opens the app list and then scrubs it, so one
  * unbroken touch does both.
@@ -73,6 +86,7 @@ private const val DOUBLE_TAP_WINDOW_MS = 300L
 @Composable
 fun EdgeTouchZone(
     side: EdgeSide,
+    /** How far from its screen edge the zone reaches, system gesture edge included. */
     widthDp: Dp,
     letters: List<String>,
     band: ScrubBand,
@@ -114,7 +128,7 @@ fun EdgeTouchZone(
             // Held off the edge rather than made narrower: the point is to leave the outermost
             // pixels to the system, so the strip has to start inside them.
             .padding(start = if (fromLeft) insetDp else 0.dp, end = if (fromLeft) 0.dp else insetDp)
-            .width(widthDp)
+            .width(edgeZoneWidth(widthDp, insetDp))
             // The whole side, or only as much of it as the letters occupy. Full height is the
             // old behaviour and still the default; confined, the edge stops taking touches
             // meant for whatever shares that side of the screen.

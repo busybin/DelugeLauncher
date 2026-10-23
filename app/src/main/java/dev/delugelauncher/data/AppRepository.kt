@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ShortcutInfo
 import android.content.res.Configuration
 import android.content.res.Resources
+import android.graphics.Rect
 import java.util.Locale
 import android.os.Build
 import android.os.Process
@@ -538,7 +539,7 @@ class AppRepository(
      * [app] is the row the menu was opened on: a shortcut into a frozen app cannot start until
      * that app is lifted, exactly like pressing the app itself.
      */
-    fun startAppShortcut(app: AppInfo, shortcut: ShortcutInfo): Boolean {
+    fun startAppShortcut(app: AppInfo, shortcut: ShortcutInfo, origin: Rect? = null): Boolean {
         // A shortcut points into its publisher's app, and a pinned shortcut row carries that
         // app's state too, so the row kind does not matter here.
         if (app.frozen != null) {
@@ -546,7 +547,7 @@ class AppRepository(
                 val lifted = freezeManager.unfreeze(app.packageName)
                 withContext(Dispatchers.Main) {
                     when (lifted) {
-                        FreezeOutcome.DONE -> startAppShortcutNow(shortcut)
+                        FreezeOutcome.DONE -> startAppShortcutNow(shortcut, origin)
                         FreezeOutcome.NO_ACCESS -> Toast.makeText(
                             context,
                             context.getString(R.string.freeze_needs_access),
@@ -562,11 +563,11 @@ class AppRepository(
             }
             return true
         }
-        return startAppShortcutNow(shortcut)
+        return startAppShortcutNow(shortcut, origin)
     }
 
-    private fun startAppShortcutNow(shortcut: ShortcutInfo): Boolean = runCatching {
-        launcherApps.startShortcut(shortcut, null, null)
+    private fun startAppShortcutNow(shortcut: ShortcutInfo, origin: Rect?): Boolean = runCatching {
+        launcherApps.startShortcut(shortcut, origin, null)
         true
     }.getOrDefault(false)
 
@@ -802,7 +803,7 @@ class AppRepository(
     /**
      * Returns false if the app could not be started, so callers can undo whatever they hid.
      */
-    fun launch(app: AppInfo): Boolean {
+    fun launch(app: AppInfo, origin: Rect? = null): Boolean {
         // A shortcut points into its publisher's app, so it is just as unusable while that app
         // is frozen as the app's own row is.
         val enterable = app.kind == EntryKind.APP || app.kind == EntryKind.SHORTCUT
@@ -814,7 +815,7 @@ class AppRepository(
                 val lifted = freezeManager.unfreeze(app.packageName)
                 withContext(Dispatchers.Main) {
                     when (lifted) {
-                        FreezeOutcome.DONE -> launchNow(app)
+                        FreezeOutcome.DONE -> launchNow(app, origin)
                         FreezeOutcome.NO_ACCESS -> Toast.makeText(
                             context,
                             context.getString(R.string.freeze_needs_access),
@@ -830,11 +831,11 @@ class AppRepository(
             }
             return true
         }
-        return launchNow(app)
+        return launchNow(app, origin)
     }
 
-    private fun launchNow(app: AppInfo): Boolean {
-        if (app.kind == EntryKind.SHORTCUT) return launchShortcut(app)
+    private fun launchNow(app: AppInfo, origin: Rect?): Boolean {
+        if (app.kind == EntryKind.SHORTCUT) return launchShortcut(app, origin)
         // Only an app has an activity to start. The private space row is opened by the screen
         // that knows what it is, and arriving here means it was routed wrongly — which must not
         // launch anything and must not be counted as a launch.
@@ -843,7 +844,7 @@ class AppRepository(
         val started = runCatching {
             // Through LauncherApps so an app in another profile starts as that profile; a
             // plain startActivity would look for it in ours and find nothing.
-            launcherApps.startMainActivity(app.componentName, app.user ?: Process.myUserHandle(), null, null)
+            launcherApps.startMainActivity(app.componentName, app.user ?: Process.myUserHandle(), origin, null)
             true
         }.getOrElse {
             runCatching {
@@ -851,7 +852,8 @@ class AppRepository(
                     Intent(Intent.ACTION_MAIN)
                         .addCategory(Intent.CATEGORY_LAUNCHER)
                         .setComponent(app.componentName)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        .also { if (origin != null) it.sourceBounds = origin },
                 )
                 true
             }.getOrElse {
@@ -859,6 +861,7 @@ class AppRepository(
                 // package's own launcher intent is then the reliable way in.
                 runCatching {
                     val intent = pm.getLaunchIntentForPackage(app.packageName) ?: return@runCatching false
+                    if (origin != null) intent.sourceBounds = origin
                     context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     true
                 }.getOrDefault(false)
@@ -872,7 +875,7 @@ class AppRepository(
         return started
     }
 
-    private fun launchShortcut(app: AppInfo): Boolean {
+    private fun launchShortcut(app: AppInfo, origin: Rect?): Boolean {
         val id = app.shortcutId ?: return false
         if (app.disabled) {
             // The publisher's own wording wherever there is any: it is the only thing that
@@ -889,7 +892,7 @@ class AppRepository(
             launcherApps.startShortcut(
                 app.packageName,
                 id,
-                null,
+                origin,
                 null,
                 app.user ?: Process.myUserHandle(),
             )

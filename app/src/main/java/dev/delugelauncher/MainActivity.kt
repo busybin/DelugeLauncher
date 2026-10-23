@@ -3,10 +3,18 @@ package dev.delugelauncher
 
 import dev.delugelauncher.data.LanguagePrefs
 
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.graphics.RectF
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.Message
+import android.os.Messenger
+import android.os.UserHandle
+import android.os.UserManager
 import android.view.KeyEvent
 import android.view.Window
 import android.view.WindowManager
@@ -30,6 +38,7 @@ import dev.delugelauncher.service.StatusBarFader
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.ui.DelugeNavHost
 import dev.delugelauncher.ui.common.IconConfig
+import dev.delugelauncher.ui.common.LaunchOrigin
 import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.theme.DelugeTheme
@@ -44,6 +53,15 @@ data class TypedKey(val seq: Long, val char: Char?)
 
 /** Smallest width that counts as a tablet, which is the platform's own threshold. */
 private const val TABLET_WIDTH_DP = 600
+
+// The launcher ⇄ gesture navigation handshake, as defined by Launcher3.
+private const val EXTRA_GESTURE_CONTRACT = "gesture_nav_contract_v1"
+private const val EXTRA_CONTRACT_POSITION = "gesture_nav_contract_icon_position"
+private const val EXTRA_CONTRACT_SURFACE = "gesture_nav_contract_surface_control"
+private const val EXTRA_CONTRACT_CALLBACK = "android.intent.extra.REMOTE_CALLBACK"
+private const val EXTRA_CONTRACT_FINISH = "gesture_nav_contract_finish_callback"
+private const val EXTRA_CONTRACT_COMPONENT = Intent.EXTRA_COMPONENT_NAME
+private const val EXTRA_CONTRACT_USER = Intent.EXTRA_USER
 
 class MainActivity : ComponentActivity() {
 
@@ -79,10 +97,18 @@ class MainActivity : ComponentActivity() {
     private var typedToSearch by mutableStateOf<List<TypedKey>>(emptyList())
     private var nextTypedSeq = 0L
 
+    /**
+     * Answers the system's return-to-home contract. It receives a message and has nothing to
+     * do with it; the system only needs to know the animation may end.
+     */
+    private val gestureFinish = Messenger(object : Handler(Looper.getMainLooper()) {
+        override fun handleMessage(msg: Message) = Unit
+    })
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Before the content: a shortcut that starts the app has the work already under way.
-        handleShortcut(intent)
+        if (!handleGestureContract(intent)) handleShortcut(intent)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         allowDrawingBehindTheCutout()
         // Portrait until told otherwise on a phone, free on a tablet: this is a list down the
@@ -269,9 +295,46 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        if (handleGestureContract(intent)) return
         if (handleShortcut(intent)) return
         // Pressing HOME re-delivers the intent to us; treat it as "go back to the home screen".
         homeIntentTick++
+    }
+
+    /**
+     * Replies with where the app's icon is, so the system can shrink the closing window into
+     * it. Present only on a gesture back to home; without a matching icon rectangle there is
+     * nothing useful to say and the contract is simply consumed.
+     */
+    private fun handleGestureContract(intent: Intent?): Boolean {
+        val extras = intent?.getBundleExtra(EXTRA_GESTURE_CONTRACT) ?: return false
+        intent.removeExtra(EXTRA_GESTURE_CONTRACT)
+        @Suppress("DEPRECATION")
+        val component = extras.getParcelable(EXTRA_CONTRACT_COMPONENT) as? ComponentName
+        @Suppress("DEPRECATION")
+        val user = extras.getParcelable(EXTRA_CONTRACT_USER) as? UserHandle
+        @Suppress("DEPRECATION")
+        val callback = extras.getParcelable(EXTRA_CONTRACT_CALLBACK) as? Message
+        val systemReply = callback?.replyTo ?: return true
+        if (component == null || user == null) return true
+        val serial = runCatching {
+            getSystemService(UserManager::class.java).getSerialNumberForUser(user)
+        }.getOrDefault(if (user == android.os.Process.myUserHandle()) 0L else Long.MIN_VALUE)
+        val bounds = LaunchOrigin.of(component, serial) ?: return true
+        val data = Bundle().apply {
+            putParcelable(EXTRA_CONTRACT_POSITION, RectF(bounds))
+            putParcelable(EXTRA_CONTRACT_SURFACE, null)
+            putParcelable(
+                EXTRA_CONTRACT_FINISH,
+                Message.obtain(null, 0).also { it.replyTo = gestureFinish },
+            )
+        }
+        runCatching {
+            val reply = Message.obtain().apply { copyFrom(callback) }
+            reply.setData(data)
+            systemReply.send(reply)
+        }
+        return true
     }
 
     /**

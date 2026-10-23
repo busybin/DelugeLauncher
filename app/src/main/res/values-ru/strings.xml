@@ -102,7 +102,9 @@
     <string name="settings_dim_paused_apps">Приглушать приостановленные приложения</string>
     <string name="settings_wallpaper_blur">Размытие обоев</string>
     <string name="settings_dim_paused_apps_detail">Приостановленные приложения показываются приглушённо, как отложенные. Выключите, чтобы они выглядели как остальные.</string>
-    <string name="settings_notification_badges_detail">Требуется тот же доступ к уведомлениям, что и для «Сейчас играет». Показываются только счётчики, а не текст уведомлений</string>
+    <string name="settings_notification_badges_detail">Требуется тот же доступ к уведомлениям, что и для «Сейчас играет». Только счётчики, если текст уведомлений не включён ниже</string>
+    <string name="settings_notification_preview">Текст уведомлений в строках</string>
+    <string name="settings_notification_preview_detail">Показывает последнее уведомление под названием приложения. Нужен тот же доступ к уведомлениям. По умолчанию выключено.</string>
     <string name="settings_section_top">Куда ведёт буква</string>
     <string name="settings_close_folder">Закрывать папку после открытия приложения</string>
     <string name="settings_close_folder_detail">Если выключено, папка остаётся открытой, пока вы не закроете её сами</string>
@@ -177,7 +179,7 @@
     <string name="settings_now_playing_show">Показывать виджет «Сейчас играет»</string>
     <string name="settings_notification_access_granted">Доступ к уведомлениям разрешён</string>
     <string name="settings_notification_access_missing">Доступ к уведомлениям не разрешён</string>
-    <string name="settings_notification_access_detail">Нужен для отображения текущего трека</string>
+    <string name="settings_notification_access_detail">Используется для «Сейчас играет», счётчиков и текста уведомлений</string>
     <string name="settings_open_settings">Открыть настройки</string>
     <string name="settings_favorites">Избранное</string>
     <string name="settings_favorites_detail">Выберите, какие приложения будут на домашнем экране</string>
@@ -294,6 +296,8 @@
     <string name="freeze_hide_cons">Нужен root, и это не защита: приложения, перечисляющие все пакеты, всё равно его видят.</string>
     <string name="freeze_suspend_pros">Оставляет значок серым, скрывает уведомления и запрещает запуск, а также останавливает фоновую работу, не теряя данные.</string>
     <string name="freeze_suspend_cons">Останавливает запланированную фоновую работу, но приложение с особыми правами может её обойти.</string>
+    <string name="freeze_suspend_dialog_message">%1$s приостановлено приложением Deluge. Нажмите кнопку, чтобы возобновить и открыть его.</string>
+    <string name="freeze_suspend_dialog_button">Возобновить и открыть</string>
     <string name="freeze_stop_pros">Сразу убивает текущий процесс и не оставляет ничего для отмены.</string>
     <string name="freeze_stop_cons">Ничего не сохраняется: широковещание или будильник могут снова его разбудить, так что это не постоянная заморозка.</string>
     <string name="freeze_system_apps">Показывать и замораживать системные приложения</string>

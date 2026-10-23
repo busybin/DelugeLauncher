@@ -102,7 +102,9 @@
     <string name="settings_dim_paused_apps">Griser les applis en pause</string>
     <string name="settings_wallpaper_blur">Flou du fond d\'écran</string>
     <string name="settings_dim_paused_apps_detail">Les applis en pause s\'affichent en grisé, comme mises de côté. Désactivez pour les voir comme les autres.</string>
-    <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, jamais le contenu d\'une notification</string>
+    <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, sauf si le texte des notifications est activé ci-dessous</string>
+    <string name="settings_notification_preview">Texte des notifications sur les lignes</string>
+    <string name="settings_notification_preview_detail">Affiche la notification la plus récente sous le nom de l\'app. Nécessite le même accès aux notifications. Désactivé par défaut.</string>
     <string name="settings_section_top">Où arrive une lettre</string>
     <string name="settings_close_folder">Fermer un dossier après l\'ouverture d\'une application</string>
     <string name="settings_close_folder_detail">Désactivé le laisse ouvert jusqu\'à ce que vous le fermiez vous-même</string>
@@ -177,7 +179,7 @@
     <string name="settings_now_playing_show">Afficher le widget Now Playing</string>
     <string name="settings_notification_access_granted">Accès aux notifications accordé</string>
     <string name="settings_notification_access_missing">Accès aux notifications non accordé</string>
-    <string name="settings_notification_access_detail">Nécessaire pour afficher le morceau en cours de lecture</string>
+    <string name="settings_notification_access_detail">Sert à Now Playing, aux compteurs et au texte des notifications</string>
     <string name="settings_open_settings">Ouvrir les paramètres</string>
     <string name="settings_favorites">Favoris</string>
     <string name="settings_favorites_detail">Choisissez les applications présentes sur l\'écran d\'accueil</string>
@@ -294,6 +296,8 @@
     <string name="freeze_hide_cons">Nécessite root et n\'est pas une barrière de sécurité : les apps qui énumèrent tous les paquets la voient encore.</string>
     <string name="freeze_suspend_pros">Garde l\'icône, la grise, cache les notifications et empêche de l\'ouvrir, et arrête l\'exécution en arrière-plan, sans perdre les données.</string>
     <string name="freeze_suspend_cons">Arrête le travail en arrière-plan planifié, mais une app avec des privilèges spéciaux peut encore passer.</string>
+    <string name="freeze_suspend_dialog_message">%1$s est en pause par Deluge. Touchez le bouton pour la réactiver et l\'ouvrir.</string>
+    <string name="freeze_suspend_dialog_button">Réactiver et ouvrir</string>
     <string name="freeze_stop_pros">Tue le processus en cours immédiatement et ne laisse rien à annuler.</string>
     <string name="freeze_stop_cons">Rien n\'est conservé : une diffusion ou une alarme peut la réveiller ; ce n\'est donc pas un gel durable.</string>
     <string name="freeze_system_apps">Afficher et geler les apps système</string>

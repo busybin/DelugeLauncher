@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v25">
+        <item>When another app opens a paused app, the system dialog now offers Unpause and open instead of a dead end. Apps paused by an earlier version get that button on their own.</item>
+        <item>Notification text on rows: the newest notification shows under the app name in favorites. Off by default.</item>
+        <item>Apps open out of their icon and shrink back into it on a gesture back.</item>
+        <item>The A-Z strip setting now measures the whole reach from the screen edge, and defaults to 40 dp instead of 56, so it no longer covers the leftmost icons.</item>
+        <item>Shizuku is recognised by its API rather than by a package name, so Shizuku-Next, Shevery and other compatible managers work too.</item>
+        <item>Importing settings is bounded: 1 MB per file, 64 KB per string, capped lists and range-checked numbers, so a hand-edited backup can no longer crash the app.</item>
+        <item>Copying a crash log replaces packages from other profiles with [private].</item>
+        <item>All 8 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v24">
         <item>Freeze apps with root or Shizuku: Stop, Suspend, Disable or Hide, one tab per method, each with what it costs. The screen says whether root (and which root: Magisk, KernelSU, APatch) or Shizuku is answering.</item>
         <item>Freezing has triggers, not a switch: Freeze all, the corner button, a shortcut on the launcher\'s own icon, or automatic freezing a while after the screen goes off. The automatic run leaves the app on screen, apps with notifications and a phone on a charger alone.</item>

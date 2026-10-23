@@ -89,6 +89,7 @@ import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.PaddingSlot
 import dev.delugelauncher.data.folderToken
+import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.media.NowPlayingBus
 import dev.delugelauncher.media.isListenerEnabled
 import dev.delugelauncher.service.SystemUi
@@ -101,8 +102,10 @@ import dev.delugelauncher.ui.applist.ScrubBand
 import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
 import dev.delugelauncher.data.HapticFeedback
+import dev.delugelauncher.ui.common.LaunchOrigin
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
+import dev.delugelauncher.ui.applist.edgeZoneWidth
 import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.ui.common.FolderPickerDialog
 import dev.delugelauncher.ui.common.FreezeActions
@@ -403,6 +406,8 @@ fun HomeRoute(
     var folderPickerFor by remember { mutableStateOf<AppInfo?>(null) }
 
     val nowPlaying by NowPlayingBus.state.collectAsState()
+    val previewWanted by app.prefs.notificationPreview.collectAsState(initial = false)
+    val previews by NotificationPreviewBus.previews.collectAsState()
     // The grant lives in system Settings, so a BACK from there resumes without a HOME
     // intent: re-check on every resume, not just when the tick moves.
     var resumeTick by remember { mutableStateOf(0) }
@@ -741,7 +746,7 @@ fun HomeRoute(
             onTogglePrivateSpace()
             true
         }
-        else -> app.appRepository.launch(entry)
+        else -> app.appRepository.launch(entry, LaunchOrigin.of(entry))
     }
 
     // A locked app asks for the device's own lock screen before it opens, every time it is
@@ -955,9 +960,14 @@ fun HomeRoute(
     LaunchedEffect(settings.edgeSide, settings.edgeZoneWidthDp, insetLeftDp, insetRightDp, view, band) {
         view.post {
             val density = view.resources.displayMetrics.density
-            val widthPx = (settings.edgeZoneWidthDp * density).toInt()
             val insetLeftPx = (insetLeftDp * density).toInt()
             val insetRightPx = (insetRightDp * density).toInt()
+            // The same width the zone itself takes: the setting is the whole reach, so the
+            // exclusion covers only what is left of it past the system's own edge.
+            val leftWidthPx =
+                (edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetLeftDp.dp).value * density).toInt()
+            val rightWidthPx =
+                (edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetRightDp.dp).value * density).toInt()
             val h = view.height
             val w = view.width
             if (h > 0 && w > 0) {
@@ -981,10 +991,10 @@ fun HomeRoute(
                 // gesture out of the pixels the setting had just handed back to it.
                 val rects = buildList {
                     if (settings.edgeSide != EdgeSide.RIGHT) {
-                        add(Rect(insetLeftPx, exTop, insetLeftPx + widthPx, exBottom))
+                        add(Rect(insetLeftPx, exTop, insetLeftPx + leftWidthPx, exBottom))
                     }
                     if (settings.edgeSide != EdgeSide.LEFT) {
-                        add(Rect(w - widthPx - insetRightPx, exTop, w - insetRightPx, exBottom))
+                        add(Rect(w - rightWidthPx - insetRightPx, exTop, w - insetRightPx, exBottom))
                     }
                 }
                 ViewCompat.setSystemGestureExclusionRects(view, rects)
@@ -1177,6 +1187,7 @@ fun HomeRoute(
                 hiddenApps = hiddenApps,
                 overlayOpen = appListVisible,
                 nameOverrides = nameOverrides,
+                notificationPreviews = if (previewWanted) previews else emptyMap(),
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
                 itemSpacingDp = settings.itemSpacingDp,

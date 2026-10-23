@@ -4,6 +4,7 @@ package dev.delugelauncher.media
 import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
+import android.os.UserManager
 import android.provider.Settings
 import android.media.MediaMetadata
 import android.media.session.MediaController
@@ -11,7 +12,13 @@ import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
+import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.widget.ClockWidgetProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class NowPlayingListenerService : NotificationListenerService() {
 
@@ -41,6 +48,9 @@ class NowPlayingListenerService : NotificationListenerService() {
             runCatching { requestRebind(component) }
         }
 
+        /** A row shows one line; anything longer is ellipsised there anyway. */
+        private const val MAX_PREVIEW_CHARS = 200
+
         // Binder plus disk plus a calendar query per render: never on the listener's thread.
         private val background: java.util.concurrent.ExecutorService by lazy {
             java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -49,6 +59,28 @@ class NowPlayingListenerService : NotificationListenerService() {
 
     private lateinit var sessionManager: MediaSessionManager
     private lateinit var componentName: ComponentName
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /** Whether the setting that puts notification text on the home screen is on. */
+    @Volatile
+    private var previewWanted = false
+
+    override fun onCreate() {
+        super.onCreate()
+        val app = application as DelugeApp
+        scope.launch {
+            app.prefs.notificationPreview.collect { wanted ->
+                previewWanted = wanted
+                if (wanted) publishCounts() else NotificationPreviewBus.clear()
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
+    }
 
     private var watched: MediaController? = null
 
@@ -84,6 +116,7 @@ class NowPlayingListenerService : NotificationListenerService() {
         detach()
         NowPlayingBus.update(null)
         NotificationCountBus.clear()
+        NotificationPreviewBus.clear()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()
@@ -112,6 +145,7 @@ class NowPlayingListenerService : NotificationListenerService() {
         val active = runCatching { activeNotifications }.getOrNull()
         if (active == null) {
             NotificationCountBus.clear()
+            NotificationPreviewBus.clear()
             persistCounts(emptyMap())
             renderAllAsync()
             return
@@ -125,6 +159,11 @@ class NowPlayingListenerService : NotificationListenerService() {
         }
         val before = NotificationCountBus.counts.value
         NotificationCountBus.update(counts)
+        if (previewWanted) {
+            NotificationPreviewBus.update(active.mapNotNull { it.toPreview() })
+        } else {
+            NotificationPreviewBus.clear()
+        }
         persistCounts(counts)
         // A widget is drawn only when something asks. The home screen follows the bus on its
         // own; a RemoteViews cannot, so a change in who has what — not just the total — has
@@ -132,6 +171,45 @@ class NowPlayingListenerService : NotificationListenerService() {
         // Render carries a calendar query plus binder per widget: off this thread.
         if (counts != before) renderAllAsync()
     }
+
+    /**
+     * One notification's words, for the line under its app's name.
+     *
+     * Ongoing and summary notifications are left out for the same reason they are not counted.
+     * Text is flattened and capped here rather than at the row: this is the only place that
+     * knows what the posting app actually sent.
+     */
+    private fun StatusBarNotification.toPreview(): NotificationPreview? {
+        if (!isClearable) return null
+        val notification = notification ?: return null
+        if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
+        val extras = notification.extras
+        val title = readLine(
+            extras.getCharSequence(Notification.EXTRA_TITLE)
+                ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG),
+        )
+        val text = readLine(
+            extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
+                ?: extras.getCharSequence(Notification.EXTRA_TEXT),
+        )
+        if (title.isEmpty() && text.isEmpty()) return null
+        val serial = runCatching {
+            getSystemService(UserManager::class.java).getSerialNumberForUser(user)
+        }.getOrDefault(if (user == android.os.Process.myUserHandle()) 0L else Long.MIN_VALUE)
+        return NotificationPreview(
+            packageName = packageName,
+            userSerial = serial,
+            title = title,
+            text = text,
+            postTime = postTime,
+        )
+    }
+
+    private fun readLine(value: CharSequence?): String =
+        value?.toString().orEmpty()
+            .replace(Regex("""\s+"""), " ")
+            .trim()
+            .take(MAX_PREVIEW_CHARS)
 
     /** Binder plus disk plus a calendar query: never on the listener's main thread. */
     private fun renderAllAsync() {

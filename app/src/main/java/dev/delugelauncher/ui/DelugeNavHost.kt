@@ -581,7 +581,7 @@ fun DelugeNavHost(
     val appListSearchHidden by app.prefs.appListSearchHidden.collectAsState(initial = false)
     val sortByUsage by app.prefs.sortByUsage.collectAsState(initial = false)
     val launchCounts by app.prefs.launchCounts.collectAsState(initial = emptyMap())
-    val edgeZoneWidthDp by app.prefs.edgeZoneWidthDp.collectAsState(initial = 56)
+    val edgeZoneWidthDp by app.prefs.edgeZoneWidthDp.collectAsState(initial = 40)
     val quickLaunchLeftKey by app.prefs.quickLaunchLeft.collectAsState(initial = null)
     val quickLaunchRightKey by app.prefs.quickLaunchRight.collectAsState(initial = null)
     val quickLaunchLeftAction by app.prefs.quickLaunchLeftAction
@@ -590,6 +590,7 @@ fun DelugeNavHost(
         .collectAsState(initial = CornerAction.OPEN_APP)
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
+    val notificationPreview by app.prefs.notificationPreview.collectAsState(initial = false)
     val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
     val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
@@ -1142,6 +1143,7 @@ fun DelugeNavHost(
             // function lets Kotlin pass captured variables itself.
             @Composable
             fun buildActionsA() = SettingsActionsA(
+                    onSetNotificationPreview = { scope.launch { app.prefs.setNotificationPreview(it) } },
                     onSetShowFavoriteIcons = { scope.launch { app.prefs.setShowFavoriteIcons(it) } },
                     onSetTextShadowStrength = { scope.launch { app.prefs.setTextShadowStrength(it) } },
                     onSetStayAfterPrivateUnlock = { scope.launch { app.prefs.setStayAfterPrivateUnlock(it) } },
@@ -1390,6 +1392,8 @@ fun DelugeNavHost(
                 onSetShowListHeaders = actionsA.onSetShowListHeaders,
                 notificationBadges = notificationBadges,
                 onSetNotificationBadges = actionsA.onSetNotificationBadges,
+                notificationPreview = notificationPreview,
+                onSetNotificationPreview = actionsA.onSetNotificationPreview,
                 dimPausedApps = dimPausedApps,
                 onSetDimPausedApps = actionsA.onSetDimPausedApps,
                 autoDark = autoDark,

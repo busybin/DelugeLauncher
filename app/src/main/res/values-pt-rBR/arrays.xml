@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v25">
+        <item>Quando outro app abre um app suspenso, o diálogo do sistema agora oferece "Reativar e abrir" em vez de um beco sem saída. Apps suspensos por uma versão anterior ganham o botão sozinhos.</item>
+        <item>Texto de notificações nas linhas: a notificação mais recente aparece sob o nome do app nos favoritos. Desativado por padrão.</item>
+        <item>Os apps abrem a partir do ícone e encolhem de volta nele ao voltar com o gesto.</item>
+        <item>O ajuste da tira A-Z agora mede todo o alcance a partir da borda da tela e o padrão é 40 dp em vez de 56, então ela não cobre mais os ícones da coluna da esquerda.</item>
+        <item>O Shizuku é reconhecido pela API e não pelo nome do pacote, então Shizuku-Next, Shevery e outros gerenciadores compatíveis também funcionam.</item>
+        <item>A importação de ajustes tem limites: 1 MB por arquivo, 64 KB por string, listas limitadas e números com faixa verificada, então um backup editado à mão não derruba mais o app.</item>
+        <item>Copiar o registro de falhas substitui pacotes de outros perfis por [private].</item>
+        <item>Os 8 idiomas estão completos.</item>
+    </string-array>
     <string-array name="changelog_v24">
         <item>Congele apps com root ou Shizuku: Parar, Suspender, Desativar ou Ocultar, uma aba por método, cada uma com o que custa. A tela diz se quem responde é o root (e qual: Magisk, KernelSU, APatch) ou o Shizuku.</item>
         <item>O congelamento tem gatilhos, não um interruptor: Congelar tudo, o botão de canto, um atalho no ícone do launcher ou congelamento automático um tempo depois de a tela apagar. O automático deixa em paz o app na tela, apps com notificações e um celular carregando.</item>

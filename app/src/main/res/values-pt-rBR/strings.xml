@@ -102,7 +102,9 @@
     <string name="settings_dim_paused_apps">Atenuar apps pausados</string>
     <string name="settings_wallpaper_blur">Desfoque do plano de fundo</string>
     <string name="settings_dim_paused_apps_detail">Apps pausados aparecem atenuados, como se estivessem de lado. Desligue para vê-los como os demais.</string>
-    <string name="settings_notification_badges_detail">Precisa do mesmo acesso a notificações que o Now Playing. Apenas contagens, nunca o que uma notificação diz</string>
+    <string name="settings_notification_badges_detail">Precisa do mesmo acesso a notificações que o Now Playing. Apenas contagens, a menos que o texto das notificações seja ativado abaixo</string>
+    <string name="settings_notification_preview">Texto das notificações nas linhas</string>
+    <string name="settings_notification_preview_detail">Mostra a notificação mais recente sob o nome do app. Precisa do mesmo acesso a notificações. Desativado por padrão.</string>
     <string name="settings_section_top">Onde uma letra para</string>
     <string name="settings_close_folder">Fechar uma pasta depois de abrir um app</string>
     <string name="settings_close_folder_detail">Desativado deixa aberta até que você a feche</string>
@@ -177,7 +179,7 @@
     <string name="settings_now_playing_show">Mostrar o widget Now Playing</string>
     <string name="settings_notification_access_granted">Acesso a notificações concedido</string>
     <string name="settings_notification_access_missing">Acesso a notificações não concedido</string>
-    <string name="settings_notification_access_detail">Necessário para mostrar a faixa que toca no momento</string>
+    <string name="settings_notification_access_detail">Usado para Now Playing, contagens e texto de notificações</string>
     <string name="settings_open_settings">Abrir configurações</string>
     <string name="settings_favorites">Favoritos</string>
     <string name="settings_favorites_detail">Escolha quais apps ficam na tela inicial</string>
@@ -294,6 +296,8 @@
     <string name="freeze_hide_cons">Exige root e não é uma barreira de segurança: apps que enumeram todos os pacotes ainda o veem.</string>
     <string name="freeze_suspend_pros">Mantém o ícone cinza, oculta as notificações e impede abri-lo, e para a execução em segundo plano, sem perder dados.</string>
     <string name="freeze_suspend_cons">Para o trabalho em segundo plano agendado, mas um app com privilégios especiais ainda pode passar.</string>
+    <string name="freeze_suspend_dialog_message">%1$s está pausado pelo Deluge. Toque no botão para reativar e abrir.</string>
+    <string name="freeze_suspend_dialog_button">Reativar e abrir</string>
     <string name="freeze_stop_pros">Mata o processo em execução na hora e não deixa nada para desfazer.</string>
     <string name="freeze_stop_cons">Nada é mantido: um broadcast ou alarme pode acordá-lo, então não é um congelamento duradouro.</string>
     <string name="freeze_system_apps">Mostrar e congelar apps do sistema</string>

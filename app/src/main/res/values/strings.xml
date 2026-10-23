@@ -155,7 +155,9 @@
     <string name="settings_pinch_resize">Pinch to resize icons</string>
     <string name="settings_pinch_resize_detail">Two fingers on the home screen change the icon size.</string>
     <string name="settings_dim_paused_apps_detail">Apps you have paused show dimmed, so they read as set aside. Turn off to list them like any other.</string>
-    <string name="settings_notification_badges_detail">Needs the same notification access Now Playing does. Counts only, never what a notification says</string>
+    <string name="settings_notification_badges_detail">Needs the same notification access Now Playing does. Counts only unless notification text is turned on below</string>
+    <string name="settings_notification_preview">Notification text on rows</string>
+    <string name="settings_notification_preview_detail">Shows the newest notification under the app name. Needs the same notification access. Off by default.</string>
     <string name="settings_section_top">Where a letter lands</string>
     <string name="settings_close_folder">Close a folder after opening an app</string>
     <string name="settings_close_folder_detail">Off leaves it open until you close it yourself</string>
@@ -247,7 +249,7 @@
     <string name="settings_now_playing_show">Show Now Playing widget</string>
     <string name="settings_notification_access_granted">Notification access granted</string>
     <string name="settings_notification_access_missing">Notification access not granted</string>
-    <string name="settings_notification_access_detail">Needed to show the currently playing track</string>
+    <string name="settings_notification_access_detail">Used for Now Playing, notification counts and notification text</string>
     <string name="settings_open_settings">Open settings</string>
     <string name="settings_favorites">Favorites</string>
     <string name="settings_favorites_detail">Choose which apps sit on the home screen</string>
@@ -377,6 +379,8 @@
     <string name="freeze_hide_cons">Needs root, and it is not a security boundary: apps that enumerate every package still see it.</string>
     <string name="freeze_suspend_pros">Keeps the icon, greys it, hides notifications and blocks opening it, and stops background runs, without losing data.</string>
     <string name="freeze_suspend_cons">Stops scheduled background work, but an app with special privileges can still get through.</string>
+    <string name="freeze_suspend_dialog_message">%1$s is paused by Deluge. Tap the button to unpause it and open it.</string>
+    <string name="freeze_suspend_dialog_button">Unpause and open</string>
     <string name="freeze_stop_pros">Kills the running process at once and leaves nothing to undo.</string>
     <string name="freeze_stop_cons">Nothing is persisted: a broadcast or alarm can wake it again, so this is not a lasting freeze.</string>
     <string name="freeze_system_apps">Show and freeze system apps</string>

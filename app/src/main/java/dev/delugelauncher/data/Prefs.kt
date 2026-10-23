@@ -281,6 +281,7 @@ class Prefs(private val context: Context) {
         val FREQUENT_COUNT = intPreferencesKey("frequent_count")
         val SHOW_LIST_HEADERS = booleanPreferencesKey("show_list_headers")
         val NOTIFICATION_BADGES = booleanPreferencesKey("notification_badges")
+        val NOTIFICATION_PREVIEW = booleanPreferencesKey("notification_preview")
         val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
         val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
         val AUTO_DARK = booleanPreferencesKey("auto_dark")
@@ -325,6 +326,7 @@ class Prefs(private val context: Context) {
         val FREEZE_ENABLED = booleanPreferencesKey("freeze_enabled")
         val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
         val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
+        val FREEZE_DIALOG_READY = booleanPreferencesKey("freeze_dialog_ready")
         val FREEZE_AUTO_ENABLED = booleanPreferencesKey("freeze_auto_enabled")
         val FREEZE_AUTO_DELAY_SECONDS = intPreferencesKey("freeze_auto_delay_seconds")
         val FREEZE_UNFREEZE_ON_UNLOCK = booleanPreferencesKey("freeze_unfreeze_on_unlock")
@@ -428,6 +430,9 @@ class Prefs(private val context: Context) {
      * store would leave someone with neither their old set-up nor the one they were restoring.
      */
     suspend fun importJson(text: String): Boolean {
+        // The picker's reader already stops at this size; this is the backstop for any other
+        // caller, including a test or a future one that hands over a string directly.
+        if (text.length > ImportLimits.MAX_BYTES) return false
         var language: String? = null
         var languagePresent = false
         val parsed = runCatching {
@@ -463,6 +468,7 @@ class Prefs(private val context: Context) {
                             "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
                             "stringSet" -> {
                                 val array = entry.getJSONArray("value")
+                                if (array.length() > ImportLimits.MAX_SET_ITEMS) return@forEach
                                 Pair(
                                     stringSetPreferencesKey(name),
                                     (0 until array.length()).map { array.getString(it) }.toSet(),
@@ -471,11 +477,19 @@ class Prefs(private val context: Context) {
                             else -> return@forEach
                         }
                     }.getOrNull() ?: return@forEach
+                    val safe = when (val value = pair.second) {
+                        is Int -> ImportLimits.int(name, value) ?: return@forEach
+                        is Float -> ImportLimits.float(name, value) ?: return@forEach
+                        is String -> ImportLimits.string(value) ?: return@forEach
+                        is Set<*> -> ImportLimits.stringSet(value.filterIsInstance<String>().toSet())
+                            ?: return@forEach
+                        else -> value
+                    }
                     // A hand-edited backup can smuggle a shortcut id carrying a newline, which
                     // would corrupt the whole favorites list on the way back in. The pin flow
                     // refuses such ids; import does the same rather than storing them.
-                    if (name == PREF_FAVORITES && pair.second is String) {
-                        val lines = (pair.second as String).split("\n").filter { line ->
+                    if (name == PREF_FAVORITES && safe is String) {
+                        val lines = safe.split("\n").filter { line ->
                             if (!EntryKeys.isShortcut(line)) true
                             else EntryKeys.parseShortcut(line)?.let {
                                 EntryKeys.isStorableShortcutId(it.shortcutId)
@@ -483,7 +497,7 @@ class Prefs(private val context: Context) {
                         }
                         add(Pair(pair.first, lines.joinToString("\n")))
                     } else {
-                        add(pair)
+                        add(Pair(pair.first, safe))
                     }
                 }
             }
@@ -582,6 +596,12 @@ class Prefs(private val context: Context) {
         data.map { it[Keys.FREEZE_APPLIED] ?: emptySet() }.distinctUntilChanged()
 
     suspend fun freezeAppliedNow(): Set<String> = freezeApplied.first()
+
+    /** Whether the apps paused before the pause dialog existed have been given it. */
+    val freezeDialogReady: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_DIALOG_READY] ?: false }.distinctUntilChanged()
+
+    suspend fun freezeDialogReadyNow(): Boolean = freezeDialogReady.first()
 
     val freezeAutoEnabled: Flow<Boolean> =
         data.map { it[Keys.FREEZE_AUTO_ENABLED] ?: false }.distinctUntilChanged()
@@ -937,7 +957,7 @@ class Prefs(private val context: Context) {
     }.distinctUntilChanged()
 
     /** Width of the invisible strip at each screen edge that opens the app list. */
-    val edgeZoneWidthDp: Flow<Int> = data.map { it[Keys.EDGE_ZONE_WIDTH_DP] ?: 56 }.distinctUntilChanged()
+    val edgeZoneWidthDp: Flow<Int> = data.map { it[Keys.EDGE_ZONE_WIDTH_DP] ?: 40 }.distinctUntilChanged()
 
     /**
      * How much of the very edge is left to the system rather than taken by the strip.
@@ -1016,6 +1036,15 @@ class Prefs(private val context: Context) {
 
     val notificationBadges: Flow<Boolean> =
         data.map { it[Keys.NOTIFICATION_BADGES] ?: false }.distinctUntilChanged()
+
+    /**
+     * Whether the newest notification's words are shown under an app's name.
+     *
+     * Off by default, and deliberately not tied to the badge: a count says something is waiting,
+     * the text says what it is, and those are different amounts of the user's business.
+     */
+    val notificationPreview: Flow<Boolean> =
+        data.map { it[Keys.NOTIFICATION_PREVIEW] ?: false }.distinctUntilChanged()
 
     /** Whether a paused (suspended) app is shown greyed out so it reads as set aside. */
     val dimPausedApps: Flow<Boolean> =
@@ -1383,6 +1412,10 @@ class Prefs(private val context: Context) {
             val current = pref[Keys.FREEZE_APPLIED] ?: emptySet()
             pref[Keys.FREEZE_APPLIED] = if (applied) current + packages else current - packages
         }
+    }
+
+    suspend fun setFreezeDialogReady() {
+        context.dataStore.edit { it[Keys.FREEZE_DIALOG_READY] = true }
     }
 
     /**
@@ -1948,6 +1981,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setNotificationBadges(v: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATION_BADGES] = v }
+    }
+
+    suspend fun setNotificationPreview(v: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFICATION_PREVIEW] = v }
     }
 
     suspend fun setDimPausedApps(v: Boolean) {

@@ -102,7 +102,9 @@
     <string name="settings_dim_paused_apps">一時停止したアプリをグレー表示</string>
     <string name="settings_wallpaper_blur">壁紙のぼかし</string>
     <string name="settings_dim_paused_apps_detail">一時停止したアプリのアイコンと名前をグレーで表示し、脇に置いた状態として見せます。オフにすると他のアプリと同じ表示です。</string>
-    <string name="settings_notification_badges_detail">再生中と同じ通知アクセスが必要です。数だけで、通知の内容は表示しません</string>
+    <string name="settings_notification_badges_detail">再生中と同じ通知アクセスが必要です。下で通知の内容をオンにしない限り、数のみ表示します</string>
+    <string name="settings_notification_preview">アプリ行に通知の内容を表示</string>
+    <string name="settings_notification_preview_detail">アプリ名の下に最新の通知を表示します。同じ通知アクセスが必要です。既定ではオフです。</string>
     <string name="settings_section_top">文字を表示する位置</string>
     <string name="settings_close_folder">アプリを開いた後にフォルダを閉じる</string>
     <string name="settings_close_folder_detail">オフでは、自分で閉じるまでフォルダは開いたままです</string>
@@ -177,7 +179,7 @@
     <string name="settings_now_playing_show">再生中ウィジェットを表示</string>
     <string name="settings_notification_access_granted">通知アクセスが許可されています</string>
     <string name="settings_notification_access_missing">通知アクセスが許可されていません</string>
-    <string name="settings_notification_access_detail">再生中の曲を表示するために必要です</string>
+    <string name="settings_notification_access_detail">再生中、通知の数と内容に使います</string>
     <string name="settings_open_settings">設定を開く</string>
     <string name="settings_favorites">お気に入り</string>
     <string name="settings_favorites_detail">ホーム画面に置くアプリを選択</string>
@@ -294,6 +296,8 @@
     <string name="freeze_hide_cons">root が必要で、セキュリティ境界ではない。全パッケージを列挙するアプリには見える。</string>
     <string name="freeze_suspend_pros">アイコンを残して灰色にし、通知を隠して起動を防ぎ、バックグラウンド実行も止める。データは失わない。</string>
     <string name="freeze_suspend_cons">予定されたバックグラウンド処理は止まるが、特権を持つアプリは通ることがある。</string>
+    <string name="freeze_suspend_dialog_message">%1$s は Deluge により一時停止されています。ボタンを押すと再開して開きます。</string>
+    <string name="freeze_suspend_dialog_button">再開して開く</string>
     <string name="freeze_stop_pros">実行中のプロセスを即座に終了し、元に戻すものは残らない。</string>
     <string name="freeze_stop_cons">何も保存されない。ブロードキャストやアラームで再び起動するため、持続的なフリーズではない。</string>
     <string name="freeze_system_apps">システムアプリを表示してフリーズ</string>

@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v25">
+        <item>别的应用打开被暂停的应用时，系统对话框现在有「解除暂停并打开」，不再是死路；旧版本暂停的应用会自动补上这个按钮。</item>
+        <item>应用行可显示通知内容：最新一条通知出现在收藏行应用名下方。默认关闭。</item>
+        <item>应用从图标展开启动，手势返回时缩回图标。</item>
+        <item>字母条设置改为从屏幕边缘算起的总宽度，默认 40dp（原来是 56dp），不再压住最左列图标。</item>
+        <item>Shizuku 改按接口识别而不认包名，Shizuku-Next、Shevery 等兼容的管理器也能用。</item>
+        <item>导入设置加上上限：单文件 1MB、单字符串 64KB、列表有条数上限、数值按范围校验，手改备份不再能让应用崩溃。</item>
+        <item>复制崩溃日志时，其他资料里的包名会替换成 [private]。</item>
+        <item>8 种语言全部补齐。</item>
+    </string-array>
     <string-array name="changelog_v24">
         <item>用 root 或 Shizuku 冻结应用：停止、挂起、禁用、隐藏各占一个标签页，并写明各自的代价。页面会说明由谁来执行：root（Magisk、KernelSU、APatch）还是 Shizuku。</item>
         <item>冻结由触发动作执行：全部冻结、角落按钮、启动器图标的快捷方式，或熄屏一段时间后自动冻结。自动冻结会避开正在前台的应用、有通知的应用和正在充电的手机。</item>

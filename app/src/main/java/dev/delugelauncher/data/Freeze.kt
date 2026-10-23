@@ -4,6 +4,7 @@ package dev.delugelauncher.data
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -290,14 +291,23 @@ class FreezeShell(private val context: Context) {
         rikka.shizuku.Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
-    fun shizukuInstalled(): Boolean = runCatching {
-        context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE) != null ||
-            context.packageManager.getPackageInfo(SHIZUKU_PACKAGE, 0) != null
-    }.getOrDefault(false)
+    /**
+     * The installed manager that defines the Shizuku API permission.
+     *
+     * Any manager that can serve this API has to declare that permission — official Shizuku,
+     * Shizuku-Next and Shevery all do — so this finds the family by contract instead of by a
+     * package name, and a future fork needs no change here.
+     */
+    private fun shizukuManager(): String? = runCatching {
+        context.packageManager.getPermissionInfo(SHIZUKU_PERMISSION, 0).packageName
+    }.getOrNull()
+
+    fun shizukuInstalled(): Boolean = shizukuManager() != null
 
     fun openShizuku(): Boolean = runCatching {
-        val intent = context.packageManager.getLaunchIntentForPackage(SHIZUKU_PACKAGE)
-            ?: return false
+        val manager = shizukuManager() ?: return false
+        val intent = context.packageManager.getLaunchIntentForPackage(manager)
+            ?: android.content.Intent().setClassName(manager, SHIZUKU_MAIN_ACTIVITY)
         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
         true
@@ -404,7 +414,14 @@ class FreezeShell(private val context: Context) {
     }.getOrNull()
 
     companion object {
-        private const val SHIZUKU_PACKAGE = "moe.shizuku.privileged.api"
+        /**
+         * Declared by every manager that speaks the Shizuku API. Reading its owner names the
+         * manager, so no fork needs to be listed here.
+         */
+        private const val SHIZUKU_PERMISSION = "moe.shizuku.manager.permission.API_V23"
+
+        /** The manager's activity; forks keep the name so Shizuku-aware apps still open them. */
+        private const val SHIZUKU_MAIN_ACTIVITY = "moe.shizuku.manager.MainActivity"
         private const val ROOT_TIMEOUT_MS = 15_000L
         private const val COMMAND_TIMEOUT_MS = 20_000L
         private const val BATCH_TIMEOUT_MS = 180_000L
@@ -486,6 +503,30 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             shell.status()
         }
         reconcile()
+        upgradeSuspendDialog()
+    }
+
+    /**
+     * Gives the pause dialog to the apps that were paused before it existed.
+     *
+     * Pausing again under the same suspender replaces the parameters the system stores, so
+     * this is what turns an old record — one that dead-ends on "More details" when another app
+     * tries to open it — into one with an unpause button. Runs until every app takes it: a
+     * failed call leaves the flag alone for the next visit.
+     */
+    private suspend fun upgradeSuspendDialog() {
+        if (prefs.freezeDialogReadyNow()) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || !binder.available()) return
+        val plan = prefs.freezeMethodsNow()
+        val targets = prefs.freezeAppliedNow().filter { plan[it] == FreezeMethod.SUSPEND }
+        if (targets.isEmpty()) {
+            prefs.setFreezeDialogReady()
+            return
+        }
+        val done = withContext(Dispatchers.IO) {
+            targets.map { packageName -> async { binder.refreshSuspend(packageName) == true } }.awaitAll()
+        }
+        if (done.all { it }) prefs.setFreezeDialogReady()
     }
 
     /** Probes again before an operation that cannot work without access. */

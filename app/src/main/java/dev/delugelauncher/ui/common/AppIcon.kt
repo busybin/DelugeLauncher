@@ -2,9 +2,13 @@
 package dev.delugelauncher.ui.common
 
 import android.content.Context
+import android.graphics.Rect
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.LruCache
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -449,7 +453,24 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
     // Badged rather than drawn into the bitmap: the count changes while the icon does not, and
     // baking it in would throw away the cached icon every time a notification arrived.
     val badge = notificationBadgeCount(app)
-    Box(modifier = modifier.size(sizeDp.dp)) {
+    Box(
+        modifier = modifier
+            .size(sizeDp.dp)
+            // Where this icon is, for the window animation the system draws from it. The
+            // bounds are in window coordinates, which is what the launch APIs expect.
+            .onGloballyPositioned { coords ->
+                val bounds = coords.boundsInWindow()
+                LaunchOrigin.note(
+                    app,
+                    Rect(
+                        bounds.left.roundToInt(),
+                        bounds.top.roundToInt(),
+                        bounds.right.roundToInt(),
+                        bounds.bottom.roundToInt(),
+                    ),
+                )
+            },
+    ) {
         val drawn = bitmap
         if (drawn != null) {
             Image(
