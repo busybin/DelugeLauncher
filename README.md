@@ -102,18 +102,7 @@ JDK 17 and an Android SDK with platform 37 (versions are the `baseline.*` keys i
 ./gradlew assembleDebug
 ```
 
-Release builds are signed from a git-ignored `keystore.properties`:
-
-```properties
-storeFile=app/keys_release.jks
-[REDACTED]=***
-keyAlias=deluge
-keyPassword=***
-```
-
-Without it `assembleRelease` prints a warning and produces an **unsigned** APK; never publish
-that. [fdroid/README.md](fdroid/README.md) has the signing key, the release checklist and the
-distribution channels. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for build
+Release builds need your own signing key; see [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for build
 notes and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the code layout.
 
 ## Credits and license
