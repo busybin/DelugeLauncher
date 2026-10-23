@@ -64,7 +64,7 @@ object UpdateChecker {
     private const val RETRY_DELAY_MS = 1_200L
 
     /** Tag on the one line this writes when it fails, for a bug report to carry. */
-    private const val TAG = "VicUpdate"
+    private const val TAG = "DelugeUpdate"
 
     /**
      * Asks the release page for the newest release and reads it against [currentVersion].
