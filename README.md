@@ -113,7 +113,7 @@ keyPassword=***
 
 Without it `assembleRelease` prints a warning and produces an **unsigned** APK; never publish
 that. [fdroid/README.md](fdroid/README.md) has the signing key, the release checklist and the
-F-Droid / IzzyOnDroid situation. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for build
+distribution channels. See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for build
 notes and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the code layout.
 
 ## Credits and license
