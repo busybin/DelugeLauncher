@@ -57,7 +57,9 @@ Version 2.0:
 
 It also bundles the Shizuku API and provider (dev.rikka.shizuku:api,
 dev.rikka.shizuku:provider), by Rikka, under the MIT License. They are used to run
-shell commands with the privileges the user has granted through Shizuku.
+shell commands with the privileges the user has granted through Shizuku, and
+HiddenApiBypass (org.lsposed.hiddenapibypass:hiddenapibypass), by the LSPosed
+project, under the Apache License, Version 2.0.
 
 The app-freezing feature follows the approach and command layer of Hail
 (https://github.com/aistra0528/Hail), which is licensed under the GNU GPL version 3.
