@@ -166,6 +166,7 @@ class SettingsActionsA(
     val onSetShowSettingsRow: (Boolean) -> Unit,
     val onSetShowListHeaders: (Boolean) -> Unit,
     val onSetNotificationBadges: (Boolean) -> Unit,
+    val onSetNotificationPreview: (Boolean) -> Unit,
     val onSetDimPausedApps: (Boolean) -> Unit,
     val onSetAutoDark: (Boolean) -> Unit,
     val onSetCornerTapAction: (CornerAction) -> Unit,

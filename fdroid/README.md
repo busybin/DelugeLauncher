@@ -30,7 +30,7 @@ None. The update check is off by default and the app needs no network service.
 ## Signing
 
 - `app/keys_release.jks` and `keystore.properties` are not committed.
-- Certificate SHA-256 for `AllowedAPKSigningKeys`:
+- Certificate SHA-256 (reference only; reproducible builds are not set up):
   `342e3ca62956b4f11f35cbd5cb742bc39644be97c3bd6a335d9f75a38fb5e8c0`
 - Alias `deluge`, RSA 4096, valid until 2054-03-05.
 - Keep this key: a new one cannot upgrade over the installed app.

@@ -124,6 +124,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import android.content.res.Configuration
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
@@ -137,6 +138,8 @@ import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.Folder
+import dev.delugelauncher.media.NotificationPreview
+import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
@@ -241,6 +244,8 @@ fun HomeScreen(
     shortcutSwipe: ShortcutSwipe,
     favorites: List<FavoriteEntry>,
     nameOverrides: Map<String, String>,
+    /** Newest notification per app, for the line under its name; empty unless that is on. */
+    notificationPreviews: Map<String, NotificationPreview> = emptyMap(),
     iconSizeDp: Int,
     labelSizeSp: Int,
     itemSpacingDp: Int,
@@ -1339,6 +1344,9 @@ fun HomeScreen(
                             shortcutSwipe = shortcutSwipe,
                             app = item.app,
                             label = displayName(item.app),
+                            notificationLine = notificationPreviews[
+                                NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
+                            ]?.line,
                             editMode = editMode,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
@@ -1587,6 +1595,8 @@ private fun FavoriteRow(
     shortcutSwipe: ShortcutSwipe,
     app: AppInfo,
     label: String,
+    /** The newest notification's words, or null when there is nothing to show. */
+    notificationLine: String?,
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
@@ -1626,6 +1636,17 @@ private fun FavoriteRow(
     // outlive the menu it was opened from, so the state sits with the row.
     var freezeChoosing by remember { mutableStateOf(false) }
 
+    // The notification line sits below the row rather than inside its label column, so a long
+    // one cannot widen the label and push a centered icon off its mark.
+    val iconLeft = iconSide == IconSide.LEFT && alignment != HomeAlignment.RIGHT
+    val showIconsHere = LocalIconConfig.current.showIcons
+    val previewStart = when {
+        alignment == HomeAlignment.CENTER -> sidePaddingDp
+        iconLeft && showIconsHere && showLabels -> sidePaddingDp + 8 + iconSizeDp + 16
+        else -> sidePaddingDp
+    }
+
+    Column(Modifier.fillMaxWidth()) {
     Box(Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -1818,6 +1839,26 @@ private fun FavoriteRow(
                 freezeActions?.add(app, method)
             },
         )
+    }
+    if (!editMode && notificationLine != null) {
+        Text(
+            notificationLine,
+            color = contentColor.copy(alpha = 0.65f),
+            fontSize = (labelSizeSp - 3).coerceAtLeast(10).sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = alignment.textAlign(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = previewStart.dp,
+                    end = sidePaddingDp.dp,
+                    top = 1.dp,
+                    bottom = 2.dp,
+                )
+                .clickable(onClick = onLaunch),
+        )
+    }
     }
 }
 

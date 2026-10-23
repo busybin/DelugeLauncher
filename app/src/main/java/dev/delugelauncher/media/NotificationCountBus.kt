@@ -12,9 +12,8 @@ import kotlinx.coroutines.flow.map
  * Bridges the NotificationListenerService to the UI for the same reason [NowPlayingBus] does:
  * the system owns the service and hands the app no handle to it.
  *
- * A count and nothing else. The text of a notification is the notification's business, and a
- * launcher that copied it onto the home screen would be putting whatever arrived in front of
- * whoever happened to be looking at the phone.
+ * A count by default. The words of a notification are its app's business; they are published
+ * separately, only while the user has turned that on, and never written to disk.
  */
 object NotificationCountBus {
     // The last published counts, persisted: the bus is memory-only, so a widget drawn

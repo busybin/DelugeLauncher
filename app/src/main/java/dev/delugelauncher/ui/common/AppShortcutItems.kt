@@ -71,7 +71,7 @@ fun AppShortcutItems(
         val waiting = pending
         pending = null
         if (waiting != null && result.resultCode == Activity.RESULT_OK) {
-            delugeApp.appRepository.startAppShortcut(waiting.first, waiting.second)
+            delugeApp.appRepository.startAppShortcut(waiting.first, waiting.second, LaunchOrigin.of(waiting.first))
             onStarted()
         }
     }
@@ -117,7 +117,7 @@ fun AppShortcutItems(
                 }
                 // One prompt at a time: a second answer would open the wrong shortcut.
                 if (prompt == null) {
-                    delugeApp.appRepository.startAppShortcut(app, shortcut)
+                    delugeApp.appRepository.startAppShortcut(app, shortcut, LaunchOrigin.of(app))
                     onStarted()
                 } else if (pending == null) {
                     pending = app to shortcut

@@ -242,6 +242,8 @@ class SettingsScreenModel(
     val onSetHoldScrollSpeed: (Int) -> Unit,
     val notificationBadges: Boolean,
     val onSetNotificationBadges: (Boolean) -> Unit,
+    val notificationPreview: Boolean,
+    val onSetNotificationPreview: (Boolean) -> Unit,
     val dimPausedApps: Boolean,
     val onSetDimPausedApps: (Boolean) -> Unit,
     val autoDark: Boolean,
@@ -1056,6 +1058,17 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = notificationBadges, onCheckedChange = onSetNotificationBadges,
             )
         },
+        SettingsEntry(
+            SettingsSection.NOTIFICATIONS,
+            stringResource(R.string.settings_notification_preview),
+            "notification text preview message",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_notification_preview),
+                detail = stringResource(R.string.settings_notification_preview_detail),
+                checked = notificationPreview, onCheckedChange = onSetNotificationPreview,
+            )
+        },
         SettingsEntry(SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
@@ -1068,7 +1081,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_notification_access_detail), "permission access",
-            visible = nowPlayingEnabled || notificationBadges,
+            visible = nowPlayingEnabled || notificationBadges || notificationPreview,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),

@@ -154,7 +154,9 @@
     <string name="settings_pinch_resize">القرص لتغيير حجم الأيقونات</string>
     <string name="settings_pinch_resize_detail">إصبعان على الشاشة الرئيسية يغيّران حجم الأيقونات.</string>
     <string name="settings_dim_paused_apps_detail">تظهر التطبيقات التي أوقفتها باهتة لتبدو كأنها جانبية. أوقف هذا لعرضها كأي تطبيق آخر.</string>
-    <string name="settings_notification_badges_detail">يحتاج إذن الوصول إلى الإشعارات نفسه الذي يحتاجه «قيد التشغيل». الأعداد فقط، لا محتوى الإشعارات</string>
+    <string name="settings_notification_badges_detail">يحتاج إذن الوصول إلى الإشعارات نفسه الذي يحتاجه «قيد التشغيل». الأعداد فقط، ما لم يتم تشغيل نص الإشعارات أدناه</string>
+    <string name="settings_notification_preview">نص الإشعارات في صفوف التطبيقات</string>
+    <string name="settings_notification_preview_detail">يعرض أحدث إشعار أسفل اسم التطبيق. يحتاج إلى إذن الوصول إلى الإشعارات نفسه. معطّل افتراضيًا.</string>
     <string name="settings_section_top">موضع استقرار الحرف</string>
     <string name="settings_close_folder">إغلاق المجلد بعد فتح تطبيق</string>
     <string name="settings_close_folder_detail">عند الإيقاف يبقى مفتوحًا حتى تغلقه بنفسك</string>
@@ -246,7 +248,7 @@
     <string name="settings_now_playing_show">إظهار أداة «قيد التشغيل»</string>
     <string name="settings_notification_access_granted">تم منح الوصول إلى الإشعارات</string>
     <string name="settings_notification_access_missing">لم يُمنح الوصول إلى الإشعارات</string>
-    <string name="settings_notification_access_detail">مطلوب لعرض المقطع الذي يُشغَّل الآن</string>
+    <string name="settings_notification_access_detail">يُستخدم لـ«قيد التشغيل» وأعداد الإشعارات ونصها</string>
     <string name="settings_open_settings">فتح الإعدادات</string>
     <string name="settings_favorites">المفضّلة</string>
     <string name="settings_favorites_detail">اختر التطبيقات التي تظهر في الشاشة الرئيسية</string>
@@ -364,6 +366,8 @@
     <string name="freeze_hide_cons">يتطلب root وليس حدًا أمنيًا: التطبيقات التي تُحصي كل الحزم ما زالت تراه.</string>
     <string name="freeze_suspend_pros">يبقي الأيقونة رمادية ويخفي الإشعارات ويمنع الفتح، ويوقف العمل في الخلفية أيضًا دون فقدان البيانات.</string>
     <string name="freeze_suspend_cons">يوقف المهام المجدولة في الخلفية، لكن تطبيقًا بصلاحيات خاصة قد يمر.</string>
+    <string name="freeze_suspend_dialog_message">تم إيقاف %1$s مؤقتًا بواسطة Deluge. اضغط الزر لإلغاء الإيقاف وفتحه.</string>
+    <string name="freeze_suspend_dialog_button">إلغاء الإيقاف والفتح</string>
     <string name="freeze_stop_pros">يقتل العملية الجارية فورًا ولا يترك شيئًا للتراجع عنه.</string>
     <string name="freeze_stop_cons">لا يُحفظ شيء: قد يُوقظه بث أو منبّه، لذا ليس تجميدًا دائمًا.</string>
     <string name="freeze_system_apps">إظهار تطبيقات النظام وتجميدها</string>

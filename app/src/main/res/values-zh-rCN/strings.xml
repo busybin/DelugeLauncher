@@ -137,7 +137,9 @@
     <string name="settings_pinch_resize">双指缩放图标</string>
     <string name="settings_pinch_resize_detail">在主屏用两根手指捏合可调整图标大小。</string>
     <string name="settings_dim_paused_apps_detail">被你暂停（paused）的应用，图标和名字显示为灰色，看起来像被收起；关掉则和其他应用一样显示。</string>
-    <string name="settings_notification_badges_detail">需要与“正在播放”相同的通知使用权。只显示数量，不会读取通知内容</string>
+    <string name="settings_notification_badges_detail">需要与“正在播放”相同的通知使用权。只显示数量；除非在下方打开通知内容</string>
+    <string name="settings_notification_preview">在应用行显示通知内容</string>
+    <string name="settings_notification_preview_detail">在应用名下方显示最新一条通知。需要与“正在播放”相同的通知使用权。默认关闭。</string>
     <string name="settings_section_top">字母停靠位置</string>
     <string name="settings_close_folder">打开应用后关闭文件夹</string>
     <string name="settings_close_folder_detail">关闭时文件夹会保持打开，直到你手动关闭</string>
@@ -227,7 +229,7 @@
     <string name="settings_now_playing_show">显示正在播放小部件</string>
     <string name="settings_notification_access_granted">已授予通知使用权</string>
     <string name="settings_notification_access_missing">未授予通知使用权</string>
-    <string name="settings_notification_access_detail">显示当前播放的曲目需要此权限</string>
+    <string name="settings_notification_access_detail">用于“正在播放”、通知数量与通知内容</string>
     <string name="settings_open_settings">打开设置</string>
     <string name="settings_favorites">收藏</string>
     <string name="settings_favorites_detail">选择放在主屏幕上的应用</string>
@@ -345,6 +347,8 @@
     <string name="freeze_hide_cons">需要 root，而且它不是安全边界：能枚举所有安装包的应用仍看得到它。</string>
     <string name="freeze_suspend_pros">保留图标并置灰，隐藏通知、禁止打开，同时禁止后台运行，且不丢数据。</string>
     <string name="freeze_suspend_cons">能压住后台计划任务，但有特殊权限的应用仍可能绕过。</string>
+    <string name="freeze_suspend_dialog_message">%1$s 已被 Deluge 暂停。点下面的按钮解除暂停并打开。</string>
+    <string name="freeze_suspend_dialog_button">解除暂停并打开</string>
     <string name="freeze_stop_pros">立即杀掉当前进程，不留任何需要撤销的东西。</string>
     <string name="freeze_stop_cons">不会持久化：广播或闹钟可以再次唤醒它，所以这不是长期的冻结。</string>
     <string name="freeze_system_apps">显示并冻结系统应用</string>

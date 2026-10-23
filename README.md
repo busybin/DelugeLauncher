@@ -43,7 +43,10 @@ Wikimedia Commons.
 - **Batched and parallel** `su` sessions; a 170-app list freezes in a few seconds and a second
   pass skips what is already asleep.
 - **Root or Shizuku.** Shizuku is recommended and works without root (Android 11+, over wireless
-  debugging). Hide needs root. The screen names what answered, with its version.
+  debugging). Hide needs root. The screen names what answered, with its version. Any manager that
+  declares the Shizuku API is found, including Shizuku-Next and Shevery.
+- **A paused app opened from elsewhere** gets an Unpause and open button in the system dialog
+  instead of a dead end.
 - **Widgets and pinned shortcuts** stay, greyed, and a tap unfreezes.
 - **System apps** are behind an off-by-default switch with a boot warning. Turning freezing off
   thaws everything first.
@@ -58,6 +61,9 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 - A-Z strip follows the list, highlights the letters on screen, sits opposite the list alignment
   and within thumb reach.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
+- Apps open out of their icon and shrink back into it on a gesture back.
+- Notification text under an app name in favorites, off by default.
+- The A-Z strip's edge setting is the whole reach from the screen edge, so it leaves the icons alone.
 - Pinyin search by initials or full spelling, and pinyin ordering for Chinese app names.
 - Tags with scrubbing, and a Frequent tag that follows usage.
 - Per-app lock, uninstall and hide from the long-press menu.

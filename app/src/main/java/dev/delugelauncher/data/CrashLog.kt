@@ -2,7 +2,9 @@
 package dev.delugelauncher.data
 
 import android.content.Context
+import android.content.pm.LauncherApps
 import android.os.Build
+import android.os.Process
 import dev.delugelauncher.BuildConfig
 import java.io.File
 import java.io.PrintWriter
@@ -73,10 +75,32 @@ object CrashLog {
 
     private fun file(context: Context) = File(context.filesDir, FILE_NAME)
 
-    /** The last crash, or null if there has not been one since it was last cleared. */
-    fun read(context: Context): String? =
-        runCatching { file(context).takeIf { it.isFile }?.readText() }.getOrNull()
+    /**
+     * The last crash, or null if there has not been one since it was last cleared.
+     *
+     * Names belonging to a second profile are taken out here rather than at the copy button:
+     * the trace is also shown on screen, and it exists to be pasted somewhere public.
+     */
+    fun read(context: Context): String? {
+        val trace = runCatching { file(context).takeIf { it.isFile }?.readText() }.getOrNull()
             ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return CrashRedaction.redact(trace, otherProfile(context))
+    }
+
+    /** Whether a package is installed in some profile other than the one running this app. */
+    private fun otherProfile(context: Context): (String) -> Boolean {
+        val launcherApps = context.getSystemService(LauncherApps::class.java) ?: return { false }
+        val mine = Process.myUserHandle()
+        val others = runCatching { launcherApps.profiles.filter { it != mine } }
+            .getOrDefault(emptyList())
+        if (others.isEmpty()) return { false }
+        return { pkg ->
+            others.any { user ->
+                runCatching { launcherApps.getApplicationInfo(pkg, 0, user) }.isSuccess
+            }
+        }
+    }
 
     fun clear(context: Context) {
         runCatching { file(context).delete() }

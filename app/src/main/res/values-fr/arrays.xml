@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v25">
+        <item>Quand une autre appli ouvre une appli suspendue, la boîte de dialogue système propose désormais « Réactiver et ouvrir » au lieu d\'une impasse. Les applis suspendues par une version antérieure reçoivent le bouton d\'elles-mêmes.</item>
+        <item>Texte des notifications sur les lignes : la notification la plus récente s\'affiche sous le nom de l\'appli dans les favoris. Désactivé par défaut.</item>
+        <item>Les applis s\'ouvrent depuis leur icône et s\'y replient au retour par geste.</item>
+        <item>Le réglage de la bande A-Z mesure toute la portée depuis le bord de l\'écran et vaut 40 dp par défaut au lieu de 56 : elle ne recouvre plus les icônes de la colonne de gauche.</item>
+        <item>Shizuku est reconnu par son API et non par un nom de paquet : Shizuku-Next, Shevery et les autres gestionnaires compatibles fonctionnent aussi.</item>
+        <item>L\'import des réglages est borné : 1 Mo par fichier, 64 Ko par chaîne, listes plafonnées et nombres vérifiés, une sauvegarde modifiée à la main ne peut plus faire planter l\'appli.</item>
+        <item>Copier un journal de plantage remplace les paquets des autres profils par [private].</item>
+        <item>Les 8 langues sont complètes.</item>
+    </string-array>
     <string-array name="changelog_v24">
         <item>Congelez des applis avec root ou Shizuku : Arrêt, Suspension, Désactivation ou Masquage, un onglet par méthode, avec ce que chacune coûte. L\'écran indique qui répond : root (Magisk, KernelSU, APatch) ou Shizuku.</item>
         <item>La congélation se déclenche : Tout congeler, le bouton d\'angle, un raccourci sur l\'icône du lanceur, ou la congélation automatique un moment après l\'extinction de l\'écran. L\'automatique épargne l\'appli affichée, les applis avec notifications et un téléphone en charge.</item>

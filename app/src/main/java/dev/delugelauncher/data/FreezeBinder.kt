@@ -5,6 +5,7 @@ import android.app.AppOpsManager
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import dev.delugelauncher.R
 import org.lsposed.hiddenapibypass.HiddenApiBypass
 import rikka.shizuku.Shizuku
 import rikka.shizuku.ShizukuBinderWrapper
@@ -35,6 +36,14 @@ class FreezeBinder(private val context: Context) {
     fun freeze(packageName: String, method: FreezeMethod): Boolean? =
         attempt { it.freeze(packageName, method) }
 
+    /**
+     * Re-applies the pause with the dialog on an app paused before the dialog existed.
+     * Called once per app by the upgrade pass; a pause by the same suspender replaces the
+     * stored parameters, so this is what gives old records the unpause button.
+     */
+    fun refreshSuspend(packageName: String): Boolean? =
+        attempt { it.setSuspended(packageName, suspended = true) }
+
     /** Lifts every kind of freeze, because the stored method can be wrong. */
     fun unfreeze(packageName: String): Boolean? = attempt { proxy ->
         proxy.setSuspended(packageName, false)
@@ -51,6 +60,31 @@ class FreezeBinder(private val context: Context) {
         // attempt starts clean, and let the caller run the command path instead.
         proxy = null
         null
+    }
+
+    /**
+     * The dialog the system shows when something tries to open a paused app.
+     *
+     * Without one the system offers only "More details", so a launch from another app dead-ends
+     * with a message naming root as the manager and no way out. The unpause button lifts the
+     * pause and continues the launch.
+     */
+    private val suspendDialog: Any? by lazy {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return@lazy null
+        runCatching {
+            val builderClass = Class.forName("android.content.pm.SuspendDialogInfo\$Builder")
+            val builder = HiddenApiBypass.newInstance(builderClass)
+            HiddenApiBypass.invoke(
+                builderClass, builder, "setMessage",
+                context.getString(R.string.freeze_suspend_dialog_message),
+            )
+            HiddenApiBypass.invoke(
+                builderClass, builder, "setNeutralButtonText",
+                context.getString(R.string.freeze_suspend_dialog_button),
+            )
+            HiddenApiBypass.invoke(builderClass, builder, "setNeutralButtonAction", UNPAUSE_ACTION)
+            HiddenApiBypass.invoke(builderClass, builder, "build")
+        }.getOrNull()
     }
 
     private inner class Proxy {
@@ -92,15 +126,16 @@ class FreezeBinder(private val context: Context) {
             val names = arrayOf(packageName)
             // Android 15 added the flags argument and split the suspender from the user it
             // acts on; before that the only suspender parameter is the calling package.
+            val dialog = if (suspended) suspendDialog else null
             val result = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
                 call(
                     packageManager, "setPackagesSuspendedAsUser",
-                    names, suspended, null, null, null, 0, suspender, userId, userId,
+                    names, suspended, null, null, dialog, 0, suspender, userId, userId,
                 )
             } else {
                 call(
                     packageManager, "setPackagesSuspendedAsUser",
-                    names, suspended, null, null, null, suspender, userId,
+                    names, suspended, null, null, dialog, suspender, userId,
                 )
             }
             return (result as? Array<*>)?.isEmpty() ?: false
@@ -156,6 +191,9 @@ class FreezeBinder(private val context: Context) {
 
         /** The name `pm` records when it runs as root. */
         private const val ROOT_SUSPENDER = "root"
+
+        /** `SuspendDialogInfo.BUTTON_ACTION_UNSUSPEND`, the button that lifts and opens. */
+        private const val UNPAUSE_ACTION = 1
 
         /** The shell's package, which is both the caller and the suspender outside root mode. */
         private const val SHELL_PACKAGE = "com.android.shell"
