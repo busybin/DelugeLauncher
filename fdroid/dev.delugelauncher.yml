@@ -18,11 +18,13 @@ Builds:
   - versionName: '25'
     versionCode: 25
     commit: 8323a71143eeacc21ee79a8ab2463a1d86e1cb95
-    gradle: yes
+    gradle:
+      - yes
   - versionName: '24'
     versionCode: 24
     commit: fd3f46af21bff0c146984333535cca11ad06d6d8
-    gradle: yes
+    gradle:
+      - yes
 
 # Releases are signed by us; F-Droid re-signs with its own key (no Binaries/reproducible build is
 # configured), so the two channels cannot upgrade over each other.
@@ -44,4 +46,5 @@ MaintainerNotes: |-
   Deluge Launcher, a renamed fork of Victoria Launcher (GPL-3): package name, display name,
   icon and strings were all replaced, leaving only the upstream notices in LICENSE / NOTICE.
   The release keystore is not in the repo, so either build reproducibly with our key or accept
-  F-Droid re-signing.
+  F-Droid re-signing. The project also publishes its own F-Droid repo, where the APK keeps our
+  signature.
