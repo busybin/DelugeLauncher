@@ -26,3 +26,6 @@ Thumbs.db
 
 # Local backups only, never commit.
 *.bak.*
+
+# Internal runbooks, audit notes and self-use scripts
+.internal/
