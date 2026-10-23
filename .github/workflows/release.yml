@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    # Current tags are plain integers (= versionCode); v19-v23 are the old style.
+    tags: ['v*', '[0-9]*']
 
 permissions:
   contents: write
