@@ -5,7 +5,6 @@ Categories:
   - Launcher
 License: GPL-3.0-or-later
 AuthorName: busybin
-WebSite: https://github.com/busybin/DelugeLauncher
 SourceCode: https://github.com/busybin/DelugeLauncher
 IssueTracker: https://github.com/busybin/DelugeLauncher/issues
 Changelog: https://github.com/busybin/DelugeLauncher/releases
@@ -16,26 +15,28 @@ Repo: https://github.com/busybin/DelugeLauncher.git
 
 Builds:
   # Fill in on release: the tag is plain digits (= versionCode), the commit is the full hash.
+  - versionName: '25'
+    versionCode: 25
+    commit: 8323a71143eeacc21ee79a8ab2463a1d86e1cb95
+    gradle: yes
   - versionName: '24'
     versionCode: 24
     commit: fd3f46af21bff0c146984333535cca11ad06d6d8
     gradle: yes
 
-# Releases are signed by us. F-Droid re-signs with its own key unless reproducible builds are
-# set up, which would leave the two channels unable to upgrade over each other.
-AllowedAPKSigningKeys: 342e3ca62956b4f11f35cbd5cb742bc39644be97c3bd6a335d9f75a38fb5e8c0
+# Releases are signed by us; F-Droid re-signs with its own key (no Binaries/reproducible build is
+# configured), so the two channels cannot upgrade over each other.
 
 AutoUpdateMode: Version
 # Tags are plain digits, so only tags ending in a digit count.
 UpdateCheckMode: Tags .*[0-9]$
 # versionCode lives in app/build.gradle.kts (the default only looks at build.gradle).
 UpdateCheckData: app/build.gradle.kts|versionCode\s*=\s*(\d+)|.|versionName\s*=\s*"([^"]+)"
-CurrentVersion: '24'
-CurrentVersionCode: 24
+CurrentVersion: '25'
+CurrentVersionCode: 25
 
 # No anti-features: the release-page check is opt-in and off by default, and the app itself
 # needs no network service.
-AntiFeatures: []
 
 RequiresRoot: false
 
