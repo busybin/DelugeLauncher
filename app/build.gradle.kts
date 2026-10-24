@@ -35,8 +35,8 @@ android {
         targetSdk = baselineInt("baseline.targetSdk")
         // Plain integers, no "V" prefix, only ever raised, and always kept equal: the system
         // compares versionCode, and a lower number is rejected as a downgrade.
-        versionCode = 25
-        versionName = "25"
+        versionCode = 26
+        versionName = "26"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

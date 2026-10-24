@@ -132,8 +132,9 @@ fun clearIconCache() = IconCache.clear()
  * the files it would save.
  */
 private object IconDiskCache {
-    private const val DIR = "icon_cache_v2"
-    private const val OLD_DIR = "icon_cache_v1"
+    private const val DIR = "icon_cache_v3"
+    // Earlier naming or generation; dropped once rather than carried beside the new one.
+    private val OLD_DIRS = listOf("icon_cache_v1", "icon_cache_v2")
     private const val MAX_BYTES = 48L * 1024L * 1024L
 
     // One mkdir per process: the directory does not move under us.
@@ -142,9 +143,11 @@ private object IconDiskCache {
     private fun dir(context: Context): java.io.File {
         if (!::dirFile.isInitialized) {
             dirFile = java.io.File(context.filesDir, DIR).apply { mkdirs() }
-            // Previous naming had no package prefix; drop it once rather than carrying
-            // unreachable files beside the new ones.
-            runCatching { java.io.File(context.filesDir, OLD_DIR).deleteRecursively() }
+            // v2 could hold the placeholder a hidden app was drawn with while it could not be
+            // read; those keys are still the right ones, so the files have to go, not just age.
+            OLD_DIRS.forEach { old ->
+                runCatching { java.io.File(context.filesDir, old).deleteRecursively() }
+            }
         }
         return dirFile
     }

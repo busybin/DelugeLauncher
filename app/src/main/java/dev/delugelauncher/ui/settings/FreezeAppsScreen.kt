@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -52,6 +55,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,9 +73,13 @@ import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.data.RootProvider
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.ui.common.FreezePinned
 
 /** Delays offered for the automatic freeze, all in seconds. Zero freezes at once. */
 private val AUTO_DELAYS = listOf(0, 30, 60, 300, 900, 1800)
+
+/** What the export picker offers to call the file. */
+private const val FREEZE_PLAN_FILE = "deluge-freeze-list.json"
 
 /**
  * Builds a freeze list, one method per tab.
@@ -102,6 +110,7 @@ fun FreezeAppsScreen(
     autoSkipCharging: Boolean,
     autoSkipForeground: Boolean,
     autoSkipNotifications: Boolean,
+    protectEssentials: Boolean,
     onRefreshAccess: () -> Unit,
     onOpenShizuku: () -> Unit,
     onAddToPlan: (AppInfo, FreezeMethod) -> Unit,
@@ -118,7 +127,11 @@ fun FreezeAppsScreen(
     onSetAutoSkipCharging: (Boolean) -> Unit,
     onSetAutoSkipForeground: (Boolean) -> Unit,
     onSetAutoSkipNotifications: (Boolean) -> Unit,
+    onSetProtectEssentials: (Boolean) -> Unit,
     onSetSystemAppsEnabled: (Boolean) -> Unit,
+    /** The picked file for each of the two actions; the caller does the reading and writing. */
+    onExportPlan: (android.net.Uri) -> Unit,
+    onImportPlan: (android.net.Uri) -> Unit,
     onSetSourceFilter: (FreezeSourceFilter) -> Unit,
     onSetStateFilter: (FreezeStateFilter) -> Unit,
     onSetSort: (FreezeSort) -> Unit,
@@ -126,6 +139,13 @@ fun FreezeAppsScreen(
     onBack: () -> Unit,
 ) {
     val surface = MaterialTheme.colorScheme.surface
+    val context = LocalContext.current
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json"),
+    ) { uri -> if (uri != null) onExportPlan(uri) }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument(),
+    ) { uri -> if (uri != null) onImportPlan(uri) }
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
     val methods = FreezeMethod.entries
     val method = methods[tabIndex.coerceIn(methods.indices)]
@@ -138,11 +158,16 @@ fun FreezeAppsScreen(
     val apps = remember(allApps, systemAppsEnabled, effectiveSource) {
         val wantsSystem = effectiveSource == FreezeSourceFilter.SYSTEM
         allApps.filter {
-            it.kind == EntryKind.APP && it.userSerial == 0L &&
+            it.kind == EntryKind.APP &&
                 (systemAppsEnabled || !it.system) && it.system == wantsSystem
         }
     }
-    val name = { app: AppInfo -> nameOverrides[app.key] ?: app.label }
+    // Work-profile rows say so: freezing one app is a per-profile choice, and two rows with
+    // the same name must be told apart before the switch is flipped.
+    val workSuffix = stringResource(R.string.app_work_suffix)
+    val name = { app: AppInfo ->
+        nameOverrides[app.key] ?: (app.label + if (app.work) workSuffix else "")
+    }
     val term = query.trim()
     val matchesQuery = { app: AppInfo ->
         term.isEmpty() ||
@@ -151,25 +176,25 @@ fun FreezeAppsScreen(
     }
     // What is frozen overall, whichever method holds it, so a state filter means the same
     // thing on every tab.
-    val frozenNow = { app: AppInfo -> app.packageName in freezeApplied }
+    val frozenNow = { app: AppInfo -> app.freezeKey in freezeApplied }
     val shown = remember(
         apps, freezeMethods, method, stateFilter, term, sort, freezeApplied, nameOverrides, pinyin,
     ) {
         val matching = apps.filter(matchesQuery)
         val listed = when (stateFilter) {
-            FreezeStateFilter.ALL -> matching.filter { freezeMethods[it.packageName] == method }
+            FreezeStateFilter.ALL -> matching.filter { freezeMethods[it.freezeKey] == method }
             FreezeStateFilter.FROZEN -> matching.filter {
-                freezeMethods[it.packageName] == method && frozenNow(it)
+                freezeMethods[it.freezeKey] == method && frozenNow(it)
             }
             FreezeStateFilter.UNFROZEN -> matching.filter {
-                freezeMethods[it.packageName] == method && !frozenNow(it)
+                freezeMethods[it.freezeKey] == method && !frozenNow(it)
             }
         }
         val rest = when (stateFilter) {
-            FreezeStateFilter.ALL -> matching.filterNot { freezeMethods[it.packageName] == method }
+            FreezeStateFilter.ALL -> matching.filterNot { freezeMethods[it.freezeKey] == method }
             FreezeStateFilter.FROZEN -> emptyList()
             FreezeStateFilter.UNFROZEN -> matching.filterNot {
-                freezeMethods[it.packageName] == method || frozenNow(it)
+                freezeMethods[it.freezeKey] == method || frozenNow(it)
             }
         }
         FreezeListing.sorted(listed, sort, name, pinyin) to
@@ -183,17 +208,17 @@ fun FreezeAppsScreen(
     // that is frozen right now leaves the record naming a method that did not freeze it.
     // It is unchecked in the tab that owns it instead.
     val unlistedInRest = remember(rest, freezeMethods) {
-        rest.filter { freezeMethods[it.packageName] == null }
+        rest.filter { freezeMethods[it.freezeKey] == null }
     }
     // Inverting only touches apps this tab could hold: unlisted ones join, listed ones leave.
     // An app on another method's list is left alone rather than silently moved.
     val assignable = remember(apps, freezeMethods, method, term, nameOverrides) {
         apps.filter(matchesQuery).filter {
-            freezeMethods[it.packageName] == null || freezeMethods[it.packageName] == method
+            freezeMethods[it.freezeKey] == null || freezeMethods[it.freezeKey] == method
         }
     }
-    val invertJoining = assignable.filter { freezeMethods[it.packageName] == null }
-    val invertLeaving = assignable.filter { freezeMethods[it.packageName] == method }
+    val invertJoining = assignable.filter { freezeMethods[it.freezeKey] == null }
+    val invertLeaving = assignable.filter { freezeMethods[it.freezeKey] == method }
 
     var menu by remember { mutableStateOf(false) }
     var confirmingSelectAll by remember { mutableStateOf(false) }
@@ -255,6 +280,19 @@ fun FreezeAppsScreen(
                                 text = { Text(stringResource(R.string.freeze_auto)) },
                                 onClick = { menu = false; autoDialog = true },
                             )
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.freeze_export)) },
+                                enabled = freezeMethods.isNotEmpty(),
+                                onClick = {
+                                    menu = false
+                                    exportLauncher.launch(FREEZE_PLAN_FILE)
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.freeze_import)) },
+                                onClick = { menu = false; importLauncher.launch(arrayOf("*/*")) },
+                            )
                         }
                     }
                 },
@@ -262,106 +300,114 @@ fun FreezeAppsScreen(
             )
         },
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
-            AccessBanner(
-                status = status,
-                onRequestShizuku = {
-                    if (runCatching { rikka.shizuku.Shizuku.pingBinder() }.getOrDefault(false)) {
-                        runCatching { rikka.shizuku.Shizuku.requestPermission(0) }
-                    } else {
-                        onOpenShizuku()
+        // The header travels with the rows. Four method tabs, a balance line, the system-app
+        // switch, the filter row and two buttons took more than half the screen from a list
+        // whose whole job is to be scrolled; everything but the tabs now scrolls away with it.
+        LazyColumn(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 8.dp),
+        ) {
+            item(key = "header-access") {
+                AccessBanner(
+                    status = status,
+                    onRequestShizuku = {
+                        if (runCatching { rikka.shizuku.Shizuku.pingBinder() }.getOrDefault(false)) {
+                            runCatching { rikka.shizuku.Shizuku.requestPermission(0) }
+                        } else {
+                            onOpenShizuku()
+                        }
+                    },
+                    onOpenShizuku = onOpenShizuku,
+                )
+            }
+            // The tabs stay put: they are how the list below is chosen, and having to scroll
+            // back up to change method costs more than the row of space they hold.
+            stickyHeader(key = "header-methods") {
+                Surface(color = surface) {
+                    TabRow(selectedTabIndex = tabIndex) {
+                        methods.forEachIndexed { index, m ->
+                            val count = apps.count { freezeMethods[it.freezeKey] == m }
+                            Tab(
+                                selected = index == tabIndex,
+                                onClick = { tabIndex = index },
+                                text = {
+                                    // The count keeps its width; a long method name shrinks instead,
+                                    // so the number is not the part that gets clipped.
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Text(
+                                            methodName(m),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f, fill = false),
+                                        )
+                                        if (count > 0) {
+                                            Text(" ($count)", maxLines = 1)
+                                        }
+                                    }
+                                },
+                            )
+                        }
                     }
-                },
-                onOpenShizuku = onOpenShizuku,
-            )
-
-            TabRow(selectedTabIndex = tabIndex) {
-                methods.forEachIndexed { index, m ->
-                    val count = apps.count { freezeMethods[it.packageName] == m }
-                    Tab(
-                        selected = index == tabIndex,
-                        onClick = { tabIndex = index },
-                        text = {
-                            // The count keeps its width; a long method name shrinks instead,
-                            // so the number is not the part that gets clipped.
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center,
-                            ) {
-                                Text(
-                                    methodName(m),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f, fill = false),
-                                )
-                                if (count > 0) {
-                                    Text(" ($count)", maxLines = 1)
-                                }
-                            }
-                        },
+                }
+            }
+            item(key = "header-balance") { MethodBalance(method) }
+            if (method == FreezeMethod.HIDE && !status.rootGranted) {
+                item(key = "header-hide-note") { InfoLine(stringResource(R.string.freeze_hide_needs_root)) }
+            }
+            item(key = "header-system-apps") {
+                SystemAppsRow(
+                    checked = systemAppsEnabled,
+                    onCheckedChange = { wanted ->
+                        if (wanted) enablingSystemApps = true else disablingSystemApps = true
+                    },
+                )
+            }
+            item(key = "header-filters") {
+                FilterControls(
+                    query = query,
+                    onQuery = onSetQuery,
+                    sourceFilter = effectiveSource,
+                    onSource = onSetSourceFilter,
+                    stateFilter = stateFilter,
+                    onState = onSetStateFilter,
+                    sort = sort,
+                    onSort = onSetSort,
+                    systemAppsEnabled = systemAppsEnabled,
+                )
+            }
+            item(key = "header-actions") {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilledTonalButton(
+                        onClick = { confirmingSelectAll = true },
+                        enabled = canOperate && unlistedInRest.isNotEmpty(),
+                    ) {
+                        Text(stringResource(R.string.freeze_select_all))
+                    }
+                    FilledTonalButton(
+                        onClick = { confirmingInvert = true },
+                        enabled = canOperate && (invertJoining.isNotEmpty() || invertLeaving.isNotEmpty()),
+                    ) {
+                        Text(stringResource(R.string.freeze_invert))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        stringResource(R.string.freeze_selected_count, listed.size),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                     )
                 }
             }
-
-            MethodBalance(method)
-
-            if (method == FreezeMethod.HIDE && !status.rootGranted) {
-                InfoLine(stringResource(R.string.freeze_hide_needs_root))
-            }
-            if (access == FreezeAccess.NONE) {
-                InfoLine(stringResource(R.string.freeze_needs_access))
-            }
-
-            SystemAppsRow(
-                checked = systemAppsEnabled,
-                onCheckedChange = { wanted ->
-                    if (wanted) enablingSystemApps = true else disablingSystemApps = true
-                },
-            )
-
-            FilterControls(
-                query = query,
-                onQuery = onSetQuery,
-                sourceFilter = effectiveSource,
-                onSource = onSetSourceFilter,
-                stateFilter = stateFilter,
-                onState = onSetStateFilter,
-                sort = sort,
-                onSort = onSetSort,
-                systemAppsEnabled = systemAppsEnabled,
-            )
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                FilledTonalButton(
-                    onClick = { confirmingSelectAll = true },
-                    enabled = canOperate && unlistedInRest.isNotEmpty(),
-                ) {
-                    Text(stringResource(R.string.freeze_select_all))
-                }
-                FilledTonalButton(
-                    onClick = { confirmingInvert = true },
-                    enabled = canOperate && (invertJoining.isNotEmpty() || invertLeaving.isNotEmpty()),
-                ) {
-                    Text(stringResource(R.string.freeze_invert))
-                }
-                Spacer(Modifier.weight(1f))
-                Text(
-                    stringResource(R.string.freeze_selected_count, listed.size),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                )
-            }
-
-            LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
                 if (listed.isEmpty() && rest.isEmpty()) {
                     item {
                         InfoLine(
@@ -381,19 +427,28 @@ fun FreezeAppsScreen(
                             checked = true,
                             enabled = canOperate,
                             subtitle = stringResource(
-                                if (app.packageName in freezeApplied) R.string.freeze_state_frozen
+                                if (app.freezeKey in freezeApplied) R.string.freeze_state_frozen
                                 else R.string.freeze_state_pending
                             ),
                             onToggle = { onRemoveFromPlan(app) },
                             onSetApplied = { freeze -> onSetApplied(app, freeze) },
                             onRemove = { onRemoveFromPlan(app) },
+                            onPin = {
+                                if (!FreezePinned.request(context, app, name(app))) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        R.string.freeze_pin_failed,
+                                        android.widget.Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
                         )
                     }
                 }
                 if (rest.isNotEmpty()) {
                     item { ListSectionLabel(stringResource(R.string.freeze_add_section)) }
                     items(rest, key = { it.key }) { app ->
-                        val other = freezeMethods[app.packageName]
+                        val other = freezeMethods[app.freezeKey]
                         val elsewhere = other != null && other != method
                         FreezeRow(
                             app = app,
@@ -410,7 +465,7 @@ fun FreezeAppsScreen(
                     }
                 }
                 if (systemAppsEnabled) {
-                    item {
+                    item(key = "header-system-warning") {
                         Text(
                             stringResource(R.string.freeze_system_warning),
                             style = MaterialTheme.typography.bodySmall,
@@ -419,7 +474,6 @@ fun FreezeAppsScreen(
                         )
                     }
                 }
-            }
         }
     }
 
@@ -557,6 +611,12 @@ fun FreezeAppsScreen(
                         detail = stringResource(R.string.freeze_auto_skip_notifications_detail),
                         checked = autoSkipNotifications,
                         onCheckedChange = onSetAutoSkipNotifications,
+                    )
+                    SwitchLine(
+                        label = stringResource(R.string.freeze_protect),
+                        detail = stringResource(R.string.freeze_protect_detail),
+                        checked = protectEssentials,
+                        onCheckedChange = onSetProtectEssentials,
                     )
                 }
             },
@@ -918,6 +978,8 @@ private fun FreezeRow(
     /** Non-null on a listed app: the long-press menu freezes or unfreezes it on the spot. */
     onSetApplied: ((Boolean) -> Unit)?,
     onRemove: (() -> Unit)?,
+    /** Non-null on a listed app: the menu can pin a shortcut that toggles it from the home screen. */
+    onPin: (() -> Unit)? = null,
 ) {
     var rowMenu by remember { mutableStateOf(false) }
     Box {
@@ -960,6 +1022,13 @@ private fun FreezeRow(
                     leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
                     onClick = { rowMenu = false; onSetApplied(false) },
                 )
+                if (onPin != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.freeze_menu_pin)) },
+                        leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                        onClick = { rowMenu = false; onPin() },
+                    )
+                }
                 if (onRemove != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.freeze_menu_remove)) },

@@ -40,18 +40,26 @@ Wikimedia Commons.
   goes off — skipping the app in front, apps with notifications, and a phone on a charger.
   Unlocking thaws the list if you enable it.
 - **A tap is a temporary thaw.** The row stays and the next trigger puts it back to sleep.
-- **Batched and parallel** `su` sessions; a 170-app list freezes in a few seconds and a second
-  pass skips what is already asleep.
+- **Fast by design.** One package-manager pass reads every app's state, a run only touches what
+  is not already asleep, and through Shizuku each app is a single binder call — hiding included
+  when the manager runs as root. A 170-app list settles in well under a second of IPC.
 - **Root or Shizuku.** Shizuku is recommended and works without root (Android 11+, over wireless
   debugging). Hide needs root. The screen names what answered, with its version. Any manager that
   declares the Shizuku API is found, including Shizuku-Next and Shevery.
 - **A paused app opened from elsewhere** gets an Unpause and open button in the system dialog
   instead of a dead end.
 - **Widgets and pinned shortcuts** stay, greyed, and a tap unfreezes.
+- **Protected apps** are never frozen while the guard is on (the default): the current keyboard,
+  the home app, enabled accessibility services, Shizuku and every installed root manager.
+- **Work profile and private space apps** can be frozen too, each profile tracked separately from
+  the main one with the same package name.
+- **More ways in and out:** a quick settings tile freezes or thaws the whole list, a listed app
+  can pin its own toggle shortcut to the home screen, and the list can be exported to a file and
+  imported on another phone.
 - **System apps** are behind an off-by-default switch with a boot warning. Turning freezing off
   thaws everything first.
-- **Limits:** hiding is not invisible to `MATCH_UNINSTALLED_PACKAGES`; the automatic trigger only
-  runs while the launcher is alive, so open it once after a reboot.
+- **Limits:** hiding is not invisible to `MATCH_UNINSTALLED_PACKAGES`. The automatic trigger is a
+  foreground service and comes back after a reboot.
 
 The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NOTICE](NOTICE).
 

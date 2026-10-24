@@ -629,4 +629,18 @@
     <string name="corner_action_open_shortcut">Open a shortcut</string>
     <string name="corner_action_do_nothing">Do nothing</string>
     <string name="slot_no_shortcuts">No shortcuts pinned yet</string>
+
+    <string name="freeze_protect">Protect essential apps</string>
+    <string name="freeze_protect_detail">Never freeze the current keyboard, the home app, accessibility services, or the tools that grant freeze access.</string>
+    <string name="freeze_protected">%1$s is protected, because it is one of the apps that keep the phone usable. Freezing it is refused.</string>
+    <string name="freeze_export">Export freeze list…</string>
+    <string name="freeze_export_done">Freeze list exported</string>
+    <string name="freeze_export_failed">Could not write the file</string>
+    <string name="freeze_import">Import freeze list…</string>
+    <string name="freeze_import_done">Added %1$d apps to the freeze list</string>
+    <string name="freeze_import_none">No new apps in that file</string>
+    <string name="freeze_import_failed">That is not a Deluge freeze list</string>
+    <string name="freeze_menu_pin">Add a home screen shortcut</string>
+    <string name="freeze_pin_failed">Could not add the shortcut</string>
+    <string name="freeze_tile_label">Freeze apps</string>
 </resources>

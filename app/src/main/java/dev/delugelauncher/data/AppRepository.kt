@@ -126,16 +126,22 @@ class AppRepository(
         withInstallTimes: Boolean = true,
         /** Package name to freeze method, so frozen rows stay listed and say so. */
         frozen: Map<String, FreezeMethod> = emptyMap(),
-        /** Packages in the freeze list, frozen or merely paused, so rows can offer the right thing. */
+        /** Keys in the freeze list, frozen or merely paused, so rows can offer the right thing. */
         planned: Set<String> = emptySet(),
+        /** What the list remembers about rows that cannot be read back, keyed like [frozen]. */
+        freezeRows: Map<String, FreezeRow> = emptyMap(),
     ): List<AppInfo> {
         val profiles = runCatching { userManager.userProfiles }.getOrNull().orEmpty()
         val mainUser = Process.myUserHandle()
-        // Once for the whole enumeration, not once per profile: this is the
-        // single slowest PackageManager call here, and every profile needs
-        // the same map. It used to sit inside the flatMap below, paying that
-        // cost once per profile on every reload and every cold start.
-        val installTimes = if (withInstallTimes) installTimes() else emptyMap<String, Pair<Long, Long>>()
+        // One call answers every question here about the main profile: enabled/hidden/
+        // suspended/stopped flags, system state, uid and both install times. Asking per app
+        // and per profile was hundreds of round trips on every reload and every cold start.
+        val states = FreezeState.mainStates(context)
+        val installTimes = if (withInstallTimes) {
+            states.mapValues { it.value.installedAt to it.value.updatedAt }
+        } else {
+            emptyMap()
+        }
         return profiles
             .flatMap { user ->
                 val serial = listableSerial(user, mainUser) ?: return@flatMap emptyList()
@@ -149,6 +155,7 @@ class AppRepository(
                     .getOrNull()
                     .orEmpty()
                     .map { info ->
+                        val serialKey = EntryKeys.app(info.componentName.packageName, serial)
                         AppInfo(
                             componentName = info.componentName,
                             label = info.label?.toString() ?: info.componentName.packageName,
@@ -161,19 +168,21 @@ class AppRepository(
                             }.getOrDefault(false),
                             installedAt = installTimes[info.componentName.packageName]?.first ?: 0L,
                             updatedAt = installTimes[info.componentName.packageName]?.second ?: 0L,
-                            // isPackageSuspended rather than the ApplicationInfo flag: the flag
-                            // is not reliably carried on a LauncherActivityInfo, so a paused
-                            // app kept looking normal.
-                            suspended = runCatching {
-                                context.packageManager.isPackageSuspended(info.componentName.packageName)
-                            }.getOrDefault(false),
+                            // Read from the profile the row belongs to; the flag on a
+                            // LauncherActivityInfo is not reliably carried, so it is never
+                            // trusted for this.
+                            suspended = if (user == mainUser) {
+                                states[info.componentName.packageName]?.suspended == true
+                            } else {
+                                false
+                            },
                             // A disabled or hidden app is not listed by LauncherApps at all,
                             // and whether it is frozen is the manager's own record rather than
                             // anything re-derived here: the platform's answer for a suspended
                             // app is not reliable, and a wrong one showed a frozen app as if it
                             // still had to be frozen.
-                            planned = info.componentName.packageName in planned,
-                            frozen = frozen[info.componentName.packageName],
+                            planned = serialKey in planned,
+                            frozen = frozen[serialKey],
                         )
                     }
             }
@@ -196,7 +205,7 @@ class AppRepository(
             .filterNot { privateSpace.conceals(it.key) }
             .distinctBy { it.key }
             // After the dedupe: these are the frozen apps LauncherApps stopped returning.
-            .let { rows -> rows + frozenRows(frozen, rows.map { it.packageName }.toSet()) }
+            .let { rows -> rows + frozenRows(frozen, rows.mapTo(mutableSetOf()) { it.freezeKey }, freezeRows) }
             // By pinyin on a Chinese phone: this is the order every list of app names starts
             // from, and codepoint order would put ZhiFuBao where no reader looks for it.
             // The app list re-files and re-orders the same apps by its own letters.
@@ -216,36 +225,41 @@ class AppRepository(
     private fun frozenRows(
         frozen: Map<String, FreezeMethod>,
         present: Set<String>,
-    ): List<AppInfo> = frozen.mapNotNull { (packageName, method) ->
-        if (packageName in present) return@mapNotNull null
-        val info = FreezeState.applicationInfo(context, packageName) ?: return@mapNotNull null
+        rows: Map<String, FreezeRow>,
+    ): List<AppInfo> = frozen.mapNotNull { (key, method) ->
+        if (key in present) return@mapNotNull null
+        val serial = FreezeTargetKey.userSerial(key)
+        val packageName = FreezeTargetKey.packageName(key)
+        val info = FreezeState.applicationInfo(context, packageName, serial) ?: return@mapNotNull null
         if (info.flags and ApplicationInfo.FLAG_INSTALLED == 0) return@mapNotNull null
         // Hidden apps are absent from the launcher by definition; a disabled one must still
         // report disabled, or the user re-enabled it themselves and this entry is stale.
         if (method == FreezeMethod.DISABLE && info.enabled) return@mapNotNull null
+        val stored = rows[key]
         AppInfo(
-            componentName = launcherComponent(packageName)
+            // The activity recorded when the app joined the list wins: another profile's
+            // launcher cannot be asked, and a package with several launcher activities would
+            // otherwise come back under one the favorites were not stored by.
+            componentName = stored?.component
+                ?.let(ComponentName::unflattenFromString)
+                ?: launcherComponent(packageName)
                 ?: ComponentName(packageName, packageName),
-            label = runCatching { pm.getApplicationLabel(info).toString() }
-                .getOrDefault(packageName),
-            user = Process.myUserHandle(),
-            system = info.flags and ApplicationInfo.FLAG_SYSTEM != 0,
+            label = stored?.label
+                ?: runCatching { pm.getApplicationLabel(info).toString() }.getOrDefault(packageName),
+            user = if (serial == 0L) {
+                Process.myUserHandle()
+            } else {
+                userManager.getUserForSerialNumber(serial)
+            },
+            userSerial = serial,
+            system = info.flags and FreezeState.SYSTEM_FLAGS != 0,
             frozen = method,
             planned = true,
         )
     }
 
-    private fun launcherComponent(packageName: String): ComponentName? {
-        pm.getLaunchIntentForPackage(packageName)?.component?.let { return it }
-        return runCatching {
-            pm.queryIntentActivities(
-                Intent(Intent.ACTION_MAIN)
-                    .addCategory(Intent.CATEGORY_LAUNCHER)
-                    .setPackage(packageName),
-                PackageManager.MATCH_DISABLED_COMPONENTS or PackageManager.MATCH_UNINSTALLED_PACKAGES,
-            ).firstOrNull()?.activityInfo?.let { ComponentName(packageName, it.name) }
-        }.getOrNull()
-    }
+    private fun launcherComponent(packageName: String): ComponentName? =
+        FreezeState.launcherComponent(context, packageName)
 
     /**
      * What kind of profile this is, or null when the platform will not say — which everything
@@ -265,13 +279,6 @@ class AppRepository(
 
     /** LauncherUserInfo.PRIVATE_SPACE_ENTRYPOINT_HIDDEN, by its documented value. */
     private val PRIVATE_SPACE_ENTRYPOINT_HIDDEN = "private_space_entrypoint_hidden"
-
-    /** First-install and last-update time per package, read in one pass. */
-    private fun installTimes(): Map<String, Pair<Long, Long>> = runCatching {
-        pm.getInstalledPackages(0).associate {
-            it.packageName to (it.firstInstallTime to it.lastUpdateTime)
-        }
-    }.getOrDefault(emptyMap())
 
     /**
      * Whether the owner has asked for the private space's entry to be hidden while locked.
@@ -544,7 +551,7 @@ class AppRepository(
         // app's state too, so the row kind does not matter here.
         if (app.frozen != null) {
             scope.launch {
-                val lifted = freezeManager.unfreeze(app.packageName)
+                val lifted = freezeManager.unfreeze(app)
                 withContext(Dispatchers.Main) {
                     when (lifted) {
                         FreezeOutcome.DONE -> startAppShortcutNow(shortcut, origin)
@@ -738,15 +745,29 @@ class AppRepository(
                 runCatching { info.getBadgedIcon(0) }.getOrNull()?.let { return it }
             }
         }
-        return try {
-            pm.getActivityIcon(app.componentName)
-        } catch (e: PackageManager.NameNotFoundException) {
-            try {
-                pm.getApplicationIcon(app.componentName.packageName)
-            } catch (e2: PackageManager.NameNotFoundException) {
-                pm.defaultActivityIcon
-            }
-        }
+        runCatching { pm.getActivityIcon(app.componentName) }.getOrNull()?.let { return it }
+        runCatching { pm.getApplicationIcon(app.componentName.packageName) }.getOrNull()
+            ?.let { return it }
+        return hiddenIcon(app.componentName) ?: pm.defaultActivityIcon
+    }
+
+    /**
+     * The icon of a hidden app — the freeze method is HIDE.
+     *
+     * Hiding makes the package unavailable to every ordinary query, icons included: both
+     * `getActivityIcon` and `getApplicationIcon` throw for it, and LauncherApps does not list
+     * it. The package is still installed, so MATCH_UNINSTALLED_PACKAGES still reads it, and
+     * that is the only way its icon comes back once a restart has taken the caches that
+     * happened to cover for this away.
+     */
+    private fun hiddenIcon(componentName: ComponentName): Drawable? {
+        val flags = PackageManager.MATCH_UNINSTALLED_PACKAGES or
+            PackageManager.MATCH_DISABLED_COMPONENTS
+        runCatching { pm.getActivityInfo(componentName, flags) }
+            .getOrNull()
+            ?.let { info -> runCatching { info.loadIcon(pm) }.getOrNull()?.let { return it } }
+        val info = FreezeState.applicationInfo(context, componentName.packageName) ?: return null
+        return runCatching { info.loadIcon(pm) }.getOrNull()
     }
 
     private fun shortcutIcon(app: AppInfo): Drawable? {
@@ -812,7 +833,7 @@ class AppRepository(
             // the app comes forward when they finish. It stays on the freeze list, so the
             // next trigger puts it back.
             scope.launch {
-                val lifted = freezeManager.unfreeze(app.packageName)
+                val lifted = freezeManager.unfreeze(app)
                 withContext(Dispatchers.Main) {
                     when (lifted) {
                         FreezeOutcome.DONE -> launchNow(app, origin)

@@ -629,4 +629,18 @@
     <string name="freeze_disable_confirm">解冻并关闭</string>
     <string name="freeze_disabled_done">应用冻结已关闭，已解冻 %1$d 个应用并清空名单。</string>
     <string name="freeze_disable_failed">有 %1$d 个应用无法解冻，应用冻结保持开启。</string>
+
+    <string name="freeze_protect">保护关键应用</string>
+    <string name="freeze_protect_detail">永不冻结当前输入法、桌面、无障碍服务，以及授予冻结权限的工具。</string>
+    <string name="freeze_protected">%1$s 属于保证手机可用的关键应用，已拒绝冻结。</string>
+    <string name="freeze_export">导出冻结名单…</string>
+    <string name="freeze_export_done">冻结名单已导出</string>
+    <string name="freeze_export_failed">无法写入文件</string>
+    <string name="freeze_import">导入冻结名单…</string>
+    <string name="freeze_import_done">已把 %1$d 个应用加入冻结名单</string>
+    <string name="freeze_import_none">文件里没有新的应用</string>
+    <string name="freeze_import_failed">这不是 Deluge 的冻结名单</string>
+    <string name="freeze_menu_pin">添加桌面快捷方式</string>
+    <string name="freeze_pin_failed">无法添加快捷方式</string>
+    <string name="freeze_tile_label">冻结应用</string>
 </resources>

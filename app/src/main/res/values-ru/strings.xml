@@ -637,4 +637,18 @@
     <string name="freeze_disable_confirm">Разморозить и отключить</string>
     <string name="freeze_disabled_done">Заморозка отключена. Разморожено %1$d приложений, список очищен.</string>
     <string name="freeze_disable_failed">Не удалось разморозить %1$d приложений, поэтому заморозка осталась включённой.</string>
+
+    <string name="freeze_protect">Защищать важные приложения</string>
+    <string name="freeze_protect_detail">Никогда не замораживать текущую клавиатуру, приложение рабочего стола, службы доступности и инструменты, дающие доступ к заморозке.</string>
+    <string name="freeze_protected">%1$s защищено: это одно из приложений, без которых телефоном нельзя пользоваться. Заморозка отклонена.</string>
+    <string name="freeze_export">Экспорт списка заморозки…</string>
+    <string name="freeze_export_done">Список заморозки экспортирован</string>
+    <string name="freeze_export_failed">Не удалось записать файл</string>
+    <string name="freeze_import">Импорт списка заморозки…</string>
+    <string name="freeze_import_done">В список заморозки добавлено приложений: %1$d</string>
+    <string name="freeze_import_none">В этом файле нет новых приложений</string>
+    <string name="freeze_import_failed">Это не список заморозки Deluge</string>
+    <string name="freeze_menu_pin">Добавить ярлык на главный экран</string>
+    <string name="freeze_pin_failed">Не удалось добавить ярлык</string>
+    <string name="freeze_tile_label">Заморозка приложений</string>
 </resources>

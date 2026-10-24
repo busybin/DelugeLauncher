@@ -629,4 +629,18 @@
     <string name="freeze_disable_confirm">Descongelar y desactivar</string>
     <string name="freeze_disabled_done">Congelación desactivada. %1$d apps descongeladas y lista vaciada.</string>
     <string name="freeze_disable_failed">No se pudieron descongelar %1$d apps; la congelación sigue activa.</string>
+
+    <string name="freeze_protect">Proteger apps esenciales</string>
+    <string name="freeze_protect_detail">Nunca congela el teclado actual, la app de inicio, los servicios de accesibilidad ni las herramientas que dan acceso a la congelación.</string>
+    <string name="freeze_protected">%1$s está protegida porque es una de las apps que mantienen usable el teléfono. Se rechazó congelarla.</string>
+    <string name="freeze_export">Exportar lista de congelación…</string>
+    <string name="freeze_export_done">Lista de congelación exportada</string>
+    <string name="freeze_export_failed">No se pudo escribir el archivo</string>
+    <string name="freeze_import">Importar lista de congelación…</string>
+    <string name="freeze_import_done">Se añadieron %1$d apps a la lista de congelación</string>
+    <string name="freeze_import_none">No hay apps nuevas en ese archivo</string>
+    <string name="freeze_import_failed">Ese archivo no es una lista de congelación de Deluge</string>
+    <string name="freeze_menu_pin">Añadir acceso directo a la pantalla de inicio</string>
+    <string name="freeze_pin_failed">No se pudo añadir el acceso directo</string>
+    <string name="freeze_tile_label">Congelar apps</string>
 </resources>

@@ -629,4 +629,18 @@
     <string name="freeze_disable_confirm">Dégeler et désactiver</string>
     <string name="freeze_disabled_done">Gel désactivé. %1$d applications dégelées et liste vidée.</string>
     <string name="freeze_disable_failed">Impossible de dégeler %1$d applications ; le gel reste activé.</string>
+
+    <string name="freeze_protect">Protéger les applis essentielles</string>
+    <string name="freeze_protect_detail">Ne jamais geler le clavier actuel, l\'appli d\'accueil, les services d\'accessibilité ni les outils qui accordent l\'accès au gel.</string>
+    <string name="freeze_protected">%1$s est protégée, car elle fait partie des applis qui gardent le téléphone utilisable. Le gel a été refusé.</string>
+    <string name="freeze_export">Exporter la liste de gel…</string>
+    <string name="freeze_export_done">Liste de gel exportée</string>
+    <string name="freeze_export_failed">Impossible d\'écrire le fichier</string>
+    <string name="freeze_import">Importer la liste de gel…</string>
+    <string name="freeze_import_done">%1$d applis ajoutées à la liste de gel</string>
+    <string name="freeze_import_none">Aucune nouvelle appli dans ce fichier</string>
+    <string name="freeze_import_failed">Ce fichier n\'est pas une liste de gel Deluge</string>
+    <string name="freeze_menu_pin">Ajouter un raccourci à l\'écran d\'accueil</string>
+    <string name="freeze_pin_failed">Impossible d\'ajouter le raccourci</string>
+    <string name="freeze_tile_label">Geler des applis</string>
 </resources>

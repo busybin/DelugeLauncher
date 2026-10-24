@@ -629,4 +629,18 @@
     <string name="freeze_disable_confirm">إلغاء التجميد والإيقاف</string>
     <string name="freeze_disabled_done">تم إيقاف تجميد التطبيقات. أُلغي تجميد %1$d تطبيقات ومُسحت القائمة.</string>
     <string name="freeze_disable_failed">تعذر إلغاء تجميد %1$d تطبيقات، لذا بقي التجميد مفعلاً.</string>
+
+    <string name="freeze_protect">حماية التطبيقات الأساسية</string>
+    <string name="freeze_protect_detail">لا تجمّد لوحة المفاتيح الحالية أو تطبيق الشاشة الرئيسية أو خدمات إمكانية الوصول أو الأدوات التي تمنح صلاحية التجميد.</string>
+    <string name="freeze_protected">%1$s محمي لأنه من التطبيقات التي تُبقي الهاتف صالحًا للاستخدام. تم رفض تجميده.</string>
+    <string name="freeze_export">تصدير قائمة التجميد…</string>
+    <string name="freeze_export_done">تم تصدير قائمة التجميد</string>
+    <string name="freeze_export_failed">تعذّرت كتابة الملف</string>
+    <string name="freeze_import">استيراد قائمة التجميد…</string>
+    <string name="freeze_import_done">أُضيف %1$d تطبيقًا إلى قائمة التجميد</string>
+    <string name="freeze_import_none">لا توجد تطبيقات جديدة في هذا الملف</string>
+    <string name="freeze_import_failed">هذا ليس ملف قائمة تجميد من Deluge</string>
+    <string name="freeze_menu_pin">إضافة اختصار إلى الشاشة الرئيسية</string>
+    <string name="freeze_pin_failed">تعذّرت إضافة الاختصار</string>
+    <string name="freeze_tile_label">تجميد التطبيقات</string>
 </resources>

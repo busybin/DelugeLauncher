@@ -100,6 +100,9 @@ data class AppInfo(
 
     val packageName: String get() = componentName.packageName
 
+    /** The freeze list's key for this row: bare package in the main profile, suffixed elsewhere. */
+    val freezeKey: String = EntryKeys.app(componentName.packageName, userSerial)
+
     /**
      * Whether [locked] covers this row. Locks are stored per component, but a frozen app is
      * rebuilt under whichever activity the package manager names as its launcher, so the key

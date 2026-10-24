@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v26">
+        <item>Apps protegidos, ativado por padrão: o teclado atual, o app inicial, os serviços de acessibilidade, o Shizuku e os gerenciadores de root nunca são congelados.</item>
+        <item>Apps do perfil de trabalho e do espaço privado também podem ser congelados, cada perfil separado mesmo com o mesmo nome de pacote.</item>
+        <item>Um bloco nas configurações rápidas congela ou descongela a lista inteira.</item>
+        <item>Qualquer app da lista pode fixar seu próprio atalho na tela inicial.</item>
+        <item>A lista de congelamento é exportada para um arquivo e importada em outro celular.</item>
+        <item>Congelar ficou mais rápido: uma única consulta lê o estado de todos os apps e, pelo Shizuku, cada app é uma única chamada binder.</item>
+        <item>O congelamento automático volta após reiniciar, sem esperar o launcher ser aberto.</item>
+        <item>Apps que o sistema deixou como “desativado até o uso”, comum em Samsung, abrem normalmente em vez de falhar ao descongelar.</item>
+        <item>Apps ocultos mantêm o ícone após reiniciar, e retomar um app restaura suas configurações em segundo plano.</item>
+        <item>Os 8 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v25">
         <item>Quando outro app abre um app suspenso, o diálogo do sistema agora oferece "Reativar e abrir" em vez de um beco sem saída. Apps suspensos por uma versão anterior ganham o botão sozinhos.</item>
         <item>Texto de notificações nas linhas: a notificação mais recente aparece sob o nome do app nos favoritos. Desativado por padrão.</item>

@@ -65,16 +65,7 @@ class FreezeAutoService : Service() {
     override fun onCreate() {
         super.onCreate()
         createChannel()
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            notification(),
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            } else {
-                0
-            },
-        )
+        startForegroundWithNotification()
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_SCREEN_OFF)
             addAction(Intent.ACTION_SCREEN_ON)
@@ -84,9 +75,27 @@ class FreezeAutoService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // A later start means the app is asking again — typically after the notification
+        // permission was just granted, when the first post was dropped.
+        startForegroundWithNotification()
         // The screen may already be off when the service starts; nothing else would arm it.
         if (isScreenOff()) schedule()
         return START_STICKY
+    }
+
+    private fun startForegroundWithNotification() {
+        runCatching {
+            ServiceCompat.startForeground(
+                this,
+                NOTIFICATION_ID,
+                notification(),
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+                } else {
+                    0
+                },
+            )
+        }
     }
 
     override fun onDestroy() {

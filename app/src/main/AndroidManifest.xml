@@ -46,6 +46,13 @@
          notification the whole time. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- The watcher's ongoing notification is the only sign that something is running in the
+         background; without this it is silently dropped on Android 13 and newer. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The watcher above is a service, and a boot broadcast is the one moment the system
+         lets an app start one from the background. Without this, automatic freezing stayed
+         off until the launcher was opened once after a reboot. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- The flashlight, asked for the first time the corner button is set to it rather than at
          install: setTorchMode holds the camera open for as long as the light is on. Nothing is
@@ -203,6 +210,38 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Watches for the screen going off to apply the user's freeze list." />
         </service>
+
+        <!-- Starts that service again after a reboot; see the receiver. -->
+        <receiver
+            android:name=".service.FreezeBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- One tap in the shade: freeze the whole list, or lift it. The system binds this
+             one, hence the permission and the export. -->
+        <service
+            android:name=".service.FreezeTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_freeze_notification"
+            android:label="@string/freeze_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- The target of a pinned freeze shortcut: no UI, finishes at once. Exported because
+             the launcher starts shortcut intents as itself, not as the publisher. The worst a
+             stranger can do with it is toggle an app the user already put on the list. -->
+        <activity
+            android:name=".FreezeToggleActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
     </application>
 </manifest>

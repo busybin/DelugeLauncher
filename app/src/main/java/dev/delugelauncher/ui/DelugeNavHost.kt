@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui
 
 import android.app.Activity.RESULT_OK
+import android.Manifest
 import android.app.role.RoleManager
 import android.os.Build
 import android.appwidget.AppWidgetManager
@@ -84,6 +85,7 @@ import dev.delugelauncher.R
 import dev.delugelauncher.data.folderIdFromToken
 import dev.delugelauncher.data.stripsOtherProfiles
 import dev.delugelauncher.media.isListenerEnabled
+import dev.delugelauncher.service.FreezeAutoService
 import dev.delugelauncher.service.SystemUi
 import dev.delugelauncher.ui.common.IconPickerScreen
 import dev.delugelauncher.ui.common.IconStyle
@@ -126,6 +128,9 @@ import kotlinx.coroutines.withContext
  */
 /** How many of the most-used apps the "frequently used" tag covers. */
 private const val FREQUENT_TAG_COUNT = 5
+
+/** The largest freeze list file an import will read; the manager refuses anything longer. */
+private const val MAX_PLAN_BYTES = 1 shl 20
 
 /**
  * How long between silent looks at the release page.
@@ -261,6 +266,7 @@ fun DelugeNavHost(
                 withInstallTimes = withTimes,
                 frozen = frozen,
                 planned = plan.keys,
+                freezeRows = app.prefs.freezeRowsNow(),
             )
         }
         // Overtaken while it ran: this list was enumerated against a state that is no longer
@@ -463,6 +469,7 @@ fun DelugeNavHost(
     val freezeSkipCharging by app.prefs.freezeAutoSkipCharging.collectAsState(initial = true)
     val freezeSkipForeground by app.prefs.freezeAutoSkipForeground.collectAsState(initial = true)
     val freezeSkipNotifications by app.prefs.freezeAutoSkipNotifications.collectAsState(initial = true)
+    val freezeProtect by app.prefs.freezeProtect.collectAsState(initial = true)
     val freezeSourceFilter by app.prefs.freezeSourceFilter.collectAsState(initial = FreezeSourceFilter.USER)
     val freezeStateFilter by app.prefs.freezeStateFilter.collectAsState(initial = FreezeStateFilter.ALL)
     val freezeSort by app.prefs.freezeSort.collectAsState(initial = FreezeSort.NAME_ASC)
@@ -843,6 +850,20 @@ fun DelugeNavHost(
                 if (ok) R.string.settings_import_done else R.string.settings_backup_failed,
                 Toast.LENGTH_SHORT,
             ).show()
+        }
+    }
+
+    // The watcher is a foreground service, so its notification is the only evidence it is
+    // running. Ask when the feature is switched on, and carry on either way: freezing itself
+    // never needs the permission.
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        // The service started before the answer, so its first notification was dropped.
+        if (granted) scope.launch {
+            if (app.prefs.freezeAutoEnabledNow()) {
+                FreezeAutoService.sync(context, enabled = true)
+            }
         }
     }
 
@@ -1716,6 +1737,7 @@ fun DelugeNavHost(
                 autoSkipCharging = freezeSkipCharging,
                 autoSkipForeground = freezeSkipForeground,
                 autoSkipNotifications = freezeSkipNotifications,
+                protectEssentials = freezeProtect,
                 onRefreshAccess = { scope.launch { app.freezeManager.refreshAccess() } },
                 onOpenShizuku = {
                     if (!app.freezeManager.openShizuku()) {
@@ -1724,19 +1746,20 @@ fun DelugeNavHost(
                 },
                 onAddToPlan = { appInfo, method ->
                     scope.launch {
-                        val result = app.freezeManager.addToPlan(appInfo.packageName, method)
-                        if (result == FreezeOutcome.SYSTEM_APPS_OFF) {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.freeze_system_off_blocked),
-                                Toast.LENGTH_LONG,
-                            ).show()
+                        val message = when (app.freezeManager.addToPlan(appInfo, method)) {
+                            FreezeOutcome.SYSTEM_APPS_OFF -> context.getString(R.string.freeze_system_off_blocked)
+                            FreezeOutcome.PROTECTED ->
+                                context.getString(R.string.freeze_protected, appInfo.label)
+                            else -> null
+                        }
+                        if (message != null) withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                         }
                     }
                 },
                 onAddManyToPlan = { apps, method ->
                     scope.launch {
-                        val added = app.freezeManager.addManyToPlan(apps.map { it.packageName }, method)
+                        val added = app.freezeManager.addManyToPlan(apps, method)
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
@@ -1748,10 +1771,7 @@ fun DelugeNavHost(
                 },
                 onInvertSelection = { joining, leaving, method ->
                     scope.launch {
-                        val result = app.freezeManager.invertPlan(
-                            (joining + leaving).map { it.packageName },
-                            method,
-                        )
+                        val result = app.freezeManager.invertPlan(joining + leaving, method)
                         val message = when {
                             result.noAccess -> context.getString(R.string.freeze_needs_access)
                             result.failed > 0 -> context.getString(
@@ -1768,15 +1788,17 @@ fun DelugeNavHost(
                 onSetApplied = { appInfo, freeze ->
                     scope.launch {
                         val result = if (freeze) {
-                            app.freezeManager.freeze(appInfo.packageName)
+                            app.freezeManager.freeze(appInfo)
                         } else {
-                            app.freezeManager.unfreeze(appInfo.packageName)
+                            app.freezeManager.unfreeze(appInfo)
                         }
                         val message = when (result) {
                             FreezeOutcome.DONE -> null
                             FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
                             FreezeOutcome.SYSTEM_APPS_OFF ->
                                 context.getString(R.string.freeze_system_off_blocked)
+                            FreezeOutcome.PROTECTED ->
+                                context.getString(R.string.freeze_protected, appInfo.label)
                             else -> context.getString(
                                 if (freeze) R.string.freeze_failed else R.string.freeze_unfreeze_failed,
                                 appInfo.label,
@@ -1789,7 +1811,7 @@ fun DelugeNavHost(
                 },
                 onRemoveFromPlan = { appInfo ->
                     scope.launch {
-                        val result = app.freezeManager.removeFromPlan(appInfo.packageName)
+                        val result = app.freezeManager.removeFromPlan(appInfo)
                         val message = when (result) {
                             FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
                             FreezeOutcome.FAILED -> context.getString(
@@ -1837,7 +1859,17 @@ fun DelugeNavHost(
                         }
                     }
                 },
-                onSetAutoEnabled = { enabled -> scope.launch { app.prefs.setFreezeAutoEnabled(enabled) } },
+                onSetAutoEnabled = { enabled ->
+                    if (enabled && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS,
+                        ) != PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                    scope.launch { app.prefs.setFreezeAutoEnabled(enabled) }
+                },
                 onSetAutoDelay = { seconds -> scope.launch { app.prefs.setFreezeAutoDelaySeconds(seconds) } },
                 onSetUnfreezeOnUnlock = { enabled ->
                     scope.launch { app.prefs.setFreezeUnfreezeOnUnlock(enabled) }
@@ -1850,6 +1882,59 @@ fun DelugeNavHost(
                 },
                 onSetAutoSkipNotifications = { enabled ->
                     scope.launch { app.prefs.setFreezeAutoSkipNotifications(enabled) }
+                },
+                onSetProtectEssentials = { enabled ->
+                    scope.launch { app.prefs.setFreezeProtect(enabled) }
+                },
+                onExportPlan = { uri ->
+                    scope.launch {
+                        val text = app.freezeManager.exportPlan()
+                        val done = runCatching {
+                            withContext(Dispatchers.IO) {
+                                val stream = context.contentResolver.openOutputStream(uri)
+                                    ?: error("no output stream")
+                                stream.use { it.write(text.toByteArray()) }
+                            }
+                        }.isSuccess
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                context.getString(
+                                    if (done) R.string.freeze_export_done else R.string.freeze_export_failed
+                                ),
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    }
+                },
+                onImportPlan = { uri ->
+                    scope.launch {
+                        val text = runCatching {
+                            withContext(Dispatchers.IO) {
+                                val stream = context.contentResolver.openInputStream(uri)
+                                    ?: error("no input stream")
+                                stream.use {
+                                    val out = java.io.ByteArrayOutputStream()
+                                    val chunk = ByteArray(8192)
+                                    while (out.size() < MAX_PLAN_BYTES) {
+                                        val read = it.read(chunk)
+                                        if (read <= 0) break
+                                        out.write(chunk, 0, read)
+                                    }
+                                    out.toByteArray().toString(Charsets.UTF_8)
+                                }
+                            }
+                        }.getOrDefault("")
+                        val added = if (text.isEmpty()) -1 else app.freezeManager.importPlan(text)
+                        val message = when {
+                            added < 0 -> context.getString(R.string.freeze_import_failed)
+                            added == 0 -> context.getString(R.string.freeze_import_none)
+                            else -> context.getString(R.string.freeze_import_done, added)
+                        }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                        }
+                    }
                 },
                 onSetSystemAppsEnabled = { enabled ->
                     scope.launch {

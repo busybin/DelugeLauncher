@@ -348,26 +348,31 @@ fun HomeRoute(
                 FreezeOutcome.SYSTEM_APPS_OFF -> Toast.makeText(
                     context, context.getString(R.string.freeze_system_off_blocked), Toast.LENGTH_LONG,
                 ).show()
+                FreezeOutcome.PROTECTED -> Toast.makeText(
+                    context, context.getString(R.string.freeze_protected, label), Toast.LENGTH_LONG,
+                ).show()
                 else -> fail(failed, label)
             }
         }
         FreezeActions(
             add = { target, method ->
                 scope.launch {
-                    val result = app.freezeManager.addToPlan(target.packageName, method)
-                    if (result == FreezeOutcome.SYSTEM_APPS_OFF) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.freeze_system_off_blocked),
-                            Toast.LENGTH_LONG,
-                        ).show()
+                    val message = when (app.freezeManager.addToPlan(target, method)) {
+                        FreezeOutcome.SYSTEM_APPS_OFF ->
+                            context.getString(R.string.freeze_system_off_blocked)
+                        FreezeOutcome.PROTECTED ->
+                            context.getString(R.string.freeze_protected, target.label)
+                        else -> null
+                    }
+                    if (message != null) {
+                        Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                     }
                 }
             },
             freezeNow = { target ->
                 scope.launch {
                     outcome(
-                        app.freezeManager.freeze(target.packageName),
+                        app.freezeManager.freeze(target),
                         target.label,
                         R.string.freeze_failed,
                     )
@@ -376,7 +381,7 @@ fun HomeRoute(
             unfreeze = { target ->
                 scope.launch {
                     outcome(
-                        app.freezeManager.unfreeze(target.packageName),
+                        app.freezeManager.unfreeze(target),
                         target.label,
                         R.string.freeze_unfreeze_failed,
                     )
@@ -385,7 +390,7 @@ fun HomeRoute(
             remove = { target ->
                 scope.launch {
                     outcome(
-                        app.freezeManager.removeFromPlan(target.packageName),
+                        app.freezeManager.removeFromPlan(target),
                         target.label,
                         R.string.freeze_unfreeze_failed,
                     )

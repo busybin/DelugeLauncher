@@ -55,6 +55,14 @@ class DelugeApp : Application() {
         appScope.launch { runCatching { block() } }
     }
 
+    /**
+     * Runs suspending work that has to finish even though its caller — a tile, a shortcut
+     * trampoline — is gone the moment it returns.
+     */
+    fun runInBackground(block: suspend () -> Unit) {
+        appScope.launch { runCatching { block() } }
+    }
+
     override fun onCreate() {
         super.onCreate()
         // First, so a crash on the way up is still recorded.

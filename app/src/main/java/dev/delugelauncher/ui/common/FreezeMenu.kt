@@ -64,7 +64,7 @@ fun FreezeMenuItems(
     onChooseMethod: () -> Unit,
 ) {
     if (actions == null) return
-    if (app.kind != EntryKind.APP || app.userSerial != 0L) return
+    if (app.kind != EntryKind.APP) return
     if (!app.planned) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.freeze_menu_add)) },

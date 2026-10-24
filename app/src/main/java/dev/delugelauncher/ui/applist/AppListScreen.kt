@@ -80,12 +80,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.LocalTextStyle
 import dev.delugelauncher.ui.theme.launcherTextShadow
+import android.os.SystemClock
+
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -559,6 +562,11 @@ fun AppListScreen(
             runCatching { searchFocus.requestFocus() }
         }
     }
+    // Whether a finger is on the list right now, and a counter that rebuilds the list's scroll
+    // machinery. Both belong to the stuck-scroll watchdog below.
+    var fingerDown by remember { mutableStateOf(false) }
+    var listEpoch by remember { mutableIntStateOf(0) }
+
     LaunchedEffect(visible) {
         if (!visible) {
             focusManager.clearFocus()
@@ -567,6 +575,14 @@ fun AppListScreen(
             stretchPx = 0f
             collapsing = false
             scrub.clearPlacement()
+            // Nothing may be left scrolling into a list that is not placed. A scroll issued
+            // while the overlay is hidden waits for a layout that never comes, and takes the
+            // scroll mutex with it: the list then refuses every drag until the launcher is
+            // restarted. Taking the mutex here cancels whatever is still waiting.
+            try {
+                listState.scroll { }
+            } catch (_: Throwable) {
+            }
             return@LaunchedEffect
         }
         // Back to the top on the way in rather than on the way out, and only when nothing has
@@ -579,6 +595,43 @@ fun AppListScreen(
         // one landed second the list opened at A having been told to go to N. Only ever on the
         // first open after the launcher started, because only then is one left pending.
         if (scrub.placement == null) listState.scrollToItem(0)
+    }
+
+    /**
+     * Rebuilds a list that has stopped taking drags while its rows still respond to taps.
+     *
+     * That pair is a scroll gesture whose end went missing, not a list with nowhere to go: the
+     * touch stream is taken away mid-gesture by whatever comes over the screen — a menu, a
+     * dialog, the freeze list's own window — and the scrollable then waits for an up event that
+     * will never arrive. Nothing moves it again but a new scrollable, so the only question worth
+     * asking is whether that has happened: a scroll still in progress, with no finger on the
+     * screen and the list not moving for over a second.
+     */
+    LaunchedEffect(visible) {
+        if (!visible) return@LaunchedEffect
+        var lastPos = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+        var stuckSince = 0L
+        while (true) {
+            delay(400)
+            val pos = listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+            val moved = pos != lastPos
+            lastPos = pos
+            if (moved || fingerDown || !listState.isScrollInProgress) {
+                stuckSince = 0L
+                continue
+            }
+            if (stuckSince == 0L) {
+                stuckSince = SystemClock.uptimeMillis()
+            } else if (SystemClock.uptimeMillis() - stuckSince > 1200L) {
+                stuckSince = 0L
+                android.util.Log.w("DelugeScroll", "stuck scroll with no finger; rebuilding the list")
+                try {
+                    listState.scroll { }
+                } catch (_: Throwable) {
+                }
+                listEpoch++
+            }
+        }
     }
 
     // How much of the scrub placement padding is still sitting on screen at each end, over and
@@ -747,8 +800,11 @@ fun AppListScreen(
         if (compensate > 0f) listState.dispatchRawDelta(-compensate)
     }
 
-    LaunchedEffect(scrubRowIndex, scrubPlacement, displayModel, scrub.active) {
-        if (scrubRowIndex < 0) return@LaunchedEffect
+    LaunchedEffect(visible, scrubRowIndex, scrubPlacement, displayModel, scrub.active) {
+        // A hidden list is measured but never placed, so a scroll into it would wait for a
+        // layout that is not coming and keep the scroll mutex while it waits. Placing happens
+        // when there is something to place into; the effect reruns on open for that reason.
+        if (!visible || scrubRowIndex < 0) return@LaunchedEffect
         // The next letter's header ends this section. Walking the rows to find it copied the
         // whole tail of the list on every one of the ~26 letter changes in a gesture.
         val end = cells.letterIndex.firstOrNull { it.second > scrubRowIndex }?.second ?: cells.rows.size
@@ -1156,6 +1212,16 @@ fun AppListScreen(
         modifier = Modifier
             .fillMaxSize()
             .nestedScroll(listConnection)
+            // Watched, never consumed: the watchdog needs to tell a drag in progress from a
+            // scroll that has outlived its finger.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        fingerDown = awaitPointerEvent(PointerEventPass.Initial)
+                            .changes.any { it.pressed }
+                    }
+                }
+            }
             .pointerInput(listState) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -1264,6 +1330,9 @@ fun AppListScreen(
         }
         Box(modifier = Modifier.weight(1f)) {
         CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+        // Rebuilt from scratch when the watchdog below finds a stuck scroll: a fresh scrollable
+        // is what clears a gesture whose end never arrived.
+        key(listEpoch) {
         LazyColumn(
             state = listState,
             modifier = Modifier
@@ -1525,6 +1594,7 @@ fun AppListScreen(
                     }
                 }
             }
+        }
         }
         }
 

@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v26">
+        <item>Applications protégées, activé par défaut : le clavier en cours, l\'application d\'accueil, les services d\'accessibilité, Shizuku et les gestionnaires root ne sont jamais gelés.</item>
+        <item>Les applications du profil professionnel et de l\'espace privé peuvent aussi être gelées, chaque profil étant séparé même à nom de paquet identique.</item>
+        <item>Une tuile dans le panneau rapide gèle ou dégèle toute la liste.</item>
+        <item>Chaque application de la liste peut épingler son propre bouton sur l\'écran d\'accueil.</item>
+        <item>La liste de gel s\'exporte dans un fichier et s\'importe sur un autre téléphone.</item>
+        <item>Le gel est plus rapide : une seule requête lit l\'état de toutes les applications et, via Shizuku, chaque application ne demande qu\'un appel binder.</item>
+        <item>Le gel automatique revient après un redémarrage, sans attendre l\'ouverture du lanceur.</item>
+        <item>Les applications que le système a laissées en « désactivée jusqu\'à utilisation », courant sur Samsung, se rouvrent au lieu d\'échouer au dégel.</item>
+        <item>Les applications masquées gardent leur icône après un redémarrage, et la reprise restaure leurs réglages en arrière-plan.</item>
+        <item>Les 8 langues sont complètes.</item>
+    </string-array>
     <string-array name="changelog_v25">
         <item>Quand une autre appli ouvre une appli suspendue, la boîte de dialogue système propose désormais « Réactiver et ouvrir » au lieu d\'une impasse. Les applis suspendues par une version antérieure reçoivent le bouton d\'elles-mêmes.</item>
         <item>Texte des notifications sur les lignes : la notification la plus récente s\'affiche sous le nom de l\'appli dans les favoris. Désactivé par défaut.</item>

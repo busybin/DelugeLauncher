@@ -184,6 +184,10 @@ private val NEVER_EXPORT = setOf(
     "freeze_methods",
     // Which of them are frozen right now is even more of a device fact.
     "freeze_applied",
+    // What the rows were called and which activity they launched: of this device too, and the
+    // list itself has its own export that carries what a new phone needs.
+    "freeze_labels",
+    "freeze_components",
 )
 
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
@@ -326,6 +330,9 @@ class Prefs(private val context: Context) {
         val FREEZE_ENABLED = booleanPreferencesKey("freeze_enabled")
         val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
         val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
+        val FREEZE_LABELS = stringPreferencesKey("freeze_labels")
+        val FREEZE_COMPONENTS = stringPreferencesKey("freeze_components")
+        val FREEZE_PROTECT = booleanPreferencesKey("freeze_protect")
         val FREEZE_DIALOG_READY = booleanPreferencesKey("freeze_dialog_ready")
         val FREEZE_AUTO_ENABLED = booleanPreferencesKey("freeze_auto_enabled")
         val FREEZE_AUTO_DELAY_SECONDS = intPreferencesKey("freeze_auto_delay_seconds")
@@ -597,6 +604,29 @@ class Prefs(private val context: Context) {
 
     suspend fun freezeAppliedNow(): Set<String> = freezeApplied.first()
 
+    /**
+     * What each listed app was called and which activity it launched when it joined the list.
+     *
+     * A disabled or hidden app cannot be listed by the launcher and, for another profile, its
+     * label cannot be read either. Keeping both at join time is what lets its row come back
+     * with the right name and the same key after a reboot.
+     */
+    val freezeRows: Flow<Map<String, FreezeRow>> = data.map { pref ->
+        val labels = jsonToMap(pref[Keys.FREEZE_LABELS])
+        val components = jsonToMap(pref[Keys.FREEZE_COMPONENTS])
+        (labels.keys + components.keys).associateWith { key ->
+            FreezeRow(labels[key], components[key])
+        }
+    }.distinctUntilChanged()
+
+    suspend fun freezeRowsNow(): Map<String, FreezeRow> = freezeRows.first()
+
+    /** Whether freezing skips the keyboard, the home app and the tools that grant access. */
+    val freezeProtect: Flow<Boolean> =
+        data.map { it[Keys.FREEZE_PROTECT] ?: true }.distinctUntilChanged()
+
+    suspend fun freezeProtectNow(): Boolean = freezeProtect.first()
+
     /** Whether the apps paused before the pause dialog existed have been given it. */
     val freezeDialogReady: Flow<Boolean> =
         data.map { it[Keys.FREEZE_DIALOG_READY] ?: false }.distinctUntilChanged()
@@ -605,6 +635,8 @@ class Prefs(private val context: Context) {
 
     val freezeAutoEnabled: Flow<Boolean> =
         data.map { it[Keys.FREEZE_AUTO_ENABLED] ?: false }.distinctUntilChanged()
+
+    suspend fun freezeAutoEnabledNow(): Boolean = freezeAutoEnabled.first()
 
     /** Seconds the screen must stay off before the automatic freeze runs. */
     val freezeAutoDelaySeconds: Flow<Int> =
@@ -1342,6 +1374,28 @@ class Prefs(private val context: Context) {
         }
     }
 
+    /** Records how one listed app was drawn and launched, so its row can be rebuilt later. */
+    suspend fun setFreezeRow(key: String, row: FreezeRow) {
+        setFreezeRows(mapOf(key to row))
+    }
+
+    /** The same for a whole batch, in one store pass. */
+    suspend fun setFreezeRows(rows: Map<String, FreezeRow>) {
+        if (rows.isEmpty()) return
+        context.dataStore.edit { pref ->
+            val labels = jsonToMap(pref[Keys.FREEZE_LABELS]).toMutableMap()
+            val components = jsonToMap(pref[Keys.FREEZE_COMPONENTS]).toMutableMap()
+            rows.forEach { (key, row) ->
+                val label = row.label?.takeIf { it.isNotBlank() }
+                if (label == null) labels.remove(key) else labels[key] = label
+                val component = row.component?.takeIf { it.isNotBlank() }
+                if (component == null) components.remove(key) else components[key] = component
+            }
+            pref[Keys.FREEZE_LABELS] = mapToJson(labels)
+            pref[Keys.FREEZE_COMPONENTS] = mapToJson(components)
+        }
+    }
+
     /** Adds or moves a whole batch in one write, so Select all is one store pass. */
     suspend fun setFreezeMethods(entries: Map<String, FreezeMethod>) {
         context.dataStore.edit { pref ->
@@ -1358,6 +1412,12 @@ class Prefs(private val context: Context) {
             current.remove(packageName)
             pref[Keys.FREEZE_METHODS] = mapToJson(current)
             pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packageName
+            pref[Keys.FREEZE_LABELS] = mapToJson(
+                jsonToMap(pref[Keys.FREEZE_LABELS]).toMutableMap().apply { remove(packageName) }
+            )
+            pref[Keys.FREEZE_COMPONENTS] = mapToJson(
+                jsonToMap(pref[Keys.FREEZE_COMPONENTS]).toMutableMap().apply { remove(packageName) }
+            )
         }
     }
 
@@ -1369,6 +1429,11 @@ class Prefs(private val context: Context) {
             packages.forEach { current.remove(it) }
             pref[Keys.FREEZE_METHODS] = mapToJson(current)
             pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packages.toSet()
+            listOf(Keys.FREEZE_LABELS, Keys.FREEZE_COMPONENTS).forEach { key ->
+                pref[key] = mapToJson(
+                    jsonToMap(pref[key]).toMutableMap().apply { packages.forEach { remove(it) } }
+                )
+            }
         }
     }
 
@@ -1377,6 +1442,8 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             pref.remove(Keys.FREEZE_METHODS)
             pref.remove(Keys.FREEZE_APPLIED)
+            pref.remove(Keys.FREEZE_LABELS)
+            pref.remove(Keys.FREEZE_COMPONENTS)
             pref[Keys.FREEZE_AUTO_ENABLED] = false
             pref[Keys.FREEZE_SYSTEM_APPS] = false
         }
@@ -1463,6 +1530,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setFreezeAutoSkipNotifications(enabled: Boolean) {
         context.dataStore.edit { it[Keys.FREEZE_AUTO_SKIP_NOTIFICATIONS] = enabled }
+    }
+
+    suspend fun setFreezeProtect(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.FREEZE_PROTECT] = enabled }
     }
 
     suspend fun setFreezeSourceFilter(filter: FreezeSourceFilter) {

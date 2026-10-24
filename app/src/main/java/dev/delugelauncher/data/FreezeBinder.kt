@@ -33,23 +33,41 @@ class FreezeBinder(private val context: Context) {
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
-    fun freeze(packageName: String, method: FreezeMethod): Boolean? =
-        attempt { it.freeze(packageName, method) }
+    /**
+     * Whether hiding apps can go over the binder.
+     *
+     * Hiding is a root operation: a shell-mode manager cannot do it, but one running as root
+     * (Shevery, or Shizuku in root mode) can, and then it is one IPC instead of a `pm` fork.
+     */
+    fun canHide(): Boolean = available() && runCatching { Shizuku.getUid() == 0 }.getOrDefault(false)
+
+    fun freeze(
+        packageName: String,
+        method: FreezeMethod,
+        userId: Int,
+        uid: Int,
+    ): Boolean? = attempt { it.freeze(packageName, method, userId, uid) }
 
     /**
      * Re-applies the pause with the dialog on an app paused before the dialog existed.
      * Called once per app by the upgrade pass; a pause by the same suspender replaces the
      * stored parameters, so this is what gives old records the unpause button.
      */
-    fun refreshSuspend(packageName: String): Boolean? =
-        attempt { it.setSuspended(packageName, suspended = true) }
+    fun refreshSuspend(packageName: String, userId: Int): Boolean? =
+        attempt { it.setSuspended(packageName, suspended = true, userId = userId) }
 
     /** Lifts every kind of freeze, because the stored method can be wrong. */
-    fun unfreeze(packageName: String): Boolean? = attempt { proxy ->
-        proxy.setSuspended(packageName, false)
-        proxy.setEnabled(packageName, true)
-        runCatching { proxy.setHidden(packageName, false) }
-        runCatching { proxy.setBackgroundRestricted(packageName, false) }
+    fun unfreeze(packageName: String, userId: Int, uid: Int): Boolean? = attempt { proxy ->
+        proxy.setSuspended(packageName, suspended = false, userId = userId)
+        proxy.setEnabled(packageName, enabled = true, userId = userId)
+        runCatching { proxy.setHidden(packageName, hidden = false, userId = userId) }
+        if (uid > 0) runCatching { proxy.setBackgroundRestricted(packageName, restricted = false, uid) }
+        true
+    }
+
+    /** Lifts the two background app-ops a pause left behind, without touching the pause. */
+    fun setBackgroundAllowed(packageName: String, uid: Int): Boolean? = attempt { proxy ->
+        proxy.setBackgroundRestricted(packageName, restricted = false, uid)
         true
     }
 
@@ -89,9 +107,8 @@ class FreezeBinder(private val context: Context) {
 
     private inner class Proxy {
 
-        // The process's own uid carries its user: plid/multiuser offsets are 100000 apart.
-        private val userId = android.os.Process.myUid() / USER_RANGE
         private val root: Boolean = runCatching { Shizuku.getUid() == 0 }.getOrDefault(false)
+
         /** Who the system records for SUSPEND; has to match for a later lift to take. */
         private val suspender = if (root) ROOT_SUSPENDER else SHELL_PACKAGE
         private val caller = if (root) context.packageName else SHELL_PACKAGE
@@ -101,11 +118,11 @@ class FreezeBinder(private val context: Context) {
             service("appops", "com.android.internal.app.IAppOpsService")
         }.getOrNull()
 
-        fun forceStop(packageName: String) {
+        fun forceStop(packageName: String, userId: Int) {
             call(activityManager, "forceStopPackage", packageName, userId)
         }
 
-        fun setEnabled(packageName: String, enabled: Boolean) {
+        fun setEnabled(packageName: String, enabled: Boolean, userId: Int) {
             val state = when {
                 enabled -> PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                 // Root may disable outright; a shell only ever disables for the user, which
@@ -119,10 +136,10 @@ class FreezeBinder(private val context: Context) {
             )
         }
 
-        fun setHidden(packageName: String, hidden: Boolean): Boolean =
+        fun setHidden(packageName: String, hidden: Boolean, userId: Int): Boolean =
             call(packageManager, "setApplicationHiddenSettingAsUser", packageName, hidden, userId) == true
 
-        fun setSuspended(packageName: String, suspended: Boolean): Boolean {
+        fun setSuspended(packageName: String, suspended: Boolean, userId: Int): Boolean {
             val names = arrayOf(packageName)
             // Android 15 added the flags argument and split the suspender from the user it
             // acts on; before that the only suspender parameter is the calling package.
@@ -142,9 +159,9 @@ class FreezeBinder(private val context: Context) {
         }
 
         /** The same two app-ops `pm suspend` leaves behind, so scheduled work stops too. */
-        fun setBackgroundRestricted(packageName: String, restricted: Boolean) {
+        fun setBackgroundRestricted(packageName: String, restricted: Boolean, uid: Int) {
             val ops = appOps ?: return
-            val uid = FreezeState.applicationInfo(context, packageName)?.uid ?: return
+            if (uid <= 0) return
             val mode = if (restricted) AppOpsManager.MODE_IGNORED else AppOpsManager.MODE_ALLOWED
             for (name in BACKGROUND_OPS) {
                 val op = opCode(name) ?: continue
@@ -152,24 +169,29 @@ class FreezeBinder(private val context: Context) {
             }
         }
 
-        fun freeze(packageName: String, method: FreezeMethod): Boolean = when (method) {
+        fun freeze(
+            packageName: String,
+            method: FreezeMethod,
+            userId: Int,
+            uid: Int,
+        ): Boolean = when (method) {
             FreezeMethod.STOP -> {
-                forceStop(packageName)
+                forceStop(packageName, userId)
                 true
             }
             FreezeMethod.DISABLE -> {
-                forceStop(packageName)
-                setEnabled(packageName, false)
+                forceStop(packageName, userId)
+                setEnabled(packageName, false, userId)
                 true
             }
             FreezeMethod.HIDE -> {
-                forceStop(packageName)
-                setHidden(packageName, true)
+                forceStop(packageName, userId)
+                setHidden(packageName, true, userId)
             }
             FreezeMethod.SUSPEND -> {
-                runCatching { setBackgroundRestricted(packageName, true) }
-                forceStop(packageName)
-                setSuspended(packageName, true)
+                runCatching { setBackgroundRestricted(packageName, restricted = true, uid) }
+                forceStop(packageName, userId)
+                setSuspended(packageName, suspended = true, userId)
             }
         }
 
@@ -186,9 +208,6 @@ class FreezeBinder(private val context: Context) {
     }
 
     companion object {
-        /** Android's per-user uid range; the constant itself is not in the public SDK. */
-        private const val USER_RANGE = 100_000
-
         /** The name `pm` records when it runs as root. */
         private const val ROOT_SUSPENDER = "root"
 

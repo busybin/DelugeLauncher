@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v26">
+        <item>Protected apps, on by default: the current keyboard, the home app, accessibility services, Shizuku and root managers are never frozen.</item>
+        <item>Work profile and private space apps can be frozen too, each profile kept apart even when the package name is the same.</item>
+        <item>One tile in the shade freezes or thaws the whole list.</item>
+        <item>Any app on the list can pin its own switch to the home screen.</item>
+        <item>The freeze list exports to a file and imports on another phone.</item>
+        <item>Freezing is faster: one pass reads every app state, and through Shizuku each app is a single binder call.</item>
+        <item>Automatic freezing comes back after a reboot instead of waiting for the launcher to be opened.</item>
+        <item>Apps the system parked as disabled until used, common on Samsung phones, open normally again instead of failing to unfreeze.</item>
+        <item>Hidden apps keep their icons after a reboot, and unpausing an app restores its background settings.</item>
+        <item>All 8 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v25">
         <item>When another app opens a paused app, the system dialog now offers Unpause and open instead of a dead end. Apps paused by an earlier version get that button on their own.</item>
         <item>Notification text on rows: the newest notification shows under the app name in favorites. Off by default.</item>
