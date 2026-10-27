@@ -48,12 +48,11 @@ class FreezeActions(
 )
 
 /**
- * The entries a long-press menu adds for one app.
+ * The first-level entries a long-press menu adds for one app.
  *
  * Which one it is depends on where the app sits: not on the list offers to add it, on the list
- * and frozen offers to unfreeze it, on the list and not frozen offers to freeze it — and any
- * app on the list can be taken off it. Every one of these is the same two-step model the
- * freeze screen uses, so the wording never promises a freeze that has not happened.
+ * and frozen offers to unfreeze it, on the list and not frozen offers to freeze it. Taking it
+ * off the list is deliberately one level in, with the rest of the row's management.
  */
 @Composable
 fun FreezeMenuItems(
@@ -91,6 +90,18 @@ fun FreezeMenuItems(
             if (app.frozen != null) actions.unfreeze(app) else actions.freezeNow(app)
         },
     )
+}
+
+/** The second-level action that takes a listed app off the freeze list for good. */
+@Composable
+fun FreezeRemoveMenuItem(
+    app: AppInfo,
+    actions: FreezeActions?,
+    onDismissMenu: () -> Unit,
+) {
+    if (actions == null) return
+    if (app.kind != EntryKind.APP) return
+    if (!app.planned) return
     DropdownMenuItem(
         text = { Text(stringResource(R.string.freeze_menu_remove)) },
         leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },

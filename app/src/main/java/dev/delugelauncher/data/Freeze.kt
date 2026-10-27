@@ -425,6 +425,9 @@ class FreezeShell(private val context: Context) {
 
     private var rootState: RootState? = null
 
+    /** When `su` last refused; avoids turning every resume into another prompt. */
+    private var rootMissAt = 0L
+
     fun status(): FreezeStatus {
         val root = rootState()
         val running = shizukuRunning()
@@ -457,8 +460,13 @@ class FreezeShell(private val context: Context) {
         rootState?.let { return it }
         synchronized(this) {
             rootState?.let { return it }
+            val now = SystemClock.elapsedRealtime()
+            if (rootMissAt != 0L && now - rootMissAt < ROOT_RETRY_MS) return null
             val result = runProcess(arrayOf("su", "-c", ROOT_PROBE), ROOT_TIMEOUT_MS)
-            if (result?.first != 0 || !result.second.contains("uid=0")) return null
+            if (result?.first != 0 || !result.second.contains("uid=0")) {
+                rootMissAt = now
+                return null
+            }
             val lines = result.second.lineSequence().map { it.trim() }.toList()
             val provider = when {
                 lines.contains(PROVIDER_MAGISK) -> RootProvider.MAGISK
@@ -473,7 +481,16 @@ class FreezeShell(private val context: Context) {
                     it != PROVIDER_APATCH &&
                     !it.startsWith("uid=")
             }
+            rootMissAt = 0L
             return RootState(provider, version).also { rootState = it }
+        }
+    }
+
+    /** Forgets a previous answer, so a grant made after a refusal is seen on the next probe. */
+    fun invalidateRoot() {
+        synchronized(this) {
+            rootState = null
+            rootMissAt = 0L
         }
     }
 
@@ -653,6 +670,8 @@ class FreezeShell(private val context: Context) {
         /** The manager's activity; forks keep the name so Shizuku-aware apps still open them. */
         private const val SHIZUKU_MAIN_ACTIVITY = "moe.shizuku.manager.MainActivity"
         private const val ROOT_TIMEOUT_MS = 15_000L
+        /** A refusal is retried after this, not before; a grant needs no restart. */
+        private const val ROOT_RETRY_MS = 15_000L
         private const val COMMAND_TIMEOUT_MS = 20_000L
         private const val BATCH_TIMEOUT_MS = 180_000L
         private const val READER_JOIN_MS = 2_000L

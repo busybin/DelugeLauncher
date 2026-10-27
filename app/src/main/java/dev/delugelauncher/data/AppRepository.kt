@@ -522,6 +522,9 @@ class AppRepository(
     private fun binder(): FreezeBinder =
         hideBinder ?: FreezeBinder(context.applicationContext).also { hideBinder = it }
 
+    /** The root-side repair script and the one-launch token it reads. */
+    private val lockGuard by lazy { LockGuard(context.applicationContext, shell()) }
+
     /** Asked once: a missing root grant should not raise a prompt on every lock. */
     @Volatile
     private var hideCapability: Boolean? = null
@@ -546,6 +549,27 @@ class AppRepository(
         suspendCapability ?: runCatching {
             shell().shizukuAvailable() || shell().rootAvailable()
         }.getOrDefault(false).also { suspendCapability = it }
+    }
+
+    /**
+     * The layers this device can apply to a locked app right now.
+     *
+     * [force] drops the cached answers, so a lock attempt after the owner grants root or
+     * Shizuku does not repeat yesterday's "no". The guard is the root boot script; it is the
+     * one layer that keeps working after Deluge itself is force-stopped.
+     */
+    suspend fun lockCapabilities(force: Boolean = true): LockCapabilities = withContext(Dispatchers.IO) {
+        if (force) {
+            // Drop only the cached layer answers. The root probe has its own short negative
+            // cache, so locking several apps in a row does not turn into a prompt each time.
+            hideCapability = null
+            suspendCapability = null
+        }
+        LockCapabilities(
+            canHide = canHideApps(),
+            canSuspend = canSuspendApps(),
+            canGuard = shell().rootAvailable(),
+        )
     }
 
     /**
@@ -614,7 +638,12 @@ class AppRepository(
         withContext(Dispatchers.IO) {
             if (!FreezeCommands.isPackageName(packageName)) return@withContext false
             val verb = if (suspend) "suspend" else "unsuspend"
-            shell().run("pm $verb --user 0 $packageName")
+            val command = "pm $verb --user 0 $packageName"
+            // Root first, so the boot guard and the launcher record the same suspender. A
+            // Shizuku shell cannot lift a suspension that root put on the package.
+            var ok = if (shell().rootAvailable()) shell().runAsRoot(command) else false
+            if (!ok) ok = shell().run(command)
+            ok
         }
 
     /**
@@ -631,9 +660,11 @@ class AppRepository(
         val suspended = isAppSuspended(packageName)
         if (!hidden && !suspended) {
             markLockReveal(packageName)
+            lockGuard.allow(packageName)
             return@withContext true
         }
         markLockReveal(packageName)
+        lockGuard.allow(packageName)
         var ok = true
         if (hidden) ok = setAppHidden(packageName, reveal = true) && ok
         if (suspended) {
@@ -643,7 +674,10 @@ class AppRepository(
             // Lift it anyway, but do not fail the launch if it really was not suspended.
             setAppSuspended(packageName, suspend = false)
         }
-        if (!ok && revealingPackage == packageName) revealingPackage = null
+        if (!ok && revealingPackage == packageName) {
+            revealingPackage = null
+            lockGuard.clearAllow(packageName)
+        }
         ok
     }
 
@@ -657,7 +691,17 @@ class AppRepository(
         // A null [only] is the launcher coming back or the screen going off: the launch that
         // was allowed is over. A package-specific call is the repair path and must leave an
         // authenticated launch alone.
-        if (only == null) revealingPackage = null
+        if (only == null) {
+            revealingPackage = null
+            lockGuard.clearAllow()
+            // Access may have been granted since this process last looked. Only the missing
+            // answers are dropped, so a full device does not probe root on every resume.
+            if (hideCapability != true || suspendCapability != true) {
+                hideCapability = null
+                suspendCapability = null
+            }
+            lockGuard.sync(prefs.lockedAppsNow())
+        }
         val hide = canHideApps()
         val suspend = canSuspendApps()
         if (!hide && !suspend) return@withContext 0
@@ -676,6 +720,17 @@ class AppRepository(
             }
         }
         changed
+    }
+
+    /** Rewrites the guard's list after a lock was added or lifted and stops it when empty. */
+    suspend fun onLockedAppsChanged(): Boolean = withContext(Dispatchers.IO) {
+        lockGuard.clearAllow()
+        lockGuard.sync(prefs.lockedAppsNow())
+    }
+
+    /** Called on a cold start so a list from a previous process is armed before the first lock tap. */
+    suspend fun syncLockGuard() = withContext(Dispatchers.IO) {
+        lockGuard.sync(prefs.lockedAppsNow())
     }
 
     /** Whether Shizuku or root can carry the private-space steps that need a shell. */

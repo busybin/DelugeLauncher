@@ -13,6 +13,7 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.LockCapabilities
 import dev.delugelauncher.data.targetKind
 import android.graphics.Rect
 import android.widget.Toast
@@ -109,6 +110,7 @@ import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.ui.common.LaunchOrigin
+import dev.delugelauncher.ui.common.LockCapabilityDialog
 import dev.delugelauncher.ui.common.PrivateSpaceProtectDialog
 import dev.delugelauncher.ui.common.rememberAppLockRequest
 import dev.delugelauncher.ui.common.ScreenshotDisguise
@@ -812,6 +814,8 @@ fun HomeRoute(
     // screens in order, and pick the flow up again when the owner comes back.
     var protectTarget by remember { mutableStateOf<AppInfo?>(null) }
     var protectStep by remember { mutableStateOf(ProtectStep.NONE) }
+    var pendingLock by remember { mutableStateOf<AppInfo?>(null) }
+    var pendingLockCapabilities by remember { mutableStateOf(LockCapabilities()) }
 
     fun protectLabel(entry: AppInfo): String =
         disguiseNames[entry.key] ?: nameOverrides[entry.key] ?: entry.label
@@ -974,14 +978,59 @@ fun HomeRoute(
         }
     }
 
-    // The lock is two things at once. It is the credential gate on every launch, and — when
-    // root or a root-mode Shizuku is there — the platform's hidden flag, so Settings, recents,
-    // search and every other launcher lose the app too. Without that privilege the credential
-    // gate is all a launcher can honestly offer, and the app stays listed everywhere.
-    //
-    // Hiding is undone on launch and put back when the launcher comes forward (MainActivity)
-    // or the screen goes off (DelugeApp). A hidden app keeps its data; only its visibility
-    // changes, which is why the lock can be lifted later without reinstalling anything.
+    /**
+     * Applies the system layers first, and only records the lock if suspension took.
+     *
+     * Hiding alone is not a boundary: Settings can unhide it. A lock that says it is on but
+     * was never suspended is worse than an explicit failure, so a failed suspension aborts
+     * before anything is written.
+     */
+    fun applyLock(entry: AppInfo, capabilities: LockCapabilities) {
+        scope.launch {
+            val mainApp = entry.kind == EntryKind.APP && entry.userSerial == 0L &&
+                !entry.privateProfile
+            if (mainApp) {
+                if (capabilities.canSuspend) {
+                    val suspended = withContext(Dispatchers.IO) {
+                        app.appRepository.setAppSuspended(entry.packageName) &&
+                            app.appRepository.isAppSuspended(entry.packageName)
+                    }
+                    if (!suspended) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_system_failed, entry.label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        return@launch
+                    }
+                }
+                if (capabilities.canHide) {
+                    val hidden = withContext(Dispatchers.IO) {
+                        app.appRepository.setAppHidden(entry.packageName) &&
+                            app.appRepository.isAppHidden(entry.packageName)
+                    }
+                    if (!hidden) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_hide_failed, entry.label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+            }
+            app.prefs.setAppLocked(entry.key, true)
+            val guardOk = app.appRepository.onLockedAppsChanged()
+            if (capabilities.canGuard && mainApp && !guardOk) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_guard_failed),
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+            onAppsChanged()
+        }
+    }
+
     fun toggleLock(entry: AppInfo) {
         if (entry.lockedBy(lockedApps)) {
             requestUnlockRemoval(entry.label) {
@@ -998,26 +1047,23 @@ fun HomeRoute(
                         return@launch
                     }
                     app.prefs.setAppLocked(entry.key, false)
+                    app.appRepository.onLockedAppsChanged()
                     onAppsChanged()
                 }
             }
         } else {
             scope.launch {
-                app.prefs.setAppLocked(entry.key, true)
-                val mainApp = entry.kind == EntryKind.APP && entry.userSerial == 0L &&
-                    !entry.privateProfile
-                if (!mainApp) return@launch
-                withContext(Dispatchers.IO) {
-                    // Suspension first: it is the layer Settings cannot undo. Hiding is
-                    // what takes the row away from every other launcher.
-                    if (app.appRepository.canSuspendApps()) {
-                        app.appRepository.setAppSuspended(entry.packageName)
-                    }
-                    if (app.appRepository.canHideApps()) {
-                        app.appRepository.setAppHidden(entry.packageName)
-                    }
+                // Asked here rather than from the click: this is the moment a root prompt or
+                // a Shizuku grant should be picked up, not a cached answer from last week.
+                val capabilities = withContext(Dispatchers.IO) {
+                    app.appRepository.lockCapabilities(force = true)
                 }
-                onAppsChanged()
+                if (capabilities.isFull) {
+                    applyLock(entry, capabilities)
+                } else {
+                    pendingLockCapabilities = capabilities
+                    pendingLock = entry
+                }
             }
         }
     }
@@ -1098,6 +1144,31 @@ fun HomeRoute(
     // to the system and left the home screen stuck in it.
     BackHandler(enabled = homeEditMode) { homeEditMode = false }
 
+    /** The freeze list's bulk verbs, shared by the corner slot and the home long-press menu. */
+    fun runFreezeAll() {
+        scope.launch {
+            FreezeToast.progress(context, R.string.freeze_working)
+            val result = app.freezeManager.freezeAll()
+            if (result.noAccess) {
+                FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+            } else {
+                FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
+            }
+        }
+    }
+
+    fun runUnfreezeAll() {
+        scope.launch {
+            FreezeToast.progress(context, R.string.unfreeze_working)
+            val result = app.freezeManager.unfreezeAll()
+            if (result.noAccess) {
+                FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+            } else {
+                FreezeToast.result(context, context.getString(R.string.freeze_all_done))
+            }
+        }
+    }
+
     /**
      * Runs [action], using the picked target of the slot that asked.
      *
@@ -1123,24 +1194,8 @@ fun HomeRoute(
             CornerAction.LOCK -> lockOrExplain()
             // The list's own two verbs, run off the main thread by the manager: this is
             // several shell commands per app, and the button must not wait for them.
-            CornerAction.FREEZE_ALL -> if (freezeEnabled) scope.launch {
-                FreezeToast.progress(context, R.string.freeze_working)
-                val result = app.freezeManager.freezeAll()
-                if (result.noAccess) {
-                    FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
-                } else {
-                    FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
-                }
-            }
-            CornerAction.UNFREEZE_ALL -> if (freezeEnabled) scope.launch {
-                FreezeToast.progress(context, R.string.unfreeze_working)
-                val result = app.freezeManager.unfreezeAll()
-                if (result.noAccess) {
-                    FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
-                } else {
-                    FreezeToast.result(context, context.getString(R.string.freeze_all_done))
-                }
-            }
+            CornerAction.FREEZE_ALL -> if (freezeEnabled) runFreezeAll()
+            CornerAction.UNFREEZE_ALL -> if (freezeEnabled) runUnfreezeAll()
             CornerAction.DO_NOTHING -> Unit
         }
     }
@@ -1422,6 +1477,8 @@ fun HomeRoute(
                 cornerSwipeBound = cornerSwipeBound,
                 freezeEnabled = freezeEnabled,
                 freezeActions = if (freezeEnabled) freezeActions else null,
+                onFreezeAll = { runFreezeAll() },
+                onUnfreezeAll = { runUnfreezeAll() },
                 onOpenFreezeList = { onNavigate("settings/freeze") },
                 favoritesReorderable = settings.favoritesSource == FavoritesSource.MANUAL,
                 shortcutSwipe = settings.shortcutSwipe,
@@ -1888,6 +1945,21 @@ fun HomeRoute(
                 appLabel = protectLabel(target),
                 onAction = { actOnProtection(target) },
                 onDismiss = { stopProtection() },
+            )
+        }
+
+        pendingLock?.let { target ->
+            LockCapabilityDialog(
+                appLabel = nameOverrides[target.key] ?: target.label,
+                capabilities = pendingLockCapabilities,
+                onDismiss = {
+                    pendingLock = null
+                    pendingLockCapabilities = LockCapabilities()
+                },
+                onConfirm = {
+                    pendingLock = null
+                    applyLock(target, pendingLockCapabilities)
+                },
             )
         }
 

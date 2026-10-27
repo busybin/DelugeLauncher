@@ -153,6 +153,7 @@ import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.AppShortcutMenu
 import dev.delugelauncher.ui.common.FreezeActions
 import dev.delugelauncher.ui.common.FreezeMenuItems
+import dev.delugelauncher.ui.common.FreezeRemoveMenuItem
 import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.LocalIconConfig
@@ -2238,9 +2239,9 @@ private fun AppRow(
         AppShortcutMenu(app, shortcutMenu, labelSizeSp) { shortcutMenu = false }
 
         var moreMenu by remember { mutableStateOf(false) }
-        // The first level is the five things a press most often means. Everything that
-        // edits the row or sends it elsewhere is one step in, so the menu opens at a
-        // readable length instead of a wall of equally weighted lines.
+        // The first level is what a press most often means: favorite, lock, hide, freeze and
+        // app info. Everything that edits the row or sends it elsewhere is one step in, so
+        // the menu opens at a readable length instead of a wall of equally weighted lines.
         LaunchedEffect(menuExpanded) { if (menuExpanded) moreMenu = false }
         DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
             when (app.kind) {
@@ -2273,13 +2274,6 @@ private fun AppRow(
                         },
                         onClick = { onDismissMenu(); onToggleLock() },
                     )
-                    if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_add_to_private_space)) },
-                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                            onClick = { onDismissMenu(); onAddToPrivateSpace() },
-                        )
-                    }
                     // Hiding belongs to the lock while one is set: offering Unhide here would
                     // put a locked app back on every other launcher without asking for the
                     // password. Unlock first, then hide it like any other row.
@@ -2301,6 +2295,17 @@ private fun AppRow(
                             onClick = { onDismissMenu(); onHide() },
                         )
                     }
+                    FreezeMenuItems(
+                        app = app,
+                        actions = freezeActions,
+                        onDismissMenu = onDismissMenu,
+                        onChooseMethod = { onDismissMenu(); freezeChoosing = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_app_info)) },
+                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                        onClick = { onDismissMenu(); onAppInfo() },
+                    )
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.settings_more)) },
                         leadingIcon = { Icon(Icons.Filled.MoreVert, contentDescription = null) },
@@ -2406,16 +2411,17 @@ private fun AppRow(
                         leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
                         onClick = { moreMenu = false; onMoveToFolder() },
                     )
-                    FreezeMenuItems(
+                    if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_private_space)) },
+                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            onClick = { moreMenu = false; onAddToPrivateSpace() },
+                        )
+                    }
+                    FreezeRemoveMenuItem(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
-                        onChooseMethod = { moreMenu = false; freezeChoosing = true },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_app_info)) },
-                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                        onClick = { moreMenu = false; onAppInfo() },
                     )
                     DropdownMenuItem(
                         text = {

@@ -159,6 +159,7 @@ import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.AppShortcutMenu
 import dev.delugelauncher.ui.common.FreezeActions
 import dev.delugelauncher.ui.common.FreezeMenuItems
+import dev.delugelauncher.ui.common.FreezeRemoveMenuItem
 import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
 import dev.delugelauncher.ui.common.LocalIconConfig
@@ -372,6 +373,10 @@ fun HomeScreen(
     freezeActions: FreezeActions? = null,
     /** Whether the freeze feature is on; its entries disappear from the background menu too. */
     freezeEnabled: Boolean = true,
+    /** Freezes every app on the list; runs from the background long-press menu. */
+    onFreezeAll: () -> Unit = {},
+    /** Thaws every app on the list; runs from the same menu. */
+    onUnfreezeAll: () -> Unit = {},
     /** Opens the freeze screen itself from the same menu. */
     onOpenFreezeList: () -> Unit = {},
 ) {    // Appended at the point of showing rather than stored in the label, so a rename still
@@ -1529,11 +1534,23 @@ fun HomeScreen(
                 onClick = { backgroundMenu = false; customizeMenu = true },
             )
             if (freezeEnabled) {
+                HorizontalDivider()
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.freeze_open_list)) },
                     leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
                     onClick = { backgroundMenu = false; onOpenFreezeList() },
                 )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.freeze_freeze_all)) },
+                    leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                    onClick = { backgroundMenu = false; onFreezeAll() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.freeze_unfreeze_all)) },
+                    leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
+                    onClick = { backgroundMenu = false; onUnfreezeAll() },
+                )
+                HorizontalDivider()
             }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open_settings)) },
@@ -1789,16 +1806,20 @@ private fun FavoriteRow(
                     },
                     onClick = onToggleLock,
                 )
-                if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_private_space)) },
-                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                        onClick = onAddToPrivateSpace,
-                    )
-                }
+                FreezeMenuItems(
+                    app = app,
+                    actions = freezeActions,
+                    onDismissMenu = onDismissMenu,
+                    onChooseMethod = { onDismissMenu(); freezeChoosing = true },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_app_info)) },
+                    leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                    onClick = { onDismissMenu(); onAppInfo() },
+                )
             }
-            // Distinct from Remove below, which only takes it off the home screen: this hands
-            // it back to the app that pinned it, and it leaves the launcher entirely.
+            // Distinct from unfavoriting below, which only takes it off the home screen: this
+            // hands it back to the app that pinned it, and it leaves the launcher entirely.
             if (app.kind == EntryKind.SHORTCUT) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_remove_shortcut)) },
@@ -1807,8 +1828,8 @@ private fun FavoriteRow(
                 )
             }
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_remove)) },
-                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                text = { Text(stringResource(R.string.applist_remove_favorite)) },
+                leadingIcon = { Icon(DelugeIcons.StarBorder, contentDescription = null) },
                 onClick = onRemove,
             )
             DropdownMenuItem(
@@ -1833,16 +1854,17 @@ private fun FavoriteRow(
                     )
                 }
                 if (app.kind == EntryKind.APP) {
-                    FreezeMenuItems(
+                    if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_private_space)) },
+                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            onClick = { moreMenu = false; onAddToPrivateSpace() },
+                        )
+                    }
+                    FreezeRemoveMenuItem(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
-                        onChooseMethod = { moreMenu = false; freezeChoosing = true },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_app_info)) },
-                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                        onClick = { moreMenu = false; onAppInfo() },
                     )
                     DropdownMenuItem(
                         text = {

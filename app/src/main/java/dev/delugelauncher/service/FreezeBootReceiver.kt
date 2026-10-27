@@ -23,6 +23,8 @@ class FreezeBootReceiver : BroadcastReceiver() {
             try {
                 kotlinx.coroutines.runBlocking {
                     val prefs = Prefs(appContext)
+                    (appContext as? dev.delugelauncher.DelugeApp)?.appRepository
+                        ?.rehideLockedApps()
                     if (prefs.freezeEnabledNow() && prefs.freezeAutoEnabledNow()) {
                         FreezeAutoService.sync(appContext, true)
                     }
