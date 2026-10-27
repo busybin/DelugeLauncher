@@ -1006,8 +1006,17 @@ fun HomeRoute(
                 app.prefs.setAppLocked(entry.key, true)
                 val mainApp = entry.kind == EntryKind.APP && entry.userSerial == 0L &&
                     !entry.privateProfile
-                if (!mainApp || !app.appRepository.canHideApps()) return@launch
-                withContext(Dispatchers.IO) { app.appRepository.setAppHidden(entry.packageName) }
+                if (!mainApp) return@launch
+                withContext(Dispatchers.IO) {
+                    // Suspension first: it is the layer Settings cannot undo. Hiding is
+                    // what takes the row away from every other launcher.
+                    if (app.appRepository.canSuspendApps()) {
+                        app.appRepository.setAppSuspended(entry.packageName)
+                    }
+                    if (app.appRepository.canHideApps()) {
+                        app.appRepository.setAppHidden(entry.packageName)
+                    }
+                }
                 onAppsChanged()
             }
         }

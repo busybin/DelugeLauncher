@@ -537,6 +537,16 @@ class AppRepository(
         }.getOrDefault(false).also { hideCapability = it }
     }
 
+    /** Asked once, like [canHideApps]. Suspending only needs the shell's `SUSPEND_APPS`. */
+    @Volatile
+    private var suspendCapability: Boolean? = null
+
+    suspend fun canSuspendApps(): Boolean = withContext(Dispatchers.IO) {
+        suspendCapability ?: runCatching {
+            shell().shizukuAvailable() || shell().rootAvailable()
+        }.getOrDefault(false).also { suspendCapability = it }
+    }
+
     /**
      * Hides or reveals [packageName] in the main profile. [reveal] is the same command the
      * Settings app cannot offer while the app is hidden; the data was never touched.
@@ -559,31 +569,71 @@ class AppRepository(
         FreezeState.isHidden(info)
     }
 
-    /**
-     * Reveals a locked app just long enough to open it. A row that is visible and not hidden
-     * passes straight through, so a phone without root pays one package-manager read.
-     */
-    suspend fun revealForLock(packageName: String): Boolean = withContext(Dispatchers.IO) {
-        !isAppHidden(packageName) || setAppHidden(packageName, reveal = true)
+    /** Whether the platform currently suspends [packageName]. */
+    suspend fun isAppSuspended(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        runCatching { context.packageManager.isPackageSuspended(packageName) }
+            .getOrDefault(false)
     }
 
     /**
-     * Puts every locked main-profile app back out of sight. Called when the launcher comes
-     * back to the foreground and when the screen goes off, which is exactly when an app
-     * opened through the lock has stopped being the thing on screen.
+     * Suspends or unsuspends [packageName] for the main user through the shell.
+     *
+     * Suspension is the part Settings cannot undo: it lists a hidden package and offers an
+     * Unhide button, but it has no button that lifts another app's suspension. So a locked
+     * app stays unlaunchable even if the owner unhides it from Settings. Deluge lifts the
+     * suspension only for the launch it authenticated.
      */
-    suspend fun rehideLockedApps(): Int = withContext(Dispatchers.IO) {
-        if (!canHideApps()) return@withContext 0
-        var hidden = 0
+    suspend fun setAppSuspended(packageName: String, suspend: Boolean = true): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!FreezeCommands.isPackageName(packageName)) return@withContext false
+            val verb = if (suspend) "suspend" else "unsuspend"
+            shell().run("pm $verb --user 0 $packageName")
+        }
+
+    /**
+     * Reveals a locked app just long enough to open it.
+     *
+     * Hiding and suspending are undone together: either one alone leaves the app unusable,
+     * and the order matters — a hidden package is unhidden first so the suspension command
+     * names something the package manager will act on. A row that is neither hidden nor
+     * suspended passes straight through, so a phone without root pays one package-manager
+     * read.
+     */
+    suspend fun revealForLock(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        val hidden = isAppHidden(packageName)
+        val suspended = isAppSuspended(packageName)
+        if (!hidden && !suspended) return@withContext true
+        var ok = true
+        if (hidden) ok = setAppHidden(packageName, reveal = true) && ok
+        if (suspended) ok = setAppSuspended(packageName, suspend = false) && ok
+        ok
+    }
+
+    /**
+     * Puts every locked main-profile app back out of sight and out of reach. Called when the
+     * launcher comes back to the foreground, when the screen goes off, and when a locked
+     * package is unhidden behind our back. Suspension is applied even where hiding is not
+     * available: Settings can unhide a hidden app, but it cannot lift our suspension.
+     */
+    suspend fun rehideLockedApps(only: String? = null): Int = withContext(Dispatchers.IO) {
+        val hide = canHideApps()
+        val suspend = canSuspendApps()
+        if (!hide && !suspend) return@withContext 0
+        var changed = 0
         for (key in prefs.lockedAppsNow()) {
             if (EntryKeys.isShortcut(key) || EntryKeys.isPrivateSpace(key)) continue
             if (EntryKeys.userSerial(key) != 0L) continue
             val packageName = key.substringBefore('/')
             if (!FreezeCommands.isPackageName(packageName)) continue
-            if (isAppHidden(packageName)) continue
-            if (setAppHidden(packageName)) hidden++
+            if (only != null && packageName != only) continue
+            if (suspend && !isAppSuspended(packageName)) {
+                if (setAppSuspended(packageName)) changed++
+            }
+            if (hide && !isAppHidden(packageName)) {
+                if (setAppHidden(packageName)) changed++
+            }
         }
-        hidden
+        changed
     }
 
     /** Whether Shizuku or root can carry the private-space steps that need a shell. */
