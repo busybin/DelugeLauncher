@@ -413,13 +413,40 @@ class AppRepository(
      * button does. Settings' own route to it can come up empty while another launcher is the
      * default. False when there is no open space or no store to open.
      */
-    fun openPrivateSpaceStore(from: Context): Boolean {
+    fun openPrivateSpaceStore(from: Context, packageName: String? = null): Boolean {
         if (Build.VERSION.SDK_INT < PRIVATE_SPACE_SDK) return false
         val user = (privateSpace() as? PrivateSpace.Unlocked)?.user ?: return false
-        return runCatching {
-            startSystemSender(from, launcherApps.getAppMarketActivityIntent(null, user) ?: return false)
-        }.getOrDefault(false)
+        // The package's own page when the store has one, the store's front page otherwise:
+        // a package that only exists outside the space can still be searched for by name.
+        val sender = runCatching {
+            (if (packageName != null) {
+                launcherApps.getAppMarketActivityIntent(packageName, user)
+            } else {
+                null
+            }) ?: launcherApps.getAppMarketActivityIntent(null, user)
+        }.getOrNull() ?: return false
+        return runCatching { startSystemSender(from, sender) }.getOrDefault(false)
     }
+
+    /**
+     * Whether [packageName] is installed inside the open private space. Null when there is no
+     * space to ask, the space is locked, or the platform would not answer.
+     *
+     * Asking is safe while the space is open; while it is locked the answer belongs to a
+     * profile whose apps nothing here may enumerate, so it is not asked at all.
+     */
+    fun privateSpaceHas(packageName: String): Boolean? {
+        if (Build.VERSION.SDK_INT < PRIVATE_SPACE_SDK) return null
+        val user = (privateSpace() as? PrivateSpace.Unlocked)?.user ?: return null
+        return runCatching {
+            launcherApps.getApplicationInfo(packageName, 0, user) != null
+        }.getOrNull()
+    }
+
+    /** Whether [packageName] is installed for the launcher's own profile. */
+    fun mainProfileHas(packageName: String): Boolean = runCatching {
+        launcherApps.getApplicationInfo(packageName, 0, Process.myUserHandle()) != null
+    }.getOrDefault(false)
 
     /**
      * Opens the system's private space settings. The launcher-facing intent is what the stock

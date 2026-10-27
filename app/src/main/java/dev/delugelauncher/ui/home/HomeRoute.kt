@@ -74,6 +74,11 @@ import dev.delugelauncher.TypedKey
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
+import dev.delugelauncher.data.PRIVATE_SPACE_SDK
+import dev.delugelauncher.data.PrivateSpace
+import dev.delugelauncher.data.ProtectStep
+import dev.delugelauncher.data.protectStepFor
+import dev.delugelauncher.data.protectionKind
 import dev.delugelauncher.data.restoreConcealed
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
@@ -103,6 +108,7 @@ import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.ui.common.LaunchOrigin
+import dev.delugelauncher.ui.common.PrivateSpaceProtectDialog
 import dev.delugelauncher.ui.common.rememberAppLockRequest
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
@@ -795,6 +801,131 @@ fun HomeRoute(
         R.string.app_unlock_prompt,
     )
 
+    // Locking an app in the main profile asks one question beyond the lock itself: whether to
+    // move it behind the private space, the only boundary Android gives a launcher without
+    // root. The flow is one step at a time because every step but the last is the system's
+    // own screen — creating the space, authenticating it, installing through its store, and
+    // confirming the uninstall. What this launcher can do is carry the app through those
+    // screens in order, and pick the flow up again when the owner comes back.
+    var protectTarget by remember { mutableStateOf<AppInfo?>(null) }
+    var protectStep by remember { mutableStateOf(ProtectStep.NONE) }
+
+    fun protectLabel(entry: AppInfo): String =
+        disguiseNames[entry.key] ?: nameOverrides[entry.key] ?: entry.label
+
+    fun stopProtection() {
+        protectTarget = null
+        protectStep = ProtectStep.NONE
+    }
+
+    /** Whether the private space can be reached from here at all. */
+    fun canProtect(entry: AppInfo): Boolean =
+        entry.kind == EntryKind.APP && entry.userSerial == 0L && !entry.privateProfile &&
+            android.os.Build.VERSION.SDK_INT >= PRIVATE_SPACE_SDK &&
+            runCatching {
+                context.getSystemService(android.app.role.RoleManager::class.java)
+                    ?.isRoleHeld(android.app.role.RoleManager.ROLE_HOME) == true
+            }.getOrDefault(false)
+
+    suspend fun nextProtectStep(entry: AppInfo, from: ProtectStep): ProtectStep =
+        withContext(Dispatchers.IO) {
+            val space = app.appRepository.privateSpace()
+            protectStepFor(
+                space = space.protectionKind,
+                installedInSpace = app.appRepository.privateSpaceHas(entry.packageName),
+                installedInMain = app.appRepository.mainProfileHas(entry.packageName),
+                afterRemoval = from == ProtectStep.REMOVE_MAIN,
+            )
+        }
+
+    // The lock's own key is dropped together with the outside copy: leaving it behind would
+    // lock a later reinstall that nobody asked to lock, and it is protection for a copy that
+    // no longer exists.
+    suspend fun forgetOutsideLocks(entry: AppInfo) {
+        app.prefs.setAppLocked(entry.key, false)
+        lockedApps.filter {
+            !EntryKeys.isShortcut(it) && it.substringBefore('/') == entry.packageName &&
+                EntryKeys.userSerial(it) == 0L
+        }.forEach { app.prefs.setAppLocked(it, false) }
+    }
+
+    fun applyProtectStep(entry: AppInfo, step: ProtectStep) {
+        if (protectTarget?.key != entry.key) return
+        if (step == ProtectStep.DONE) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.app_lock_space_done, protectLabel(entry)),
+                Toast.LENGTH_LONG,
+            ).show()
+            scope.launch { forgetOutsideLocks(entry) }
+            stopProtection()
+        } else if (step != ProtectStep.NONE) {
+            protectStep = step
+        }
+    }
+
+    fun advanceProtection(entry: AppInfo, from: ProtectStep = protectStep) {
+        scope.launch { applyProtectStep(entry, nextProtectStep(entry, from)) }
+    }
+
+    fun startProtection(entry: AppInfo) {
+        if (!canProtect(entry)) return
+        protectTarget = entry
+        protectStep = ProtectStep.NONE
+        advanceProtection(entry)
+    }
+
+    fun unlockProtectionSpace(entry: AppInfo) {
+        onTogglePrivateSpace()
+        // The system's authentication is in front of the unlock and answers on its own time,
+        // so the next step is waited for rather than read straight after the request. The
+        // cap is only there so a cancelled prompt stops the loop.
+        scope.launch {
+            repeat(40) {
+                delay(300)
+                val space = withContext(Dispatchers.IO) { app.appRepository.privateSpace() }
+                if (space is PrivateSpace.Unlocked) {
+                    applyProtectStep(entry, nextProtectStep(entry, ProtectStep.UNLOCK))
+                    return@launch
+                }
+                if (space is PrivateSpace.Absent) return@launch
+            }
+        }
+    }
+
+    fun actOnProtection(entry: AppInfo) {
+        when (protectStep) {
+            ProtectStep.CREATE -> {
+                if (!app.appRepository.openPrivateSpaceSettings(context)) {
+                    Toast.makeText(context, R.string.app_lock_space_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            ProtectStep.UNLOCK -> unlockProtectionSpace(entry)
+            ProtectStep.INSTALL -> {
+                if (!app.appRepository.openPrivateSpaceStore(context, entry.packageName)) {
+                    Toast.makeText(context, R.string.app_lock_space_failed, Toast.LENGTH_SHORT).show()
+                }
+            }
+            // The system uninstaller asks for its own confirmation; the flow waits for the
+            // answer and re-checks the package when the launcher resumes.
+            ProtectStep.REMOVE_MAIN -> app.appRepository.uninstall(entry)
+            ProtectStep.NONE, ProtectStep.DONE -> Unit
+        }
+    }
+
+    fun toggleLock(entry: AppInfo) {
+        if (entry.lockedBy(lockedApps)) {
+            requestUnlockRemoval(entry.label) {
+                scope.launch { app.prefs.setAppLocked(entry.key, false) }
+            }
+        } else {
+            scope.launch { app.prefs.setAppLocked(entry.key, true) }
+            // The lock is applied before the question is asked: this is what the tap meant,
+            // and backing out of the private-space flow must not quietly undo it.
+            startProtection(entry)
+        }
+    }
+
     /** Opens an app the lock has just been lifted for, waking it first if it is also asleep. */
     fun openUnlocked(entry: AppInfo) {
         AppLock.markOpen(entry.key)
@@ -948,6 +1079,10 @@ fun HomeRoute(
                     // Settings was in front; a BACK from there resumes with no HOME
                     // intent, so the tick alone would keep yesterday's answer.
                     resumeTick++
+                    // Every step of the lock-time protection flow but the last is a system
+                    // screen, so coming back is exactly the moment to see whether it changed
+                    // what the next step is.
+                    protectTarget?.let { advanceProtection(it) }
                     // An update can leave the accessibility grant on but its binding
                     // dead; heal that silently, or nudge once if the grant is gone.
                     SystemUi.refreshAccessibilityBinding(context)
@@ -1326,15 +1461,7 @@ fun HomeRoute(
                 pinchToResize = settings.pinchToResize,
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 lockedApps = lockedApps,
-                onToggleLock = { entry ->
-                    if (entry.lockedBy(lockedApps)) {
-                        requestUnlockRemoval(entry.label) {
-                            scope.launch { app.prefs.setAppLocked(entry.key, false) }
-                        }
-                    } else {
-                        scope.launch { app.prefs.setAppLocked(entry.key, true) }
-                    }
-                },
+                onToggleLock = { entry -> toggleLock(entry) },
                 alignment = settings.alignment,
                 iconSide = settings.iconSide,
                 editMode = homeEditMode,
@@ -1552,15 +1679,7 @@ fun HomeRoute(
                 dimPausedApps = settings.dimPausedApps,
                 reduceMotion = settings.reduceMotion,
                 lockedApps = lockedApps,
-                onToggleLock = { entry ->
-                    if (entry.lockedBy(lockedApps)) {
-                        requestUnlockRemoval(entry.label) {
-                            scope.launch { app.prefs.setAppLocked(entry.key, false) }
-                        }
-                    } else {
-                        scope.launch { app.prefs.setAppLocked(entry.key, true) }
-                    }
-                },
+                onToggleLock = { entry -> toggleLock(entry) },
                 freezeActions = if (freezeEnabled) freezeActions else null,
                 appTags = appTags,
                 allTags = allTags,
@@ -1666,6 +1785,15 @@ fun HomeRoute(
 
         if (showWelcome) {
             WelcomeDialog(onDismiss = onWelcomeDismissed)
+        }
+
+        protectTarget?.let { target ->
+            PrivateSpaceProtectDialog(
+                step = protectStep,
+                appLabel = protectLabel(target),
+                onAction = { actOnProtection(target) },
+                onDismiss = { stopProtection() },
+            )
         }
 
         folderPickerFor?.let { target ->
