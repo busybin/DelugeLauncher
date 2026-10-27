@@ -300,6 +300,7 @@ fun DelugeNavHost(
                 frozen = frozen,
                 planned = plan.keys,
                 freezeRows = app.prefs.freezeRowsNow(),
+                locked = app.prefs.lockedAppsNow(),
             )
         }
         // Overtaken while it ran: this list was enumerated against a state that is no longer
@@ -1226,6 +1227,9 @@ fun DelugeNavHost(
                         reloadApps(locked, pass)
                     }
                 },
+                onAppsChanged = {
+                    scope.launch { reloadApps(known = null, pass = reloadOrder.begin()) }
+                },
                 onNavigate = { route -> navController.navigate(route) },
                 disguiseNames = disguise ?: emptyMap(),
             )
@@ -1261,8 +1265,24 @@ fun DelugeNavHost(
                 panelEnabled = notificationPanel,
                 onOpenApp = { appInfo ->
                     val open: () -> Unit = {
-                        app.appRepository.launch(appInfo)
-                        navController.popBackStack()
+                        scope.launch {
+                            val revealed = withContext(Dispatchers.IO) {
+                                app.appRepository.revealForLock(appInfo.packageName)
+                            }
+                            if (revealed) {
+                                app.appRepository.launch(appInfo)
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        R.string.app_lock_reveal_failed,
+                                        appInfo.label,
+                                    ),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        }
                         Unit
                     }
                     if (appInfo.lockedBy(lockedApps) && !AppLock.isOpen(appInfo.key, appLockTimeout)) {

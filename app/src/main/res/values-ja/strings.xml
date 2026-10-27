@@ -579,6 +579,8 @@
     <string name="action_change_wallpaper">壁紙を変更</string>
     <string name="wallpaper_no_picker">壁紙選択が見つかりません</string>
     <string name="action_lock_app">アプリをロック</string>
+    <string name="action_add_to_private_space">プライベートスペースに追加</string>
+    <string name="app_lock_reveal_failed">%1$s を表示できませんでした。ロックされたままです。</string>
     <string name="action_unlock_app">アプリのロック解除</string>
     <string name="action_set_tag">タグを設定</string>
     <string name="tag_label">タグ</string>
@@ -589,8 +591,8 @@
     <string name="app_lock_prompt">%1$sを開くには画面ロックを認証してください</string>
     <string name="app_unlock_title">アプリのロックを解除</string>
     <string name="app_unlock_prompt">%1$sのロックを解除するには画面ロックを認証してください</string>
-    <string name="app_lock_space_create_title">%1$s を Deluge の外からも保護しますか？</string>
-    <string name="app_lock_space_create_body">アプリロックは Deluge 内でこのアプリを隠すだけで、Android の設定、最近使ったアプリ、他のランチャーからは引き続き開けます。プライベートスペース内のアプリは、スペースがロックされている間は停止され、どこからも見えなくなります。</string>
+    <string name="app_lock_space_create_title">%1$s をプライベートスペースに追加しますか？</string>
+    <string name="app_lock_space_create_body">プライベートスペースはアプリの専用コピーを持つ別プロファイルです。スペースがロックされている間、そのコピーは停止され、Deluge、設定、検索、最近使ったアプリ、他のランチャーから隠されます。外側のコピーは、削除するまでデータを保持します。</string>
     <string name="app_lock_space_create_action">プライベートスペースを作成</string>
     <string name="app_lock_space_later">今はしない</string>
     <string name="app_lock_space_unlock_title">プライベートスペースのロックを解除</string>

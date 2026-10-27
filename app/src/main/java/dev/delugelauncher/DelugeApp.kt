@@ -82,7 +82,13 @@ class DelugeApp : Application() {
             this,
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
-                    appScope.launch { if (prefs.appLockScreenOffNow()) AppLock.forgetAll() }
+                    appScope.launch {
+                        if (prefs.appLockScreenOffNow()) AppLock.forgetAll()
+                        // The screen going off is the same boundary as leaving the launcher:
+                        // an app opened through the lock goes back out of sight, and the
+                        // hidden flag stops whatever it was still doing.
+                        appRepository.rehideLockedApps()
+                    }
                 }
             },
             android.content.IntentFilter(android.content.Intent.ACTION_SCREEN_OFF),

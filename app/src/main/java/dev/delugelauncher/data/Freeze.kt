@@ -523,6 +523,18 @@ class FreezeShell(private val context: Context) {
         return code == 0 && !output.contains("Exception") && !output.contains("Error")
     }
 
+    /**
+     * Runs one command through root only, never through Shizuku's shell user.
+     *
+     * Hiding an app needs `MANAGE_USERS`, which the shell user does not hold even when
+     * Shizuku is connected. The binder path handles a root-mode Shizuku; this is the plain
+     * `su` fallback for a rooted phone without Shizuku.
+     */
+    fun runAsRoot(command: String): Boolean {
+        val (code, output) = runScript(command, COMMAND_TIMEOUT_MS, root = true) ?: return false
+        return code == 0 && !output.contains("Exception") && !output.contains("Error")
+    }
+
     /** The command's output, for the dumps the guards parse; null when there is no access. */
     fun output(command: String): String? = execute(command)?.second
 

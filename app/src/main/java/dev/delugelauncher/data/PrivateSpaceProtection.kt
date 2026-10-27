@@ -2,10 +2,9 @@
 package dev.delugelauncher.data
 
 /**
- * The step the lock-time protection flow is on. A main-space app that is locked through Deluge
- * keeps one way in that the launcher cannot close: Android Settings, recents and other
- * launchers still know the package. Moving it into the private space is the only boundary the
- * platform gives an unprivileged launcher, so locking such an app asks about that boundary.
+ * The step the private-space flow is on. It is its own action on an app — "Add to private
+ * space" — not part of locking: the lock already hides an app on this phone, while the space
+ * moves it behind a boundary the rest of Android cannot reach.
  *
  * Creating the space stays the owner's own step: only the system may do it, behind its own
  * authentication. Everything after that can be done without a store when a shell is available:

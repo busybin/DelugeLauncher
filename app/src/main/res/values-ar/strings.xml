@@ -15,6 +15,8 @@
     <string name="action_change_wallpaper">تغيير الخلفية</string>
     <string name="wallpaper_no_picker">لم يتم العثور على أداة اختيار خلفية</string>
     <string name="action_lock_app">قفل التطبيق</string>
+    <string name="action_add_to_private_space">إضافة إلى المساحة الخاصة</string>
+    <string name="app_lock_reveal_failed">تعذّر إظهار %1$s. ما زال مقفلًا.</string>
     <string name="action_unlock_app">إلغاء قفل التطبيق</string>
     <string name="action_set_tag">تعيين علامة</string>
     <string name="tag_label">علامة</string>
@@ -32,8 +34,8 @@
     <string name="app_lock_prompt">أكّد قفل الشاشة لفتح %1$s</string>
     <string name="app_unlock_title">إزالة قفل التطبيق</string>
     <string name="app_unlock_prompt">أكّد قفل الشاشة لإزالة القفل عن %1$s</string>
-    <string name="app_lock_space_create_title">هل تريد حماية %1$s خارج Deluge؟</string>
-    <string name="app_lock_space_create_body">قفل التطبيقات يخفي هذا التطبيق داخل Deluge فقط، لكن إعدادات Android والتطبيقات الحديثة والمشغلات الأخرى يمكنها فتحه. التطبيقات داخل المساحة الخاصة يتم إيقافها وإخفاؤها في كل مكان أثناء قفل المساحة.</string>
+    <string name="app_lock_space_create_title">هل تريد إضافة %1$s إلى المساحة الخاصة؟</string>
+    <string name="app_lock_space_create_body">المساحة الخاصة ملف تعريف منفصل فيه نسخة خاصة من التطبيق. أثناء قفل المساحة، تُوقف تلك النسخة وتُخفى عن Deluge والإعدادات والبحث والتطبيقات الحديثة والمشغلات الأخرى. تحتفظ النسخة الخارجية ببياناتها حتى تزيلها.</string>
     <string name="app_lock_space_create_action">إنشاء مساحة خاصة</string>
     <string name="app_lock_space_later">ليس الآن</string>
     <string name="app_lock_space_unlock_title">إلغاء قفل المساحة الخاصة</string>

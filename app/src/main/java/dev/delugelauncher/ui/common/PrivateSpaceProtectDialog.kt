@@ -10,7 +10,7 @@ import dev.delugelauncher.R
 import dev.delugelauncher.data.ProtectStep
 
 /**
- * The one question the lock-time protection flow asks at a time. [ProtectStep.DONE] and
+ * The one question the private-space flow asks at a time. [ProtectStep.DONE] and
  * [ProtectStep.NONE] have no dialog; the caller reports the first and never requests the second.
  */
 @Composable

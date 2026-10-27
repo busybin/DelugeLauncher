@@ -48,6 +48,10 @@ class FreezeBinder(private val context: Context) {
         uid: Int,
     ): Boolean? = attempt { it.freeze(packageName, method, userId, uid) }
 
+    /** Sets the platform's hidden flag directly; root only, like the `pm hide` command. */
+    fun setHidden(packageName: String, hidden: Boolean, userId: Int = 0): Boolean? =
+        attempt { it.setHidden(packageName, hidden, userId) }
+
     /**
      * Re-applies the pause with the dialog on an app paused before the dialog existed.
      * Called once per app by the upgrade pass; a pause by the same suspender replaces the

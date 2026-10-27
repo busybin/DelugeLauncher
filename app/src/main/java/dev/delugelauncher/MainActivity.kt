@@ -391,6 +391,10 @@ class MainActivity : ComponentActivity() {
             runCatching { app.widgetHost.startListening() }
             runCatching { NowPlayingListenerService.rebindIfPermitted(this) }
         }
+        // A locked app was revealed to be opened; coming back to the launcher is the moment
+        // it stops being the thing on screen. Hiding it also force-stops it, so nothing of it
+        // keeps running behind the lock.
+        app.runInBackground { runCatching { app.appRepository.rehideLockedApps() } }
         // The clock widget's own rows go stale on their own — an event passes, an alarm is
         // set, "in 20 minutes" stops being true. Half an hour is the shortest the system will
         // wake a widget on a schedule, so the other half of keeping it honest is redrawing it

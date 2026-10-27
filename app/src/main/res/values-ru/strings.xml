@@ -587,6 +587,8 @@
     <string name="action_change_wallpaper">Сменить обои</string>
     <string name="wallpaper_no_picker">Выбор обоев не найден</string>
     <string name="action_lock_app">Заблокировать приложение</string>
+    <string name="action_add_to_private_space">Добавить в приватное пространство</string>
+    <string name="app_lock_reveal_failed">Не удалось показать %1$s. Приложение всё ещё заблокировано.</string>
     <string name="action_unlock_app">Разблокировать приложение</string>
     <string name="action_set_tag">Задать тег</string>
     <string name="tag_label">Тег</string>
@@ -597,8 +599,8 @@
     <string name="app_lock_prompt">Подтвердите блокировку экрана, чтобы открыть %1$s</string>
     <string name="app_unlock_title">Снять блокировку</string>
     <string name="app_unlock_prompt">Подтвердите блокировку экрана, чтобы снять блокировку с %1$s</string>
-    <string name="app_lock_space_create_title">Защитить %1$s за пределами Deluge?</string>
-    <string name="app_lock_space_create_body">Блокировка приложений скрывает это приложение только в Deluge, но «Настройки» Android, недавние приложения и другие лаунчеры всё ещё могут его открыть. Приложения в приватном пространстве останавливаются и скрываются везде, пока пространство заблокировано.</string>
+    <string name="app_lock_space_create_title">Добавить %1$s в приватное пространство?</string>
+    <string name="app_lock_space_create_body">Приватное пространство — отдельный профиль со своей копией приложения. Пока пространство заблокировано, эта копия остановлена и скрыта от Deluge, «Настроек», поиска, недавних приложений и других лаунчеров. Внешняя копия сохраняет данные, пока вы её не удалите.</string>
     <string name="app_lock_space_create_action">Создать приватное пространство</string>
     <string name="app_lock_space_later">Не сейчас</string>
     <string name="app_lock_space_unlock_title">Разблокировать приватное пространство</string>

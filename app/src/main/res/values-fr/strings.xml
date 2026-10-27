@@ -579,6 +579,8 @@
     <string name="action_change_wallpaper">Changer le fond d\'écran</string>
     <string name="wallpaper_no_picker">Aucun sélecteur de fond trouvé</string>
     <string name="action_lock_app">Verrouiller l\'app</string>
+    <string name="action_add_to_private_space">Ajouter à l\'espace privé</string>
+    <string name="app_lock_reveal_failed">Impossible d\'afficher %1$s. Elle reste verrouillée.</string>
     <string name="action_unlock_app">Déverrouiller l\'app</string>
     <string name="action_set_tag">Définir l\'étiquette</string>
     <string name="tag_label">Étiquette</string>
@@ -589,8 +591,8 @@
     <string name="app_lock_prompt">Confirme le verrouillage pour ouvrir %1$s</string>
     <string name="app_unlock_title">Retirer le verrou</string>
     <string name="app_unlock_prompt">Confirmez le verrouillage de l\'écran pour retirer le verrou de %1$s</string>
-    <string name="app_lock_space_create_title">Protéger %1$s hors de Deluge ?</string>
-    <string name="app_lock_space_create_body">Le verrou d’applications masque cette app dans Deluge, mais les Paramètres Android, les applis récentes et les autres lanceurs peuvent toujours l’ouvrir. Les apps d’un espace privé sont arrêtées et masquées partout lorsque celui-ci est verrouillé.</string>
+    <string name="app_lock_space_create_title">Ajouter %1$s à l\'espace privé ?</string>
+    <string name="app_lock_space_create_body">L\'espace privé est un profil séparé avec sa propre copie de l\'app. Tant que l\'espace est verrouillé, cette copie est arrêtée et masquée de Deluge, des Paramètres, de la recherche, des applis récentes et des autres lanceurs. La copie extérieure garde ses données jusqu\'à ce que vous la supprimiez.</string>
     <string name="app_lock_space_create_action">Créer un espace privé</string>
     <string name="app_lock_space_later">Plus tard</string>
     <string name="app_lock_space_unlock_title">Déverrouiller l’espace privé</string>

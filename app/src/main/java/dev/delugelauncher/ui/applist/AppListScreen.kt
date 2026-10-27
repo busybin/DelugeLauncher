@@ -293,6 +293,8 @@ fun AppListScreen(
     /** Keys that ask for the device lock before opening. */
     lockedApps: Set<String>,
     onToggleLock: (AppInfo) -> Unit,
+    /** Opens the private-space flow for an app; null where the space cannot be reached. */
+    onAddToPrivateSpace: ((AppInfo) -> Unit)? = null,
     /** Freeze-list actions a row's long-press menu offers; null where freezing is not set up. */
     freezeActions: FreezeActions? = null,
     /** Every tag in use, offered by the picker. */
@@ -1566,6 +1568,9 @@ fun AppListScreen(
                         dimPausedApps = dimPausedApps,
                         isLocked = entry.app.lockedBy(lockedApps),
                         onToggleLock = { onToggleLock(entry.app) },
+                        onAddToPrivateSpace = onAddToPrivateSpace?.let { add ->
+                            { add(entry.app) }
+                        },
                         onEditTag = { selecting = true; selectedKeys = setOf(entry.app.key) },
                         onMoveToFolder = { onMoveToFolder(entry.app) },
                         freezeActions = freezeActions,
@@ -2081,6 +2086,8 @@ private fun AppRow(
     /** Whether this app asks for the device lock before it opens. */
     isLocked: Boolean,
     onToggleLock: () -> Unit,
+    /** Adds this app to the private space; null where that flow is not available. */
+    onAddToPrivateSpace: (() -> Unit)? = null,
     onEditTag: () -> Unit,
     /** True while picking apps to tag and this one is picked. */
     selected: Boolean,
@@ -2286,6 +2293,13 @@ private fun AppRow(
                     },
                     onClick = { onDismissMenu(); onToggleLock() },
                 )
+                if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_private_space)) },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        onClick = { onDismissMenu(); onAddToPrivateSpace() },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_set_tag)) },
                     leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },

@@ -15,6 +15,8 @@
     <string name="action_change_wallpaper">更换壁纸</string>
     <string name="wallpaper_no_picker">没有可用的壁纸选择器</string>
     <string name="action_lock_app">锁定应用</string>
+    <string name="action_add_to_private_space">加入私密空间</string>
+    <string name="app_lock_reveal_failed">无法显示 %1$s，它仍处于锁定状态。</string>
     <string name="action_unlock_app">取消锁定</string>
     <string name="action_set_tag">设置标签</string>
     <string name="tag_label">标签</string>
@@ -32,8 +34,8 @@
     <string name="app_lock_prompt">确认锁屏密码以打开 %1$s</string>
     <string name="app_unlock_title">移除应用锁</string>
     <string name="app_unlock_prompt">确认锁屏密码以移除 %1$s 的应用锁</string>
-    <string name="app_lock_space_create_title">要在 Deluge 之外也保护 %1$s 吗？</string>
-    <string name="app_lock_space_create_body">应用锁只在 Deluge 内隐藏这个应用，Android 设置、最近任务和其他桌面仍能打开它。私密空间锁定时，里面的应用会被停止，并在所有地方隐藏。</string>
+    <string name="app_lock_space_create_title">要把 %1$s 加入私密空间吗？</string>
+    <string name="app_lock_space_create_body">私密空间是独立配置，里面有一份独立的应用副本。私密空间锁定时，这份副本会被停止，并从 Deluge、设置、搜索、最近任务和其他桌面中隐藏。外面的副本会保留数据，直到你移除它。</string>
     <string name="app_lock_space_create_action">创建私密空间</string>
     <string name="app_lock_space_later">暂不</string>
     <string name="app_lock_space_unlock_title">解锁私密空间</string>

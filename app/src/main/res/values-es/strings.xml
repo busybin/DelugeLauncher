@@ -579,6 +579,8 @@
     <string name="action_change_wallpaper">Cambiar fondo</string>
     <string name="wallpaper_no_picker">No se encontró selector de fondo</string>
     <string name="action_lock_app">Bloquear app</string>
+    <string name="action_add_to_private_space">Añadir al espacio privado</string>
+    <string name="app_lock_reveal_failed">No se pudo mostrar %1$s. Sigue bloqueada.</string>
     <string name="action_unlock_app">Desbloquear app</string>
     <string name="action_set_tag">Poner etiqueta</string>
     <string name="tag_label">Etiqueta</string>
@@ -589,8 +591,8 @@
     <string name="app_lock_prompt">Confirma el bloqueo de pantalla para abrir %1$s</string>
     <string name="app_unlock_title">Quitar el bloqueo</string>
     <string name="app_unlock_prompt">Confirma el bloqueo de pantalla para quitar el bloqueo de %1$s</string>
-    <string name="app_lock_space_create_title">¿Proteger %1$s fuera de Deluge?</string>
-    <string name="app_lock_space_create_body">El bloqueo de apps solo oculta esta app dentro de Deluge, pero Ajustes de Android, las apps recientes y otros lanzadores aún pueden abrirla. Las apps del espacio privado se detienen y se ocultan en todas partes mientras el espacio está bloqueado.</string>
+    <string name="app_lock_space_create_title">¿Añadir %1$s al espacio privado?</string>
+    <string name="app_lock_space_create_body">El espacio privado es un perfil aparte con su propia copia de la app. Mientras el espacio está bloqueado, esa copia se detiene y se oculta de Deluge, Ajustes, la búsqueda, las apps recientes y otros lanzadores. La copia de fuera conserva sus datos hasta que la elimines.</string>
     <string name="app_lock_space_create_action">Crear espacio privado</string>
     <string name="app_lock_space_later">Ahora no</string>
     <string name="app_lock_space_unlock_title">Desbloquear el espacio privado</string>

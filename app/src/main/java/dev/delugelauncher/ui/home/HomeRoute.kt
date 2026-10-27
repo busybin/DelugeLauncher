@@ -207,6 +207,8 @@ fun HomeRoute(
     onAppListVisibleChange: (Boolean) -> Unit,
     /** Locks an open private space or asks for a locked one to be opened, off this thread. */
     onTogglePrivateSpace: () -> Unit,
+    /** Re-reads the app list after the lock changed what the system will list. */
+    onAppsChanged: () -> Unit,
     onNavigate: (String) -> Unit,
     /** Fake names by app key while the screenshot disguise is on; empty otherwise. */
     disguiseNames: Map<String, String>,
@@ -829,6 +831,15 @@ fun HomeRoute(
                     ?.isRoleHeld(android.app.role.RoleManager.ROLE_HOME) == true
             }.getOrDefault(false)
 
+    /** The menu offers the action only where the flow can actually finish. */
+    val privateSpaceAddAvailable = remember(context) {
+        android.os.Build.VERSION.SDK_INT >= PRIVATE_SPACE_SDK &&
+            runCatching {
+                context.getSystemService(android.app.role.RoleManager::class.java)
+                    ?.isRoleHeld(android.app.role.RoleManager.ROLE_HOME) == true
+            }.getOrDefault(false)
+    }
+
     suspend fun nextProtectStep(entry: AppInfo, from: ProtectStep): ProtectStep =
         withContext(Dispatchers.IO) {
             val space = app.appRepository.privateSpace()
@@ -963,16 +974,42 @@ fun HomeRoute(
         }
     }
 
+    // The lock is two things at once. It is the credential gate on every launch, and — when
+    // root or a root-mode Shizuku is there — the platform's hidden flag, so Settings, recents,
+    // search and every other launcher lose the app too. Without that privilege the credential
+    // gate is all a launcher can honestly offer, and the app stays listed everywhere.
+    //
+    // Hiding is undone on launch and put back when the launcher comes forward (MainActivity)
+    // or the screen goes off (DelugeApp). A hidden app keeps its data; only its visibility
+    // changes, which is why the lock can be lifted later without reinstalling anything.
     fun toggleLock(entry: AppInfo) {
         if (entry.lockedBy(lockedApps)) {
             requestUnlockRemoval(entry.label) {
-                scope.launch { app.prefs.setAppLocked(entry.key, false) }
+                scope.launch {
+                    val revealed = withContext(Dispatchers.IO) {
+                        app.appRepository.revealForLock(entry.packageName)
+                    }
+                    if (!revealed) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_reveal_failed, entry.label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        return@launch
+                    }
+                    app.prefs.setAppLocked(entry.key, false)
+                    onAppsChanged()
+                }
             }
         } else {
-            scope.launch { app.prefs.setAppLocked(entry.key, true) }
-            // The lock is applied before the question is asked: this is what the tap meant,
-            // and backing out of the private-space flow must not quietly undo it.
-            startProtection(entry)
+            scope.launch {
+                app.prefs.setAppLocked(entry.key, true)
+                val mainApp = entry.kind == EntryKind.APP && entry.userSerial == 0L &&
+                    !entry.privateProfile
+                if (!mainApp || !app.appRepository.canHideApps()) return@launch
+                withContext(Dispatchers.IO) { app.appRepository.setAppHidden(entry.packageName) }
+                onAppsChanged()
+            }
         }
     }
 
@@ -984,7 +1021,23 @@ fun HomeRoute(
         if (entry.suspended) (context.applicationContext as? DelugeApp)?.offMain {
             app.appRepository.unsuspend(entry)
         }
-        actuallyLaunch(entry)
+        // A hidden app cannot be started until the platform sees it again. It is put back
+        // out of sight by the launcher on resume, not here: the app has to stay startable
+        // for as long as it is on screen.
+        scope.launch {
+            val revealed = withContext(Dispatchers.IO) {
+                app.appRepository.revealForLock(entry.packageName)
+            }
+            if (!revealed) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_reveal_failed, entry.label),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return@launch
+            }
+            actuallyLaunch(entry)
+        }
     }
 
     fun launchEntry(entry: AppInfo): Boolean {
@@ -997,6 +1050,12 @@ fun HomeRoute(
             (!lockLoaded || !AppLock.isOpen(entry.key, lockTimeout))
         ) {
             requestUnlock(entry.label) { openUnlocked(entry) }
+            return true
+        }
+        // A locked app the timeout still lets through is still hidden: it needs the same
+        // reveal as one that just asked for credentials.
+        if (enterable && entry.lockedBy(lockedApps)) {
+            openUnlocked(entry)
             return true
         }
         return actuallyLaunch(entry)
@@ -1512,6 +1571,11 @@ fun HomeRoute(
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 lockedApps = lockedApps,
                 onToggleLock = { entry -> toggleLock(entry) },
+                onAddToPrivateSpace = if (privateSpaceAddAvailable) {
+                    { entry -> startProtection(entry) }
+                } else {
+                    null
+                },
                 alignment = settings.alignment,
                 iconSide = settings.iconSide,
                 editMode = homeEditMode,
@@ -1730,6 +1794,11 @@ fun HomeRoute(
                 reduceMotion = settings.reduceMotion,
                 lockedApps = lockedApps,
                 onToggleLock = { entry -> toggleLock(entry) },
+                onAddToPrivateSpace = if (privateSpaceAddAvailable) {
+                    { entry -> startProtection(entry) }
+                } else {
+                    null
+                },
                 freezeActions = if (freezeEnabled) freezeActions else null,
                 appTags = appTags,
                 allTags = allTags,

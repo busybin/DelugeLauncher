@@ -130,6 +130,8 @@ class AppRepository(
         planned: Set<String> = emptySet(),
         /** What the list remembers about rows that cannot be read back, keyed like [frozen]. */
         freezeRows: Map<String, FreezeRow> = emptyMap(),
+        /** Locked rows, so an app the lock has hidden still has a row to be opened from. */
+        locked: Set<String> = emptySet(),
     ): List<AppInfo> {
         val profiles = runCatching { userManager.userProfiles }.getOrNull().orEmpty()
         val mainUser = Process.myUserHandle()
@@ -206,6 +208,11 @@ class AppRepository(
             .distinctBy { it.key }
             // After the dedupe: these are the frozen apps LauncherApps stopped returning.
             .let { rows -> rows + frozenRows(frozen, rows.mapTo(mutableSetOf()) { it.freezeKey }, freezeRows) }
+            // Hiding for the lock takes the row out of LauncherApps too, but it must stay
+            // reachable here: it is still installed, still locked, and the only place the
+            // owner can get back into it. These are added after the frozen rows so an app
+            // already held by the freeze list keeps its own row and method.
+            .let { rows -> rows + lockedHiddenRows(locked, states, rows.mapTo(mutableSetOf()) { it.key }) }
             // By pinyin on a Chinese phone: this is the order every list of app names starts
             // from, and codepoint order would put ZhiFuBao where no reader looks for it.
             // The app list re-files and re-orders the same apps by its own letters.
@@ -260,6 +267,42 @@ class AppRepository(
 
     private fun launcherComponent(packageName: String): ComponentName? =
         FreezeState.launcherComponent(context, packageName)
+
+    /**
+     * Rows for apps the lock has hidden from the rest of the system.
+     *
+     * `pm hide` is the strongest thing the launcher can do without a private space: the app
+     * vanishes from Settings, recents, search and every other launcher, and its data stays.
+     * LauncherApps then stops returning it, so without a row here the app would be locked out
+     * of its own launcher. The key is the one the app was locked under, which is what
+     * favorites, folders, renames and launch counts already point at.
+     */
+    private fun lockedHiddenRows(
+        locked: Set<String>,
+        states: Map<String, FreezeAppState>,
+        present: Set<String>,
+    ): List<AppInfo> = locked.mapNotNull { key ->
+        if (EntryKeys.isShortcut(key) || EntryKeys.isPrivateSpace(key)) return@mapNotNull null
+        if (EntryKeys.userSerial(key) != 0L || key in present) return@mapNotNull null
+        val packageName = key.substringBefore('/')
+        if (packageName.isEmpty()) return@mapNotNull null
+        val info = FreezeState.applicationInfo(context, packageName) ?: return@mapNotNull null
+        if (info.flags and ApplicationInfo.FLAG_INSTALLED == 0) return@mapNotNull null
+        // A platform that will not say is read as "not hidden", so a row is never invented
+        // for an app the lock did not actually take away.
+        val hidden = states[packageName]?.hidden ?: FreezeState.isHidden(info)
+        if (!hidden) return@mapNotNull null
+        AppInfo(
+            componentName = ComponentName.unflattenFromString(key)
+                ?: launcherComponent(packageName)
+                ?: ComponentName(packageName, packageName),
+            label = runCatching { pm.getApplicationLabel(info).toString() }
+                .getOrDefault(packageName),
+            user = Process.myUserHandle(),
+            userSerial = 0L,
+            system = info.flags and FreezeState.SYSTEM_FLAGS != 0,
+        )
+    }
 
     /**
      * What kind of profile this is, or null when the platform will not say — which everything
@@ -443,10 +486,23 @@ class AppRepository(
         }.getOrNull()
     }
 
-    /** Whether [packageName] is installed for the launcher's own profile. */
-    fun mainProfileHas(packageName: String): Boolean = runCatching {
-        launcherApps.getApplicationInfo(packageName, 0, Process.myUserHandle()) != null
-    }.getOrDefault(false)
+    /**
+     * Whether [packageName] is installed for the launcher's own profile.
+     *
+     * A hidden app is still installed but no longer answered by LauncherApps, so with a shell
+     * the package manager is asked instead; `-u` is what includes the hidden state.
+     */
+    suspend fun mainProfileHas(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        if (FreezeCommands.isPackageName(packageName) && shellAvailable()) {
+            val out = shell().output("pm list packages -u --user 0 $packageName")
+            if (out != null) {
+                return@withContext out.lineSequence().any { it.trim() == "package:$packageName" }
+            }
+        }
+        runCatching {
+            launcherApps.getApplicationInfo(packageName, 0, Process.myUserHandle()) != null
+        }.getOrDefault(false)
+    }
 
     /**
      * The shell that can provision a private space without opening it, made once so its root
@@ -457,6 +513,78 @@ class AppRepository(
 
     private fun shell(): FreezeShell =
         provisionShell ?: FreezeShell(context.applicationContext).also { provisionShell = it }
+
+    /** Root-mode Shizuku answers hiding in one IPC; plain root goes through the shell. */
+    @Volatile
+    private var hideBinder: FreezeBinder? = null
+
+    private fun binder(): FreezeBinder =
+        hideBinder ?: FreezeBinder(context.applicationContext).also { hideBinder = it }
+
+    /** Asked once: a missing root grant should not raise a prompt on every lock. */
+    @Volatile
+    private var hideCapability: Boolean? = null
+
+    /**
+     * Whether this phone can hide an app at all.
+     *
+     * Hiding needs `MANAGE_USERS`, which neither an ordinary launcher nor Shizuku's shell
+     * user holds. Root, or a Shizuku running as root, is the only way in.
+     */
+    suspend fun canHideApps(): Boolean = withContext(Dispatchers.IO) {
+        hideCapability ?: runCatching {
+            binder().canHide() || shell().rootAvailable()
+        }.getOrDefault(false).also { hideCapability = it }
+    }
+
+    /**
+     * Hides or reveals [packageName] in the main profile. [reveal] is the same command the
+     * Settings app cannot offer while the app is hidden; the data was never touched.
+     */
+    suspend fun setAppHidden(packageName: String, reveal: Boolean = false): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!FreezeCommands.isPackageName(packageName)) return@withContext false
+            val hidden = !reveal
+            if (binder().canHide()) {
+                binder().setHidden(packageName, hidden, 0)?.let { return@withContext it }
+            }
+            if (!shell().rootAvailable()) return@withContext false
+            val verb = if (reveal) "unhide" else "hide"
+            shell().runAsRoot("pm $verb --user 0 $packageName")
+        }
+
+    /** Whether the platform currently hides [packageName] from the rest of the system. */
+    suspend fun isAppHidden(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        val info = FreezeState.applicationInfo(context, packageName) ?: return@withContext false
+        FreezeState.isHidden(info)
+    }
+
+    /**
+     * Reveals a locked app just long enough to open it. A row that is visible and not hidden
+     * passes straight through, so a phone without root pays one package-manager read.
+     */
+    suspend fun revealForLock(packageName: String): Boolean = withContext(Dispatchers.IO) {
+        !isAppHidden(packageName) || setAppHidden(packageName, reveal = true)
+    }
+
+    /**
+     * Puts every locked main-profile app back out of sight. Called when the launcher comes
+     * back to the foreground and when the screen goes off, which is exactly when an app
+     * opened through the lock has stopped being the thing on screen.
+     */
+    suspend fun rehideLockedApps(): Int = withContext(Dispatchers.IO) {
+        if (!canHideApps()) return@withContext 0
+        var hidden = 0
+        for (key in prefs.lockedAppsNow()) {
+            if (EntryKeys.isShortcut(key) || EntryKeys.isPrivateSpace(key)) continue
+            if (EntryKeys.userSerial(key) != 0L) continue
+            val packageName = key.substringBefore('/')
+            if (!FreezeCommands.isPackageName(packageName)) continue
+            if (isAppHidden(packageName)) continue
+            if (setAppHidden(packageName)) hidden++
+        }
+        hidden
+    }
 
     /** Whether Shizuku or root can carry the private-space steps that need a shell. */
     suspend fun shellAvailable(): Boolean = withContext(Dispatchers.IO) {

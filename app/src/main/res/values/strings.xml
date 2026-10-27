@@ -15,6 +15,8 @@
     <string name="action_change_wallpaper">Change wallpaper</string>
     <string name="wallpaper_no_picker">No wallpaper picker found</string>
     <string name="action_lock_app">Lock app</string>
+    <string name="action_add_to_private_space">Add to private space</string>
+    <string name="app_lock_reveal_failed">Couldn\'t reveal %1$s. It is still locked.</string>
     <string name="action_unlock_app">Unlock app</string>
     <string name="action_set_tag">Set tag</string>
     <string name="tag_label">Tag</string>
@@ -32,8 +34,8 @@
     <string name="app_lock_prompt">Confirm your screen lock to open %1$s</string>
     <string name="app_unlock_title">Remove the app lock</string>
     <string name="app_unlock_prompt">Confirm your screen lock to remove the lock from %1$s</string>
-    <string name="app_lock_space_create_title">Protect %1$s beyond Deluge?</string>
-    <string name="app_lock_space_create_body">The app lock hides this app inside Deluge, but Android Settings, recent apps and other launchers can still open it. Apps in a private space are stopped and hidden everywhere while the space is locked.</string>
+    <string name="app_lock_space_create_title">Add %1$s to the private space?</string>
+    <string name="app_lock_space_create_body">The private space is a separate profile with its own copy of the app. While the space is locked, that copy is stopped and hidden from Deluge, Settings, search, recents and other launchers. The copy outside keeps its data until you remove it.</string>
     <string name="app_lock_space_create_action">Create private space</string>
     <string name="app_lock_space_later">Not now</string>
     <string name="app_lock_space_unlock_title">Unlock the private space</string>

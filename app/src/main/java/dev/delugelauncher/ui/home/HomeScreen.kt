@@ -308,6 +308,8 @@ fun HomeScreen(
     /** Keys that ask for the device lock before opening. */
     lockedApps: Set<String>,
     onToggleLock: (AppInfo) -> Unit,
+    /** Opens the private-space flow for an app; null where the space cannot be reached. */
+    onAddToPrivateSpace: ((AppInfo) -> Unit)? = null,
     alignment: HomeAlignment,
     iconSide: IconSide,
     editMode: Boolean,
@@ -1383,6 +1385,9 @@ fun HomeScreen(
                             onAppInfo = { menuForKey = null; onAppInfo(item.app) },
                             onUninstall = { menuForKey = null; onUninstall(item.app) },
                             onToggleLock = { menuForKey = null; onToggleLock(item.app) },
+                            onAddToPrivateSpace = onAddToPrivateSpace?.let { add ->
+                                { menuForKey = null; add(item.app) }
+                            },
                             isLocked = item.app.lockedBy(lockedApps),
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
@@ -1637,6 +1642,7 @@ private fun FavoriteRow(
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
     onToggleLock: () -> Unit,
+    onAddToPrivateSpace: (() -> Unit)?,
     isLocked: Boolean,
     onUnpin: () -> Unit,
     onRemove: () -> Unit,
@@ -1811,6 +1817,13 @@ private fun FavoriteRow(
                     },
                     onClick = onToggleLock,
                 )
+                if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_add_to_private_space)) },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        onClick = onAddToPrivateSpace,
+                    )
+                }
                 FreezeMenuItems(
                     app = app,
                     actions = freezeActions,

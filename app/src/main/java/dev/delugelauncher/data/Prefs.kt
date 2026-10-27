@@ -1218,6 +1218,8 @@ class Prefs(private val context: Context) {
 
     suspend fun appLockScreenOffNow(): Boolean = appLockScreenOff.first()
 
+    suspend fun lockedAppsNow(): Set<String> = lockedApps.first()
+
     /** Free-form tags per app, so an app can be gathered under several headings at once. */
     val appTags: Flow<Map<String, Set<String>>> = data.map { pref ->
         val raw = pref[Keys.APP_TAGS] ?: return@map emptyMap()
