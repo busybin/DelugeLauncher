@@ -59,6 +59,7 @@ class AppRepository(
      */
     @Volatile
     private var lastKnownPrivateSerial: Long = 0L
+    private val LOCK_REVEAL_GUARD_MS = 2 * 60 * 60 * 1000L
 
     /**
      * The last list handed to the UI, kept for the life of this process so a
@@ -548,6 +549,32 @@ class AppRepository(
     }
 
     /**
+     * The package an authenticated launch is currently using, and when that launch started.
+     *
+     * Lifting hide/suspend itself sends package broadcasts. The repair receiver must not
+     * mistake those for someone unhiding the app and put it straight back, so a launch is
+     * left alone until the launcher returns or the screen goes off. The timestamp is only a
+     * safety valve for a process that never comes back to the foreground.
+     */
+    @Volatile
+    private var revealingPackage: String? = null
+    @Volatile
+    private var revealingAt: Long = 0L
+
+    fun isLockRevealActive(packageName: String): Boolean {
+        if (revealingPackage != packageName) return false
+        val age = System.currentTimeMillis() - revealingAt
+        if (age in 0..LOCK_REVEAL_GUARD_MS) return true
+        revealingPackage = null
+        return false
+    }
+
+    private fun markLockReveal(packageName: String) {
+        revealingPackage = packageName
+        revealingAt = System.currentTimeMillis()
+    }
+
+    /**
      * Hides or reveals [packageName] in the main profile. [reveal] is the same command the
      * Settings app cannot offer while the app is hidden; the data was never touched.
      */
@@ -602,10 +629,21 @@ class AppRepository(
     suspend fun revealForLock(packageName: String): Boolean = withContext(Dispatchers.IO) {
         val hidden = isAppHidden(packageName)
         val suspended = isAppSuspended(packageName)
-        if (!hidden && !suspended) return@withContext true
+        if (!hidden && !suspended) {
+            markLockReveal(packageName)
+            return@withContext true
+        }
+        markLockReveal(packageName)
         var ok = true
         if (hidden) ok = setAppHidden(packageName, reveal = true) && ok
-        if (suspended) ok = setAppSuspended(packageName, suspend = false) && ok
+        if (suspended) {
+            ok = setAppSuspended(packageName, suspend = false) && ok
+        } else if (hidden) {
+            // Some ROMs answer false to isPackageSuspended while the package is hidden.
+            // Lift it anyway, but do not fail the launch if it really was not suspended.
+            setAppSuspended(packageName, suspend = false)
+        }
+        if (!ok && revealingPackage == packageName) revealingPackage = null
         ok
     }
 
@@ -616,6 +654,10 @@ class AppRepository(
      * available: Settings can unhide a hidden app, but it cannot lift our suspension.
      */
     suspend fun rehideLockedApps(only: String? = null): Int = withContext(Dispatchers.IO) {
+        // A null [only] is the launcher coming back or the screen going off: the launch that
+        // was allowed is over. A package-specific call is the repair path and must leave an
+        // authenticated launch alone.
+        if (only == null) revealingPackage = null
         val hide = canHideApps()
         val suspend = canSuspendApps()
         if (!hide && !suspend) return@withContext 0

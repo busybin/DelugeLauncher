@@ -759,4 +759,26 @@
     <string name="settings_notification_text_size">Taille du texte</string>
     <string name="folder_remove_from_home">Retirer de l\'écran d\'accueil</string>
     <string name="folder_add_to_home">Ajouter à l\'écran d\'accueil</string>
+    <string name="home_customize">Personnaliser</string>
+    <string name="settings_section_apps_privacy">Applications et confidentialité</string>
+    <string name="settings_section_system">Système</string>
+    <string name="settings_advanced">Afficher les réglages avancés</string>
+    <string name="settings_advanced_detail">Réglages que la plupart des gens n’utilisent pas.</string>
+    <string name="settings_group_theme">Thème</string>
+    <string name="settings_group_icons_text">Icônes et texte</string>
+    <string name="settings_group_layout">Disposition</string>
+    <string name="settings_group_search">Recherche</string>
+    <string name="settings_group_sorting">Tri et sections</string>
+    <string name="settings_group_az_strip">Bande A–Z</string>
+    <string name="settings_group_sections">Sections et badges</string>
+    <string name="settings_group_protection">Protection</string>
+    <string name="settings_group_effects">Effets</string>
+    <string name="settings_status_bar">Barre d’état</string>
+    <string name="settings_status_bar_detail">Choisissez où elle se masque et combien de temps elle reste.</string>
+    <string name="settings_dim_wallpaper">Assombrir le fond</string>
+    <string name="settings_dim_wallpaper_detail">Réglez séparément l’intensité de l’accueil et de la liste.</string>
+    <string name="settings_two_columns">Deux colonnes</string>
+    <string name="settings_two_columns_detail">Utilisez deux colonnes sur l’accueil et dans la liste.</string>
+    <string name="settings_az_strip">Bande A–Z</string>
+    <string name="settings_az_strip_detail">Choisissez où la bande de lettres apparaît.</string>
 </resources>

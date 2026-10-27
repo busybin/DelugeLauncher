@@ -1422,39 +1422,6 @@ fun HomeRoute(
                 cornerSwipeBound = cornerSwipeBound,
                 freezeEnabled = freezeEnabled,
                 freezeActions = if (freezeEnabled) freezeActions else null,
-                onFreezeAll = {
-                    scope.launch {
-                        FreezeToast.progress(context, R.string.freeze_working)
-                        val result = app.freezeManager.freezeAll()
-                        if (result.noAccess) {
-                            FreezeToast.result(
-                                context,
-                                context.getString(R.string.freeze_needs_access),
-                                long = true,
-                            )
-                        } else {
-                            FreezeToast.result(
-                                context,
-                                context.getString(R.string.freeze_many_done, result.done),
-                            )
-                        }
-                    }
-                },
-                onUnfreezeAll = {
-                    scope.launch {
-                        FreezeToast.progress(context, R.string.unfreeze_working)
-                        val result = app.freezeManager.unfreezeAll()
-                        if (result.noAccess) {
-                            FreezeToast.result(
-                                context,
-                                context.getString(R.string.freeze_needs_access),
-                                long = true,
-                            )
-                        } else {
-                            FreezeToast.result(context, context.getString(R.string.freeze_all_done))
-                        }
-                    }
-                },
                 onOpenFreezeList = { onNavigate("settings/freeze") },
                 favoritesReorderable = settings.favoritesSource == FavoritesSource.MANUAL,
                 shortcutSwipe = settings.shortcutSwipe,

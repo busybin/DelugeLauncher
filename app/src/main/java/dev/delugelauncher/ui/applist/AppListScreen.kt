@@ -71,6 +71,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.DropdownMenu
@@ -2236,147 +2237,220 @@ private fun AppRow(
 
         AppShortcutMenu(app, shortcutMenu, labelSizeSp) { shortcutMenu = false }
 
+        var moreMenu by remember { mutableStateOf(false) }
+        // The first level is the five things a press most often means. Everything that
+        // edits the row or sends it elsewhere is one step in, so the menu opens at a
+        // readable length instead of a wall of equally weighted lines.
+        LaunchedEffect(menuExpanded) { if (menuExpanded) moreMenu = false }
         DropdownMenu(expanded = menuExpanded, onDismissRequest = onDismissMenu, offset = menuOffset) {
-            // Not offered while the favorites keep themselves. Starring an app wrote to a list
-            // nothing was drawing, so the app never appeared and there was nothing on screen to
-            // say why — which is what #77 reported as favorites being broken.
-            if (favoritesEditable) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(if (isFavorite) R.string.applist_remove_favorite else R.string.applist_add_favorite)) },
-                    leadingIcon = {
-                        Icon(
-                            if (isFavorite) DelugeIcons.StarBorder else Icons.Filled.Star,
-                            contentDescription = null,
+            when (app.kind) {
+                EntryKind.APP -> {
+                    if (favoritesEditable) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(if (isFavorite) R.string.applist_remove_favorite else R.string.applist_add_favorite)) },
+                            leadingIcon = {
+                                Icon(
+                                    if (isFavorite) DelugeIcons.StarBorder else Icons.Filled.Star,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { onDismissMenu(); onSetFavorite(!isFavorite) },
                         )
-                    },
-                    onClick = { onDismissMenu(); onSetFavorite(!isFavorite) },
-                )
-            }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
-                leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
-                onClick = { onDismissMenu(); onEdit() },
-            )
-            // Only an installed app has a settings screen to open; a row that stands for
-            // something else — a shortcut, the private space — would send the system looking
-            // for a package that is not there.
-
-            if (app.kind == EntryKind.APP) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_app_info)) },
-                    leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                    onClick = { onDismissMenu(); onAppInfo() },
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(R.string.action_uninstall),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                    onClick = { onDismissMenu(); onUninstall() },
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(
-                                if (isLocked) R.string.action_unlock_app else R.string.action_lock_app
-                            )
-                        )
-                    },
-                    leadingIcon = {
-                        Icon(
-                            if (isLocked) DelugeIcons.LockOpen else Icons.Filled.Lock,
-                            contentDescription = null,
-                        )
-                    },
-                    onClick = { onDismissMenu(); onToggleLock() },
-                )
-                if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                    }
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.action_add_to_private_space)) },
-                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                        onClick = { onDismissMenu(); onAddToPrivateSpace() },
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isLocked) R.string.action_unlock_app else R.string.action_lock_app
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (isLocked) DelugeIcons.LockOpen else Icons.Filled.Lock,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = { onDismissMenu(); onToggleLock() },
+                    )
+                    if (onAddToPrivateSpace != null && app.userSerial == 0L && !app.privateProfile) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_add_to_private_space)) },
+                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            onClick = { onDismissMenu(); onAddToPrivateSpace() },
+                        )
+                    }
+                    // Hiding belongs to the lock while one is set: offering Unhide here would
+                    // put a locked app back on every other launcher without asking for the
+                    // password. Unlock first, then hide it like any other row.
+                    if (!isLocked) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    stringResource(
+                                        if (isHidden) R.string.applist_unhide else R.string.applist_hide
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    if (isHidden) DelugeIcons.Visibility else DelugeIcons.VisibilityOff,
+                                    contentDescription = null,
+                                )
+                            },
+                            onClick = { onDismissMenu(); onHide() },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.settings_more)) },
+                        leadingIcon = { Icon(Icons.Filled.MoreVert, contentDescription = null) },
+                        onClick = { onDismissMenu(); moreMenu = true },
                     )
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_set_tag)) },
-                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    onClick = { onDismissMenu(); onEditTag() },
-                )
-                FreezeMenuItems(
-                    app = app,
-                    actions = freezeActions,
-                    onDismissMenu = onDismissMenu,
-                    onChooseMethod = { onDismissMenu(); freezeChoosing = true },
-                )
-            }
-            // Hands the shortcut back to the app that pinned it, which is the only way one
-            // ever leaves: nothing uninstalls a shortcut.
-            if (app.kind == EntryKind.SHORTCUT) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_remove_shortcut)) },
-                    leadingIcon = { Icon(DelugeIcons.LinkOff, contentDescription = null) },
-                    onClick = { onDismissMenu(); onUnpin() },
-                )
-            }
-            // The padlock is the space's own row, so what one does to a space lives on it.
-            if (app.kind == EntryKind.PRIVATE_SPACE) {
-                val context = LocalContext.current
-                val repo = (context.applicationContext as DelugeApp).appRepository
-                if (app.componentName.className == PRIVATE_SPACE_UNLOCKED_CLASS) {
+                EntryKind.SHORTCUT -> {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.private_space_install_apps)) },
-                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        text = { Text(stringResource(R.string.action_remove_shortcut)) },
+                        leadingIcon = { Icon(DelugeIcons.LinkOff, contentDescription = null) },
+                        onClick = { onDismissMenu(); onUnpin() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.settings_more)) },
+                        leadingIcon = { Icon(Icons.Filled.MoreVert, contentDescription = null) },
+                        onClick = { onDismissMenu(); moreMenu = true },
+                    )
+                }
+                EntryKind.PRIVATE_SPACE -> {
+                    val context = LocalContext.current
+                    val repo = (context.applicationContext as DelugeApp).appRepository
+                    if (app.componentName.className == PRIVATE_SPACE_UNLOCKED_CLASS) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.private_space_install_apps)) },
+                            leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                            onClick = {
+                                onDismissMenu()
+                                if (!repo.openPrivateSpaceStore(context)) {
+                                    Toast.makeText(
+                                        context,
+                                        R.string.private_space_install_failed,
+                                        Toast.LENGTH_SHORT,
+                                    ).show()
+                                }
+                            },
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.private_space_settings)) },
+                        leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                         onClick = {
                             onDismissMenu()
-                            if (!repo.openPrivateSpaceStore(context)) {
+                            if (!repo.openPrivateSpaceSettings(context)) {
                                 Toast.makeText(
                                     context,
-                                    R.string.private_space_install_failed,
+                                    R.string.private_space_settings_failed,
                                     Toast.LENGTH_SHORT,
                                 ).show()
                             }
                         },
                     )
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.private_space_settings)) },
-                    leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    onClick = {
-                        onDismissMenu()
-                        if (!repo.openPrivateSpaceSettings(context)) {
-                            Toast.makeText(
-                                context,
-                                R.string.private_space_settings_failed,
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        }
-                    },
-                )
+                else -> {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
+                        leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                        onClick = { onDismissMenu(); onEdit() },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_move_to_folder)) },
+                        leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
+                        onClick = { onDismissMenu(); onMoveToFolder() },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isHidden) R.string.applist_unhide else R.string.applist_hide
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (isHidden) DelugeIcons.Visibility else DelugeIcons.VisibilityOff,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = { onDismissMenu(); onHide() },
+                    )
+                }
             }
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_move_to_folder)) },
-                leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
-                onClick = { onDismissMenu(); onMoveToFolder() },
-            )
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        stringResource(
-                            if (isHidden) R.string.applist_unhide else R.string.applist_hide
-                        )
+        }
+
+        if (moreMenu) {
+            DropdownMenu(
+                expanded = true,
+                onDismissRequest = { moreMenu = false },
+                offset = menuOffset,
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
+                    leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                    onClick = { moreMenu = false; onEdit() },
+                )
+                if (app.kind == EntryKind.APP) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_set_tag)) },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        onClick = { moreMenu = false; onEditTag() },
                     )
-                },
-                leadingIcon = {
-                    Icon(
-                        if (isHidden) DelugeIcons.Visibility else DelugeIcons.VisibilityOff,
-                        contentDescription = null,
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_move_to_folder)) },
+                        leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
+                        onClick = { moreMenu = false; onMoveToFolder() },
                     )
-                },
-                onClick = { onDismissMenu(); onHide() },
-            )
+                    FreezeMenuItems(
+                        app = app,
+                        actions = freezeActions,
+                        onDismissMenu = { moreMenu = false },
+                        onChooseMethod = { moreMenu = false; freezeChoosing = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_app_info)) },
+                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                        onClick = { moreMenu = false; onAppInfo() },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.action_uninstall),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                        onClick = { moreMenu = false; onUninstall() },
+                    )
+                } else if (app.kind == EntryKind.SHORTCUT) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_move_to_folder)) },
+                        leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
+                        onClick = { moreMenu = false; onMoveToFolder() },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isHidden) R.string.applist_unhide else R.string.applist_hide
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (isHidden) DelugeIcons.Visibility else DelugeIcons.VisibilityOff,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = { moreMenu = false; onHide() },
+                    )
+                }
+            }
         }
 
         FreezeMethodDialog(

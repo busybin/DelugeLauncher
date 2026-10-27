@@ -759,4 +759,26 @@
     <string name="settings_notification_text_size">Tamanho do texto</string>
     <string name="folder_remove_from_home">Remover da tela inicial</string>
     <string name="folder_add_to_home">Adicionar à tela inicial</string>
+    <string name="home_customize">Personalizar</string>
+    <string name="settings_section_apps_privacy">Aplicativos e privacidade</string>
+    <string name="settings_section_system">Sistema</string>
+    <string name="settings_advanced">Mostrar configurações avançadas</string>
+    <string name="settings_advanced_detail">Ajustes que a maioria não precisa.</string>
+    <string name="settings_group_theme">Tema</string>
+    <string name="settings_group_icons_text">Ícones e texto</string>
+    <string name="settings_group_layout">Layout</string>
+    <string name="settings_group_search">Busca</string>
+    <string name="settings_group_sorting">Ordenação e seções</string>
+    <string name="settings_group_az_strip">Faixa A–Z</string>
+    <string name="settings_group_sections">Seções e emblemas</string>
+    <string name="settings_group_protection">Proteção</string>
+    <string name="settings_group_effects">Efeitos</string>
+    <string name="settings_status_bar">Barra de status</string>
+    <string name="settings_status_bar_detail">Escolha onde ela fica oculta e por quanto tempo permanece.</string>
+    <string name="settings_dim_wallpaper">Escurecer papel de parede</string>
+    <string name="settings_dim_wallpaper_detail">Ajuste a intensidade da tela inicial e da lista separadamente.</string>
+    <string name="settings_two_columns">Duas colunas</string>
+    <string name="settings_two_columns_detail">Use duas colunas na tela inicial e na lista de aplicativos.</string>
+    <string name="settings_az_strip">Faixa A–Z</string>
+    <string name="settings_az_strip_detail">Escolha onde a faixa de letras aparece.</string>
 </resources>

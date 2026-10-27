@@ -6,6 +6,8 @@ import dev.delugelauncher.ui.common.DelugeIcons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -159,6 +162,7 @@ import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE
 // class, so no componentN/copy is generated.
 class SettingsScreenModel(
     val hiddenCount: Int,
+    val settingsAdvanced: Boolean,
     val iconPacks: List<IconPackRepository.IconPackInfo>,
     val iconPackPackage: String?,
     val previewApp: AppInfo?,
@@ -269,6 +273,7 @@ class SettingsScreenModel(
     val onSetPinchToResize: (Boolean) -> Unit,
     val reduceMotion: Boolean,
     val onSetReduceMotion: (Boolean) -> Unit,
+    val onSetSettingsAdvanced: (Boolean) -> Unit,
     val sectionTopPercent: Int,
     val onSetSectionTopPercent: (Int) -> Unit,
     val closeFolderOnLaunch: Boolean,
@@ -450,15 +455,15 @@ fun SettingsScreen(model: SettingsScreenModel) {
     // Saveable, not merely remembered. Settings that change the window — the rotation lock is
     // the plain one — rebuild the Activity, and a plain remember goes with it, dropping whoever
     // was three rows into a section back at the top menu.
-    var openSection by rememberSaveable { mutableStateOf<SettingsSection?>(null) }
+    var openCard by rememberSaveable { mutableStateOf<SettingsCard?>(null) }
     // The developer switch hides until it is unlocked: five seconds held on the app name in
     // About. Not persisted — a dead process relocks, which is the point of hiding it.
     var developerUnlocked by rememberSaveable { mutableStateOf(false) }
     // Typed across every section at once, since the whole trouble with a settings screen is
     // knowing which section the thing you want was filed under.
     var query by rememberSaveable { mutableStateOf("") }
-    BackHandler(enabled = openSection != null || query.isNotBlank()) {
-        if (query.isNotBlank()) query = "" else openSection = null
+    BackHandler(enabled = openCard != null || query.isNotBlank()) {
+        if (query.isNotBlank()) query = "" else openCard = null
     }
 
     // The project's page: new releases live there. Opened from the app name in About.
@@ -489,6 +494,10 @@ fun SettingsScreen(model: SettingsScreenModel) {
     // list is emptied, so it gets a confirmation rather than a switch that just flips.
     var disablingFreeze by remember { mutableStateOf(false) }
     var appLockDialog by remember { mutableStateOf(false) }
+    var statusBarDialog by remember { mutableStateOf(false) }
+    var dimDialog by remember { mutableStateOf(false) }
+    var twoColumnDialog by remember { mutableStateOf(false) }
+    var azDialog by remember { mutableStateOf(false) }
 
     // Every row of settings as one list: what it is called, what else it answers to, the
     // section it belongs in, and the control itself. One list rather than a block per section
@@ -499,7 +508,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
     val updateState = updateRowState(updateChecking, updateResult, updateKnownVersion)
     val entries = listOf(
         // Language first: it is the one row that changes what every other row says.
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_language), "language locale translate") {
+        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_language), "language locale translate") {
             QuickLaunchRow(
                 label = stringResource(R.string.settings_language),
                 value = languageLabel(),
@@ -508,25 +517,25 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         // ---- Appearance ----
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_color_scheme), "theme color palette blue") {
+        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_color_scheme), "theme color palette blue") {
             ColorSchemeRow(colorScheme, onSetColorScheme)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_preview)) {
+        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_preview)) {
             RowPreview(previewApp, iconSizeDp, labelSizeSp, font, fontFile, itemSpacingDp)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_icon_pack), "icons themed pack") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icon_pack), "icons themed pack") {
             IconPackRow(
                 iconPacks, iconPackPackage, showAppIcons, showFavoriteIcons, themedIcons,
                 onSetIconPack, onSetShowAppIcons, onSetShowFavoriteIcons, onSetThemedIcons,
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_icons_favorites), "icons") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icons_favorites), "icons") {
             SwitchRow(stringResource(R.string.settings_icons_favorites), showFavoriteIcons, onSetShowFavoriteIcons)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_icons_app_list), "icons") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icons_app_list), "icons") {
             SwitchRow(stringResource(R.string.settings_icons_app_list), showAppIcons, onSetShowAppIcons)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_icon_size), "size") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icon_size), "size") {
             SliderRow(
                 label = stringResource(R.string.settings_icon_size),
                 // Down to where an icon is still a recognisable shape. A list of names wants
@@ -536,7 +545,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetIconSize(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_text_size), "font label size") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_text_size), "font label size") {
             SliderRow(
                 label = stringResource(R.string.settings_text_size),
                 value = labelSizeSp.toFloat(), range = 10f..28f,
@@ -544,7 +553,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetLabelSize(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_favorite_spacing), "gap spacing") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_favorite_spacing), "gap spacing", advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_favorite_spacing),
                 value = itemSpacingDp.toFloat(), range = 0f..40f,
@@ -552,33 +561,47 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetItemSpacing(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_font), "typeface") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_font), "typeface") {
             FontRow(font, fontFile, onSetFont, onPickFontFile)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_text_color), "colour") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_text_color), "colour", advanced = true) {
             TextColorRow(textColorMode, textColorCustom, onSetTextColorMode, onSetTextColorCustom)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.icon_shape), "shape") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.icon_shape), "shape") {
             IconShapeRow(iconShape, onSetIconShape)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_alignment_favorites), "align left right center") {
+        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_alignment_favorites), "align left right center") {
             AlignmentRow(stringResource(R.string.settings_alignment_favorites), alignment, onSetAlignment)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_alignment_applist), "align left right center") {
+        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_alignment_applist), "align left right center", advanced = true) {
             AlignmentRow(stringResource(R.string.settings_alignment_applist), appListAlignment, onSetAppListAlignment)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_icon_side), "left right") {
+        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_icon_side), "left right", advanced = true) {
             IconSideRow(iconSide, onSetIconSide)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_show_names), "labels") {
+        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_show_names), "labels") {
             SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
         },
+        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_two_columns), "two columns portrait landscape") {
+            BackupRow(
+                label = stringResource(R.string.settings_two_columns),
+                detail = stringResource(R.string.settings_two_columns_detail),
+                onClick = { twoColumnDialog = true },
+            )
+        },
         SettingsEntry(
-            SettingsSection.APPEARANCE, stringResource(R.string.settings_dim_color), "colour wallpaper",
+            SettingsSection.EFFECTS, stringResource(R.string.settings_dim_color), "colour wallpaper",
             // Only worth offering once something is actually dimmed.
             visible = dimHomeAlpha > 0f || dimWallpaperAlpha > 0f,
-        ) { DimColorRow(dimColor, onSetDimColor) },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_wallpaper_blur), "blur background frosted") {
+         advanced = true) { DimColorRow(dimColor, onSetDimColor) },
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_wallpaper), "dim wallpaper") {
+            BackupRow(
+                label = stringResource(R.string.settings_dim_wallpaper),
+                detail = stringResource(R.string.settings_dim_wallpaper_detail),
+                onClick = { dimDialog = true },
+            )
+        },
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_wallpaper_blur), "blur background frosted", advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_wallpaper_blur),
                 value = wallpaperBlurDp.toFloat(),
@@ -588,7 +611,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 step = 1f,
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_auto_dark), "dark night theme schedule") {
+        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_auto_dark), "dark night theme schedule") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_auto_dark),
                 detail = stringResource(R.string.settings_auto_dark_detail),
@@ -596,9 +619,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPEARANCE, stringResource(R.string.settings_night_start),
+            SettingsSection.THEME, stringResource(R.string.settings_night_start),
             "dark night theme schedule start evening", visible = autoDark,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_night_start),
                 value = nightStartHour.toFloat(),
@@ -609,9 +632,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPEARANCE, stringResource(R.string.settings_night_end),
+            SettingsSection.THEME, stringResource(R.string.settings_night_end),
             "dark night theme schedule end morning", visible = autoDark,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_night_end),
                 value = nightEndHour.toFloat(),
@@ -621,7 +644,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 step = 1f,
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_reduce_motion), "animation motion") {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_reduce_motion), "animation motion") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_reduce_motion),
                 detail = stringResource(R.string.settings_reduce_motion_detail),
@@ -633,43 +656,21 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_favorites_source), "frequent most used manual") {
             FavoritesSourceRow(favoritesSource, frequentCount, onSetFavoritesSource, onSetFrequentCount)
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_close_folder), "folder") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_close_folder), "folder", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_close_folder),
                 detail = stringResource(R.string.settings_close_folder_detail),
                 checked = closeFolderOnLaunch, onCheckedChange = onSetCloseFolderOnLaunch,
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_hide_status_bar), "status bar") {
-            SwitchRow(stringResource(R.string.settings_hide_status_bar), hideStatusBar, onSetHideStatusBar)
-        },
-        SettingsEntry(
-            SettingsSection.HOME, stringResource(R.string.settings_status_bar_timeout), "status bar peek",
-            visible = hideStatusBar,
-        ) {
-            SliderRow(
-                label = stringResource(R.string.settings_status_bar_timeout),
-                value = statusBarPeekSeconds.toFloat(), range = 1f..30f,
-                valueLabel = { "${it.roundToInt()}s" },
-                onValueChange = { onSetStatusBarPeekSeconds(it.roundToInt()) },
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_status_bar), "status bar hide peek") {
+            BackupRow(
+                label = stringResource(R.string.settings_status_bar),
+                detail = stringResource(R.string.settings_status_bar_detail),
+                onClick = { statusBarDialog = true },
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_dim_home), "dim wallpaper") {
-            SliderRow(
-                label = stringResource(R.string.settings_dim_home),
-                value = dimHomeAlpha, range = 0f..0.85f,
-                valueLabel = { "${(it * 100).roundToInt()}%" },
-                // Rounded to whole percent, so dragging lands where the buttons do.
-                onValueChange = {
-                    val next = (it * 100).roundToInt() / 100f
-                    dimPreviewValue = next
-                    dimPreviewTick++
-                    onSetDimHome(next)
-                },
-                step = 0.01f,
-            )
-        },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_allow_rotation), "landscape rotate") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_allow_rotation), "landscape rotate", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_allow_rotation),
                 detail = stringResource(R.string.settings_allow_rotation_detail),
@@ -678,7 +679,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
 
         // ---- App list ----
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_search_bar), "search") {
+        SettingsEntry(SettingsSection.SEARCH, stringResource(R.string.settings_search_bar), "search") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_search_bar),
                 detail = stringResource(R.string.settings_search_bar_detail),
@@ -686,7 +687,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_auto_keyboard), "keyboard search",
+            SettingsSection.SEARCH, stringResource(R.string.settings_auto_keyboard), "keyboard search",
             visible = appListSearch,
         ) {
             SwitchRowWithDetail(
@@ -696,22 +697,22 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_search_bar_bottom), "search position",
+            SettingsSection.SEARCH, stringResource(R.string.settings_search_bar_bottom), "search position",
             visible = appListSearch,
-        ) {
+         advanced = true) {
             SwitchRow(stringResource(R.string.settings_search_bar_bottom), appListSearchBottom, onSetAppListSearchBottom)
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_search_hidden), "search hidden",
+            SettingsSection.SEARCH, stringResource(R.string.settings_search_hidden), "search hidden",
             visible = appListSearch,
-        ) {
+         advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_search_hidden),
                 detail = stringResource(R.string.settings_search_hidden_detail),
                 checked = appListSearchHidden, onCheckedChange = onSetAppListSearchHidden,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_list_headers), "letters headings") {
+        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_list_headers), "letters headings") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_list_headers),
                 detail = stringResource(R.string.settings_list_headers_detail),
@@ -719,7 +720,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST,
+            SettingsSection.APP_LIST_LAYOUT,
             stringResource(R.string.settings_applist_folders),
             "folders in list alphabet",
         ) {
@@ -729,65 +730,38 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = appListFolders, onCheckedChange = onSetAppListFolders,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_settings_row), "settings shortcut row") {
+        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_settings_row), "settings shortcut row") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_settings_row),
                 detail = stringResource(R.string.settings_settings_row_detail),
                 checked = showSettingsRow, onCheckedChange = onSetShowSettingsRow,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_sort_by_usage), "frequent order") {
+        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_sort_by_usage), "frequent order") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_sort_by_usage),
                 detail = stringResource(R.string.settings_sort_by_usage_detail),
                 checked = sortByUsage, onCheckedChange = onSetSortByUsage,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_auto_frequent), "frequent tag auto") {
+        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_auto_frequent), "frequent tag auto", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_auto_frequent),
                 detail = stringResource(R.string.settings_auto_frequent_detail),
                 checked = autoFrequentTag, onCheckedChange = onSetAutoFrequentTag,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_two_column_list_portrait), "two columns portrait") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_two_column_list_portrait),
-                detail = stringResource(R.string.settings_two_column_list_portrait_detail),
-                checked = listTwoColumnPortrait,
-                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_PORTRAIT, it) },
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_az_strip), "alphabet strip a-z") {
+            BackupRow(
+                label = stringResource(R.string.settings_az_strip),
+                detail = stringResource(R.string.settings_az_strip_detail),
+                onClick = { azDialog = true },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_two_column_list_landscape), "two columns landscape sideways") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_two_column_list_landscape),
-                detail = landscapeDetail(stringResource(R.string.settings_two_column_list_landscape_detail)),
-                checked = listTwoColumnLandscape,
-                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_LANDSCAPE, it) },
-            )
-        },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_az_visibility), "alphabet strip a-z") {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                Text(stringResource(R.string.settings_az_visibility), style = MaterialTheme.typography.bodyMedium)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    AzStripVisibility.entries.forEach { option ->
-                        FilledChip(stringResource(option.labelRes()), azStripVisibility == option) {
-                            onSetAzStripVisibility(option)
-                        }
-                    }
-                }
-            }
-        },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_show_alphabet), "letters a-z strip") {
-            SwitchRow(stringResource(R.string.settings_show_alphabet), showAlphabet, onSetShowAlphabet)
-        },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_edge_side), "a-z strip left right") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_side), "a-z strip left right", advanced = true) {
             EdgeSideRow(edgeSide) { edgePreviewTick++; onSetEdgeSide(it) }
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_web_search), "search web browser") {
+        SettingsEntry(SettingsSection.SEARCH, stringResource(R.string.settings_web_search), "search web browser", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_web_search),
                 detail = stringResource(R.string.settings_web_search_detail),
@@ -795,30 +769,30 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_swipe_up_search), "swipe up search keyboard",
+            SettingsSection.SEARCH, stringResource(R.string.settings_swipe_up_search), "swipe up search keyboard",
             visible = swipeUpOpensList,
-        ) {
+         advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_swipe_up_search),
                 detail = stringResource(R.string.settings_swipe_up_search_detail),
                 checked = swipeUpOpensSearch, onCheckedChange = onSetSwipeUpOpensSearch,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_stay_private_unlock), "private space unlock stay list") {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_stay_private_unlock), "private space unlock stay list", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_stay_private_unlock),
                 detail = stringResource(R.string.settings_stay_private_unlock_detail),
                 checked = stayAfterPrivateUnlock, onCheckedChange = onSetStayAfterPrivateUnlock,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_private_space_section), "private space profile section") {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_private_space_section), "private space profile section") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_private_space_section),
                 detail = stringResource(R.string.settings_private_space_section_detail),
                 checked = privateSpaceSection, onCheckedChange = onSetPrivateSpaceSection,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_recent_section), "recently installed new apps") {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_recent_section), "recently installed new apps") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_recent_section),
                 detail = stringResource(R.string.settings_recent_section_detail),
@@ -826,9 +800,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_recent_section_count),
+            SettingsSection.SECTIONS, stringResource(R.string.settings_recent_section_count),
             "recently installed new apps", visible = recentSection,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_recent_section_count),
                 value = recentSectionCount.toFloat(),
@@ -837,21 +811,21 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetRecentSectionCount(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_mark_work_apps), "work profile duplicate apps") {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_mark_work_apps), "work profile duplicate apps", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_mark_work_apps),
                 detail = stringResource(R.string.settings_mark_work_apps_detail),
                 checked = markWorkApps, onCheckedChange = onSetMarkWorkApps,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_dim_others), "dim fade a-z scrub") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_dim_others), "dim fade a-z scrub", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_dim_others),
                 detail = stringResource(R.string.settings_dim_others_detail),
                 checked = dimOthersScrubbing, onCheckedChange = onSetDimOthersScrubbing,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_hold_scroll), "a-z hold scroll") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_hold_scroll), "a-z hold scroll", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_hold_scroll),
                 detail = stringResource(R.string.settings_hold_scroll_detail),
@@ -859,9 +833,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_hold_scroll_speed), "a-z hold scroll",
+            SettingsSection.AZ_STRIP, stringResource(R.string.settings_hold_scroll_speed), "a-z hold scroll",
             visible = holdScroll,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_hold_scroll_speed),
                 value = holdScrollSpeed.toFloat(),
@@ -870,14 +844,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetHoldScrollSpeed(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_edge_band_only), "a-z strip height touch") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_band_only), "a-z strip height touch", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_edge_band_only),
                 detail = stringResource(R.string.settings_edge_band_only_detail),
                 checked = edgeZoneBandOnly, onCheckedChange = onSetEdgeZoneBandOnly,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_edge_inset_auto), "back gesture edge conflict automatic") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_inset_auto), "back gesture edge conflict automatic", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_edge_inset_auto),
                 detail = stringResource(R.string.settings_edge_inset_auto_detail),
@@ -885,9 +859,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST, stringResource(R.string.settings_edge_inset), "back gesture edge conflict",
+            SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_inset), "back gesture edge conflict",
             visible = !edgeZoneInsetAuto,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_edge_inset),
                 value = edgeZoneInsetDp.toFloat(),
@@ -896,7 +870,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetEdgeZoneInsetDp(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_edge_zone_width), "a-z strip width") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_zone_width), "a-z strip width", advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_edge_zone_width),
                 value = edgeZoneWidthDp.toFloat(), range = 32f..96f,
@@ -904,14 +878,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { edgePreviewTick++; onSetEdgeZoneWidth(it.roundToInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_last_letter), "letter lands end z") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_last_letter), "letter lands end z", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_last_letter),
                 detail = stringResource(R.string.settings_last_letter_detail),
                 checked = lastLetterToLine, onCheckedChange = onSetLastLetterToLine,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_section_top), "letter lands scroll position") {
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_section_top), "letter lands scroll position", advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_section_top),
                 value = sectionTopPercent.toFloat(),
@@ -920,29 +894,15 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { sectionPreviewTick++; onSetSectionTopPercent(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_hide_status_bar_applist), "status bar") {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_hide_status_bar_applist), "status bar", advanced = true) {
             SwitchRow(
                 stringResource(R.string.settings_hide_status_bar_applist),
                 hideStatusBarAppList, onSetHideStatusBarAppList,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_dim_applist), "dim wallpaper") {
-            SliderRow(
-                label = stringResource(R.string.settings_dim_applist),
-                value = dimWallpaperAlpha, range = 0f..0.85f,
-                valueLabel = { "${(it * 100).roundToInt()}%" },
-                onValueChange = {
-                    val next = (it * 100).roundToInt() / 100f
-                    dimPreviewValue = next
-                    dimPreviewTick++
-                    onSetDimWallpaper(next)
-                },
-                step = 0.01f,
-            )
-        },
 
         // ---- Gestures ----
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_pinch_resize), "pinch zoom icons size") {
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_pinch_resize), "pinch zoom icons size", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_pinch_resize),
                 detail = stringResource(R.string.settings_pinch_resize_detail),
@@ -1058,7 +1018,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 AccessibilityActions(onOpenAccessibilitySettings, onOpenAppInfo)
             }
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_shade_gesture), "notification shade pull") {
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_shade_gesture), "notification shade pull", advanced = true) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1102,7 +1062,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             stringResource(R.string.settings_notification_text_size),
             "notification text preview message",
             visible = notificationPreview,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_notification_text_size),
                 value = notificationTextSp.toFloat(),
@@ -1138,7 +1098,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim") {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_dim_paused_apps),
                 detail = stringResource(R.string.settings_dim_paused_apps_detail),
@@ -1215,30 +1175,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 leading = DelugeIcons.Tune,
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_portrait), "two columns favorites portrait") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_two_column_home_portrait),
-                detail = stringResource(R.string.settings_two_column_home_portrait_detail),
-                checked = homeTwoColumnPortrait,
-                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_PORTRAIT, it) },
-            )
-        },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_landscape), "two columns favorites landscape sideways") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_two_column_home_landscape),
-                detail = landscapeDetail(stringResource(R.string.settings_two_column_home_landscape_detail)),
-                checked = homeTwoColumnLandscape,
-                onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_LANDSCAPE, it) },
-            )
-        },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_compact_tap),
                 detail = stringResource(R.string.settings_compact_tap_detail),
                 checked = compactTapArea, onCheckedChange = onSetCompactTapArea,
             )
         },
-        SettingsEntry(SettingsSection.APPEARANCE, stringResource(R.string.settings_text_shadow), "contrast readability wallpaper") {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_text_shadow), "contrast readability wallpaper", advanced = true) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_text_shadow),
                 detail = stringResource(R.string.settings_text_shadow_detail),
@@ -1246,9 +1190,9 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPEARANCE, stringResource(R.string.settings_text_shadow_strength),
+            SettingsSection.EFFECTS, stringResource(R.string.settings_text_shadow_strength),
             "contrast readability wallpaper", visible = textShadow,
-        ) {
+         advanced = true) {
             SliderRow(
                 label = stringResource(R.string.settings_text_shadow_strength),
                 value = textShadowStrength.toFloat(),
@@ -1261,7 +1205,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             SettingsSection.APPS, stringResource(R.string.settings_frequent_excluded),
             "most used favorites exclude block",
             visible = frequentExcludedVisible,
-        ) {
+         advanced = true) {
             BackupRow(
                 label = stringResource(R.string.settings_frequent_excluded),
                 detail = if (frequentExcludedCount == 0) {
@@ -1277,7 +1221,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 leading = Icons.Filled.FavoriteBorder,
             )
         },
-        SettingsEntry(SettingsSection.APPS, stringResource(R.string.settings_hidden_apps), "hide") {
+        SettingsEntry(SettingsSection.PROTECTION, stringResource(R.string.settings_hidden_apps), "hide") {
             BackupRow(
                 label = stringResource(R.string.settings_hidden_apps),
                 detail = if (hiddenCount == 0) stringResource(R.string.settings_hidden_none)
@@ -1287,7 +1231,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPS, stringResource(R.string.settings_app_lock_timeout),
+            SettingsSection.PROTECTION, stringResource(R.string.settings_app_lock_timeout),
             "app lock unlock credential biometric fingerprint timeout minutes",
         ) {
             BackupRow(
@@ -1298,7 +1242,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPS, stringResource(R.string.settings_app_lock_screen_off),
+            SettingsSection.PROTECTION, stringResource(R.string.settings_app_lock_screen_off),
             "app lock screen off relock forget",
         ) {
             SwitchRowWithDetail(
@@ -1311,7 +1255,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         // Beside hiding, which is the launcher's own idea of hidden; this one is the system's.
         // The master switch stays visible when off, since it is the only way back on.
         SettingsEntry(
-            SettingsSection.APPS, stringResource(R.string.settings_freeze_enable),
+            SettingsSection.PROTECTION, stringResource(R.string.settings_freeze_enable),
             "freeze frozen disable hide suspend stop root shizuku enable feature",
         ) {
             SwitchRowWithDetail(
@@ -1324,7 +1268,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APPS, stringResource(R.string.settings_freeze_apps),
+            SettingsSection.PROTECTION, stringResource(R.string.settings_freeze_apps),
             "freeze frozen disable hide suspend stop root shizuku", visible = freezeEnabled,
         ) {
             BackupRow(
@@ -1438,7 +1382,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             SettingsSection.ABOUT, stringResource(R.string.settings_crash_copy),
             "crash log report bug trace",
             visible = crashText != null && !crashCleared,
-        ) {
+         advanced = true) {
             BackupRow(
                 label = stringResource(R.string.settings_crash_copy),
                 detail = stringResource(R.string.settings_crash_detail),
@@ -1455,11 +1399,15 @@ fun SettingsScreen(model: SettingsScreenModel) {
     ).filter { it.visible }
 
     // What the list below actually draws: the matches while something is typed, the open
-    // section otherwise, and nothing at all on the top menu.
-    val entriesToShow = remember(entries, query, openSection) {
+    // card otherwise, and nothing at all on the top menu. Advanced rows stay out of the way
+    // unless the switch is on, but a search still reaches them: hiding a row from the list is
+    // not the same as pretending it does not exist.
+    val entriesToShow = remember(entries, query, openCard, settingsAdvanced) {
         val matching = when {
             query.isNotBlank() -> entries.filter { it.matches(query) }
-            openSection != null -> entries.filter { it.section == openSection }
+            openCard != null -> entries.filter {
+                it.section.card == openCard && (settingsAdvanced || !it.advanced)
+            }
             else -> emptyList()
         }
         matching.groupBy { it.section }.toList()
@@ -1479,13 +1427,13 @@ fun SettingsScreen(model: SettingsScreenModel) {
             TopAppBar(
                 title = {
                     Text(
-                        stringResource(openSection?.labelRes ?: R.string.settings_title),
+                        stringResource(openCard?.labelRes ?: R.string.settings_title),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = { if (openSection != null) openSection = null else onBack() }) {
+                    IconButton(onClick = { if (openCard != null) openCard = null else onBack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
@@ -1535,23 +1483,45 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 )
             }
 
-            if (openSection == null && query.isBlank()) {
-                SettingsSection.entries.chunked(2).forEach { line ->
+            if (openCard == null && query.isBlank()) {
+                SettingsCard.entries.chunked(2).forEach { line ->
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            line.forEach { section ->
+                            line.forEach { card ->
                                 SectionCard(
-                                    section = section,
-                                    count = entries.count { it.section == section },
-                                    onClick = { openSection = section },
+                                    card = card,
+                                    count = entries.count { it.section.card == card },
+                                    onClick = { openCard = card },
                                     modifier = Modifier.weight(1f),
                                 )
                             }
                             if (line.size == 1) Spacer(Modifier.weight(1f))
                         }
+                    }
+                }
+            }
+
+            if (openCard != null && query.isBlank() &&
+                entries.any { it.section.card == openCard && it.advanced }
+            ) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        border = BorderStroke(
+                            1.dp,
+                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        ),
+                    ) {
+                        SwitchRowWithDetail(
+                            label = stringResource(R.string.settings_advanced),
+                            detail = stringResource(R.string.settings_advanced_detail),
+                            checked = settingsAdvanced,
+                            onCheckedChange = onSetSettingsAdvanced,
+                        )
                     }
                 }
             }
@@ -1658,6 +1628,171 @@ fun SettingsScreen(model: SettingsScreenModel) {
         )
     }
 
+    if (statusBarDialog) {
+        AlertDialog(
+            onDismissRequest = { statusBarDialog = false },
+            title = { Text(stringResource(R.string.settings_status_bar)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    SwitchRow(
+                        stringResource(R.string.settings_hide_status_bar),
+                        hideStatusBar,
+                        onSetHideStatusBar,
+                    )
+                    SwitchRow(
+                        stringResource(R.string.settings_hide_status_bar_applist),
+                        hideStatusBarAppList,
+                        onSetHideStatusBarAppList,
+                    )
+                    if (hideStatusBar || hideStatusBarAppList) {
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                        )
+                        SliderRow(
+                            label = stringResource(R.string.settings_status_bar_timeout),
+                            value = statusBarPeekSeconds.toFloat(),
+                            range = 1f..30f,
+                            valueLabel = { "${it.roundToInt()}s" },
+                            onValueChange = { onSetStatusBarPeekSeconds(it.roundToInt()) },
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { statusBarDialog = false }) {
+                    Text(stringResource(R.string.action_done))
+                }
+            },
+        )
+    }
+
+    if (dimDialog) {
+        AlertDialog(
+            onDismissRequest = { dimDialog = false },
+            title = { Text(stringResource(R.string.settings_dim_wallpaper)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    SliderRow(
+                        label = stringResource(R.string.settings_dim_home),
+                        value = dimHomeAlpha,
+                        range = 0f..0.85f,
+                        valueLabel = { "${(it * 100).roundToInt()}%" },
+                        onValueChange = {
+                            val next = (it * 100).roundToInt() / 100f
+                            dimPreviewValue = next
+                            dimPreviewTick++
+                            onSetDimHome(next)
+                        },
+                        step = 0.01f,
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    SliderRow(
+                        label = stringResource(R.string.settings_dim_applist),
+                        value = dimWallpaperAlpha,
+                        range = 0f..0.85f,
+                        valueLabel = { "${(it * 100).roundToInt()}%" },
+                        onValueChange = {
+                            val next = (it * 100).roundToInt() / 100f
+                            dimPreviewValue = next
+                            dimPreviewTick++
+                            onSetDimWallpaper(next)
+                        },
+                        step = 0.01f,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { dimDialog = false }) {
+                    Text(stringResource(R.string.action_done))
+                }
+            },
+        )
+    }
+
+    if (twoColumnDialog) {
+        AlertDialog(
+            onDismissRequest = { twoColumnDialog = false },
+            title = { Text(stringResource(R.string.settings_two_columns)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_two_column_home_portrait),
+                        detail = stringResource(R.string.settings_two_column_home_portrait_detail),
+                        checked = homeTwoColumnPortrait,
+                        onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_PORTRAIT, it) },
+                    )
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_two_column_home_landscape),
+                        detail = landscapeDetail(stringResource(R.string.settings_two_column_home_landscape_detail)),
+                        checked = homeTwoColumnLandscape,
+                        onCheckedChange = { onSetTwoColumn(TwoColumnSlot.HOME_LANDSCAPE, it) },
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_two_column_list_portrait),
+                        detail = stringResource(R.string.settings_two_column_list_portrait_detail),
+                        checked = listTwoColumnPortrait,
+                        onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_PORTRAIT, it) },
+                    )
+                    SwitchRowWithDetail(
+                        label = stringResource(R.string.settings_two_column_list_landscape),
+                        detail = landscapeDetail(stringResource(R.string.settings_two_column_list_landscape_detail)),
+                        checked = listTwoColumnLandscape,
+                        onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_LANDSCAPE, it) },
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { twoColumnDialog = false }) {
+                    Text(stringResource(R.string.action_done))
+                }
+            },
+        )
+    }
+
+    if (azDialog) {
+        AlertDialog(
+            onDismissRequest = { azDialog = false },
+            title = { Text(stringResource(R.string.settings_az_strip)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        stringResource(R.string.settings_section_home),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AzStripVisibility.entries.forEach { option ->
+                            FilledChip(stringResource(option.labelRes()), azStripVisibility == option) {
+                                onSetAzStripVisibility(option)
+                            }
+                        }
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    SwitchRow(
+                        stringResource(R.string.settings_show_alphabet),
+                        showAlphabet,
+                        onSetShowAlphabet,
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { azDialog = false }) {
+                    Text(stringResource(R.string.action_done))
+                }
+            },
+        )
+    }
+
     if (disablingFreeze) {
         AlertDialog(
             onDismissRequest = { disablingFreeze = false },
@@ -1691,12 +1826,12 @@ private fun appLockTimeoutLabel(seconds: Int): String =
 
 @Composable
 private fun SectionCard(
-    section: SettingsSection,
+    card: SettingsCard,
     count: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val (container, content) = sectionColors(section)
+    val (container, content) = sectionColors(card)
     Surface(
         shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -1713,7 +1848,7 @@ private fun SectionCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    section.icon,
+                    card.icon,
                     contentDescription = null,
                     tint = content,
                     modifier = Modifier.size(22.dp),
@@ -1721,7 +1856,7 @@ private fun SectionCard(
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                stringResource(section.labelRes),
+                stringResource(card.labelRes),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -1736,19 +1871,17 @@ private fun SectionCard(
     }
 }
 
-/** One tonal pair per section, so the top menu reads as a set rather than eight grey cards. */
+/** One tonal pair per top-level card, so the menu reads as a set rather than six grey cards. */
 @Composable
-private fun sectionColors(section: SettingsSection): Pair<Color, Color> {
+private fun sectionColors(card: SettingsCard): Pair<Color, Color> {
     val colors = MaterialTheme.colorScheme
-    return when (section) {
-        SettingsSection.APPEARANCE, SettingsSection.APPS ->
+    return when (card) {
+        SettingsCard.APPEARANCE, SettingsCard.APPS ->
             colors.primaryContainer to colors.onPrimaryContainer
-        SettingsSection.HOME, SettingsSection.GESTURES ->
+        SettingsCard.HOME, SettingsCard.GESTURES ->
             colors.primaryContainer.copy(alpha = 0.72f) to colors.onPrimaryContainer
-        SettingsSection.APP_LIST, SettingsSection.NOTIFICATIONS, SettingsSection.BACKUP ->
+        SettingsCard.APP_LIST, SettingsCard.SYSTEM ->
             colors.surfaceContainerHighest to colors.onSurfaceVariant
-        SettingsSection.ABOUT ->
-            colors.surfaceContainerHigh to colors.onSurfaceVariant
     }
 }
 
@@ -1758,7 +1891,7 @@ private fun Section(
     count: Int,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val (container, contentColor) = sectionColors(section)
+    val (container, contentColor) = sectionColors(section.card)
     Column {
         Row(
             modifier = Modifier
@@ -2291,33 +2424,58 @@ private fun TextColorRow(
 }
 
 /**
- * The settings screen shows one of these at a time; the first screen is the list of them.
- *
- * Grouped by the surface each option acts on rather than by what kind of option it is. A-Z
- * settings used to be spread through Behavior while the search options sat nowhere near the
- * list they search, which meant knowing the implementation to find anything.
+ * The cards on the first screen. Six rather than one per section: a section is a group of
+ * rows, not a destination of its own, and the old menu made the owner read eight headings
+ * before reaching the one they wanted.
  */
-private enum class SettingsSection(@StringRes val labelRes: Int, val icon: ImageVector) {
+private enum class SettingsCard(@StringRes val labelRes: Int, val icon: ImageVector) {
     APPEARANCE(R.string.settings_section_appearance, Icons.Filled.Star),
     HOME(R.string.settings_section_home, Icons.Filled.Home),
     APP_LIST(R.string.settings_section_app_list, Icons.Filled.List),
     GESTURES(R.string.settings_section_gestures, Icons.Filled.Build),
-    NOTIFICATIONS(R.string.settings_section_notifications, Icons.Filled.Notifications),
-    APPS(R.string.settings_section_apps, DelugeIcons.Checklist),
-    BACKUP(R.string.settings_section_backup, Icons.Filled.Refresh),
-    ABOUT(R.string.settings_section_about, Icons.Filled.Info),
+    APPS(R.string.settings_section_apps_privacy, DelugeIcons.Checklist),
+    SYSTEM(R.string.settings_section_system, Icons.Filled.Settings),
+}
+
+/**
+ * A group of rows inside a card. The card is the destination; these are the headings the
+ * owner scrolls past, which is why Appearance can hold Theme, Icons & text, Layout and
+ * Effects without turning each of them into a top-level card.
+ */
+private enum class SettingsSection(
+    @StringRes val labelRes: Int,
+    val icon: ImageVector,
+    val card: SettingsCard,
+) {
+    THEME(R.string.settings_group_theme, Icons.Filled.Star, SettingsCard.APPEARANCE),
+    ICONS_TEXT(R.string.settings_group_icons_text, Icons.Filled.Star, SettingsCard.APPEARANCE),
+    LAYOUT(R.string.settings_group_layout, Icons.Filled.Build, SettingsCard.APPEARANCE),
+    EFFECTS(R.string.settings_group_effects, Icons.Filled.Star, SettingsCard.APPEARANCE),
+    HOME(R.string.settings_section_home, Icons.Filled.Home, SettingsCard.HOME),
+    SEARCH(R.string.settings_group_search, Icons.Filled.Search, SettingsCard.APP_LIST),
+    APP_LIST_LAYOUT(R.string.settings_group_sorting, Icons.Filled.List, SettingsCard.APP_LIST),
+    AZ_STRIP(R.string.settings_group_az_strip, Icons.Filled.List, SettingsCard.APP_LIST),
+    SECTIONS(R.string.settings_group_sections, DelugeIcons.Checklist, SettingsCard.APP_LIST),
+    GESTURES(R.string.settings_section_gestures, Icons.Filled.Build, SettingsCard.GESTURES),
+    NOTIFICATIONS(R.string.settings_section_notifications, Icons.Filled.Notifications, SettingsCard.SYSTEM),
+    APPS(R.string.settings_section_apps, DelugeIcons.Checklist, SettingsCard.APPS),
+    PROTECTION(R.string.settings_group_protection, Icons.Filled.Lock, SettingsCard.APPS),
+    BACKUP(R.string.settings_section_backup, Icons.Filled.Refresh, SettingsCard.SYSTEM),
+    ABOUT(R.string.settings_section_about, Icons.Filled.Info, SettingsCard.SYSTEM),
 }
 
 /**
  * One row of settings, as data rather than as a call in a section body.
  *
  * [keywords] is what else the row answers to, for the search box: the words someone would
- * reach for who does not already know what this screen calls the thing.
+ * reach for who does not already know what this screen calls the thing. [advanced] rows are
+ * the tuning knobs: still searchable, but not in the way when the switch is off.
  */
 private class SettingsEntry(
     val section: SettingsSection,
     val title: String,
     val keywords: String = "",
+    val advanced: Boolean = false,
     val visible: Boolean = true,
     val content: @Composable () -> Unit,
 ) {

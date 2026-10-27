@@ -510,6 +510,7 @@ fun DelugeNavHost(
     }
 
     val hiddenApps by app.prefs.hiddenApps.collectAsState(initial = emptySet())
+    val settingsAdvanced by app.prefs.settingsAdvanced.collectAsState(initial = false)
     val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
     val freezeMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
     val freezeApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
@@ -1552,6 +1553,10 @@ fun DelugeNavHost(
             }
             SettingsScreen(SettingsScreenModel(
                 hiddenCount = hiddenShownCount,
+                settingsAdvanced = settingsAdvanced,
+                onSetSettingsAdvanced = { enabled ->
+                    scope.launch { app.prefs.setSettingsAdvanced(enabled) }
+                },
                 frozenCount = frozenShownCount,
                 freezeEnabled = freezeEnabled,
                 onOpenFreezeApps = { navController.navigate("settings/freeze") },

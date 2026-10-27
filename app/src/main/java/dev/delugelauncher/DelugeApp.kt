@@ -105,7 +105,11 @@ class DelugeApp : Application() {
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
                     val packageName = intent.data?.schemeSpecificPart ?: return
-                    appScope.launch { appRepository.rehideLockedApps(only = packageName) }
+                    appScope.launch {
+                        if (!appRepository.isLockRevealActive(packageName)) {
+                            appRepository.rehideLockedApps(only = packageName)
+                        }
+                    }
                 }
             },
             android.content.IntentFilter().apply {
