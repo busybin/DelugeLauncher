@@ -94,6 +94,28 @@ class DelugeApp : Application() {
             android.content.IntentFilter(android.content.Intent.ACTION_SCREEN_OFF),
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        // Settings offers an Unhide button for a hidden package. Hiding is still the right
+        // first layer (it keeps the app out of every launcher), but it is not a boundary on
+        // its own. This catches that unhide and puts the package back; suspension, applied
+        // beside hiding, is what stops the app from opening in the moment before the re-hide
+        // lands. The receiver is only a repair path — a killed launcher leaves the
+        // suspension in place.
+        ContextCompat.registerReceiver(
+            this,
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+                    val packageName = intent.data?.schemeSpecificPart ?: return
+                    appScope.launch { appRepository.rehideLockedApps(only = packageName) }
+                }
+            },
+            android.content.IntentFilter().apply {
+                addAction(android.content.Intent.ACTION_PACKAGE_CHANGED)
+                addAction(android.content.Intent.ACTION_PACKAGE_ADDED)
+                addAction(android.content.Intent.ACTION_PACKAGE_REMOVED)
+                addDataScheme("package")
+            },
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         // The automatic freeze is a running watcher rather than a scheduled job: it is started
         // and stopped from here alone, so the preference and the notification can never
         // disagree about whether something is watching the screen.
