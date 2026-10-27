@@ -131,6 +131,7 @@ import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.EDGE_ZONE_INSET_RANGE
 import dev.delugelauncher.data.HOLD_SCROLL_RANGE
+import dev.delugelauncher.data.NOTIFICATION_TEXT_SP_RANGE
 import dev.delugelauncher.data.RECENT_SECTION_RANGE
 import dev.delugelauncher.data.SECTION_TOP_RANGE
 import dev.delugelauncher.data.FREQUENT_RANGE
@@ -146,6 +147,7 @@ import android.content.Intent
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.theme.toFontFamily
 import dev.delugelauncher.R
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE
@@ -181,6 +183,10 @@ class SettingsScreenModel(
     val iconShape: IconShape,
     val themedIcons: Boolean,
     val doubleTapToLock: Boolean,
+    val appLockTimeout: Int,
+    val onSetAppLockTimeout: (Int) -> Unit,
+    val appLockScreenOff: Boolean,
+    val onSetAppLockScreenOff: (Boolean) -> Unit,
     val edgeSide: EdgeSide,
     val azStripVisibility: AzStripVisibility,
     val showAlphabet: Boolean,
@@ -208,6 +214,8 @@ class SettingsScreenModel(
     val onSetShowListHeaders: (Boolean) -> Unit,
     val showSettingsRow: Boolean,
     val onSetShowSettingsRow: (Boolean) -> Unit,
+    val appListFolders: Boolean,
+    val onSetAppListFolders: (Boolean) -> Unit,
     val edgeZoneBandOnly: Boolean,
     val onSetEdgeZoneBandOnly: (Boolean) -> Unit,
     val holdScroll: Boolean,
@@ -243,7 +251,12 @@ class SettingsScreenModel(
     val notificationBadges: Boolean,
     val onSetNotificationBadges: (Boolean) -> Unit,
     val notificationPreview: Boolean,
+    val notificationTextSp: Int,
+    val onSetNotificationTextSp: (Int) -> Unit,
     val onSetNotificationPreview: (Boolean) -> Unit,
+    val notificationPanel: Boolean,
+    val onSetNotificationPanel: (Boolean) -> Unit,
+    val onOpenNotificationPanel: () -> Unit,
     val dimPausedApps: Boolean,
     val onSetDimPausedApps: (Boolean) -> Unit,
     val autoDark: Boolean,
@@ -344,6 +357,9 @@ class SettingsScreenModel(
     val frequentExcludedVisible: Boolean,
     val onOpenFrequentExcluded: () -> Unit,
     val onOpenFavorites: () -> Unit,
+    /** How many favorite rules are on, for the row's subtitle. */
+    val favoriteRuleCount: Int,
+    val onOpenFavoriteRules: () -> Unit,
     /** Opens the launcher's own language picker. */
     val onOpenLanguage: () -> Unit,
     /** Opens the release notes. */
@@ -472,6 +488,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
     // Turning the freeze feature off is a one-way cleanup: every frozen app is lifted and the
     // list is emptied, so it gets a confirmation rather than a switch that just flips.
     var disablingFreeze by remember { mutableStateOf(false) }
+    var appLockDialog by remember { mutableStateOf(false) }
 
     // Every row of settings as one list: what it is called, what else it answers to, the
     // section it belongs in, and the control itself. One list rather than a block per section
@@ -699,6 +716,17 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 label = stringResource(R.string.settings_list_headers),
                 detail = stringResource(R.string.settings_list_headers_detail),
                 checked = showListHeaders, onCheckedChange = onSetShowListHeaders,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APP_LIST,
+            stringResource(R.string.settings_applist_folders),
+            "folders in list alphabet",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_applist_folders),
+                detail = stringResource(R.string.settings_applist_folders_detail),
+                checked = appListFolders, onCheckedChange = onSetAppListFolders,
             )
         },
         SettingsEntry(SettingsSection.APP_LIST, stringResource(R.string.settings_settings_row), "settings shortcut row") {
@@ -1069,6 +1097,44 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = notificationPreview, onCheckedChange = onSetNotificationPreview,
             )
         },
+        SettingsEntry(
+            SettingsSection.NOTIFICATIONS,
+            stringResource(R.string.settings_notification_text_size),
+            "notification text preview message",
+            visible = notificationPreview,
+        ) {
+            SliderRow(
+                label = stringResource(R.string.settings_notification_text_size),
+                value = notificationTextSp.toFloat(),
+                range = NOTIFICATION_TEXT_SP_RANGE.first.toFloat()..
+                    NOTIFICATION_TEXT_SP_RANGE.last.toFloat(),
+                valueLabel = { it.roundToInt().toString() },
+                onValueChange = { onSetNotificationTextSp(it.toInt()) },
+            )
+        },
+        SettingsEntry(
+            SettingsSection.NOTIFICATIONS,
+            stringResource(R.string.settings_notification_panel),
+            "panel shade notifications replies",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_notification_panel),
+                detail = stringResource(R.string.settings_notification_panel_detail),
+                checked = notificationPanel, onCheckedChange = onSetNotificationPanel,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.NOTIFICATIONS,
+            stringResource(R.string.settings_notification_panel_open),
+            "open panel",
+            visible = notificationPanel,
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_notification_panel_open),
+                detail = stringResource(R.string.settings_notification_panel_open_detail),
+                onClick = onOpenNotificationPanel,
+            )
+        },
         SettingsEntry(SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
@@ -1081,7 +1147,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_notification_access_detail), "permission access",
-            visible = nowPlayingEnabled || notificationBadges || notificationPreview,
+            visible = nowPlayingEnabled || notificationBadges || notificationPreview || notificationPanel,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
@@ -1127,6 +1193,26 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 detail = stringResource(R.string.settings_favorites_detail),
                 onClick = onOpenFavorites,
                 leading = Icons.Filled.Favorite,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPS,
+            stringResource(R.string.settings_favorite_rules),
+            "rules wi-fi wifi time headphones daily opens situational",
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_favorite_rules),
+                detail = if (favoriteRuleCount > 0) {
+                    pluralStringResource(
+                        R.plurals.settings_favorite_rules_on,
+                        favoriteRuleCount,
+                        favoriteRuleCount,
+                    )
+                } else {
+                    stringResource(R.string.settings_favorite_rules_detail)
+                },
+                onClick = onOpenFavoriteRules,
+                leading = DelugeIcons.Tune,
             )
         },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_column_home_portrait), "two columns favorites portrait") {
@@ -1198,6 +1284,28 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     else stringResource(R.string.settings_hidden_count, hiddenCount),
                 onClick = onOpenHiddenApps,
                 leading = DelugeIcons.VisibilityOff,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPS, stringResource(R.string.settings_app_lock_timeout),
+            "app lock unlock credential biometric fingerprint timeout minutes",
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_app_lock_timeout),
+                detail = appLockTimeoutLabel(appLockTimeout),
+                onClick = { appLockDialog = true },
+                leading = Icons.Filled.Lock,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.APPS, stringResource(R.string.settings_app_lock_screen_off),
+            "app lock screen off relock forget",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_app_lock_screen_off),
+                detail = stringResource(R.string.settings_app_lock_screen_off_detail),
+                checked = appLockScreenOff,
+                onCheckedChange = onSetAppLockScreenOff,
             )
         },
         // Beside hiding, which is the launcher's own idea of hidden; this one is the system's.
@@ -1512,6 +1620,44 @@ fun SettingsScreen(model: SettingsScreenModel) {
         }
     }
 
+    if (appLockDialog) {
+        AlertDialog(
+            onDismissRequest = { appLockDialog = false },
+            title = { Text(stringResource(R.string.settings_app_lock_timeout)) },
+            text = {
+                Column {
+                    APP_LOCK_TIMEOUTS.forEach { seconds ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSetAppLockTimeout(seconds)
+                                    appLockDialog = false
+                                }
+                                .padding(vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(
+                                selected = appLockTimeout == seconds,
+                                onClick = {
+                                    onSetAppLockTimeout(seconds)
+                                    appLockDialog = false
+                                },
+                            )
+                            Text(appLockTimeoutLabel(seconds))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { appLockDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
     if (disablingFreeze) {
         AlertDialog(
             onDismissRequest = { disablingFreeze = false },
@@ -1534,6 +1680,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
     }
     }
 }
+
+/** The lock's choices, in seconds; 0 asks on every tap. */
+private val APP_LOCK_TIMEOUTS = listOf(0, 60, 300, 900, 1800)
+
+@Composable
+private fun appLockTimeoutLabel(seconds: Int): String =
+    if (seconds <= 0) stringResource(R.string.settings_app_lock_every_time)
+    else stringResource(R.string.settings_app_lock_minutes, seconds / 60)
 
 @Composable
 private fun SectionCard(
@@ -2328,6 +2482,7 @@ private fun CornerAction.labelRes(): Int = when (this) {
     CornerAction.CAMERA -> R.string.corner_action_camera
     CornerAction.FLASHLIGHT -> R.string.corner_action_flashlight
     CornerAction.SHADE -> R.string.corner_action_shade
+    CornerAction.NOTIFICATIONS -> R.string.corner_action_notifications
     CornerAction.LOCK -> R.string.corner_action_lock
     CornerAction.FREEZE_ALL -> R.string.corner_action_freeze_all
     CornerAction.UNFREEZE_ALL -> R.string.corner_action_unfreeze_all

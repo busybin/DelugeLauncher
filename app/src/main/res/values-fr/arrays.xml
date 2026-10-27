@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v27">
+        <item>Le texte des notifications sous les favoris affiche jusqu\'à trois notifications par application, les plus récentes d\'abord. Touchez-en une pour l\'ouvrir, et réglez sa taille de texte.</item>
+        <item>Un point à côté du nom quand les icônes sont masquées et que l\'application a des notifications.</item>
+        <item>Sur un téléphone en japonais, les noms se classent par lignes de kana, et les noms en kanji sur une ligne à part.</item>
+        <item>Le cadenas de l\'espace privé termine la liste ; son menu installe des applications dans l\'espace et ouvre ses paramètres.</item>
+        <item>Les widgets peuvent vivre dans les dossiers, au-dessus des applications, avec leur propre hauteur et menu de réglages.</item>
+        <item>Les dossiers de la liste ont un menu par appui long : gérer les applications, ajouter à ou retirer de l\'écran d\'accueil, supprimer.</item>
+        <item>Le widget horloge suit la police du lanceur.</item>
+        <item>Un panneau de notifications tiré depuis l\'écran d\'accueil : chaque notification avec ses boutons et une zone de réponse.</item>
+        <item>Les règles de favoris affichent ou masquent des favoris selon le Wi-Fi, l\'heure, le casque ou une limite d\'ouvertures par jour.</item>
+        <item>L\'écran de gel explique l\'espace privé d\'Android 15 quand le téléphone en a un.</item>
+        <item>Les 8 langues complètes.</item>
+    </string-array>
     <string-array name="changelog_v26">
         <item>Applications protégées, activé par défaut : le clavier en cours, l\'application d\'accueil, les services d\'accessibilité, Shizuku et les gestionnaires root ne sont jamais gelés.</item>
         <item>Les applications du profil professionnel et de l\'espace privé peuvent aussi être gelées, chaque profil étant séparé même à nom de paquet identique.</item>

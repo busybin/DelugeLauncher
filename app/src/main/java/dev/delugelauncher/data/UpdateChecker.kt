@@ -20,6 +20,13 @@ import javax.net.ssl.SSLException
  * Why a check came back with no answer. One per thing that actually goes wrong, because
  * "couldn't check" on its own is a dead end for whoever reads it.
  */
+/**
+ * The answer to "may the launcher look at the release page on its own?", asked once on first
+ * launch. [UNASKED] is the only state that shows the question; nothing is requested before it is
+ * answered.
+ */
+enum class UpdateConsent { UNASKED, ALLOWED, DENIED }
+
 enum class UpdateError { DNS, SOCKET, TIMEOUT, TLS, SERVER, UNEXPECTED }
 
 /** What one look at the release page found. */

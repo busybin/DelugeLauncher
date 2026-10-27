@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import android.content.Context
+import android.content.Intent
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -71,6 +74,7 @@ import dev.delugelauncher.data.FreezeStateFilter
 import dev.delugelauncher.data.FreezeStatus
 import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.data.RootProvider
+import dev.delugelauncher.data.privateSpaceGuideVisible
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.common.FreezePinned
@@ -358,6 +362,9 @@ fun FreezeAppsScreen(
             item(key = "header-balance") { MethodBalance(method) }
             if (method == FreezeMethod.HIDE && !status.rootGranted) {
                 item(key = "header-hide-note") { InfoLine(stringResource(R.string.freeze_hide_needs_root)) }
+            }
+            if (method == FreezeMethod.HIDE) {
+                item(key = "header-private-space") { PrivateSpaceHint() }
             }
             item(key = "header-system-apps") {
                 SystemAppsRow(
@@ -962,6 +969,68 @@ private fun InfoLine(text: String) {
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
     )
+}
+
+/** The system page: setup while there is no space yet, settings once there is one. */
+private const val ACTION_OPEN_PRIVATE_SPACE = "com.android.settings.action.OPEN_PRIVATE_SPACE_SETTINGS"
+
+private fun openPrivateSpaceSettings(context: Context): Boolean = runCatching {
+    context.startActivity(
+        Intent(ACTION_OPEN_PRIVATE_SPACE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    )
+}.isSuccess
+
+/**
+ * What hiding cannot buy, said on the tab that chooses it. Deluge already lists the platform's
+ * private space and offers its padlock row; this only explains the difference and where the
+ * switch lives, because no permission request or setup flow of our own can take its place.
+ */
+@Composable
+private fun PrivateSpaceHint() {
+    if (!privateSpaceGuideVisible(Build.VERSION.SDK_INT)) return
+    val context = LocalContext.current
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                stringResource(R.string.freeze_private_space_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Text(
+                stringResource(R.string.freeze_private_space_body),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                stringResource(R.string.freeze_private_space_how),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+            Text(
+                stringResource(R.string.freeze_private_space_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            )
+            TextButton(
+                onClick = {
+                    if (!openPrivateSpaceSettings(context)) {
+                        android.widget.Toast.makeText(
+                            context,
+                            R.string.freeze_private_space_missing,
+                            android.widget.Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+                contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp),
+            ) {
+                Text(stringResource(R.string.freeze_private_space_open))
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

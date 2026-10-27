@@ -91,6 +91,9 @@ const val USER_TYPE_PROFILE_PRIVATE = "android.os.usertype.profile.PRIVATE"
  */
 const val PRIVATE_SPACE_SDK = 35
 
+/** Where the HIDE tab's note about a stronger boundary is worth showing: only where one exists. */
+fun privateSpaceGuideVisible(sdk: Int): Boolean = sdk >= PRIVATE_SPACE_SDK
+
 /** [PrivateSpace] without the profile it belongs to, so the decision can be made on its own. */
 enum class PrivateSpaceKind { ABSENT, LOCKED, UNLOCKED }
 

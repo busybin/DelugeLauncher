@@ -51,6 +51,9 @@ class NowPlayingListenerService : NotificationListenerService() {
         /** A row shows one line; anything longer is ellipsised there anyway. */
         private const val MAX_PREVIEW_CHARS = 200
 
+        /** The panel wraps up to a few lines; past that it is not a notification any more. */
+        private const val MAX_PANEL_CHARS = 600
+
         // Binder plus disk plus a calendar query per render: never on the listener's thread.
         private val background: java.util.concurrent.ExecutorService by lazy {
             java.util.concurrent.Executors.newSingleThreadExecutor()
@@ -66,8 +69,13 @@ class NowPlayingListenerService : NotificationListenerService() {
     @Volatile
     private var previewWanted = false
 
+    /** Whether the notification panel is on, which is what keeps whole notifications. */
+    @Volatile
+    private var panelWanted = false
+
     override fun onCreate() {
         super.onCreate()
+        NotificationGateway.attach(this)
         val app = application as DelugeApp
         scope.launch {
             app.prefs.notificationPreview.collect { wanted ->
@@ -75,10 +83,18 @@ class NowPlayingListenerService : NotificationListenerService() {
                 if (wanted) publishCounts() else NotificationPreviewBus.clear()
             }
         }
+        scope.launch {
+            app.prefs.notificationPanel.collect { wanted ->
+                panelWanted = wanted
+                if (wanted) publishCounts() else NotificationPanelBus.clear()
+            }
+        }
     }
 
     override fun onDestroy() {
         scope.cancel()
+        NotificationGateway.detach(this)
+        NotificationPanelBus.clear()
         super.onDestroy()
     }
 
@@ -117,6 +133,7 @@ class NowPlayingListenerService : NotificationListenerService() {
         NowPlayingBus.update(null)
         NotificationCountBus.clear()
         NotificationPreviewBus.clear()
+        NotificationPanelBus.clear()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()
@@ -146,6 +163,7 @@ class NowPlayingListenerService : NotificationListenerService() {
         if (active == null) {
             NotificationCountBus.clear()
             NotificationPreviewBus.clear()
+            NotificationPanelBus.clear()
             persistCounts(emptyMap())
             renderAllAsync()
             return
@@ -159,9 +177,16 @@ class NowPlayingListenerService : NotificationListenerService() {
         }
         val before = NotificationCountBus.counts.value
         NotificationCountBus.update(counts)
-        if (previewWanted) {
-            NotificationPreviewBus.update(active.mapNotNull { it.toPreview() })
+        if (panelWanted || previewWanted) {
+            val entries = active.mapNotNull { it.toPanelEntry() }.sortedByDescending { it.postTime }
+            if (panelWanted) NotificationPanelBus.update(entries) else NotificationPanelBus.clear()
+            if (previewWanted) {
+                NotificationPreviewBus.update(entries)
+            } else {
+                NotificationPreviewBus.clear()
+            }
         } else {
+            NotificationPanelBus.clear()
             NotificationPreviewBus.clear()
         }
         persistCounts(counts)
@@ -173,43 +198,61 @@ class NowPlayingListenerService : NotificationListenerService() {
     }
 
     /**
-     * One notification's words, for the line under its app's name.
+     * One notification in full, for the panel.
      *
-     * Ongoing and summary notifications are left out for the same reason they are not counted.
-     * Text is flattened and capped here rather than at the row: this is the only place that
-     * knows what the posting app actually sent.
+     * Group summaries are skipped because they duplicate their children's words. Ongoing ones
+     * are kept: a running download or a media session belongs on a panel even though it is not
+     * something waiting to be read. Text is flattened here so the screen only ever lays out.
      */
-    private fun StatusBarNotification.toPreview(): NotificationPreview? {
-        if (!isClearable) return null
+    private fun StatusBarNotification.toPanelEntry(): NotificationEntry? {
         val notification = notification ?: return null
         if (notification.flags and Notification.FLAG_GROUP_SUMMARY != 0) return null
         val extras = notification.extras
         val title = readLine(
             extras.getCharSequence(Notification.EXTRA_TITLE)
                 ?: extras.getCharSequence(Notification.EXTRA_TITLE_BIG),
+            MAX_PANEL_CHARS,
         )
         val text = readLine(
             extras.getCharSequence(Notification.EXTRA_BIG_TEXT)
                 ?: extras.getCharSequence(Notification.EXTRA_TEXT),
+            MAX_PANEL_CHARS,
         )
         if (title.isEmpty() && text.isEmpty()) return null
         val serial = runCatching {
             getSystemService(UserManager::class.java).getSerialNumberForUser(user)
         }.getOrDefault(if (user == android.os.Process.myUserHandle()) 0L else Long.MIN_VALUE)
-        return NotificationPreview(
+        val actions = notification.actions.orEmpty().mapNotNull { action ->
+            val label = action.title?.toString()?.trim().orEmpty()
+            val inputs: Array<android.app.RemoteInput> =
+                action.remoteInputs?.map { it }?.toTypedArray() ?: emptyArray()
+            val reply = inputs.firstOrNull { it.allowFreeFormInput }?.resultKey
+            if (label.isEmpty()) null
+            else NotificationAction(
+                title = label,
+                pendingIntent = action.actionIntent,
+                inputs = inputs,
+                replyKey = reply,
+            )
+        }
+        return NotificationEntry(
+            notificationKey = key,
             packageName = packageName,
             userSerial = serial,
             title = title,
             text = text,
             postTime = postTime,
+            canDismiss = isClearable,
+            actions = actions,
+            contentIntent = notification.contentIntent,
         )
     }
 
-    private fun readLine(value: CharSequence?): String =
+    private fun readLine(value: CharSequence?, limit: Int = MAX_PREVIEW_CHARS): String =
         value?.toString().orEmpty()
             .replace(Regex("""\s+"""), " ")
             .trim()
-            .take(MAX_PREVIEW_CHARS)
+            .take(limit)
 
     /** Binder plus disk plus a calendar query: never on the listener's main thread. */
     private fun renderAllAsync() {

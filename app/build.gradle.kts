@@ -35,8 +35,8 @@ android {
         targetSdk = baselineInt("baseline.targetSdk")
         // Plain integers, no "V" prefix, only ever raised, and always kept equal: the system
         // compares versionCode, and a lower number is rejected as a downgrade.
-        versionCode = 26
-        versionName = "26"
+        versionCode = 27
+        versionName = "27"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -82,7 +82,7 @@ android {
         buildConfig = true
     }
 
-    // Strip the Google dependency metadata block, or the build is not reproducible (F-Droid rejects it).
+    // Strip the Google dependency metadata block, or the build is not reproducible (a third-party store rejects it).
     dependenciesInfo {
         includeInApk = false
         includeInBundle = false

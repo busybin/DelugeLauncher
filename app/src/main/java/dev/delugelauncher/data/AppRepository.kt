@@ -409,6 +409,57 @@ class AppRepository(
     }
 
     /**
+     * Opens the app store inside an open private space, the way the stock launcher's install
+     * button does. Settings' own route to it can come up empty while another launcher is the
+     * default. False when there is no open space or no store to open.
+     */
+    fun openPrivateSpaceStore(from: Context): Boolean {
+        if (Build.VERSION.SDK_INT < PRIVATE_SPACE_SDK) return false
+        val user = (privateSpace() as? PrivateSpace.Unlocked)?.user ?: return false
+        return runCatching {
+            startSystemSender(from, launcherApps.getAppMarketActivityIntent(null, user) ?: return false)
+        }.getOrDefault(false)
+    }
+
+    /**
+     * Opens the system's private space settings. The launcher-facing intent is what the stock
+     * launcher uses and it runs as the main user, which its "Install available apps" page
+     * needs; older builds only expose the settings action itself.
+     */
+    fun openPrivateSpaceSettings(from: Context): Boolean {
+        if (Build.VERSION.SDK_INT < PRIVATE_SPACE_SDK) return false
+        val sender = runCatching {
+            LauncherApps::class.java.getMethod("getPrivateSpaceSettingsIntent").invoke(launcherApps)
+        }.getOrNull() as? android.content.IntentSender
+        if (sender != null) {
+            return runCatching { startSystemSender(from, sender) }.getOrDefault(false)
+        }
+        return runCatching {
+            from.startActivity(
+                Intent("com.android.settings.action.OPEN_PRIVATE_SPACE_SETTINGS")
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+            true
+        }.getOrDefault(false)
+    }
+
+    @androidx.annotation.RequiresApi(PRIVATE_SPACE_SDK)
+    private fun startSystemSender(from: Context, sender: android.content.IntentSender): Boolean {
+        // The system made this sender, so starting it rests on our being in front, which
+        // Android 14 only lends to it when asked.
+        val options = android.app.ActivityOptions.makeBasic()
+            .setPendingIntentBackgroundActivityStartMode(
+                android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED
+            )
+        from.startIntentSender(
+            sender, null,
+            Intent.FLAG_ACTIVITY_NEW_TASK, Intent.FLAG_ACTIVITY_NEW_TASK, 0,
+            options.toBundle(),
+        )
+        return true
+    }
+
+    /**
      * The row that opens and closes the space, or nothing when there is no space to open.
      *
      * It is not an app and has no activity of its own, so it names itself after this package

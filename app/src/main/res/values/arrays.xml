@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v27">
+        <item>Notification text under favorites shows up to three notifications per app, newest first. Tap one to open that notification, and set its own text size.</item>
+        <item>A dot beside the name when icons are hidden and the app has notifications.</item>
+        <item>On a Japanese phone, app names file under kana rows, and kanji names under one row of their own.</item>
+        <item>The private space padlock ends the app list; its menu installs apps into the space and opens the space\'s settings.</item>
+        <item>Widgets can live inside folders, above the apps, with their own height and settings menu.</item>
+        <item>Folders in the app list have a long-press menu: manage apps, add to or remove from the home screen, delete.</item>
+        <item>The clock widget follows the launcher\'s font.</item>
+        <item>A notification panel pulled down from the home screen: every notification with its buttons and a reply box.</item>
+        <item>Favorite rules show or hide favorites by Wi-Fi, time of day, headphones or a daily open limit.</item>
+        <item>The freeze screen explains Android 15\'s private space when the phone has it.</item>
+        <item>All 8 languages complete.</item>
+    </string-array>
     <string-array name="changelog_v26">
         <item>Protected apps, on by default: the current keyboard, the home app, accessibility services, Shizuku and root managers are never frozen.</item>
         <item>Work profile and private space apps can be frozen too, each profile kept apart even when the package name is the same.</item>

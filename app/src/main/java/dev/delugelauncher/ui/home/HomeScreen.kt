@@ -83,6 +83,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.font.FontWeight
@@ -138,7 +139,9 @@ import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.Folder
-import dev.delugelauncher.media.NotificationPreview
+import dev.delugelauncher.data.FolderWidget
+import dev.delugelauncher.media.NotificationEntry
+import dev.delugelauncher.media.NotificationGateway
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.HomeAlignment
@@ -159,9 +162,10 @@ import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.EditAppDialog
-import dev.delugelauncher.ui.common.FolderIconImage
+import dev.delugelauncher.ui.common.FolderIcon
 import dev.delugelauncher.ui.common.recordTouchPosition
 import dev.delugelauncher.ui.common.pressPop
+import dev.delugelauncher.widget.WidgetPage
 import dev.delugelauncher.widget.WidgetSlot
 import androidx.compose.ui.semantics.Role
 import dev.delugelauncher.widget.WidgetSlotActions
@@ -244,8 +248,10 @@ fun HomeScreen(
     shortcutSwipe: ShortcutSwipe,
     favorites: List<FavoriteEntry>,
     nameOverrides: Map<String, String>,
-    /** Newest notification per app, for the line under its name; empty unless that is on. */
-    notificationPreviews: Map<String, NotificationPreview> = emptyMap(),
+    /** Newest notifications per app, for the lines under its name; empty unless that is on. */
+    notificationPreviews: Map<String, List<NotificationEntry>> = emptyMap(),
+    /** Point size for those lines. */
+    notificationTextSp: Int = 12,
     iconSizeDp: Int,
     labelSizeSp: Int,
     itemSpacingDp: Int,
@@ -281,6 +287,8 @@ fun HomeScreen(
     onChangeFolderIcon: (Folder) -> Unit,
     onResetFolderIcon: (Folder) -> Unit,
     onDeleteFolder: (Folder) -> Unit,
+    /** Set when folders are also in the app list, where one taken off here still lives. */
+    onRemoveFolderFromHome: ((Folder) -> Unit)? = null,
     onManageFolder: (Folder) -> Unit,
     onMoveToFolder: (AppInfo) -> Unit,
     appsByKey: Map<String, AppInfo>,
@@ -1279,6 +1287,11 @@ fun HomeScreen(
                             touchPosition = touchPosition,
                             displayName = { displayName(it) },
                             folderDisguise = folderDisguise,
+                            widgetActions = widgetActions,
+                            widgetTick = widgetTick,
+                            onRemoveFromHome = onRemoveFolderFromHome?.let { remove ->
+                                { folderMenuFor = null; remove(item.folder) }
+                            },
                             onToggleExpanded = {
                                 expandedFolders = if (item.folder.id in expandedFolders) {
                                     expandedFolders - item.folder.id
@@ -1344,9 +1357,10 @@ fun HomeScreen(
                             shortcutSwipe = shortcutSwipe,
                             app = item.app,
                             label = displayName(item.app),
-                            notificationLine = notificationPreviews[
+                            notificationLines = notificationPreviews[
                                 NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
-                            ]?.line,
+                            ].orEmpty(),
+                            notificationTextSp = notificationTextSp,
                             editMode = editMode,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
@@ -1595,8 +1609,10 @@ private fun FavoriteRow(
     shortcutSwipe: ShortcutSwipe,
     app: AppInfo,
     label: String,
-    /** The newest notification's words, or null when there is nothing to show. */
-    notificationLine: String?,
+    /** The newest notifications' words, newest first; empty when there is nothing to show. */
+    notificationLines: List<NotificationEntry>,
+    /** Point size for those lines. */
+    notificationTextSp: Int,
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
@@ -1840,15 +1856,10 @@ private fun FavoriteRow(
             },
         )
     }
-    if (!editMode && notificationLine != null) {
-        Text(
-            notificationLine,
-            color = contentColor.copy(alpha = 0.65f),
-            fontSize = (labelSizeSp - 3).coerceAtLeast(10).sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = alignment.textAlign(),
-            modifier = Modifier
+    if (!editMode && notificationLines.isNotEmpty()) {
+        val context = LocalContext.current
+        Column(
+            Modifier
                 .fillMaxWidth()
                 .padding(
                     start = previewStart.dp,
@@ -1856,8 +1867,29 @@ private fun FavoriteRow(
                     top = 1.dp,
                     bottom = 2.dp,
                 )
-                .clickable(onClick = onLaunch),
-        )
+        ) {
+            notificationLines.forEach { line ->
+                Text(
+                    line.line,
+                    color = contentColor.copy(alpha = 0.65f),
+                    fontSize = notificationTextSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = alignment.textAlign(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        // Each line opens its own notification, as the shade would; an app
+                        // that gave us nothing to open still opens.
+                        .clickable {
+                            if (!NotificationGateway.open(context, line)) {
+                                onLaunch()
+                            } else if (line.canDismiss) {
+                                NotificationGateway.dismiss(line.notificationKey)
+                            }
+                        },
+                )
+            }
+        }
     }
     }
 }
@@ -1898,6 +1930,10 @@ private fun FolderRow(
     onEdit: () -> Unit,
     onEditLayout: () -> Unit,
     onDelete: () -> Unit,
+    onRemoveFromHome: (() -> Unit)?,
+    widgetActions: WidgetSlotActions,
+    /** Bumped on every package event, so a folder's frozen widget providers re-read. */
+    widgetTick: Int,
     onOpenApp: (AppInfo) -> Unit,
     onRemoveApp: (AppInfo) -> Unit,
     onMemberAppInfo: (AppInfo) -> Unit,
@@ -1923,7 +1959,7 @@ private fun FolderRow(
     Column {
         // An emptied folder keeps its row (deleting it silently would surprise), but there
         // is nothing to open: no chevron, and a tap does nothing.
-        val canExpand = members.isNotEmpty()
+        val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty()
         Box(Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -2001,6 +2037,11 @@ private fun FolderRow(
                     onClick = onManage,
                 )
                 DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_add)) },
+                    leadingIcon = { Icon(DelugeIcons.Height, contentDescription = null) },
+                    onClick = { onDismissMenu(); widgetActions.onAddWidgetToFolder(folder.id) },
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
                     leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     onClick = onEdit,
@@ -2011,6 +2052,13 @@ private fun FolderRow(
                     onClick = onEditLayout,
                 )
                 HorizontalDivider()
+                onRemoveFromHome?.let { remove ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_remove_from_home)) },
+                        leadingIcon = { Icon(DelugeIcons.StarBorder, contentDescription = null) },
+                        onClick = remove,
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.home_folder_delete)) },
                     leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
@@ -2030,6 +2078,10 @@ private fun FolderRow(
                     membersBottomPx = coords.positionInWindow().y + coords.size.height
                 },
             ) {
+                // Above the apps, so a folder's widget is what it opens onto.
+                folder.widgets.forEach { widget ->
+                    key(widget.id) { FolderWidgetBlock(folder.id, widget, widgetTick, widgetActions) }
+                }
                 members.forEach { member ->
                     // Keyed so each member keeps its own press state: an unkeyed remember in
                     // a loop would hand one row's press to whichever row moved into its slot.
@@ -2277,6 +2329,78 @@ private fun NowPlayingBlock(
         contentColor = contentColor,
     )
 }
+/**
+ * One widget inside an open folder, with its own menu. The widget itself is the same hosted
+ * view the home screen's widget area draws, so a widget that fails is contained the same way.
+ */
+@Composable
+private fun FolderWidgetBlock(
+    folderId: String,
+    widget: FolderWidget,
+    refreshTick: Int,
+    actions: WidgetSlotActions,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var resizing by remember { mutableStateOf(false) }
+    // Followed while the stepper is held, and stored once the change is done.
+    var liveHeight by remember(widget.heightDp) { mutableIntStateOf(widget.heightDp) }
+    val density = LocalDensity.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+        Box(Modifier.fillMaxWidth().height(liveHeight.dp)) {
+            WidgetPage(widget.id, refreshTick) { x, y ->
+                menuOffset = with(density) { DpOffset(x.toDp(), y.toDp()) }
+                menuExpanded = true
+            }
+            TouchAnchoredMenu(
+                expanded = menuExpanded,
+                offset = menuOffset,
+                onDismissRequest = { menuExpanded = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.handle_widget_height)) },
+                    leadingIcon = { Icon(DelugeIcons.Height, contentDescription = null) },
+                    onClick = { menuExpanded = false; resizing = true },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_change_settings)) },
+                    leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                    onClick = { menuExpanded = false; actions.onWidgetSettings(widget.id) },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_app_info)) },
+                    leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                    onClick = { menuExpanded = false; actions.onAppInfo(widget.id) },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_remove_this)) },
+                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                    onClick = { menuExpanded = false; actions.onRemoveFolderWidget(folderId, widget.id) },
+                )
+            }
+        }
+        if (resizing) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                StepperRow(
+                    label = stringResource(R.string.handle_widget_height),
+                    value = liveHeight,
+                    range = 80..900,
+                    step = HEIGHT_STEP_DP,
+                    onChange = { liveHeight = it },
+                    contentColor = LocalContentColor.current,
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = {
+                    resizing = false
+                    if (liveHeight != widget.heightDp) {
+                        actions.onResizeFolderWidget(folderId, widget.id, liveHeight)
+                    }
+                }) { Text(stringResource(R.string.action_done)) }
+            }
+        }
+    }
+}
+
 /** Chevron and member count on a folder row, so expansion has a visible state. */
 @Composable
 private fun FolderChevron(expanded: Boolean, count: Int, contentColor: Color) {
@@ -2303,52 +2427,6 @@ private fun FolderChevron(expanded: Boolean, count: Int, contentColor: Color) {
                 .size(22.dp)
                 .graphicsLayer { rotationZ = rotation },
         )
-    }
-}
-
-@Composable
-private fun FolderIcon(
-    members: List<AppInfo>,
-    sizeDp: Int,
-    contentColor: Color,
-    iconOverride: String?,
-) {
-    if (!LocalIconConfig.current.showIcons) return
-    var drewOverride = false
-    if (iconOverride != null) {
-        drewOverride = FolderIconImage(iconOverride, sizeDp)
-    }
-    if (drewOverride) return
-
-    val preview = members.take(4)
-    Box(
-        modifier = Modifier
-            .size(sizeDp.dp)
-            // Enough of a container to read as one thing. At 12% it was barely there over a
-            // busy wallpaper, so the row looked like loose icons rather than a folder.
-            .background(contentColor.copy(alpha = 0.22f), RoundedCornerShape(sizeDp.dp / 4)),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (preview.isEmpty()) {
-            Icon(
-                DelugeIcons.Folder,
-                contentDescription = null,
-                tint = contentColor.copy(alpha = 0.7f),
-                modifier = Modifier.size((sizeDp * 0.55f).dp),
-            )
-        } else {
-            // Sized to fill the container rather than to sit politely inside it. At a third of
-            // the icon the preview read as a small smudge beside the solid icons it shares a
-            // column with, which is what a folder looked misaligned against.
-            val cell = (sizeDp * 0.44f).toInt()
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                preview.chunked(2).forEach { rowApps ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        rowApps.forEach { AppIcon(app = it, sizeDp = cell) }
-                    }
-                }
-            }
-        }
     }
 }
 

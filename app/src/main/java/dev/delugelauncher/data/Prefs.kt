@@ -83,6 +83,9 @@ val EDGE_ZONE_INSET_RANGE = 0..32
 
 /** Enough to be a list of what is new, short of being a second app list. */
 val RECENT_SECTION_RANGE = 3..15
+
+/** Readable at arm's length without turning a row into a paragraph. */
+val NOTIFICATION_TEXT_SP_RANGE = 8..24
 enum class AppFont { SYSTEM, SANS_SERIF, SERIF, MONOSPACE, CUSTOM }
 
 /** AUTO picks light or dark text from the wallpaper's own colors. */
@@ -111,6 +114,8 @@ enum class CornerAction {
     CAMERA,
     FLASHLIGHT,
     SHADE,
+    /** The launcher's own notification panel, rather than the system shade. */
+    NOTIFICATIONS,
     LOCK,
     /** Puts every app in the freeze list back under its chosen method. */
     FREEZE_ALL,
@@ -193,6 +198,9 @@ private val NEVER_EXPORT = setOf(
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
 data class ExportResult(val json: String, val omittedPrivateSpace: Boolean)
 
+/** Today's open counts, and the local day they belong to. */
+data class DailyOpens(val day: String, val counts: Map<String, Int>)
+
 class Prefs(private val context: Context) {
 
     // The settings whose values are app keys take their names from PrivateSpaceExport, which is
@@ -203,6 +211,7 @@ class Prefs(private val context: Context) {
         val FREQUENT_EXCLUDED = stringSetPreferencesKey(PREF_FREQUENT_EXCLUDED)
         val FAVORITES = stringPreferencesKey(PREF_FAVORITES)
         val FOLDERS = stringPreferencesKey(PREF_FOLDERS)
+        val FAVORITE_RULES = stringPreferencesKey(PREF_FAVORITE_RULES)
         val NAME_OVERRIDES = stringPreferencesKey(PREF_NAME_OVERRIDES)
         val ICON_OVERRIDES = stringPreferencesKey(PREF_ICON_OVERRIDES)
         val ICON_SIZE_DP = intPreferencesKey("icon_size_dp")
@@ -286,6 +295,10 @@ class Prefs(private val context: Context) {
         val SHOW_LIST_HEADERS = booleanPreferencesKey("show_list_headers")
         val NOTIFICATION_BADGES = booleanPreferencesKey("notification_badges")
         val NOTIFICATION_PREVIEW = booleanPreferencesKey("notification_preview")
+        val NOTIFICATION_TEXT_SP = intPreferencesKey("notification_text_sp")
+        val NOTIFICATION_PANEL = booleanPreferencesKey("notification_panel")
+        val DAILY_OPENS_DAY = stringPreferencesKey("daily_opens_day")
+        val DAILY_OPENS = stringPreferencesKey("daily_opens_json")
         val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
         val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
         val AUTO_DARK = booleanPreferencesKey("auto_dark")
@@ -296,10 +309,13 @@ class Prefs(private val context: Context) {
         val AUTO_FREQUENT_TAG = booleanPreferencesKey("auto_frequent_tag")
         val AUTO_FREQUENT_WORDS = stringSetPreferencesKey("auto_frequent_words")
         val LOCKED_APPS = stringSetPreferencesKey(PREF_LOCKED_APPS)
+        val APP_LOCK_TIMEOUT = intPreferencesKey("app_lock_timeout")
+        val APP_LOCK_SCREEN_OFF = booleanPreferencesKey("app_lock_screen_off")
         val APP_TAGS = stringPreferencesKey(PREF_APP_TAGS)
         val SECTION_TOP_PERCENT = intPreferencesKey("section_top_percent")
         val CLOSE_FOLDER_ON_LAUNCH = booleanPreferencesKey("close_folder_on_launch")
         val SHOW_SETTINGS_ROW = booleanPreferencesKey("show_settings_row")
+        val APPLIST_FOLDERS = booleanPreferencesKey("applist_folders")
         val CORNER_BUTTON_KEY = stringPreferencesKey(PREF_CORNER_BUTTON_KEY)
         val CORNER_SWIPE_KEY = stringPreferencesKey(PREF_CORNER_SWIPE_KEY)
         val CORNER_X_PORTRAIT = floatPreferencesKey("corner_x_portrait")
@@ -327,6 +343,8 @@ class Prefs(private val context: Context) {
         val UPDATE_KNOWN_VERSION = intPreferencesKey("update_known_version")
         val UPDATE_PROMPTED_VERSION = intPreferencesKey("update_prompted_version")
         val UPDATE_AUTO_CHECK = booleanPreferencesKey("update_auto_check")
+        val UPDATE_CONSENT = intPreferencesKey("update_consent")
+        val LAST_UPDATE_PROMPT = longPreferencesKey("last_update_prompt")
         val FREEZE_ENABLED = booleanPreferencesKey("freeze_enabled")
         val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
         val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
@@ -392,7 +410,8 @@ class Prefs(private val context: Context) {
             // A malformed JSON we could not parse comes back as-is rather than crashing — but
             // "as-is" may still hold another profile's keys, so the backup must say it omitted.
             if (value == rawValue && value is String && stripOtherProfiles &&
-                (key.name == PREF_FOLDERS || key.name == PREF_NAME_OVERRIDES ||
+                (key.name == PREF_FOLDERS || key.name == PREF_FAVORITE_RULES ||
+                    key.name == PREF_NAME_OVERRIDES ||
                     key.name == PREF_ICON_OVERRIDES || key.name == PREF_LAUNCH_COUNTS ||
                     key.name == PREF_APP_TAGS) &&
                 ((value.startsWith("{") && runCatching {
@@ -686,6 +705,25 @@ class Prefs(private val context: Context) {
     val folders: Flow<List<Folder>> =
         data.map { pref -> foldersFromJson(pref[Keys.FOLDERS]) }.distinctUntilChanged()
 
+    /** Which favorites are shown under which conditions. Empty means every favorite shows. */
+    val favoriteRules: Flow<List<FavoriteRule>> =
+        data.map { pref -> favoriteRulesFromJson(pref[Keys.FAVORITE_RULES]) }.distinctUntilChanged()
+
+    /**
+     * How many times each favorite was opened today, and which day that was.
+     *
+     * The day travels with the counts rather than being compared at read time: a stored map
+     * from yesterday is simply yesterday's answer, and nothing has to remember to clear it.
+     */
+    val dailyOpens: Flow<DailyOpens> = data.map { pref ->
+        DailyOpens(
+            day = pref[Keys.DAILY_OPENS_DAY].orEmpty(),
+            counts = jsonToMap(pref[Keys.DAILY_OPENS])
+                .mapValues { (_, v) -> v.toIntOrNull() ?: 0 }
+                .filterValues { it > 0 },
+        )
+    }.distinctUntilChanged()
+
     val nameOverrides: Flow<Map<String, String>> =
         data.map { pref -> jsonToMap(pref[Keys.NAME_OVERRIDES]) }.distinctUntilChanged()
 
@@ -906,21 +944,40 @@ class Prefs(private val context: Context) {
         data.map { it[Keys.UPDATE_PROMPTED_VERSION] ?: 0 }.distinctUntilChanged()
 
     /**
+     * What the user answered when the launcher offered automatic checks on its first launch.
+     *
+     * Nothing is asked of the release page until this is [UpdateConsent.ALLOWED]. A build from
+     * before the question existed is migrated: its switch was only ever turned on by the user,
+     * so an "on" becomes an answer and anything else becomes "still to ask".
+     */
+    val updateConsent: Flow<UpdateConsent> =
+        data.map { pref ->
+            pref[Keys.UPDATE_CONSENT]?.let { UpdateConsent.entries.getOrElse(it) { UpdateConsent.UNASKED } }
+                ?: if (pref[Keys.UPDATE_AUTO_CHECK] == true) UpdateConsent.ALLOWED else UpdateConsent.UNASKED
+        }.distinctUntilChanged()
+
+    suspend fun setUpdateConsent(value: UpdateConsent) {
+        context.dataStore.edit { it[Keys.UPDATE_CONSENT] = value.ordinal }
+    }
+
+    /**
      * Whether the release page may be asked on its own, without being asked first.
      *
-     * **Off by default.** The manual "check for updates" in Settings always works; this only
-     * decides whether the launcher may make that request by itself at startup. A home screen
-     * that reads a network page unasked is one more thing its user has to trust, and a version
-     * check nobody opted into is what F-Droid labels as tracking — so the request happens only
-     * after someone turns this on. The check itself reads the public release page and sends
-     * nothing else; see [UpdateChecker].
+     * True only after the first-launch question was answered with "allow"; the manual "check for
+     * updates" in Settings always works. A check nobody opted into is what F-Droid labels as
+     * tracking, so the request happens only after that answer. The check itself reads the public
+     * release page and sends nothing else; see [UpdateChecker].
      */
     val updateAutoCheck: Flow<Boolean> =
-        data.map { it[Keys.UPDATE_AUTO_CHECK] ?: false }.distinctUntilChanged()
+        updateConsent.map { it == UpdateConsent.ALLOWED }.distinctUntilChanged()
 
     suspend fun setUpdateAutoCheck(value: Boolean) {
-        context.dataStore.edit { it[Keys.UPDATE_AUTO_CHECK] = value }
+        setUpdateConsent(if (value) UpdateConsent.ALLOWED else UpdateConsent.DENIED)
     }
+
+    /** When the "update available" dialog was last shown, so a long-open app can throttle it. */
+    val lastUpdatePrompt: Flow<Long> =
+        data.map { it[Keys.LAST_UPDATE_PROMPT] ?: 0L }.distinctUntilChanged()
 
     /**
      * Records that a check ran just now, and what it saw.
@@ -941,8 +998,11 @@ class Prefs(private val context: Context) {
         }
     }
 
-    suspend fun markUpdatePrompted(version: Int) {
-        context.dataStore.edit { it[Keys.UPDATE_PROMPTED_VERSION] = version }
+    suspend fun markUpdatePrompted(version: Int, nowMillis: Long) {
+        context.dataStore.edit {
+            it[Keys.UPDATE_PROMPTED_VERSION] = version
+            it[Keys.LAST_UPDATE_PROMPT] = nowMillis
+        }
     }
 
     /**
@@ -1078,6 +1138,20 @@ class Prefs(private val context: Context) {
     val notificationPreview: Flow<Boolean> =
         data.map { it[Keys.NOTIFICATION_PREVIEW] ?: false }.distinctUntilChanged()
 
+    /** Point size for the notification lines under home screen apps. */
+    val notificationTextSp: Flow<Int> =
+        data.map { (it[Keys.NOTIFICATION_TEXT_SP] ?: 12).coerceIn(NOTIFICATION_TEXT_SP_RANGE) }
+            .distinctUntilChanged()
+
+    /**
+     * Whether the launcher keeps whole notifications for its own panel.
+     *
+     * A larger step than the one-line preview: the panel shows what every app posted, with
+     * its buttons. Off by default, and nothing is kept while it is off.
+     */
+    val notificationPanel: Flow<Boolean> =
+        data.map { it[Keys.NOTIFICATION_PANEL] ?: false }.distinctUntilChanged()
+
     /** Whether a paused (suspended) app is shown greyed out so it reads as set aside. */
     val dimPausedApps: Flow<Boolean> =
         data.map { it[Keys.DIM_PAUSED_APPS] ?: true }.distinctUntilChanged()
@@ -1125,6 +1199,23 @@ class Prefs(private val context: Context) {
     /** Apps that ask for the device's own lock before they open. */
     val lockedApps: Flow<Set<String>> =
         data.map { it[Keys.LOCKED_APPS] ?: emptySet() }.distinctUntilChanged()
+
+    /**
+     * How long an unlocked app stays open, in seconds; 0 asks on every tap.
+     *
+     * Kept short by default: the point of a lock is that handing the phone over does not
+     * hand over the app with it.
+     */
+    val appLockTimeout: Flow<Int> =
+        data.map { (it[Keys.APP_LOCK_TIMEOUT] ?: 0).coerceAtLeast(0) }.distinctUntilChanged()
+
+    /** Whether a screen-off forgets which locked apps were opened. */
+    val appLockScreenOff: Flow<Boolean> =
+        data.map { it[Keys.APP_LOCK_SCREEN_OFF] ?: true }.distinctUntilChanged()
+
+    suspend fun appLockTimeoutNow(): Int = appLockTimeout.first()
+
+    suspend fun appLockScreenOffNow(): Boolean = appLockScreenOff.first()
 
     /** Free-form tags per app, so an app can be gathered under several headings at once. */
     val appTags: Flow<Map<String, Set<String>>> = data.map { pref ->
@@ -1295,6 +1386,10 @@ class Prefs(private val context: Context) {
 
     val showSettingsRow: Flow<Boolean> =
         data.map { it[Keys.SHOW_SETTINGS_ROW] ?: true }.distinctUntilChanged()
+
+    /** Whether folders stand in the A-Z list by their own names. Off by default. */
+    val appListFolders: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_FOLDERS] ?: false }.distinctUntilChanged()
 
     val closeFolderOnLaunch: Flow<Boolean> =
         data.map { it[Keys.CLOSE_FOLDER_ON_LAUNCH] ?: false }.distinctUntilChanged()
@@ -1558,6 +1653,30 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it.writeFavorites(list) }
     }
 
+    suspend fun setFavoriteRules(rules: List<FavoriteRule>) {
+        context.dataStore.edit { it[Keys.FAVORITE_RULES] = favoriteRulesToJson(rules) }
+    }
+
+    suspend fun upsertFavoriteRule(rule: FavoriteRule) {
+        context.dataStore.edit { pref ->
+            val current = favoriteRulesFromJson(pref[Keys.FAVORITE_RULES])
+            val next = if (current.any { it.id == rule.id }) {
+                current.map { if (it.id == rule.id) rule else it }
+            } else {
+                current + rule
+            }
+            pref[Keys.FAVORITE_RULES] = favoriteRulesToJson(next)
+        }
+    }
+
+    suspend fun deleteFavoriteRule(id: String) {
+        context.dataStore.edit { pref ->
+            pref[Keys.FAVORITE_RULES] = favoriteRulesToJson(
+                favoriteRulesFromJson(pref[Keys.FAVORITE_RULES]).filterNot { it.id == id }
+            )
+        }
+    }
+
     suspend fun addFavorite(componentKey: String) {
         context.dataStore.edit { pref ->
             val current = readFavorites(pref)
@@ -1593,6 +1712,13 @@ class Prefs(private val context: Context) {
             val folders = foldersFromJson(pref[Keys.FOLDERS])
             if (folders.any { componentKey in it.apps }) {
                 pref[Keys.FOLDERS] = foldersToJson(folders.map { it.copy(apps = it.apps - componentKey) })
+            }
+            val rules = favoriteRulesFromJson(pref[Keys.FAVORITE_RULES])
+            if (rules.any { componentKey in it.tokens }) {
+                pref[Keys.FAVORITE_RULES] = favoriteRulesToJson(
+                    rules.map { it.copy(tokens = it.tokens - componentKey) }
+                        .filter { it.tokens.isNotEmpty() }
+                )
             }
 
             val names = jsonToMap(pref[Keys.NAME_OVERRIDES])
@@ -1635,6 +1761,27 @@ class Prefs(private val context: Context) {
     }
 
     /** Creates the folder if [id] is new, otherwise replaces it. */
+    /** Changes one folder in place, leaving the rest of the list as it was. */
+    private suspend fun updateFolder(folderId: String, change: (Folder) -> Folder) {
+        context.dataStore.edit { pref ->
+            val updated = foldersFromJson(pref[Keys.FOLDERS])
+                .map { if (it.id == folderId) change(it) else it }
+            pref[Keys.FOLDERS] = foldersToJson(updated)
+        }
+    }
+
+    suspend fun addFolderWidget(folderId: String, widgetId: Int) = updateFolder(folderId) {
+        it.copy(widgets = it.widgets + FolderWidget(widgetId, FOLDER_WIDGET_DEFAULT_HEIGHT_DP))
+    }
+
+    suspend fun removeFolderWidget(folderId: String, widgetId: Int) = updateFolder(folderId) {
+        it.copy(widgets = it.widgets.filterNot { w -> w.id == widgetId })
+    }
+
+    suspend fun setFolderWidgetHeight(folderId: String, widgetId: Int, heightDp: Int) = updateFolder(folderId) {
+        it.copy(widgets = it.widgets.map { w -> if (w.id == widgetId) w.copy(heightDp = heightDp) else w })
+    }
+
     suspend fun upsertFolder(folder: Folder) {
         context.dataStore.edit { pref ->
             val existing = foldersFromJson(pref[Keys.FOLDERS])
@@ -2004,6 +2151,17 @@ class Prefs(private val context: Context) {
             val map = jsonToMap(pref[Keys.LAUNCH_COUNTS]).toMutableMap()
             map[componentKey] = ((map[componentKey]?.toIntOrNull() ?: 0) + 1).toString()
             pref[Keys.LAUNCH_COUNTS] = mapToJson(map)
+            // The same write, so a daily limit never sees a launch the total count missed.
+            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+                .format(java.util.Date())
+            val daily = if (pref[Keys.DAILY_OPENS_DAY] == today) {
+                jsonToMap(pref[Keys.DAILY_OPENS]).toMutableMap()
+            } else {
+                pref[Keys.DAILY_OPENS_DAY] = today
+                mutableMapOf()
+            }
+            daily[componentKey] = ((daily[componentKey]?.toIntOrNull() ?: 0) + 1).toString()
+            pref[Keys.DAILY_OPENS] = mapToJson(daily)
         }
     }
 
@@ -2054,8 +2212,16 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.NOTIFICATION_BADGES] = v }
     }
 
+    suspend fun setNotificationTextSp(v: Int) {
+        context.dataStore.edit { it[Keys.NOTIFICATION_TEXT_SP] = v.coerceIn(NOTIFICATION_TEXT_SP_RANGE) }
+    }
+
     suspend fun setNotificationPreview(v: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATION_PREVIEW] = v }
+    }
+
+    suspend fun setNotificationPanel(v: Boolean) {
+        context.dataStore.edit { it[Keys.NOTIFICATION_PANEL] = v }
     }
 
     suspend fun setDimPausedApps(v: Boolean) {
@@ -2104,6 +2270,14 @@ class Prefs(private val context: Context) {
             val current = pref[Keys.LOCKED_APPS] ?: emptySet()
             pref[Keys.LOCKED_APPS] = EntryKeys.withAppLocked(current, key, locked)
         }
+    }
+
+    suspend fun setAppLockTimeout(seconds: Int) {
+        context.dataStore.edit { it[Keys.APP_LOCK_TIMEOUT] = seconds.coerceAtLeast(0) }
+    }
+
+    suspend fun setAppLockScreenOff(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.APP_LOCK_SCREEN_OFF] = enabled }
     }
 
     suspend fun setAppTags(key: String, tags: Set<String>) {
@@ -2321,6 +2495,10 @@ class Prefs(private val context: Context) {
         context.dataStore.edit {
             if (it[Keys.FAVORITES_EVER_SET] != true) it[Keys.FAVORITES_EVER_SET] = true
         }
+    }
+
+    suspend fun setAppListFolders(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_FOLDERS] = v }
     }
 
     suspend fun setShowSettingsRow(v: Boolean) {

@@ -69,10 +69,12 @@ import dev.delugelauncher.data.FreezeStateFilter
 import dev.delugelauncher.data.needsTimes
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.ui.applist.autoTagWords
+import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.ui.common.LocalScreenshotNames
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.UpdateChecker
+import dev.delugelauncher.data.UpdateConsent
 import dev.delugelauncher.data.UpdateResult
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
@@ -84,10 +86,13 @@ import androidx.compose.ui.res.stringResource
 import dev.delugelauncher.R
 import dev.delugelauncher.data.folderIdFromToken
 import dev.delugelauncher.data.stripsOtherProfiles
+import dev.delugelauncher.media.NotificationPanelBus
+import dev.delugelauncher.ui.notifications.NotificationPanelScreen
 import dev.delugelauncher.media.isListenerEnabled
 import dev.delugelauncher.service.FreezeAutoService
 import dev.delugelauncher.service.SystemUi
 import dev.delugelauncher.ui.common.IconPickerScreen
+import dev.delugelauncher.ui.common.rememberAppLockRequest
 import dev.delugelauncher.ui.common.IconStyle
 import dev.delugelauncher.ui.common.LocalIconConfig
 import dev.delugelauncher.ui.common.clearIconCache
@@ -96,7 +101,13 @@ import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.clearIconDiskCache
 import dev.delugelauncher.ui.common.encodePackOverride
 import dev.delugelauncher.ui.common.warmIconCache
+import dev.delugelauncher.data.DailyOpens
+import dev.delugelauncher.data.folderToken
+import dev.delugelauncher.data.hiddenTokens
 import dev.delugelauncher.ui.home.FavoriteEntry
+import dev.delugelauncher.ui.home.readWifiSsid
+import dev.delugelauncher.ui.home.rememberRuleContext
+import dev.delugelauncher.ui.settings.FavoriteRulesScreen
 import dev.delugelauncher.ui.home.HomeRoute
 import dev.delugelauncher.ui.home.HomeSettings
 import dev.delugelauncher.ui.settings.AppPickerScreen
@@ -116,6 +127,8 @@ import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.widget.WidgetPickerActivity
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,10 +148,11 @@ private const val MAX_PLAN_BYTES = 1 shl 20
 /**
  * How long between silent looks at the release page.
  *
- * Six hours: a release is noticed the same day without a request riding on every HOME press,
- * and the row in About is always there to ask again on the spot.
+ * One hour: the check runs on launch (the user asked for that), but a launcher is composed again
+ * on every HOME press, and an unauthenticated GitHub API allows 60 requests an hour per address.
+ * The row in About is always there to ask again on the spot.
  */
-private const val UPDATE_CHECK_INTERVAL_MS = 6L * 60L * 60L * 1000L
+private const val UPDATE_CHECK_INTERVAL_MS = 60L * 60L * 1000L
 
 /**
  * How long after a *failed* look before another.
@@ -148,6 +162,23 @@ private const val UPDATE_CHECK_INTERVAL_MS = 6L * 60L * 60L * 1000L
  * itself, plugged back into the network — before anyone opens settings to wonder about it.
  */
 private const val UPDATE_RETRY_INTERVAL_MS = 15L * 60L * 1000L
+
+/**
+ * How long before the same "update available" dialog may interrupt again.
+ *
+ * A launcher is opened dozens of times a day; telling its user the same news on every HOME press
+ * is what makes people turn the check off. The row in About keeps saying it in between.
+ */
+private const val UPDATE_PROMPT_INTERVAL_MS = 24L * 60L * 60L * 1000L
+
+/**
+ * How long a burst of package callbacks is given to finish before the one pass it earns runs.
+ *
+ * A freeze run reports one package at a time, spread over the length of the run; enumerating
+ * per callback rebuilt the list dozens of times and left it unable to scroll. Short enough
+ * that an install or an uninstall still lands before the row is looked at.
+ */
+private const val REFRESH_SETTLE_MS = 250L
 
 @Composable
 fun DelugeNavHost(
@@ -202,8 +233,10 @@ fun DelugeNavHost(
     var updateResult by remember { mutableStateOf<UpdateResult?>(null) }
     val updateKnownVersion by app.prefs.updateKnownVersion.collectAsState(initial = 0)
     val updatePromptedVersion by app.prefs.updatePromptedVersion.collectAsState(initial = 0)
-    // Off by default: until the user opts in, this machine sends no requests of its own
-    // (see Prefs.updateAutoCheck).
+    val lastUpdatePrompt by app.prefs.lastUpdatePrompt.collectAsState(initial = 0L)
+    // Null until the store has answered, so an existing user never sees the question flash.
+    val updateConsent by app.prefs.updateConsent.collectAsState(initial = null)
+    // Nothing is sent until the first-launch question is answered with "allow".
     val updateAutoCheck by app.prefs.updateAutoCheck.collectAsState(initial = false)
 
     fun openReleasePage() {
@@ -326,8 +359,8 @@ fun DelugeNavHost(
     // look like an old one.
     LaunchedEffect(Unit) {
         app.prefs.ensureInstallMarker()
-        // Opt-in and off by default (see Prefs.updateAutoCheck): nothing is asked unprompted.
-        if (!app.prefs.updateAutoCheck.first()) return@LaunchedEffect
+        // Nothing is asked unprompted: the first-launch question decides (see Prefs.updateConsent).
+        if (app.prefs.updateConsent.first() != UpdateConsent.ALLOWED) return@LaunchedEffect
         val failed = app.prefs.lastUpdateCheckFailed.first()
         val since = System.currentTimeMillis() - app.prefs.lastUpdateCheck.first()
         if (since < if (failed) UPDATE_RETRY_INTERVAL_MS else UPDATE_CHECK_INTERVAL_MS) {
@@ -336,32 +369,47 @@ fun DelugeNavHost(
         checkForUpdates()
     }
 
-    DisposableEffect(Unit) {
-        val launcherApps = context.getSystemService(LauncherApps::class.java)
-        fun refresh(packageName: String? = null, clearIcons: Boolean = true) {
+    // Package callbacks arrive one per package: freezing a list of forty apps sends forty of
+    // them inside a second. Each used to start a full enumeration of its own, which kept the
+    // list rebuilding for as long as the run lasted. Requests are pooled and one pass runs
+    // once the burst goes quiet.
+    val refreshRequests = remember { Channel<RefreshRequest>(Channel.UNLIMITED) }
+    LaunchedEffect(refreshRequests) {
+        for (first in refreshRequests) {
+            val batch = RefreshBatch()
+            fun take(request: RefreshRequest) = batch.add(request.packageName, request.clearIcons)
+            take(first)
+            // What is already queued, then a settle for the rest of the burst.
+            while (true) take(refreshRequests.tryReceive().getOrNull() ?: break)
+            delay(REFRESH_SETTLE_MS)
+            while (true) take(refreshRequests.tryReceive().getOrNull() ?: break)
             // Before the reload, so the widget pages re-read their provider even when the
             // enumeration below finds the same apps: freeze and unfreeze change no id.
             widgetTick++
-            scope.launch {
-                // Taken before the read, so anything already enumerating is superseded by the
-                // moment this pass looked rather than by the moment it finished.
-                val pass = reloadOrder.begin()
-                // The private space first and on its own: whatever it conceals leaves the list
-                // that is on screen now, rather than when the enumeration below comes back.
-                val state = withContext(Dispatchers.Default) { app.appRepository.privateSpace() }
-                adoptPrivateSpace(state, pass)
-                // An app that ships a new icon in an update changes none of the cache
-                // key's components, so nothing else would invalidate the stale bitmap.
-                // Scoped to the package that changed: one update must not empty the cache
-                // for the other three hundred apps. Pausing an app changes no icon at
-                // all, so those passes skip the invalidation entirely rather than
-                // paying the whole cold path for it.
-                if (!clearIcons) {
-                    // Nothing to invalidate: the pictures did not change.
-                } else if (packageName != null) clearIconCacheForPackage(context, packageName)
-                else clearIconDiskCache(context)
-                reloadApps(state, pass)
+            // Taken before the read, so anything already enumerating is superseded by the
+            // moment this pass looked rather than by the moment it finished.
+            val pass = reloadOrder.begin()
+            // The private space first and on its own: whatever it conceals leaves the list
+            // that is on screen now, rather than when the enumeration below comes back.
+            val state = withContext(Dispatchers.Default) { app.appRepository.privateSpace() }
+            adoptPrivateSpace(state, pass)
+            // An app that ships a new icon in an update changes none of the cache key's
+            // components, so nothing else would invalidate the stale bitmap. Scoped to the
+            // packages that changed: one update must not empty the cache for the other three
+            // hundred apps. Pausing an app changes no icon at all, so those passes skip the
+            // invalidation entirely rather than paying the whole cold path for it.
+            if (batch.clearsIcons) {
+                if (batch.full) clearIconDiskCache(context)
+                else batch.names.forEach { clearIconCacheForPackage(context, it) }
             }
+            reloadApps(state, pass)
+        }
+    }
+
+    DisposableEffect(Unit) {
+        val launcherApps = context.getSystemService(LauncherApps::class.java)
+        fun request(packageName: String? = null, clearIcons: Boolean = true) {
+            refreshRequests.trySend(RefreshRequest(packageName, clearIcons))
         }
 
         // LauncherApps reports package changes across every profile. The PACKAGE_* broadcasts
@@ -369,18 +417,20 @@ fun DelugeNavHost(
         // a private space would never reach the list.
         val callback = object : LauncherApps.Callback() {
             override fun onPackageAdded(packageName: String?, user: UserHandle?) =
-                refresh(packageName)
+                request(packageName)
             override fun onPackageRemoved(packageName: String?, user: UserHandle?) =
-                refresh(packageName)
+                request(packageName)
             override fun onPackageChanged(packageName: String?, user: UserHandle?) =
-                refresh(packageName)
-            override fun onPackagesAvailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
-            override fun onPackagesUnavailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = refresh()
+                request(packageName)
+            override fun onPackagesAvailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = request()
+            override fun onPackagesUnavailable(names: Array<out String>?, user: UserHandle?, replacing: Boolean) = request()
             // Pausing or resuming an app changes no package, so no package callback fires for
             // it. Without these a paused app only went grey the next time something else
             // happened to reload. No icon invalidation: the picture did not change.
-            override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh(clearIcons = false)
-            override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) = refresh(clearIcons = false)
+            override fun onPackagesSuspended(packageNames: Array<out String>?, user: UserHandle?) =
+                request(clearIcons = false)
+            override fun onPackagesUnsuspended(packageNames: Array<out String>?, user: UserHandle?) =
+                request(clearIcons = false)
             // A shortcut can be added, renamed, re-iconed or switched off while we are
             // showing it, none of which is a package change. The enumeration itself comes
             // from the shortcutChanges flow below, which fires for the same event — so this
@@ -409,7 +459,7 @@ fun DelugeNavHost(
             addAction("android.intent.action.PROFILE_REMOVED")
         }
         val receiver = object : BroadcastReceiver() {
-            override fun onReceive(c: Context, intent: Intent) = refresh()
+            override fun onReceive(c: Context, intent: Intent) = request()
         }
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
 
@@ -517,6 +567,8 @@ fun DelugeNavHost(
     val showFavoriteLabels by app.prefs.showFavoriteLabels.collectAsState(initial = true)
     val textColorMode by app.prefs.textColorMode.collectAsState(initial = TextColorMode.AUTO)
     val doubleTapToLock by app.prefs.doubleTapToLock.collectAsState(initial = false)
+    val appLockTimeout by app.prefs.appLockTimeout.collectAsState(initial = 0)
+    val appLockScreenOff by app.prefs.appLockScreenOff.collectAsState(initial = true)
     val widgetId by app.prefs.widgetId.collectAsState(initial = -1)
     val widgetPosition by app.prefs.widgetPosition.collectAsState(initial = 0)
     val widgetHeightDp by app.prefs.widgetHeightDp.collectAsState(initial = 180)
@@ -576,6 +628,9 @@ fun DelugeNavHost(
     val closeFolderOnLaunch by app.prefs.closeFolderOnLaunch.collectAsState(initial = false)
     val showListHeaders by app.prefs.showListHeaders.collectAsState(initial = true)
     val showSettingsRow by app.prefs.showSettingsRow.collectAsState(initial = true)
+    val appListFolders by app.prefs.appListFolders.collectAsState(initial = false)
+    val favoriteRules by app.prefs.favoriteRules.collectAsState(initial = emptyList())
+    val dailyOpens by app.prefs.dailyOpens.collectAsState(initial = DailyOpens("", emptyMap()))
     val cornerButtonKey by app.prefs.cornerButtonKey.collectAsState(initial = null)
     val cornerTapAction by app.prefs.cornerTapAction.collectAsState(initial = CornerAction.OPEN_APP)
     val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
@@ -598,6 +653,10 @@ fun DelugeNavHost(
     val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
     val notificationPreview by app.prefs.notificationPreview.collectAsState(initial = false)
+    val notificationTextSp by app.prefs.notificationTextSp.collectAsState(initial = 12)
+    val notificationPanel by app.prefs.notificationPanel.collectAsState(initial = false)
+    val panelEntries by NotificationPanelBus.entries.collectAsState()
+    val lockedApps by app.prefs.lockedApps.collectAsState(initial = emptySet())
     val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
     val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
@@ -773,6 +832,28 @@ fun DelugeNavHost(
         }
     }
 
+    // Situational rules: which favorites the phone's own state takes off the home screen.
+    // The monitor is only started while some rule is on, so an ordinary install never asks the
+    // network or the audio stack anything.
+    val rulesActive = favoriteRules.any { it.enabled && it.tokens.isNotEmpty() }
+    val ruleContext = if (rulesActive) rememberRuleContext(dailyOpens) else null
+    val hiddenFavoriteTokens = remember(favoriteRules, ruleContext) {
+        if (ruleContext == null) emptySet() else favoriteRules.hiddenTokens(ruleContext)
+    }
+    val shownFavoriteEntries = remember(favoriteEntries, hiddenFavoriteTokens) {
+        if (hiddenFavoriteTokens.isEmpty()) {
+            favoriteEntries
+        } else {
+            favoriteEntries.filterNot { entry ->
+                val token = when (entry) {
+                    is FavoriteEntry.App -> entry.app.key
+                    is FavoriteEntry.FolderRef -> folderToken(entry.folder.id)
+                }
+                token in hiddenFavoriteTokens
+            }
+        }
+    }
+
     // Rasterise icons in the background so opening the A-Z list doesn't have to. Favorites and
     // folder members go first: they are what the home screen needs before anything else.
     val listIconPx = with(LocalDensity.current) { iconSizeDp.dp.roundToPx() }
@@ -891,6 +972,7 @@ fun DelugeNavHost(
         closeFolderOnLaunch = closeFolderOnLaunch,
         showListHeaders = showListHeaders,
         showSettingsRow = showSettingsRow,
+        appListFolders = appListFolders,
         showFavoriteIcons = showFavoriteIcons,
         favoritesEverSet = favoritesEverSet,
         edgeZoneBandOnly = edgeZoneBandOnly,
@@ -958,16 +1040,27 @@ fun DelugeNavHost(
         pendingIconTarget = null
     }
 
+    // The folder a widget being picked is for. Held here rather than passed through the
+    // picker, which only knows about widget ids.
+    var folderWidgetTarget by rememberSaveable { mutableStateOf<String?>(null) }
     val widgetPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val id = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, -1) ?: -1
-            // Appended rather than replacing: picking a widget now adds a page.
-            if (id != -1) scope.launch {
-                app.prefs.addWidgetId(id)
-                // The provider is known here, at bind time — see widgetProviders.
-                AppWidgetManager.getInstance(context).getAppWidgetInfo(id)
-                    ?.let { app.prefs.setWidgetProvider(id, it.provider.packageName) }
+            val folderId = folderWidgetTarget
+            folderWidgetTarget = null
+            if (id != -1 && folderId != null) {
+                scope.launch { app.prefs.addFolderWidget(folderId, id) }
+            } else if (id != -1) {
+                // Appended rather than replacing: picking a widget now adds a page.
+                scope.launch {
+                    app.prefs.addWidgetId(id)
+                    // The provider is known here, at bind time — see widgetProviders.
+                    AppWidgetManager.getInstance(context).getAppWidgetInfo(id)
+                        ?.let { app.prefs.setWidgetProvider(id, it.provider.packageName) }
+                }
             }
+        } else {
+            folderWidgetTarget = null
         }
     }
 
@@ -1004,6 +1097,19 @@ fun DelugeNavHost(
                 null
             },
             onOpenSettings = { navController.navigate("settings") },
+            onAddWidgetToFolder = { folderId ->
+                folderWidgetTarget = folderId
+                widgetPickerLauncher.launch(Intent(context, WidgetPickerActivity::class.java))
+            },
+            onRemoveFolderWidget = { folderId, id ->
+                scope.launch {
+                    if (id > 0) runCatching { app.widgetHost.deleteAppWidgetId(id) }
+                    app.prefs.removeFolderWidget(folderId, id)
+                }
+            },
+            onResizeFolderWidget = { folderId, id, height ->
+                scope.launch { app.prefs.setFolderWidgetHeight(folderId, id, height) }
+            },
         )
     }
 
@@ -1032,13 +1138,14 @@ fun DelugeNavHost(
                 cornerButtonIsSearch = cornerButtonKey == EntryKeys.SEARCH,
                 autoKeyboard = autoKeyboard,
                 lastLetterToLine = lastLetterToLine,
+                notificationPanelEnabled = notificationPanel,
                 app = app,
                 homeIntentTick = homeIntentTick,
                 typedToSearch = typedToSearch,
                 onTypedToSearchHandled = onTypedToSearchHandled,
                 settings = settings,
                 homePaddings = homePaddings,
-                favorites = favoriteEntries,
+                favorites = shownFavoriteEntries,
                 appsByKey = appsByKey,
                 folders = folders,
                 favoriteKeys = favoriteKeys,
@@ -1104,6 +1211,55 @@ fun DelugeNavHost(
             }
         }
 
+        composable("notifications") {
+            // Granted in system Settings and returned from with BACK: re-read on resume, the
+            // same reason the settings screen does.
+            val panelLifecycle = LocalLifecycleOwner.current
+            var panelResumeTick by remember { mutableStateOf(0) }
+            DisposableEffect(panelLifecycle) {
+                val observer = LifecycleEventObserver { _, event ->
+                    if (event == Lifecycle.Event.ON_RESUME) panelResumeTick++
+                }
+                panelLifecycle.lifecycle.addObserver(observer)
+                onDispose { panelLifecycle.lifecycle.removeObserver(observer) }
+            }
+            val listenerGranted = remember(homeIntentTick, panelResumeTick) {
+                isListenerEnabled(context)
+            }
+            // One app per `package|u<serial>`, the same identity a notification carries.
+            val appsByAppKey = remember(allApps) {
+                allApps
+                    .filter { it.kind == EntryKind.APP }
+                    .associateBy { it.packageName + "|u" + it.userSerial }
+            }
+            val requestUnlock = rememberAppLockRequest()
+            NotificationPanelScreen(
+                entries = panelEntries,
+                appsByAppKey = appsByAppKey,
+                accessGranted = listenerGranted,
+                panelEnabled = notificationPanel,
+                onOpenApp = { appInfo ->
+                    val open: () -> Unit = {
+                        app.appRepository.launch(appInfo)
+                        navController.popBackStack()
+                        Unit
+                    }
+                    if (appInfo.lockedBy(lockedApps) && !AppLock.isOpen(appInfo.key, appLockTimeout)) {
+                        requestUnlock(appInfo.label, open)
+                    } else {
+                        open()
+                    }
+                },
+                onOpenSettings = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         composable("settings") {
             // Package-manager query, five of them: off the composition thread or the settings
             // screen drops frames on its way in.
@@ -1165,6 +1321,8 @@ fun DelugeNavHost(
             @Composable
             fun buildActionsA() = SettingsActionsA(
                     onSetNotificationPreview = { scope.launch { app.prefs.setNotificationPreview(it) } },
+                    onSetNotificationTextSp = { scope.launch { app.prefs.setNotificationTextSp(it) } },
+                    onSetNotificationPanel = { scope.launch { app.prefs.setNotificationPanel(it) } },
                     onSetShowFavoriteIcons = { scope.launch { app.prefs.setShowFavoriteIcons(it) } },
                     onSetTextShadowStrength = { scope.launch { app.prefs.setTextShadowStrength(it) } },
                     onSetStayAfterPrivateUnlock = { scope.launch { app.prefs.setStayAfterPrivateUnlock(it) } },
@@ -1183,6 +1341,7 @@ fun DelugeNavHost(
                     onSetHoldScrollSpeed = { scope.launch { app.prefs.setHoldScrollSpeed(it) } },
                     onSetEdgeZoneBandOnly = { scope.launch { app.prefs.setEdgeZoneBandOnly(it) } },
                     onSetShowSettingsRow = { scope.launch { app.prefs.setShowSettingsRow(it) } },
+                    onSetAppListFolders = { scope.launch { app.prefs.setAppListFolders(it) } },
                     onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
                     onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
                     onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
@@ -1377,6 +1536,7 @@ fun DelugeNavHost(
                 onSetShowFavoriteIcons = actionsA.onSetShowFavoriteIcons,
                 showListHeaders = showListHeaders,
                 showSettingsRow = showSettingsRow,
+                appListFolders = appListFolders,
                 edgeZoneBandOnly = edgeZoneBandOnly,
                 holdScroll = holdScroll,
                 dimOthersScrubbing = dimOthersScrubbing,
@@ -1410,11 +1570,17 @@ fun DelugeNavHost(
                 onSetHoldScrollSpeed = actionsA.onSetHoldScrollSpeed,
                 onSetEdgeZoneBandOnly = actionsA.onSetEdgeZoneBandOnly,
                 onSetShowSettingsRow = actionsA.onSetShowSettingsRow,
+                onSetAppListFolders = actionsA.onSetAppListFolders,
                 onSetShowListHeaders = actionsA.onSetShowListHeaders,
                 notificationBadges = notificationBadges,
                 onSetNotificationBadges = actionsA.onSetNotificationBadges,
                 notificationPreview = notificationPreview,
+                notificationTextSp = notificationTextSp,
+                onSetNotificationTextSp = actionsA.onSetNotificationTextSp,
                 onSetNotificationPreview = actionsA.onSetNotificationPreview,
+                notificationPanel = notificationPanel,
+                onSetNotificationPanel = actionsA.onSetNotificationPanel,
+                onOpenNotificationPanel = { navController.navigate("notifications") },
                 dimPausedApps = dimPausedApps,
                 onSetDimPausedApps = actionsA.onSetDimPausedApps,
                 autoDark = autoDark,
@@ -1463,6 +1629,10 @@ fun DelugeNavHost(
                 iconShape = iconShape,
                 themedIcons = themedIcons,
                 doubleTapToLock = doubleTapToLock,
+                appLockTimeout = appLockTimeout,
+                onSetAppLockTimeout = { seconds -> scope.launch { app.prefs.setAppLockTimeout(seconds) } },
+                appLockScreenOff = appLockScreenOff,
+                onSetAppLockScreenOff = { enabled -> scope.launch { app.prefs.setAppLockScreenOff(enabled) } },
                 edgeSide = edgeSide,
                 edgeZoneWidthDp = edgeZoneWidthDp,
                 azStripVisibility = azStripVisibility,
@@ -1560,6 +1730,8 @@ fun DelugeNavHost(
                 frequentExcludedVisible = favoritesSource == FavoritesSource.FREQUENT,
                 onOpenFrequentExcluded = actionsB.onOpenFrequentExcluded,
                 onOpenFavorites = actionsB.onOpenFavorites,
+                favoriteRuleCount = favoriteRules.count { it.enabled },
+                onOpenFavoriteRules = { navController.navigate("settings/favoritesrules") },
                 onOpenLanguage = actionsB.onOpenLanguage,
                 onOpenChangelog = actionsB.onOpenChangelog,
                 updateChecking = updateChecking,
@@ -1988,6 +2160,39 @@ fun DelugeNavHost(
             )
         }
 
+        composable("settings/favoritesrules") {
+            var grantTick by remember { mutableIntStateOf(0) }
+            val locationGranted = remember(grantTick) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
+            }
+            val locationLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { grantTick++ }
+            val currentSsid = remember(grantTick) { readWifiSsid(context) }
+            FavoriteRulesScreen(
+                rules = favoriteRules,
+                favoriteTokens = favoriteEntries.map { entry ->
+                    when (entry) {
+                        is FavoriteEntry.App -> entry.app.key
+                        is FavoriteEntry.FolderRef -> folderToken(entry.folder.id)
+                    }
+                },
+                appsByKey = appsByKey,
+                foldersById = foldersById,
+                nameOverrides = nameOverrides,
+                iconSizeDp = iconSizeDp,
+                currentSsid = if (locationGranted) currentSsid else null,
+                locationGranted = locationGranted,
+                onRequestLocation = {
+                    locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onUpsert = { rule -> scope.launch { app.prefs.upsertFavoriteRule(rule) } },
+                onDelete = { id -> scope.launch { app.prefs.deleteFavoriteRule(id) } },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         composableArgs("iconpicker/{key}") { entry ->
             // Decoded once already by the router: decoding again turns a literal %25
             // in a shortcut id into % and then into whatever follows it.
@@ -2028,15 +2233,39 @@ fun DelugeNavHost(
         }
     }
 
-    // Only once per release: a launcher that greeted every HOME press with the same news would
-    // be a reason to turn the check off. "Later" is remembered as firmly as opening the page —
-    // the row in About still says an update is there, so nothing is lost but the interruption.
-    val updateToOffer = updateKnownVersion
-        .takeIf { updateAutoCheck && it > BuildConfig.VERSION_CODE && it > updatePromptedVersion }
+    // Asked once, on the first launch: until it is answered, the launcher sends no request of
+    // its own. Answering "allow" starts a check right away, so the answer has something to show.
+    if (updateConsent == UpdateConsent.UNASKED) {
+        AlertDialog(
+            onDismissRequest = { scope.launch { app.prefs.setUpdateConsent(UpdateConsent.DENIED) } },
+            title = { Text(stringResource(R.string.update_consent_title)) },
+            text = { Text(stringResource(R.string.update_consent_message)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch { app.prefs.setUpdateConsent(UpdateConsent.ALLOWED) }
+                    checkForUpdates()
+                }) { Text(stringResource(R.string.update_consent_allow)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    scope.launch { app.prefs.setUpdateConsent(UpdateConsent.DENIED) }
+                }) { Text(stringResource(R.string.update_consent_deny)) }
+            },
+        )
+    }
+
+    // Once per release, and no more than once a day for a release already shown: a launcher that
+    // greeted every HOME press with the same news would be a reason to turn the check off. The row
+    // in About still says an update is there, so nothing is lost but the interruption.
+    val promptAge = System.currentTimeMillis() - lastUpdatePrompt
+    val updateToOffer = updateKnownVersion.takeIf {
+        updateAutoCheck && it > BuildConfig.VERSION_CODE &&
+            (it > updatePromptedVersion || promptAge > UPDATE_PROMPT_INTERVAL_MS)
+    }
     if (updateToOffer != null) {
         val offeredVersion = "$updateToOffer"
         fun dismissOffer() {
-            scope.launch { app.prefs.markUpdatePrompted(updateToOffer) }
+            scope.launch { app.prefs.markUpdatePrompted(updateToOffer, System.currentTimeMillis()) }
         }
         AlertDialog(
             onDismissRequest = { dismissOffer() },
@@ -2066,6 +2295,9 @@ fun DelugeNavHost(
  * from one and the rows from the other. Published together, there is no such moment.
  */
 private data class AppsAndSpace(val privateSpace: PrivateSpace, val apps: List<AppInfo>)
+
+/** One package change waiting to be folded into the next enumeration. */
+private data class RefreshRequest(val packageName: String?, val clearIcons: Boolean)
 
 /**
  * Whether this app is the device's home app right now.

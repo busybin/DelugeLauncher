@@ -4,6 +4,7 @@ package dev.delugelauncher
 import dev.delugelauncher.data.LanguagePrefs
 
 import android.app.Application
+import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.data.AppRepository
 import dev.delugelauncher.data.FreezeManager
 import dev.delugelauncher.data.IconPackRepository
@@ -13,6 +14,7 @@ import dev.delugelauncher.service.FreezeAutoService
 import dev.delugelauncher.service.FreezeShortcuts
 import dev.delugelauncher.widget.ClockWidgetBattery
 import dev.delugelauncher.widget.DelugeAppWidgetHost
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -74,6 +76,18 @@ class DelugeApp : Application() {
         widgetHost = DelugeAppWidgetHost(this, HOST_ID)
         // Nothing else keeps the clock widget's battery line current; see the object.
         ClockWidgetBattery.watch(this)
+        // A locked app that was opened stays open for the timeout; the screen going off is the
+        // moment that should stop being true, since the phone may have been handed over since.
+        ContextCompat.registerReceiver(
+            this,
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+                    appScope.launch { if (prefs.appLockScreenOffNow()) AppLock.forgetAll() }
+                }
+            },
+            android.content.IntentFilter(android.content.Intent.ACTION_SCREEN_OFF),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         // The automatic freeze is a running watcher rather than a scheduled job: it is started
         // and stopped from here alone, so the preference and the notification can never
         // disagree about whether something is watching the screen.

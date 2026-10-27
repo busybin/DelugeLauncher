@@ -179,7 +179,7 @@
     <string name="settings_now_playing_show">Показывать виджет «Сейчас играет»</string>
     <string name="settings_notification_access_granted">Доступ к уведомлениям разрешён</string>
     <string name="settings_notification_access_missing">Доступ к уведомлениям не разрешён</string>
-    <string name="settings_notification_access_detail">Используется для «Сейчас играет», счётчиков и текста уведомлений</string>
+    <string name="settings_notification_access_detail">Используется для «Сейчас играет», счётчиков, панели и текста уведомлений</string>
     <string name="settings_open_settings">Открыть настройки</string>
     <string name="settings_favorites">Избранное</string>
     <string name="settings_favorites_detail">Выберите, какие приложения будут на домашнем экране</string>
@@ -260,6 +260,12 @@
     <string name="freeze_open_shizuku">Открыть Shizuku</string>
     <string name="freeze_shizuku_missing">Shizuku не установлен</string>
     <string name="freeze_hide_needs_root">Для скрытия приложений нужен root. Отключение и Приостановка работают без него.</string>
+    <string name="freeze_private_space_title">Более надёжная изоляция: приватное пространство</string>
+    <string name="freeze_private_space_body">Приватное пространство Android 15 — отдельный профиль со своей копией каждого приложения. Пока оно заблокировано, его приложения остановлены и не видны ни Deluge, ни другим приложениям, ни поиску, ни недавним, ни уведомлениям.</string>
+    <string name="freeze_private_space_how">Deluge показывает его строкой с замком в конце списка приложений, пока он ваш лаунчер по умолчанию; нажмите, чтобы разблокировать. Приложения нужно установить внутри заново.</string>
+    <string name="freeze_private_space_note">В отличие от скрытия, это настоящая граница: другие приложения не могут его перечислить. Одно на устройство и только у основного пользователя; может сосуществовать с рабочим профилем.</string>
+    <string name="freeze_private_space_open">Открыть настройки приватного пространства</string>
+    <string name="freeze_private_space_missing">В этой системе нет страницы настроек приватного пространства.</string>
     <string name="freeze_frozen_section">Заморожено (%1$d)</string>
     <string name="freeze_add_section">Другие приложения</string>
     <string name="freeze_tab_empty">Этим способом ничего не заморожено</string>
@@ -325,7 +331,11 @@
     <string name="settings_update_check">Проверить обновления</string>
     <string name="settings_update_check_detail">Искать более свежую версию на GitHub</string>
     <string name="settings_update_auto_check">Проверять обновления автоматически</string>
-    <string name="settings_update_auto_check_detail">По умолчанию выключено. Пока это выключено, Deluge заглядывает на страницу релизов только когда вы нажимаете «Проверить обновления» ниже — больше ничего не отправляется.</string>
+    <string name="update_consent_title">Проверять обновления автоматически?</string>
+    <string name="update_consent_message">Разрешить Deluge при каждом запуске смотреть на GitHub, не вышла ли новая версия, и сообщать вам об этом. Он читает только номер версии, ничего о вас не отправляет и ничего не устанавливает сам.</string>
+    <string name="update_consent_allow">Разрешить</string>
+    <string name="update_consent_deny">Не сейчас</string>
+    <string name="settings_update_auto_check_detail">Спрашивается один раз при первом запуске. Пока включено, Deluge при каждом запуске заглядывает на страницу релизов (не чаще раза в час) и сообщает о новой версии.</string>
     <string name="settings_update_checking">Проверка…</string>
     <string name="settings_update_up_to_date">Установлена последняя версия (%1$s)</string>
     <string name="settings_update_available">Доступна версия %1$s</string>
@@ -585,6 +595,11 @@
     <string name="tag_remove">Убрать тег</string>
     <string name="app_lock_title">Разблокируйте, чтобы открыть</string>
     <string name="app_lock_prompt">Подтвердите блокировку экрана, чтобы открыть %1$s</string>
+    <string name="settings_app_lock_timeout">Спрашивать снова через</string>
+    <string name="settings_app_lock_every_time">Каждый раз</string>
+    <string name="settings_app_lock_minutes">%d мин</string>
+    <string name="settings_app_lock_screen_off">Блокировать при выключении экрана</string>
+    <string name="settings_app_lock_screen_off_detail">Забывать разблокированные приложения при выключении экрана.</string>
     <string name="settings_color_scheme">Цветовая схема</string>
     <string name="settings_color_scheme_detail">Синий Deluge, если не выбрано иное. Обои нужны с Android 12 и новее, ниже — синий.</string>
     <string name="scheme_deluge_blue">Синий Deluge</string>
@@ -648,7 +663,88 @@
     <string name="freeze_import_done">В список заморозки добавлено приложений: %1$d</string>
     <string name="freeze_import_none">В этом файле нет новых приложений</string>
     <string name="freeze_import_failed">Это не список заморозки Deluge</string>
+
     <string name="freeze_menu_pin">Добавить ярлык на главный экран</string>
     <string name="freeze_pin_failed">Не удалось добавить ярлык</string>
     <string name="freeze_tile_label">Заморозка приложений</string>
+
+    <string name="corner_action_notifications">Открыть панель уведомлений</string>
+    <string name="settings_notification_panel">Панель уведомлений</string>
+    <string name="settings_notification_panel_detail">Показывает содержимое шторки на собственном экране лаунчера, с кнопками и ответами. Нужен доступ к уведомлениям. По умолчанию выключено.</string>
+    <string name="settings_notification_panel_open">Открыть панель уведомлений</string>
+    <string name="settings_notification_panel_open_detail">Тот же экран, что открывается глубоким свайпом вниз на главном экране.</string>
+    <string name="notifications_title">Уведомления</string>
+    <string name="notifications_clear_all">Очистить всё</string>
+    <string name="notifications_dismiss">Убрать</string>
+    <string name="notifications_reply_hint">Ответить</string>
+    <string name="notifications_send">Отправить ответ</string>
+    <string name="notifications_empty">Ничего не ждёт</string>
+    <string name="notifications_empty_detail">Уведомления, пришедшие при включённой панели, появятся здесь.</string>
+    <string name="notifications_access_missing">Доступ к уведомлениям не предоставлен</string>
+    <string name="notifications_access_detail">Разрешите Deluge Launcher в «Настройки → Уведомления → Уведомления устройств и приложений».</string>
+
+    <string name="settings_applist_folders">Папки в списке приложений</string>
+    <string name="settings_applist_folders_detail">Ставит каждую папку под её именем среди приложений, чтобы до неё можно было добраться по алфавиту. По умолчанию выключено.</string>
+
+    <string name="settings_favorite_rules">Правила избранного</string>
+    <string name="settings_favorite_rules_detail">Показывает или скрывает избранное по Wi-Fi, времени, наушникам или числу открытий.</string>
+    <string name="rules_title">Правила избранного</string>
+    <string name="rules_add">Новое правило</string>
+    <string name="rules_new">Новое правило</string>
+    <string name="rules_edit">Изменить правило</string>
+    <string name="rules_untitled">Правило без названия</string>
+    <string name="rules_empty">Правил пока нет</string>
+    <string name="rules_empty_detail">Правило показывает или скрывает выбранное избранное, пока выполняются его условия: в сети Wi-Fi, в определённое время, с наушниками или после заданного числа открытий. Избранное, не упомянутое ни в одном правиле, показывается всегда.</string>
+    <string name="rules_name">Название</string>
+    <string name="rules_action_label">Когда условия выполнены</string>
+    <string name="rules_action_show">Показывать</string>
+    <string name="rules_action_hide">Скрывать</string>
+    <string name="rules_conditions_label">Условия</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">Любая сеть</string>
+    <string name="rules_wifi_on">В этих сетях</string>
+    <string name="rules_wifi_off">Вне этих сетей</string>
+    <string name="rules_wifi_names">Названия сетей через запятую</string>
+    <string name="rules_wifi_permission">Android нужен доступ к геолокации, чтобы прочитать имя сети Wi-Fi.</string>
+    <string name="rules_grant">Разрешить</string>
+    <string name="rules_wifi_current">Использовать %1$s</string>
+    <string name="rules_headset">Наушники</string>
+    <string name="rules_headset_any">Любые</string>
+    <string name="rules_headset_connected">Подключены</string>
+    <string name="rules_headset_disconnected">Не подключены</string>
+    <string name="rules_time">Время суток</string>
+    <string name="rules_time_from">С %1$s</string>
+    <string name="rules_time_to">До %1$s</string>
+    <string name="rules_daily_limit">Открытий в день</string>
+    <string name="rules_daily_limit_detail">Скрывать после стольких открытий за сегодня. 0 отключает.</string>
+    <string name="rules_tokens_label">Избранное, к которому применяется</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">Вне %1$s</string>
+    <string name="rules_summary_headset">Наушники</string>
+    <string name="rules_summary_no_headset">Без наушников</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">%1$d открытий в день</string>
+    <string name="rules_summary_always">Всегда</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="one">%1$d избранное</item>
+        <item quantity="few">%1$d избранных</item>
+        <item quantity="many">%1$d избранных</item>
+        <item quantity="other">%1$d избранного</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="one">%1$d правило включено</item>
+        <item quantity="few">%1$d правила включены</item>
+        <item quantity="many">%1$d правил включено</item>
+        <item quantity="other">%1$d правила включено</item>
+    </plurals>
+
+    <string name="notifications_panel_off">Панель уведомлений выключена</string>
+    <string name="notifications_panel_off_detail">Включите её в «Настройки → Уведомления», чтобы видеть здесь, что ждёт.</string>
+    <string name="private_space_install_apps">Установить приложения</string>
+    <string name="private_space_install_failed">В приватном пространстве нет магазина приложений</string>
+    <string name="private_space_settings">Настройки приватного пространства</string>
+    <string name="private_space_settings_failed">Не удалось открыть настройки приватного пространства</string>
+    <string name="settings_notification_text_size">Размер текста</string>
+    <string name="folder_remove_from_home">Убрать с главного экрана</string>
+    <string name="folder_add_to_home">Добавить на главный экран</string>
 </resources>

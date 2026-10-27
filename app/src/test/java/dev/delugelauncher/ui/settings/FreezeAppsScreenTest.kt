@@ -255,6 +255,16 @@ class FreezeAppsScreenTest {
     }
 
     @Test
+    fun `the private space note waits for the Android that has one`() {
+        // This test runs on API 34, where there is no private space. The HIDE tab is still
+        // reachable, so the note is missing by version and not because the tab never drew.
+        showScreen()
+        compose.onNodeWithText("Hide", useUnmergedTree = true).performClick()
+        compose.onNodeWithText("Advantage:", substring = true).assertExists()
+        compose.onNodeWithText("Stronger isolation: Private space").assertDoesNotExist()
+    }
+
+    @Test
     fun `a search that matches nothing says so`() {
         showScreen(query = "zzz")
         compose.onNodeWithText("No app matches the search").assertExists()

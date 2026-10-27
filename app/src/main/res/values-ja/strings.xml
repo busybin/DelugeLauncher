@@ -179,7 +179,7 @@
     <string name="settings_now_playing_show">再生中ウィジェットを表示</string>
     <string name="settings_notification_access_granted">通知アクセスが許可されています</string>
     <string name="settings_notification_access_missing">通知アクセスが許可されていません</string>
-    <string name="settings_notification_access_detail">再生中、通知の数と内容に使います</string>
+    <string name="settings_notification_access_detail">再生中、通知の数、通知パネルと内容に使います</string>
     <string name="settings_open_settings">設定を開く</string>
     <string name="settings_favorites">お気に入り</string>
     <string name="settings_favorites_detail">ホーム画面に置くアプリを選択</string>
@@ -260,6 +260,12 @@
     <string name="freeze_open_shizuku">Shizuku を開く</string>
     <string name="freeze_shizuku_missing">Shizuku がインストールされていません</string>
     <string name="freeze_hide_needs_root">アプリの非表示には Root が必要です。無効化と一時停止は Root なしで使えます。</string>
+    <string name="freeze_private_space_title">より強固な分離：プライベートスペース</string>
+    <string name="freeze_private_space_body">Android 15 のプライベートスペースは別プロファイルで、各アプリの専用コピーを持ちます。ロック中は中のアプリが停止し、Deluge・他のアプリ・検索・最近使った項目・通知から見えません。</string>
+    <string name="freeze_private_space_how">Deluge を既定のランチャーにしているとき、アプリ一覧の末尾に鍵の行として表示されます。タップでロック解除。アプリは中に入れ直す必要があります。</string>
+    <string name="freeze_private_space_note">非表示と違い、これは本当の境界です。他のアプリからは一覧できません。1 台に 1 つ、メイン ユーザーのみ。仕事用プロファイルと共存できます。</string>
+    <string name="freeze_private_space_open">プライベートスペースの設定を開く</string>
+    <string name="freeze_private_space_missing">このシステムにはプライベートスペースの設定画面がありません。</string>
     <string name="freeze_frozen_section">凍結済み（%1$d）</string>
     <string name="freeze_add_section">その他のアプリ</string>
     <string name="freeze_tab_empty">この方法で凍結したアプリはありません</string>
@@ -325,7 +331,11 @@
     <string name="settings_update_check">更新を確認</string>
     <string name="settings_update_check_detail">GitHubで新しいリリースを確認します</string>
     <string name="settings_update_auto_check">更新を自動的に確認</string>
-    <string name="settings_update_auto_check_detail">既定ではオフです。オフの間は、下の「更新を確認」をタップしたときだけ Deluge がリリースページを読みます — それ以外は何も送信しません。</string>
+    <string name="update_consent_title">更新を自動で確認しますか？</string>
+    <string name="update_consent_message">Deluge を起動するたびに GitHub で新しいバージョンが出ていないか確認し、あればお知らせします。読み取るのはバージョン番号だけで、あなたに関する情報は送信せず、自動でインストールすることもありません。</string>
+    <string name="update_consent_allow">許可</string>
+    <string name="update_consent_deny">今はしない</string>
+    <string name="settings_update_auto_check_detail">初回起動時に一度だけ確認します。オンの間は、Deluge は起動のたびにリリースページを確認し（最大 1 時間に 1 回）、新しいバージョンがあればお知らせします。</string>
     <string name="settings_update_checking">確認中…</string>
     <string name="settings_update_up_to_date">最新バージョンです (%1$s)</string>
     <string name="settings_update_available">バージョン%1$sを利用できます</string>
@@ -577,6 +587,11 @@
     <string name="tag_remove">タグを外す</string>
     <string name="app_lock_title">開くにはロック解除</string>
     <string name="app_lock_prompt">%1$sを開くには画面ロックを認証してください</string>
+    <string name="settings_app_lock_timeout">再確認の間隔</string>
+    <string name="settings_app_lock_every_time">毎回</string>
+    <string name="settings_app_lock_minutes">%d 分</string>
+    <string name="settings_app_lock_screen_off">画面オフでロック</string>
+    <string name="settings_app_lock_screen_off_detail">画面が消えたらロック解除したアプリを忘れる。</string>
     <string name="settings_color_scheme">カラースキーム</string>
     <string name="settings_color_scheme_detail">指定がなければDelugeブルー。壁紙はAndroid 12以降、それ未満はブルーになります。</string>
     <string name="scheme_deluge_blue">Delugeブルー</string>
@@ -640,7 +655,82 @@
     <string name="freeze_import_done">%1$d 個のアプリを凍結リストに追加しました</string>
     <string name="freeze_import_none">このファイルに新しいアプリはありません</string>
     <string name="freeze_import_failed">Deluge の凍結リストではありません</string>
+
     <string name="freeze_menu_pin">ホーム画面にショートカットを追加</string>
     <string name="freeze_pin_failed">ショートカットを追加できませんでした</string>
     <string name="freeze_tile_label">アプリを凍結</string>
+
+    <string name="corner_action_notifications">通知パネルを開く</string>
+    <string name="settings_notification_panel">通知パネル</string>
+    <string name="settings_notification_panel_detail">通知シェードの内容をランチャー独自の画面に表示します。ボタンと返信に対応。通知アクセスが必要です。既定ではオフです。</string>
+    <string name="settings_notification_panel_open">通知パネルを開く</string>
+    <string name="settings_notification_panel_open_detail">ホーム画面で深く下にスワイプすると開くのと同じ画面です。</string>
+    <string name="notifications_title">通知</string>
+    <string name="notifications_clear_all">すべて消去</string>
+    <string name="notifications_dismiss">消去</string>
+    <string name="notifications_reply_hint">返信</string>
+    <string name="notifications_send">返信を送信</string>
+    <string name="notifications_empty">通知はありません</string>
+    <string name="notifications_empty_detail">これがオンの間に届いた通知がここに表示されます。</string>
+    <string name="notifications_access_missing">通知アクセスが許可されていません</string>
+    <string name="notifications_access_detail">「設定 → 通知 → デバイスとアプリの通知」で Deluge Launcher を許可してください。</string>
+
+    <string name="settings_applist_folders">アプリ一覧のフォルダー</string>
+    <string name="settings_applist_folders_detail">各フォルダーを自分の名前の位置に並べ、アルファベットをたどって開けるようにします。既定ではオフです。</string>
+
+    <string name="settings_favorite_rules">お気に入りのルール</string>
+    <string name="settings_favorite_rules_detail">Wi-Fi、時間帯、ヘッドホン、または開いた回数でお気に入りを表示・非表示にします。</string>
+    <string name="rules_title">お気に入りのルール</string>
+    <string name="rules_add">新しいルール</string>
+    <string name="rules_new">新しいルール</string>
+    <string name="rules_edit">ルールを編集</string>
+    <string name="rules_untitled">名前のないルール</string>
+    <string name="rules_empty">ルールはまだありません</string>
+    <string name="rules_empty_detail">ルールは、条件を満たす間だけ選んだお気に入りを表示または非表示にします。Wi-Fi ネットワーク、時間帯、ヘッドホン、または決めた回数開いた後です。どのルールにも挙がっていないお気に入りは常に表示されます。</string>
+    <string name="rules_name">名前</string>
+    <string name="rules_action_label">条件を満たすとき</string>
+    <string name="rules_action_show">表示</string>
+    <string name="rules_action_hide">非表示</string>
+    <string name="rules_conditions_label">条件</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">すべてのネットワーク</string>
+    <string name="rules_wifi_on">これらのネットワーク</string>
+    <string name="rules_wifi_off">これらのネットワーク以外</string>
+    <string name="rules_wifi_names">ネットワーク名（カンマ区切り）</string>
+    <string name="rules_wifi_permission">Wi-Fi の名前を読むには位置情報へのアクセスが必要です。</string>
+    <string name="rules_grant">許可</string>
+    <string name="rules_wifi_current">%1$s を使う</string>
+    <string name="rules_headset">ヘッドホン</string>
+    <string name="rules_headset_any">問わない</string>
+    <string name="rules_headset_connected">接続中</string>
+    <string name="rules_headset_disconnected">未接続</string>
+    <string name="rules_time">時間帯</string>
+    <string name="rules_time_from">%1$s から</string>
+    <string name="rules_time_to">%1$s まで</string>
+    <string name="rules_daily_limit">1日の回数</string>
+    <string name="rules_daily_limit_detail">今日この回数開いたら隠します。0 で無効。</string>
+    <string name="rules_tokens_label">対象のお気に入り</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">%1$s 以外</string>
+    <string name="rules_summary_headset">ヘッドホン</string>
+    <string name="rules_summary_no_headset">ヘッドホンなし</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">1日 %1$d 回</string>
+    <string name="rules_summary_always">常に</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="other">%1$d 件</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="other">%1$d 件のルールが有効</item>
+    </plurals>
+
+    <string name="notifications_panel_off">通知パネルはオフです</string>
+    <string name="notifications_panel_off_detail">「設定 → 通知」でオンにすると、ここに届いた通知が表示されます。</string>
+    <string name="private_space_install_apps">アプリをインストール</string>
+    <string name="private_space_install_failed">プライベートスペースに開けるアプリストアがありません</string>
+    <string name="private_space_settings">プライベートスペースの設定</string>
+    <string name="private_space_settings_failed">プライベートスペースの設定を開けませんでした</string>
+    <string name="settings_notification_text_size">文字サイズ</string>
+    <string name="folder_remove_from_home">ホーム画面から削除</string>
+    <string name="folder_add_to_home">ホーム画面に追加</string>
 </resources>

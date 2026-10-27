@@ -124,6 +124,41 @@ class PrivateSpaceExportTest {
         assertSame(raw, stripPrivateSpaceFromExport("folders_json", raw, strip))
     }
 
+    // --- favorite_rules_json (array of rules, each with a tokens array) ---------------------
+
+    @Test
+    fun `a private app inside a rule is removed and the rule's conditions stay`() {
+        val rules = listOf(
+            FavoriteRule(
+                id = "r1",
+                name = "Home",
+                tokens = setOf(a, bPrivate),
+                wifi = FavoriteRuleWifi.ON,
+                wifiNames = setOf("HomeNet"),
+            )
+        )
+        val raw = favoriteRulesToJson(rules)
+        val stripped = stripPrivateSpaceFromExport("favorite_rules_json", raw, strip) as String
+        val restored = favoriteRulesFromJson(stripped).single()
+        assertEquals(setOf(a), restored.tokens)
+        assertEquals(setOf("HomeNet"), restored.wifiNames)
+    }
+
+    @Test
+    fun `a rule left with no favorites is dropped rather than exported empty`() {
+        val raw = favoriteRulesToJson(
+            listOf(FavoriteRule(id = "r1", tokens = setOf(bPrivate)), FavoriteRule(id = "r2", tokens = setOf(a)))
+        )
+        val stripped = stripPrivateSpaceFromExport("favorite_rules_json", raw, strip) as String
+        assertEquals(listOf("r2"), favoriteRulesFromJson(stripped).map { it.id })
+    }
+
+    @Test
+    fun `rules with no private favorite come back identical`() {
+        val raw = favoriteRulesToJson(listOf(FavoriteRule(id = "r1", tokens = setOf(a, c))))
+        assertSame(raw, stripPrivateSpaceFromExport("favorite_rules_json", raw, strip))
+    }
+
     // --- quick_launch_left_key / quick_launch_right_key (a single key, or absent) -----------
 
     @Test

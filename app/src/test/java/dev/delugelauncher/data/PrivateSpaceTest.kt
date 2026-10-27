@@ -15,6 +15,12 @@ class PrivateSpaceTest {
 
     private val appKey = "com.example.app/com.example.app.MainActivity"
 
+    @Test
+    fun `the private space note is offered only where a private space exists`() {
+        assertFalse(privateSpaceGuideVisible(PRIVATE_SPACE_SDK - 1))
+        assertTrue(privateSpaceGuideVisible(PRIVATE_SPACE_SDK))
+    }
+
     private companion object {
         const val MANAGED = "android.os.usertype.profile.MANAGED"
         const val CLONE = "android.os.usertype.profile.CLONE"

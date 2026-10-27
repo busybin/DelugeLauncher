@@ -5,41 +5,33 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * The newest notification of each app, for the one line shown under its name.
+ * The newest notifications of each app, for the lines shown under its name.
  *
  * Text is held only while the setting that displays it is on: the listener publishes nothing
  * when it is off, so a count-only launcher never has a notification's words in memory. Nothing
  * is written to disk.
  */
-data class NotificationPreview(
-    val packageName: String,
-    val userSerial: Long,
-    val title: String,
-    val text: String,
-    val postTime: Long,
-) {
-    /** One line, and nothing at all when there is nothing worth reading. */
-    val line: String
-        get() = when {
-            title.isBlank() -> text
-            text.isBlank() || text == title -> title
-            else -> "$title · $text"
-        }
-}
-
 object NotificationPreviewBus {
-    private val _previews = MutableStateFlow<Map<String, NotificationPreview>>(emptyMap())
-    val previews: StateFlow<Map<String, NotificationPreview>> = _previews
+    /** How many of an app's notifications the home screen lists under it, newest first. */
+    const val MAX_LINES = 3
+
+    private val _previews = MutableStateFlow<Map<String, List<NotificationEntry>>>(emptyMap())
+    val previews: StateFlow<Map<String, List<NotificationEntry>>> = _previews
 
     /** The same profile split the rest of the launcher uses, so two profiles never collide. */
     fun key(packageName: String, userSerial: Long): String = "$packageName|u$userSerial"
 
-    /** Keeps the newest of each app; the caller has already dropped summaries and ongoing ones. */
-    fun update(entries: List<NotificationPreview>) {
-        val newest = entries
-            .groupBy { key(it.packageName, it.userSerial) }
-            .mapValues { (_, list) -> list.maxBy { it.postTime } }
-        if (newest != _previews.value) _previews.value = newest
+    /**
+     * Keeps the newest few of each app; the caller has already dropped summaries. Ongoing ones
+     * stay a panel-only thing: a row's lines are about something waiting to be read.
+     */
+    fun update(entries: List<NotificationEntry>) {
+        val lines = entries
+            .filter { it.canDismiss }
+            .sortedByDescending { it.postTime }
+            .groupBy { it.appKey }
+            .mapValues { (_, list) -> list.take(MAX_LINES) }
+        if (lines != _previews.value) _previews.value = lines
     }
 
     fun clear() {

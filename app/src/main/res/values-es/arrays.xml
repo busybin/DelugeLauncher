@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v27">
+        <item>El texto de las notificaciones bajo los favoritos muestra hasta tres por aplicación, las más recientes primero. Toca una para abrirla, y ajusta su tamaño de letra.</item>
+        <item>Un punto junto al nombre cuando los iconos están ocultos y la aplicación tiene notificaciones.</item>
+        <item>En un teléfono en japonés, los nombres se ordenan en filas de kana, y los nombres en kanji en una fila propia.</item>
+        <item>El candado del espacio privado cierra la lista; su menú instala aplicaciones en el espacio y abre sus ajustes.</item>
+        <item>Los widgets pueden vivir dentro de las carpetas, sobre las aplicaciones, con su propia altura y menú de ajustes.</item>
+        <item>Las carpetas de la lista tienen menú al mantener pulsado: gestionar aplicaciones, añadir o quitar de la pantalla de inicio, eliminar.</item>
+        <item>El widget del reloj sigue la fuente del launcher.</item>
+        <item>Un panel de notificaciones que se abre deslizando desde la pantalla de inicio: cada notificación con sus botones y un cuadro de respuesta.</item>
+        <item>Las reglas de favoritos muestran u ocultan favoritos según Wi-Fi, hora, auriculares o un límite diario de aperturas.</item>
+        <item>La pantalla de congelación explica el espacio privado de Android 15 cuando el teléfono lo tiene.</item>
+        <item>Los 8 idiomas completos.</item>
+    </string-array>
     <string-array name="changelog_v26">
         <item>Apps protegidas, activado por defecto: el teclado actual, la app de inicio, los servicios de accesibilidad, Shizuku y los gestores de root nunca se congelan.</item>
         <item>Las apps del perfil de trabajo y del espacio privado también se pueden congelar, cada perfil por separado aunque el paquete se llame igual.</item>

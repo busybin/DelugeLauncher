@@ -179,7 +179,7 @@
     <string name="settings_now_playing_show">Afficher le widget Now Playing</string>
     <string name="settings_notification_access_granted">Accès aux notifications accordé</string>
     <string name="settings_notification_access_missing">Accès aux notifications non accordé</string>
-    <string name="settings_notification_access_detail">Sert à Now Playing, aux compteurs et au texte des notifications</string>
+    <string name="settings_notification_access_detail">Sert à Now Playing, aux compteurs, au panneau et au texte des notifications</string>
     <string name="settings_open_settings">Ouvrir les paramètres</string>
     <string name="settings_favorites">Favoris</string>
     <string name="settings_favorites_detail">Choisissez les applications présentes sur l\'écran d\'accueil</string>
@@ -260,6 +260,12 @@
     <string name="freeze_open_shizuku">Ouvrir Shizuku</string>
     <string name="freeze_shizuku_missing">Shizuku n’est pas installé</string>
     <string name="freeze_hide_needs_root">Masquer des applications nécessite root. Désactiver et Suspendre fonctionnent sans.</string>
+    <string name="freeze_private_space_title">Isolation plus forte : espace privé</string>
+    <string name="freeze_private_space_body">L\'espace privé d\'Android 15 est un profil séparé, avec sa propre copie de chaque application. Une fois verrouillé, ses applis sont arrêtées et invisibles pour Deluge, les autres applis, la recherche, les récents et les notifications.</string>
+    <string name="freeze_private_space_how">Deluge l\'affiche comme une ligne cadenas en fin de liste d\'applis quand il est votre lanceur par défaut ; touchez-la pour déverrouiller. Les applis doivent y être réinstallées.</string>
+    <string name="freeze_private_space_note">Contrairement au masquage, c\'est une vraie frontière : les autres applis ne peuvent pas l\'énumérer. Un seul par appareil, sur l\'utilisateur principal ; il peut cohabiter avec un profil professionnel.</string>
+    <string name="freeze_private_space_open">Ouvrir les réglages de l\'espace privé</string>
+    <string name="freeze_private_space_missing">Ce système n\'a pas de page de réglages d\'espace privé.</string>
     <string name="freeze_frozen_section">Gelées (%1$d)</string>
     <string name="freeze_add_section">Autres applications</string>
     <string name="freeze_tab_empty">Aucune application gelée ainsi</string>
@@ -325,7 +331,11 @@
     <string name="settings_update_check">Rechercher les mises à jour</string>
     <string name="settings_update_check_detail">Chercher une version plus récente sur GitHub</string>
     <string name="settings_update_auto_check">Rechercher les mises à jour automatiquement</string>
-    <string name="settings_update_auto_check_detail">Désactivé par défaut. Tant que c\'est désactivé, Deluge ne consulte sa page de versions que lorsque vous touchez « Rechercher les mises à jour » ci-dessous — rien n\'est envoyé sinon.</string>
+    <string name="update_consent_title">Vérifier les mises à jour automatiquement ?</string>
+    <string name="update_consent_message">Autoriser Deluge à consulter GitHub à chaque démarrage pour voir si une nouvelle version existe et vous prévenir. Seul le numéro de version est lu, rien sur vous n\'est envoyé, et rien n\'est installé sans votre accord.</string>
+    <string name="update_consent_allow">Autoriser</string>
+    <string name="update_consent_deny">Plus tard</string>
+    <string name="settings_update_auto_check_detail">Demandé une fois au premier lancement. Tant que c\'est activé, Deluge consulte sa page de versions au démarrage (au plus une fois par heure) et vous prévient si une nouvelle version est disponible.</string>
     <string name="settings_update_checking">Vérification…</string>
     <string name="settings_update_up_to_date">À la dernière version (%1$s)</string>
     <string name="settings_update_available">La version %1$s est disponible</string>
@@ -577,6 +587,11 @@
     <string name="tag_remove">Retirer l\'étiquette</string>
     <string name="app_lock_title">Déverrouiller pour ouvrir</string>
     <string name="app_lock_prompt">Confirme le verrouillage pour ouvrir %1$s</string>
+    <string name="settings_app_lock_timeout">Redemander après</string>
+    <string name="settings_app_lock_every_time">À chaque fois</string>
+    <string name="settings_app_lock_minutes">%d min</string>
+    <string name="settings_app_lock_screen_off">Verrouiller à l\'extinction de l\'écran</string>
+    <string name="settings_app_lock_screen_off_detail">Oublie les applis déverrouillées quand l\'écran s\'éteint.</string>
     <string name="settings_color_scheme">Jeu de couleurs</string>
     <string name="settings_color_scheme_detail">Bleu Deluge sauf avis contraire. Fond d\'écran dès Android 12, bleu en dessous.</string>
     <string name="scheme_deluge_blue">Bleu Deluge</string>
@@ -640,7 +655,84 @@
     <string name="freeze_import_done">%1$d applis ajoutées à la liste de gel</string>
     <string name="freeze_import_none">Aucune nouvelle appli dans ce fichier</string>
     <string name="freeze_import_failed">Ce fichier n\'est pas une liste de gel Deluge</string>
+
     <string name="freeze_menu_pin">Ajouter un raccourci à l\'écran d\'accueil</string>
     <string name="freeze_pin_failed">Impossible d\'ajouter le raccourci</string>
     <string name="freeze_tile_label">Geler des applis</string>
+
+    <string name="corner_action_notifications">Ouvrir le panneau de notifications</string>
+    <string name="settings_notification_panel">Panneau de notifications</string>
+    <string name="settings_notification_panel_detail">Affiche le contenu du volet dans un écran propre au lanceur, avec boutons et réponses. Nécessite l\'accès aux notifications. Désactivé par défaut.</string>
+    <string name="settings_notification_panel_open">Ouvrir le panneau de notifications</string>
+    <string name="settings_notification_panel_open_detail">Le même écran qu\'un glissement profond vers le bas sur l\'écran d\'accueil.</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_clear_all">Tout effacer</string>
+    <string name="notifications_dismiss">Ignorer</string>
+    <string name="notifications_reply_hint">Répondre</string>
+    <string name="notifications_send">Envoyer la réponse</string>
+    <string name="notifications_empty">Rien en attente</string>
+    <string name="notifications_empty_detail">Les notifications reçues tant que ceci est activé apparaissent ici.</string>
+    <string name="notifications_access_missing">Accès aux notifications non accordé</string>
+    <string name="notifications_access_detail">Autorisez Deluge Launcher dans Paramètres → Notifications → Notifications des appareils et des apps.</string>
+
+    <string name="settings_applist_folders">Dossiers dans la liste</string>
+    <string name="settings_applist_folders_detail">Place chaque dossier sous son propre nom parmi les apps, pour l\'atteindre en parcourant l\'alphabet. Désactivé par défaut.</string>
+
+    <string name="settings_favorite_rules">Règles des favoris</string>
+    <string name="settings_favorite_rules_detail">Affiche ou masque des favoris selon le Wi-Fi, l\'heure, le casque ou le nombre d\'ouvertures.</string>
+    <string name="rules_title">Règles des favoris</string>
+    <string name="rules_add">Nouvelle règle</string>
+    <string name="rules_new">Nouvelle règle</string>
+    <string name="rules_edit">Modifier la règle</string>
+    <string name="rules_untitled">Règle sans nom</string>
+    <string name="rules_empty">Aucune règle</string>
+    <string name="rules_empty_detail">Une règle affiche ou masque les favoris choisis tant que ses conditions tiennent : sur un réseau Wi-Fi, à une heure donnée, avec un casque, ou après un nombre d\'ouvertures. Les favoris qu\'aucune règle ne nomme restent toujours affichés.</string>
+    <string name="rules_name">Nom</string>
+    <string name="rules_action_label">Quand les conditions sont réunies</string>
+    <string name="rules_action_show">Afficher</string>
+    <string name="rules_action_hide">Masquer</string>
+    <string name="rules_conditions_label">Conditions</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">N\'importe quel réseau</string>
+    <string name="rules_wifi_on">Sur ceux-ci</string>
+    <string name="rules_wifi_off">Hors de ceux-ci</string>
+    <string name="rules_wifi_names">Noms des réseaux, séparés par des virgules</string>
+    <string name="rules_wifi_permission">Android a besoin de la localisation pour lire le nom du Wi-Fi.</string>
+    <string name="rules_grant">Autoriser</string>
+    <string name="rules_wifi_current">Utiliser %1$s</string>
+    <string name="rules_headset">Casque</string>
+    <string name="rules_headset_any">Indifférent</string>
+    <string name="rules_headset_connected">Connecté</string>
+    <string name="rules_headset_disconnected">Non connecté</string>
+    <string name="rules_time">Heure</string>
+    <string name="rules_time_from">À partir de %1$s</string>
+    <string name="rules_time_to">Jusqu\'à %1$s</string>
+    <string name="rules_daily_limit">Ouvertures par jour</string>
+    <string name="rules_daily_limit_detail">Masque après ce nombre d\'ouvertures aujourd\'hui. 0 désactive.</string>
+    <string name="rules_tokens_label">Favoris concernés</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">Hors de %1$s</string>
+    <string name="rules_summary_headset">Casque</string>
+    <string name="rules_summary_no_headset">Sans casque</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">%1$d ouvertures par jour</string>
+    <string name="rules_summary_always">Toujours</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="one">%1$d favori</item>
+        <item quantity="other">%1$d favoris</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="one">%1$d règle active</item>
+        <item quantity="other">%1$d règles actives</item>
+    </plurals>
+
+    <string name="notifications_panel_off">Le panneau de notifications est désactivé</string>
+    <string name="notifications_panel_off_detail">Activez-le dans Paramètres → Notifications pour voir ici ce qui attend.</string>
+    <string name="private_space_install_apps">Installer des applications</string>
+    <string name="private_space_install_failed">Aucune boutique d\'applications à ouvrir dans l\'espace privé</string>
+    <string name="private_space_settings">Paramètres de l\'espace privé</string>
+    <string name="private_space_settings_failed">Impossible d\'ouvrir les paramètres de l\'espace privé</string>
+    <string name="settings_notification_text_size">Taille du texte</string>
+    <string name="folder_remove_from_home">Retirer de l\'écran d\'accueil</string>
+    <string name="folder_add_to_home">Ajouter à l\'écran d\'accueil</string>
 </resources>

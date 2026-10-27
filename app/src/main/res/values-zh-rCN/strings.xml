@@ -30,6 +30,11 @@
     <string name="tag_remove">移除标签</string>
     <string name="app_lock_title">解锁以打开</string>
     <string name="app_lock_prompt">确认锁屏密码以打开 %1$s</string>
+    <string name="settings_app_lock_timeout">再次验证间隔</string>
+    <string name="settings_app_lock_every_time">每次</string>
+    <string name="settings_app_lock_minutes">%d 分钟</string>
+    <string name="settings_app_lock_screen_off">熄屏后重新上锁</string>
+    <string name="settings_app_lock_screen_off_detail">屏幕熄灭后忘记已解锁的应用。</string>
     <string name="action_edit_layout">编辑布局</string>
     <string name="action_edit_icon_and_name">编辑图标和名称</string>
     <string name="action_move_to_folder">移动到文件夹…</string>
@@ -229,7 +234,7 @@
     <string name="settings_now_playing_show">显示正在播放小部件</string>
     <string name="settings_notification_access_granted">已授予通知使用权</string>
     <string name="settings_notification_access_missing">未授予通知使用权</string>
-    <string name="settings_notification_access_detail">用于“正在播放”、通知数量与通知内容</string>
+    <string name="settings_notification_access_detail">用于“正在播放”、通知数量、通知面板与通知内容</string>
     <string name="settings_open_settings">打开设置</string>
     <string name="settings_favorites">收藏</string>
     <string name="settings_favorites_detail">选择放在主屏幕上的应用</string>
@@ -311,6 +316,12 @@
     <string name="freeze_open_shizuku">打开 Shizuku</string>
     <string name="freeze_shizuku_missing">未安装 Shizuku</string>
     <string name="freeze_hide_needs_root">隐藏应用需要 Root；停用和暂停不需要。</string>
+    <string name="freeze_private_space_title">更彻底的隔离：私密空间</string>
+    <string name="freeze_private_space_body">Android 15 的私密空间是一个独立配置，每个应用在里面是单独的副本。锁定后里面的应用会被停止，Deluge、其它应用、搜索、最近任务和通知都看不到它。</string>
+    <string name="freeze_private_space_how">Deluge 作为默认桌面时，会在应用列表末尾显示一行锁形入口，点它解锁；应用需要在里面重新安装。</string>
+    <string name="freeze_private_space_note">与隐藏不同，这是真正的边界：其它应用无法枚举私密空间。每台设备只有一个、只在主用户下，可与工作资料共存。</string>
+    <string name="freeze_private_space_open">打开私密空间设置</string>
+    <string name="freeze_private_space_missing">这个系统没有私密空间设置页。</string>
     <string name="freeze_frozen_section">已冻结（%1$d）</string>
     <string name="freeze_add_section">其他应用</string>
     <string name="freeze_tab_empty">这种方式还没有冻结任何应用</string>
@@ -376,7 +387,11 @@
     <string name="settings_update_check">检查更新</string>
     <string name="settings_update_check_detail">到 GitHub 上查看是否有新版本</string>
     <string name="settings_update_auto_check">自动检查更新</string>
-    <string name="settings_update_auto_check_detail">默认关闭。关闭期间，Deluge 只在你点下方「检查更新」时才读取发布页 —— 除此之外不上传任何东西。</string>
+    <string name="update_consent_title">自动检查更新？</string>
+    <string name="update_consent_message">允许 Deluge 每次启动时到 GitHub 看一眼有没有新版本，有就提醒你。它只读取版本号，不会发送关于你的任何信息，也不会自己装任何东西。</string>
+    <string name="update_consent_allow">允许</string>
+    <string name="update_consent_deny">暂不</string>
+    <string name="settings_update_auto_check_detail">首次启动时问一次。开着的时候，Deluge 每次启动都会看一眼发布页（最多每小时一次），有新版本就提醒你。</string>
     <string name="settings_update_checking">正在检查…</string>
     <string name="settings_update_up_to_date">已是最新版本（%1$s）</string>
     <string name="settings_update_available">版本 %1$s 已发布</string>
@@ -640,7 +655,82 @@
     <string name="freeze_import_done">已把 %1$d 个应用加入冻结名单</string>
     <string name="freeze_import_none">文件里没有新的应用</string>
     <string name="freeze_import_failed">这不是 Deluge 的冻结名单</string>
+
     <string name="freeze_menu_pin">添加桌面快捷方式</string>
     <string name="freeze_pin_failed">无法添加快捷方式</string>
     <string name="freeze_tile_label">冻结应用</string>
+
+    <string name="corner_action_notifications">打开通知面板</string>
+    <string name="settings_notification_panel">通知面板</string>
+    <string name="settings_notification_panel_detail">在启动器自己的界面里显示通知栏内容，带操作按钮与回复。需要通知使用权。默认关闭。</string>
+    <string name="settings_notification_panel_open">打开通知面板</string>
+    <string name="settings_notification_panel_open_detail">与在主屏向下深拉打开的是同一个界面。</string>
+    <string name="notifications_title">通知</string>
+    <string name="notifications_clear_all">全部清除</string>
+    <string name="notifications_dismiss">清除</string>
+    <string name="notifications_reply_hint">回复</string>
+    <string name="notifications_send">发送回复</string>
+    <string name="notifications_empty">没有待处理的通知</string>
+    <string name="notifications_empty_detail">开启后收到的通知会显示在这里。</string>
+    <string name="notifications_access_missing">未授予通知使用权</string>
+    <string name="notifications_access_detail">在「设置 → 通知 → 设备和应用通知」中允许 Deluge Launcher。</string>
+
+    <string name="settings_applist_folders">应用列表中的文件夹</string>
+    <string name="settings_applist_folders_detail">把文件夹按自己的名字排进应用字母表，滚动到对应字母就能找到。默认关闭。</string>
+
+    <string name="settings_favorite_rules">收藏规则</string>
+    <string name="settings_favorite_rules_detail">按 Wi-Fi、时间段、耳机或当天打开次数显示或隐藏收藏。</string>
+    <string name="rules_title">收藏规则</string>
+    <string name="rules_add">新建规则</string>
+    <string name="rules_new">新建规则</string>
+    <string name="rules_edit">编辑规则</string>
+    <string name="rules_untitled">未命名规则</string>
+    <string name="rules_empty">还没有规则</string>
+    <string name="rules_empty_detail">规则会在条件满足时显示或隐藏选中的收藏：连上某个 Wi-Fi、一天中的某个时段、插着耳机，或当天打开达到次数。没有被任何规则点名的收藏始终显示。</string>
+    <string name="rules_name">名称</string>
+    <string name="rules_action_label">条件满足时</string>
+    <string name="rules_action_show">显示</string>
+    <string name="rules_action_hide">隐藏</string>
+    <string name="rules_conditions_label">条件</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">任意网络</string>
+    <string name="rules_wifi_on">在这些网络上</string>
+    <string name="rules_wifi_off">不在这些网络上</string>
+    <string name="rules_wifi_names">网络名称，用逗号分隔</string>
+    <string name="rules_wifi_permission">读取 Wi-Fi 名称需要位置权限。</string>
+    <string name="rules_grant">允许</string>
+    <string name="rules_wifi_current">使用 %1$s</string>
+    <string name="rules_headset">耳机</string>
+    <string name="rules_headset_any">不限</string>
+    <string name="rules_headset_connected">已连接</string>
+    <string name="rules_headset_disconnected">未连接</string>
+    <string name="rules_time">时间段</string>
+    <string name="rules_time_from">从 %1$s</string>
+    <string name="rules_time_to">到 %1$s</string>
+    <string name="rules_daily_limit">每天打开次数</string>
+    <string name="rules_daily_limit_detail">当天打开达到该次数后隐藏。0 表示关闭。</string>
+    <string name="rules_tokens_label">适用此规则的收藏</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">不在 %1$s</string>
+    <string name="rules_summary_headset">耳机</string>
+    <string name="rules_summary_no_headset">无耳机</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">每天 %1$d 次</string>
+    <string name="rules_summary_always">始终</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="other">%1$d 个收藏</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="other">已启用 %1$d 条</item>
+    </plurals>
+
+    <string name="notifications_panel_off">通知面板未开启</string>
+    <string name="notifications_panel_off_detail">在「设置 → 通知」中开启后，才能在这里看到通知。</string>
+    <string name="private_space_install_apps">安装应用</string>
+    <string name="private_space_install_failed">私密空间里没有可打开的应用商店</string>
+    <string name="private_space_settings">私密空间设置</string>
+    <string name="private_space_settings_failed">打不开私密空间设置</string>
+    <string name="settings_notification_text_size">文字大小</string>
+    <string name="folder_remove_from_home">从桌面移除</string>
+    <string name="folder_add_to_home">添加到桌面</string>
 </resources>

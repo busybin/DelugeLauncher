@@ -2,8 +2,6 @@
 package dev.delugelauncher.ui.home
 
 import android.app.SearchManager
-import android.app.Activity
-import android.app.KeyguardManager
 import android.Manifest
 import android.content.Intent
 import android.provider.Settings
@@ -85,9 +83,11 @@ import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.HomePaddings
+import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.PaddingSlot
+import dev.delugelauncher.data.folderIdFromToken
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.media.NowPlayingBus
@@ -103,6 +103,7 @@ import dev.delugelauncher.ui.applist.ScrubberGeometry
 import dev.delugelauncher.ui.applist.ScrubState
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.ui.common.LaunchOrigin
+import dev.delugelauncher.ui.common.rememberAppLockRequest
 import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.ui.applist.edgeZoneWidth
@@ -167,6 +168,8 @@ fun HomeRoute(
     autoKeyboard: Boolean,
     /** Whether the last letters reach the same line as the first. */
     lastLetterToLine: Boolean,
+    /** Whether a pull down opens the launcher's own notification panel instead of the shade. */
+    notificationPanelEnabled: Boolean,
     typedToSearch: List<TypedKey>,
     onTypedToSearchHandled: (List<TypedKey>) -> Unit,
     settings: HomeSettings,
@@ -221,6 +224,8 @@ fun HomeRoute(
     // reader of the language expects to find Alipay — under Z, not under the A of its English
     // name. Asked once rather than per app: switching language recreates the activity.
     val pinyinSort = remember { Pinyin.ordering() }
+    // Read from the configuration so a change of language, which recreates this, is picked up.
+    val japaneseSort = LocalConfiguration.current.locales[0].language == "ja"
     val view = LocalView.current
     val scope = rememberCoroutineScope()
 
@@ -264,7 +269,10 @@ fun HomeRoute(
         // Empty unless the sort is on, so an ordinary launch doesn't rebuild the whole list.
         if (settings.sortByUsage) launchCounts else emptyMap(),
         settings.showListHeaders,
+        japaneseSort,
         tagSections,
+        folders,
+        settings.appListFolders,
     ) {
         val apps = appsByKey.values.toList()
         val counts = if (settings.sortByUsage) launchCounts else emptyMap()
@@ -276,11 +284,14 @@ fun HomeRoute(
                 counts,
                 englishName = { app.appRepository.englishLabel(it) },
                 pinyin = pinyinSort,
+                japanese = japaneseSort,
                 showHeaders = settings.showListHeaders,
                 renamed = { it.key in nameOverrides },
                 privateSectionLabel = privateSectionLabel,
                 recentSection = recentSectionArg,
                 tagSections = tagSections,
+                folders = folders,
+                showFolders = settings.appListFolders,
             )
         }
     }
@@ -292,6 +303,7 @@ fun HomeRoute(
         includeHiddenInSearch,
         if (settings.sortByUsage) launchCounts else emptyMap(),
         settings.showListHeaders,
+        japaneseSort,
     ) {
         val apps = appsByKey.values.toList()
         val counts = if (settings.sortByUsage) launchCounts else emptyMap()
@@ -306,6 +318,7 @@ fun HomeRoute(
                     counts,
                     englishName = { app.appRepository.englishLabel(it) },
                     pinyin = pinyinSort,
+                    japanese = japaneseSort,
                     showHeaders = settings.showListHeaders,
                     renamed = { it.key in nameOverrides },
                     privateSectionLabel = privateSectionLabel,
@@ -412,6 +425,7 @@ fun HomeRoute(
 
     val nowPlaying by NowPlayingBus.state.collectAsState()
     val previewWanted by app.prefs.notificationPreview.collectAsState(initial = false)
+    val notificationTextSp by app.prefs.notificationTextSp.collectAsState(initial = 12)
     val previews by NotificationPreviewBus.previews.collectAsState()
     // The grant lives in system Settings, so a BACK from there resumes without a HOME
     // intent: re-check on every resume, not just when the tick moves.
@@ -593,6 +607,16 @@ fun HomeRoute(
         }
     }
 
+    /**
+     * A deep pull down: the launcher's panel when it is set up, the system shade otherwise.
+     *
+     * The panel needs no accessibility grant of its own, so on a phone where the shade pull
+     * was never made to work it is also the only one of the two that answers.
+     */
+    fun expandShadeOrPanel() {
+        if (notificationPanelEnabled) onNavigate("notifications") else expandShade()
+    }
+
     fun openCamera() {
         // Two ways in: the capture intent first, which hands the shot straight to whichever
         // camera app wants it, and the plain "show me the camera" action when nothing
@@ -762,45 +786,31 @@ fun HomeRoute(
     val lockedAppsOrNull by app.prefs.lockedApps.collectAsState(initial = null)
     val lockedApps = lockedAppsOrNull ?: emptySet()
     val lockLoaded = lockedAppsOrNull != null
-    var pendingLaunch by remember { mutableStateOf<AppInfo?>(null) }
-    val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
-    val confirmLaunch = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val pending = pendingLaunch
-        pendingLaunch = null
-        if (pending != null && result.resultCode == Activity.RESULT_OK) {
-            // A locked app that is also paused cannot start until it is un-paused, so the two
-            // are lifted together: unlocking it and then doing nothing would read as broken.
-            // Off the main thread: it is a binder round trip that is refused on most phones.
-            if (pending.suspended) (context.applicationContext as? DelugeApp)?.offMain {
-                app.appRepository.unsuspend(pending)
-            }
-            actuallyLaunch(pending)
+    val lockTimeout by app.prefs.appLockTimeout.collectAsState(initial = 0)
+    val requestUnlock = rememberAppLockRequest()
+
+    /** Opens an app the lock has just been lifted for, waking it first if it is also asleep. */
+    fun openUnlocked(entry: AppInfo) {
+        AppLock.markOpen(entry.key)
+        // A locked app that is also paused cannot start until it is un-paused, so the two are
+        // lifted together: unlocking it and then doing nothing would read as broken.
+        if (entry.suspended) (context.applicationContext as? DelugeApp)?.offMain {
+            app.appRepository.unsuspend(entry)
         }
+        actuallyLaunch(entry)
     }
 
     fun launchEntry(entry: AppInfo): Boolean {
         // A shortcut row points into its publisher's app, so the two are gated alike.
         val enterable = entry.kind == EntryKind.APP || entry.kind == EntryKind.SHORTCUT
-        if (enterable && (!lockLoaded || entry.lockedBy(lockedApps))) {
-            // No secure lock on the phone means there is nothing to ask for; the app opens as
-            // usual rather than becoming unreachable.
-            val prompt = runCatching {
-                keyguard?.createConfirmDeviceCredentialIntent(
-                    context.getString(R.string.app_lock_title),
-                    context.getString(R.string.app_lock_prompt, entry.label),
-                )
-            }.getOrNull()
-            if (prompt != null) {
-                // A second locked tap while one is already waiting keeps the first: handing
-                // the second app the first answer would open the wrong thing.
-                if (pendingLaunch == null) {
-                    pendingLaunch = entry
-                    confirmLaunch.launch(prompt)
-                }
-                return true
-            }
+        // Null until the store answers: while loading, a tap is asked for credentials rather
+        // than waved through, so the first frame cannot be timed to skip the lock. The gate
+        // remembers an app opened a moment ago, so a second tap does not ask again.
+        if (enterable && (!lockLoaded || entry.lockedBy(lockedApps)) &&
+            (!lockLoaded || !AppLock.isOpen(entry.key, lockTimeout))
+        ) {
+            requestUnlock(entry.label) { openUnlocked(entry) }
+            return true
         }
         return actuallyLaunch(entry)
     }
@@ -854,6 +864,7 @@ fun HomeRoute(
             CornerAction.CAMERA -> openCamera()
             CornerAction.FLASHLIGHT -> setTorchWanted(!torchOn)
             CornerAction.SHADE -> expandShade()
+            CornerAction.NOTIFICATIONS -> onNavigate("notifications")
             CornerAction.LOCK -> lockOrExplain()
             // The list's own two verbs, run off the main thread by the manager: this is
             // several shell commands per app, and the button must not wait for them.
@@ -1193,6 +1204,7 @@ fun HomeRoute(
                 overlayOpen = appListVisible,
                 nameOverrides = nameOverrides,
                 notificationPreviews = if (previewWanted) previews else emptyMap(),
+                notificationTextSp = notificationTextSp,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
                 itemSpacingDp = settings.itemSpacingDp,
@@ -1237,7 +1249,21 @@ fun HomeRoute(
                         scope.launch { app.prefs.upsertFolder(folder.copy(name = name.trim())) }
                     }
                 },
-                onDeleteFolder = { folder -> scope.launch { app.prefs.deleteFolder(folder.id) } },
+                onDeleteFolder = { folder ->
+                    scope.launch {
+                        // Releasing the host ids matters: left allocated, their providers keep
+                        // broadcasting updates to widgets nobody can see.
+                        folder.widgets.forEach { w ->
+                            if (w.id > 0) runCatching { app.widgetHost.deleteAppWidgetId(w.id) }
+                        }
+                        app.prefs.deleteFolder(folder.id)
+                    }
+                },
+                onRemoveFolderFromHome = if (settings.appListFolders) {
+                    { folder -> scope.launch { app.prefs.removeFavorite(folderToken(folder.id)) } }
+                } else {
+                    null
+                },
                 onChangeFolderIcon = { folder -> onNavigate(iconPickerRoute(folderToken(folder.id))) },
                 onResetFolderIcon = { folder -> scope.launch { app.prefs.setFolderIcon(folder.id, null) } },
                 onManageFolder = { folder ->
@@ -1381,17 +1407,7 @@ fun HomeRoute(
                     performSlotAction(action, picked?.key)
                 },
                 onPeekStatusBar = onPeekStatusBar,
-                onExpandShade = {
-                    // Say so rather than failing silently — that way a pull that does nothing
-                    // tells you whether the gesture or the permission is at fault.
-                    if (!SystemUi.expandNotificationShade(context)) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.toast_enable_accessibility_shade),
-                            Toast.LENGTH_SHORT,
-                        ).show()
-                    }
-                },
+                onExpandShade = { expandShadeOrPanel() },
                 // Same lock as the edge strip's double tap, on bare wallpaper instead.
                 onDoubleTapBackground = if (settings.doubleTapToLock) ({ lockOrExplain() }) else null,
                 onManageFavorites = { onNavigate("favorites") },
@@ -1451,6 +1467,26 @@ fun HomeRoute(
                 viewportHeightPx = viewportHeightPx,
                 visible = appListVisible,
                 favoriteKeys = remember(favoriteKeys) { favoriteKeys.toSet() },
+                onOpenFolder = { folder -> onNavigate("folder/" + android.net.Uri.encode(folder.id)) },
+                foldersOnHome = remember(favoriteKeys) {
+                    favoriteKeys.mapNotNull { folderIdFromToken(it) }.toSet()
+                },
+                onAddFolderToHome = { folder ->
+                    scope.launch { app.prefs.addFavorite(folderToken(folder.id)) }
+                },
+                onRemoveFolderFromHome = { folder ->
+                    scope.launch { app.prefs.removeFavorite(folderToken(folder.id)) }
+                },
+                onDeleteFolder = { folder ->
+                    scope.launch {
+                        folder.widgets.forEach { w ->
+                            if (w.id > 0) runCatching { app.widgetHost.deleteAppWidgetId(w.id) }
+                        }
+                        app.prefs.removeFavorite(folderToken(folder.id))
+                        app.prefs.deleteFolder(folder.id)
+                    }
+                },
+                appsByKey = appsByKey,
                 onLaunch = { appInfo ->
                     // A launch that never got off the ground leaves nothing to wait for, and
                     // the private-space row has nothing coming to the foreground either — it
@@ -1738,6 +1774,8 @@ data class HomeSettings(
     val closeFolderOnLaunch: Boolean,
     val showListHeaders: Boolean,
     val showSettingsRow: Boolean,
+    /** Whether folders stand in the A-Z list by their own names. */
+    val appListFolders: Boolean,
     val showFavoriteIcons: Boolean,
     val favoritesEverSet: Boolean,
     val edgeZoneBandOnly: Boolean,

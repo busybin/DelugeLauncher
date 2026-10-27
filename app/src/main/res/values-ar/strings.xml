@@ -30,6 +30,11 @@
     <string name="tag_remove">إزالة العلامة</string>
     <string name="app_lock_title">ألغِ القفل للفتح</string>
     <string name="app_lock_prompt">أكّد قفل الشاشة لفتح %1$s</string>
+    <string name="settings_app_lock_timeout">اطلب مجددًا بعد</string>
+    <string name="settings_app_lock_every_time">في كل مرة</string>
+    <string name="settings_app_lock_minutes">%d دقيقة</string>
+    <string name="settings_app_lock_screen_off">القفل عند إطفاء الشاشة</string>
+    <string name="settings_app_lock_screen_off_detail">انسَ التطبيقات المفتوحة عند إطفاء الشاشة.</string>
     <string name="action_edit_layout">تعديل التخطيط</string>
     <string name="action_edit_icon_and_name">تعديل الأيقونة &amp; الاسم</string>
     <string name="action_move_to_folder">نقل إلى مجلد…</string>
@@ -248,7 +253,7 @@
     <string name="settings_now_playing_show">إظهار أداة «قيد التشغيل»</string>
     <string name="settings_notification_access_granted">تم منح الوصول إلى الإشعارات</string>
     <string name="settings_notification_access_missing">لم يُمنح الوصول إلى الإشعارات</string>
-    <string name="settings_notification_access_detail">يُستخدم لـ«قيد التشغيل» وأعداد الإشعارات ونصها</string>
+    <string name="settings_notification_access_detail">يُستخدم لـ«قيد التشغيل» وأعداد الإشعارات ولوحة الإشعارات ونصها</string>
     <string name="settings_open_settings">فتح الإعدادات</string>
     <string name="settings_favorites">المفضّلة</string>
     <string name="settings_favorites_detail">اختر التطبيقات التي تظهر في الشاشة الرئيسية</string>
@@ -330,6 +335,12 @@
     <string name="freeze_open_shizuku">فتح Shizuku</string>
     <string name="freeze_shizuku_missing">Shizuku غير مثبّت</string>
     <string name="freeze_hide_needs_root">إخفاء التطبيقات يتطلب Root. التعطيل والتعليق يعملان بدونه.</string>
+    <string name="freeze_private_space_title">عزل أقوى: المساحة الخاصة</string>
+    <string name="freeze_private_space_body">المساحة الخاصة في Android 15 ملف تعريف منفصل بنسخة خاصة من كل تطبيق. عند قفلها تتوقف تطبيقاتها وتصبح غير مرئية لـ Deluge والتطبيقات الأخرى والبحث والمهام الأخيرة والإشعارات.</string>
+    <string name="freeze_private_space_how">يعرضها Deluge كصف بقفل في نهاية قائمة التطبيقات عندما يكون المشغّل الافتراضي؛ اضغط عليه للفتح. يجب تثبيت التطبيقات من جديد بالداخل.</string>
+    <string name="freeze_private_space_note">بخلاف الإخفاء، هذا حد حقيقي: لا يمكن للتطبيقات الأخرى سرد محتوياته. مساحة واحدة لكل جهاز وعلى المستخدم الرئيسي فقط، ويمكن أن تتشارك الجهاز مع ملف تعريف عمل.</string>
+    <string name="freeze_private_space_open">فتح إعدادات المساحة الخاصة</string>
+    <string name="freeze_private_space_missing">لا توجد صفحة إعدادات للمساحة الخاصة في هذا النظام.</string>
     <string name="freeze_frozen_section">مجمّدة (%1$d)</string>
     <string name="freeze_add_section">تطبيقات أخرى</string>
     <string name="freeze_tab_empty">لا توجد تطبيقات مجمّدة بهذه الطريقة</string>
@@ -395,7 +406,11 @@
     <string name="settings_update_check">التحقق من وجود تحديثات</string>
     <string name="settings_update_check_detail">البحث عن إصدار أحدث على GitHub</string>
     <string name="settings_update_auto_check">التحقق من التحديثات تلقائيًا</string>
-    <string name="settings_update_auto_check_detail">متوقف افتراضيًا. وما دام متوقفًا، لا ينظر Deluge إلى صفحة إصداراته إلا عند نقرك على زر التحقق أدناه — ولا يُرسل شيء خلاف ذلك.</string>
+    <string name="update_consent_title">التحقق من التحديثات تلقائيًا؟</string>
+    <string name="update_consent_message">اسمح لـ Deluge بالاطلاع على GitHub في كل مرة يبدأ فيها لمعرفة إن كان هناك إصدار جديد وإخبارك. يقرأ رقم الإصدار فقط، ولا يرسل أي معلومات عنك، ولا يثبّت شيئًا من تلقاء نفسه.</string>
+    <string name="update_consent_allow">السماح</string>
+    <string name="update_consent_deny">ليس الآن</string>
+    <string name="settings_update_auto_check_detail">يُسأل مرة واحدة عند أول تشغيل. وعند تفعيله، ينظر Deluge إلى صفحة إصداراته عند كل بدء (بحد أقصى مرة كل ساعة) ويخبرك عند توفر إصدار جديد.</string>
     <string name="settings_update_checking">جارٍ التحقق…</string>
     <string name="settings_update_up_to_date">لديك أحدث إصدار (%1$s)</string>
     <string name="settings_update_available">الإصدار %1$s متوفر</string>
@@ -640,7 +655,84 @@
     <string name="freeze_import_done">أُضيف %1$d تطبيقًا إلى قائمة التجميد</string>
     <string name="freeze_import_none">لا توجد تطبيقات جديدة في هذا الملف</string>
     <string name="freeze_import_failed">هذا ليس ملف قائمة تجميد من Deluge</string>
+
     <string name="freeze_menu_pin">إضافة اختصار إلى الشاشة الرئيسية</string>
     <string name="freeze_pin_failed">تعذّرت إضافة الاختصار</string>
     <string name="freeze_tile_label">تجميد التطبيقات</string>
+
+    <string name="corner_action_notifications">فتح لوحة الإشعارات</string>
+    <string name="settings_notification_panel">لوحة الإشعارات</string>
+    <string name="settings_notification_panel_detail">يعرض محتوى لوحة الإشعارات في شاشة خاصة بالمشغّل، مع الأزرار والردود. يحتاج إلى إذن الوصول إلى الإشعارات. معطّل افتراضيًا.</string>
+    <string name="settings_notification_panel_open">فتح لوحة الإشعارات</string>
+    <string name="settings_notification_panel_open_detail">الشاشة نفسها التي يفتحها السحب العميق للأسفل في الشاشة الرئيسية.</string>
+    <string name="notifications_title">الإشعارات</string>
+    <string name="notifications_clear_all">مسح الكل</string>
+    <string name="notifications_dismiss">تجاهل</string>
+    <string name="notifications_reply_hint">رد</string>
+    <string name="notifications_send">إرسال الرد</string>
+    <string name="notifications_empty">لا شيء في الانتظار</string>
+    <string name="notifications_empty_detail">تظهر هنا الإشعارات الواردة أثناء تشغيل هذا الخيار.</string>
+    <string name="notifications_access_missing">لم يُمنح إذن الوصول إلى الإشعارات</string>
+    <string name="notifications_access_detail">اسمح لتطبيق Deluge Launcher في الإعدادات ← الإشعارات ← إشعارات الأجهزة والتطبيقات.</string>
+
+    <string name="settings_applist_folders">المجلدات في قائمة التطبيقات</string>
+    <string name="settings_applist_folders_detail">يضع كل مجلد تحت اسمه بين التطبيقات، ليصل إليه بالتمرير عبر الأبجدية. معطّل افتراضيًا.</string>
+
+    <string name="settings_favorite_rules">قواعد المفضلة</string>
+    <string name="settings_favorite_rules_detail">يعرض أو يخفي المفضلة بحسب Wi-Fi أو الوقت أو السماعات أو عدد مرات الفتح.</string>
+    <string name="rules_title">قواعد المفضلة</string>
+    <string name="rules_add">قاعدة جديدة</string>
+    <string name="rules_new">قاعدة جديدة</string>
+    <string name="rules_edit">تعديل القاعدة</string>
+    <string name="rules_untitled">قاعدة بلا اسم</string>
+    <string name="rules_empty">لا توجد قواعد بعد</string>
+    <string name="rules_empty_detail">تُظهر القاعدة المفضلة المختارة أو تخفيها ما دامت شروطها متحققة: على شبكة Wi-Fi، أو في وقت معين، أو مع السماعات، أو بعد عدد من المرات. المفضلة التي لا تذكرها أي قاعدة تظهر دائمًا.</string>
+    <string name="rules_name">الاسم</string>
+    <string name="rules_action_label">عند تحقق الشروط</string>
+    <string name="rules_action_show">إظهار</string>
+    <string name="rules_action_hide">إخفاء</string>
+    <string name="rules_conditions_label">الشروط</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">أي شبكة</string>
+    <string name="rules_wifi_on">على هذه الشبكات</string>
+    <string name="rules_wifi_off">بعيدًا عن هذه الشبكات</string>
+    <string name="rules_wifi_names">أسماء الشبكات، مفصولة بفواصل</string>
+    <string name="rules_wifi_permission">يحتاج Android إلى إذن الموقع لقراءة اسم شبكة Wi-Fi.</string>
+    <string name="rules_grant">السماح</string>
+    <string name="rules_wifi_current">استخدم %1$s</string>
+    <string name="rules_headset">السماعات</string>
+    <string name="rules_headset_any">أي</string>
+    <string name="rules_headset_connected">متصلة</string>
+    <string name="rules_headset_disconnected">غير متصلة</string>
+    <string name="rules_time">وقت اليوم</string>
+    <string name="rules_time_from">من %1$s</string>
+    <string name="rules_time_to">إلى %1$s</string>
+    <string name="rules_daily_limit">مرات الفتح اليومية</string>
+    <string name="rules_daily_limit_detail">أخفِ بعد هذا العدد من المرات اليوم. 0 يوقفها.</string>
+    <string name="rules_tokens_label">المفضلة التي تنطبق عليها</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">بعيدًا عن %1$s</string>
+    <string name="rules_summary_headset">السماعات</string>
+    <string name="rules_summary_no_headset">بلا سماعات</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">%1$d مرات يوميًا</string>
+    <string name="rules_summary_always">دائمًا</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="one">%1$d مفضلة</item>
+        <item quantity="other">%1$d مفضلة</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="one">%1$d قاعدة مفعّلة</item>
+        <item quantity="other">%1$d قواعد مفعّلة</item>
+    </plurals>
+
+    <string name="notifications_panel_off">لوحة الإشعارات متوقفة</string>
+    <string name="notifications_panel_off_detail">شغّلها في الإعدادات ← الإشعارات لترى هنا ما ينتظر.</string>
+    <string name="private_space_install_apps">تثبيت التطبيقات</string>
+    <string name="private_space_install_failed">لا يوجد متجر تطبيقات لفتحه في المساحة الخاصة</string>
+    <string name="private_space_settings">إعدادات المساحة الخاصة</string>
+    <string name="private_space_settings_failed">تعذّر فتح إعدادات المساحة الخاصة</string>
+    <string name="settings_notification_text_size">حجم النص</string>
+    <string name="folder_remove_from_home">إزالة من الشاشة الرئيسية</string>
+    <string name="folder_add_to_home">إضافة إلى الشاشة الرئيسية</string>
 </resources>

@@ -33,6 +33,28 @@ class FilingLetterTest {
     }
 
     @Test
+    fun `a japanese phone files kana under its own row, not under a romanization`() {
+        assertEquals('あ', filingLetter("あんず", renamed = false, japanese = true) { "Apricot" })
+        assertEquals('か', filingLetter("がっこう", renamed = false, japanese = true) { "School" })
+        assertEquals('か', filingLetter("カメラ", renamed = false, japanese = true) { "Camera" })
+        assertEquals('あ', filingLetter("ぁい", renamed = false, japanese = true) { null })
+        assertEquals('や', filingLetter("ゆき", renamed = false, japanese = true) { null })
+        assertEquals('は', filingLetter("ブルー", renamed = false, japanese = true) { "Blue" })
+    }
+
+    @Test
+    fun `a japanese phone files a kanji name under the kanji row`() {
+        assertEquals(KANJI_HEADING, filingLetter("天気", renamed = false, japanese = true) { "Weather" })
+        assertEquals('漢', filingLetter("漢字", renamed = true, japanese = true) { null })
+    }
+
+    @Test
+    fun `a name an alphabet can carry still files there on a japanese phone`() {
+        assertEquals('F', filingLetter("Firefox", renamed = false, japanese = true) { null })
+        assertEquals('D', filingLetter("Дом", renamed = false, japanese = true) { null })
+    }
+
+    @Test
     fun `the english name is never asked for when the shown name has a letter`() {
         var asked = false
         val letter = filingLetter("Firefox", renamed = false) { asked = true; "Firefox" }

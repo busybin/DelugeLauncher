@@ -38,6 +38,7 @@ import dev.delugelauncher.service.StatusBarFader
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.ui.DelugeNavHost
 import dev.delugelauncher.ui.common.IconConfig
+import dev.delugelauncher.ui.theme.widgetTypeface
 import dev.delugelauncher.ui.common.LaunchOrigin
 import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.LocalIconConfig
@@ -147,6 +148,9 @@ class MainActivity : ComponentActivity() {
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
             val fontFile by app.prefs.fontFile.collectAsState(initial = null)
+            LaunchedEffect(font, fontFile) {
+                app.widgetHost.typeface = widgetTypeface(font, fontFile)
+            }
             val colorSchemeChoice by app.prefs.colorSchemeChoice.collectAsState(
                 initial = ColorSchemeChoice.DELUGE_BLUE
             )

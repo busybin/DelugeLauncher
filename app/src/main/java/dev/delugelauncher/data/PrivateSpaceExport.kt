@@ -20,6 +20,7 @@ import org.json.JSONObject
 // still green, and the drift would silently put the private space back into the backups.
 internal const val PREF_FAVORITES = "favorites_order"
 internal const val PREF_FOLDERS = "folders_json"
+internal const val PREF_FAVORITE_RULES = "favorite_rules_json"
 internal const val PREF_HIDDEN_APPS = "hidden_apps"
 internal const val PREF_FREQUENT_EXCLUDED = "frequent_excluded"
 internal const val PREF_NAME_OVERRIDES = "name_overrides_json"
@@ -70,6 +71,7 @@ fun stripPrivateSpaceFromExport(name: String, value: Any, stripOtherProfiles: Bo
         PREF_HIDDEN_APPS, PREF_FREQUENT_EXCLUDED, PREF_LOCKED_APPS ->
             (value as? Set<*>)?.let { stripStringSet(it, isPrivate) } ?: value
         PREF_FOLDERS -> (value as? String)?.let { stripFoldersJson(it, isPrivate) } ?: value
+        PREF_FAVORITE_RULES -> (value as? String)?.let { stripRulesJson(it, isPrivate) } ?: value
         PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS, PREF_APP_TAGS ->
             (value as? String)?.let { stripJsonMap(it, isPrivate) } ?: value
         PREF_QUICK_LAUNCH_LEFT, PREF_QUICK_LAUNCH_RIGHT, PREF_CORNER_BUTTON_KEY, PREF_CORNER_SWIPE_KEY -> {
@@ -120,6 +122,37 @@ private fun stripFoldersJson(raw: String, isPrivate: (String) -> Boolean): Strin
         }
     }
     return if (changed) array.toString() else raw
+}
+
+/**
+ * A rule keeps its name and conditions; only its token list loses private keys, and a rule
+ * left with none is dropped rather than exported as a rule that hides nothing.
+ */
+private fun stripRulesJson(raw: String, isPrivate: (String) -> Boolean): String {
+    val array = runCatching { JSONArray(raw) }.getOrNull() ?: return raw
+    val keptRules = JSONArray()
+    var changed = false
+    for (i in 0 until array.length()) {
+        val rule = array.optJSONObject(i) ?: continue
+        val tokens = rule.optJSONArray("tokens")
+        if (tokens == null) {
+            keptRules.put(rule)
+            continue
+        }
+        val kept = JSONArray()
+        var droppedAny = false
+        for (j in 0 until tokens.length()) {
+            val token = tokens.optString(j)
+            if (isPrivate(token)) droppedAny = true else kept.put(token)
+        }
+        if (!droppedAny) {
+            keptRules.put(rule)
+            continue
+        }
+        changed = true
+        if (kept.length() > 0) keptRules.put(rule.put("tokens", kept))
+    }
+    return if (changed) keptRules.toString() else raw
 }
 
 /**

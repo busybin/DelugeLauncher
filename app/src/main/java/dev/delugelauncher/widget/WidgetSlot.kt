@@ -74,6 +74,10 @@ data class WidgetSlotActions(
     val onAppInfo: (widgetId: Int) -> Unit,
     val onResize: (heightDp: Int) -> Unit,
     val onOpenSettings: () -> Unit,
+    /** The same picker, with whatever it binds kept in a folder instead. */
+    val onAddWidgetToFolder: (folderId: String) -> Unit = {},
+    val onRemoveFolderWidget: (folderId: String, widgetId: Int) -> Unit = { _, _ -> },
+    val onResizeFolderWidget: (folderId: String, widgetId: Int, heightDp: Int) -> Unit = { _, _, _ -> },
     /** Null while the height is automatic, so the menu offers no reset for it. */
     val onResetHeight: (() -> Unit)? = null,
 )
@@ -254,7 +258,7 @@ fun WidgetSlot(
 
 /** One hosted widget. [onLongPress] carries the press position in this page's local pixels. */
 @Composable
-private fun WidgetPage(
+internal fun WidgetPage(
     widgetId: Int,
     /** Bumped on every package event; the provider is re-read, so freeze and unfreeze show. */
     refreshTick: Int,

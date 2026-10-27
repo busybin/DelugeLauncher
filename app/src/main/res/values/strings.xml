@@ -30,6 +30,11 @@
     <string name="tag_remove">Remove tag</string>
     <string name="app_lock_title">Unlock to open</string>
     <string name="app_lock_prompt">Confirm your screen lock to open %1$s</string>
+    <string name="settings_app_lock_timeout">Ask again after</string>
+    <string name="settings_app_lock_every_time">Every time</string>
+    <string name="settings_app_lock_minutes">%d min</string>
+    <string name="settings_app_lock_screen_off">Lock when the screen goes off</string>
+    <string name="settings_app_lock_screen_off_detail">Forget unlocked apps when the screen turns off.</string>
     <string name="action_edit_layout">Edit layout</string>
     <string name="action_edit_icon_and_name">Edit icon &amp; name</string>
     <string name="action_move_to_folder">Move to folder…</string>
@@ -249,7 +254,7 @@
     <string name="settings_now_playing_show">Show Now Playing widget</string>
     <string name="settings_notification_access_granted">Notification access granted</string>
     <string name="settings_notification_access_missing">Notification access not granted</string>
-    <string name="settings_notification_access_detail">Used for Now Playing, notification counts and notification text</string>
+    <string name="settings_notification_access_detail">Used for Now Playing, notification counts, the panel and notification text</string>
     <string name="settings_open_settings">Open settings</string>
     <string name="settings_favorites">Favorites</string>
     <string name="settings_favorites_detail">Choose which apps sit on the home screen</string>
@@ -343,6 +348,12 @@
     <string name="freeze_open_shizuku">Open Shizuku</string>
     <string name="freeze_shizuku_missing">Shizuku is not installed</string>
     <string name="freeze_hide_needs_root">Hiding apps needs root. Disable and Suspend work without it.</string>
+    <string name="freeze_private_space_title">Stronger isolation: Private space</string>
+    <string name="freeze_private_space_body">Android 15\'s Private space is a separate profile with its own copy of each app. While it is locked, those apps are stopped and invisible to Deluge, other apps, search, recents and notifications.</string>
+    <string name="freeze_private_space_how">Deluge shows the space as a padlock row at the end of the app list while it is your default launcher; tap it to unlock. Apps have to be installed again inside.</string>
+    <string name="freeze_private_space_note">Unlike hiding, this is a real boundary: other apps cannot enumerate it. One space per device, main user only; it can share the phone with a work profile.</string>
+    <string name="freeze_private_space_open">Open Private space settings</string>
+    <string name="freeze_private_space_missing">This system has no Private space settings page.</string>
     <string name="freeze_frozen_section">Frozen (%1$d)</string>
     <string name="freeze_add_section">Other apps</string>
     <string name="freeze_tab_empty">No apps frozen this way</string>
@@ -408,7 +419,11 @@
     <string name="settings_update_check">Check for updates</string>
     <string name="settings_update_check_detail">Look for a newer release on GitHub</string>
     <string name="settings_update_auto_check">Check for updates automatically</string>
-    <string name="settings_update_auto_check_detail">Off by default. While this is off, Deluge only looks at its release page when you tap the check below — nothing is sent otherwise.</string>
+    <string name="update_consent_title">Check for updates automatically?</string>
+    <string name="update_consent_message">Allow Deluge to look at GitHub every time it starts and tell you when a new release is out. It only reads the version number, sends nothing about you, and never installs anything by itself.</string>
+    <string name="update_consent_allow">Allow</string>
+    <string name="update_consent_deny">Not now</string>
+    <string name="settings_update_auto_check_detail">Asked once on the first launch. While it is on, Deluge looks at its release page on startup (at most once an hour) and tells you when a new version is out.</string>
     <string name="settings_update_checking">Checking…</string>
     <string name="settings_update_up_to_date">On the latest version (%1$s)</string>
     <string name="settings_update_available">Version %1$s is available</string>
@@ -640,7 +655,84 @@
     <string name="freeze_import_done">Added %1$d apps to the freeze list</string>
     <string name="freeze_import_none">No new apps in that file</string>
     <string name="freeze_import_failed">That is not a Deluge freeze list</string>
+
     <string name="freeze_menu_pin">Add a home screen shortcut</string>
     <string name="freeze_pin_failed">Could not add the shortcut</string>
     <string name="freeze_tile_label">Freeze apps</string>
+
+    <string name="corner_action_notifications">Open the notification panel</string>
+    <string name="settings_notification_panel">Notification panel</string>
+    <string name="settings_notification_panel_detail">Shows what is on the shade in the launcher\'s own screen, with buttons and replies. Needs notification access. Off by default.</string>
+    <string name="settings_notification_panel_open">Open the notification panel</string>
+    <string name="settings_notification_panel_open_detail">The same screen a deep pull down on the home screen opens.</string>
+    <string name="notifications_title">Notifications</string>
+    <string name="notifications_clear_all">Clear all</string>
+    <string name="notifications_dismiss">Dismiss</string>
+    <string name="notifications_reply_hint">Reply</string>
+    <string name="notifications_send">Send reply</string>
+    <string name="notifications_empty">Nothing waiting</string>
+    <string name="notifications_empty_detail">Notifications that arrive while this is on show up here.</string>
+    <string name="notifications_access_missing">Notification access not granted</string>
+    <string name="notifications_access_detail">Allow Deluge Launcher in Settings → Notifications → Device &amp; app notifications.</string>
+
+    <string name="settings_applist_folders">Folders in the app list</string>
+    <string name="settings_applist_folders_detail">Files each folder under its own name among the apps, so one is reachable by scrolling the alphabet. Off by default.</string>
+
+    <string name="settings_favorite_rules">Favorites rules</string>
+    <string name="settings_favorite_rules_detail">Show or hide favorites by Wi-Fi, time, headphones or how often they have been opened.</string>
+    <string name="rules_title">Favorites rules</string>
+    <string name="rules_add">New rule</string>
+    <string name="rules_new">New rule</string>
+    <string name="rules_edit">Edit rule</string>
+    <string name="rules_untitled">Untitled rule</string>
+    <string name="rules_empty">No rules yet</string>
+    <string name="rules_empty_detail">A rule shows or hides chosen favorites while its conditions hold: on a Wi-Fi network, at a time of day, with headphones, or after a set number of opens. Favorites named by no rule always show.</string>
+    <string name="rules_name">Name</string>
+    <string name="rules_action_label">When the conditions hold</string>
+    <string name="rules_action_show">Show</string>
+    <string name="rules_action_hide">Hide</string>
+    <string name="rules_conditions_label">Conditions</string>
+    <string name="rules_wifi">Wi-Fi</string>
+    <string name="rules_wifi_any">Any network</string>
+    <string name="rules_wifi_on">On these</string>
+    <string name="rules_wifi_off">Away from these</string>
+    <string name="rules_wifi_names">Network names, comma separated</string>
+    <string name="rules_wifi_permission">Android needs location access to read a Wi-Fi name.</string>
+    <string name="rules_grant">Allow</string>
+    <string name="rules_wifi_current">Use %1$s</string>
+    <string name="rules_headset">Headphones</string>
+    <string name="rules_headset_any">Any</string>
+    <string name="rules_headset_connected">Connected</string>
+    <string name="rules_headset_disconnected">Not connected</string>
+    <string name="rules_time">Time of day</string>
+    <string name="rules_time_from">From %1$s</string>
+    <string name="rules_time_to">To %1$s</string>
+    <string name="rules_daily_limit">Daily opens</string>
+    <string name="rules_daily_limit_detail">Hide once opened this many times today. 0 turns it off.</string>
+    <string name="rules_tokens_label">Favorites this rule applies to</string>
+    <string name="rules_summary_wifi_on">Wi-Fi %1$s</string>
+    <string name="rules_summary_wifi_off">Away from %1$s</string>
+    <string name="rules_summary_headset">Headphones</string>
+    <string name="rules_summary_no_headset">No headphones</string>
+    <string name="rules_summary_time">%1$s–%2$s</string>
+    <string name="rules_summary_limit">%1$d opens a day</string>
+    <string name="rules_summary_always">Always</string>
+    <plurals name="rules_tokens_count">
+        <item quantity="one">%1$d favorite</item>
+        <item quantity="other">%1$d favorites</item>
+    </plurals>
+    <plurals name="settings_favorite_rules_on">
+        <item quantity="one">%1$d rule on</item>
+        <item quantity="other">%1$d rules on</item>
+    </plurals>
+
+    <string name="notifications_panel_off">Notification panel is off</string>
+    <string name="notifications_panel_off_detail">Turn it on in Settings → Notifications to see what is waiting here.</string>
+    <string name="private_space_install_apps">Install apps</string>
+    <string name="private_space_install_failed">No app store to open in the private space</string>
+    <string name="private_space_settings">Private space settings</string>
+    <string name="private_space_settings_failed">Couldn\'t open private space settings</string>
+    <string name="settings_notification_text_size">Text size</string>
+    <string name="folder_remove_from_home">Remove from home screen</string>
+    <string name="folder_add_to_home">Add to home screen</string>
 </resources>

@@ -4,6 +4,9 @@ package dev.delugelauncher.ui.applist
 import androidx.compose.runtime.Immutable
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.EntryKind
+import dev.delugelauncher.data.Folder
+import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.data.Pinyin
 import android.content.Context
 import android.content.res.Configuration
@@ -21,19 +24,45 @@ internal const val RECENT_SECTION = "recent"
 internal fun tagSectionToken(label: String) = "tag:$label"
 
 /**
- * One laid-out row of the list. Portrait holds one app per row; sideways two share one,
+ * What a cell holds: an app, or a folder standing in the alphabet among them.
+ *
+ * Folders are only ever a full row of their own, but they pair like apps do when two columns
+ * are on — pairing is a layout question, and a folder is as tall as an app.
+ */
+@Immutable
+sealed interface ListItem {
+    val key: String
+    val section: String?
+
+    data class AppItem(val entry: AppListRow.Entry) : ListItem {
+        override val key: String get() = entry.app.key
+        override val section: String? get() = entry.section
+    }
+
+    data class FolderItem(val row: AppListRow.FolderRow) : ListItem {
+        override val key: String get() = folderToken(row.folder.id)
+        override val section: String? get() = row.section
+    }
+}
+
+/**
+ * One laid-out row of the list. Portrait holds one item per row; sideways two share one,
  * so the two columns stay level instead of one running long.
  */
 @Immutable
 sealed interface CellRow {
     data class Header(val text: String) : CellRow
-    data class One(val entry: AppListRow.Entry) : CellRow
-    data class Two(val left: AppListRow.Entry, val right: AppListRow.Entry?) : CellRow
+    data class One(val item: ListItem) : CellRow
+    data class Two(val left: ListItem, val right: ListItem?) : CellRow
 
+    /** Only the apps, for the callers that launch one or collect tags. */
     fun entries(): List<AppListRow.Entry> = when (this) {
         is Header -> emptyList()
-        is One -> listOf(entry)
-        is Two -> listOfNotNull(left, right)
+        is One -> listOfNotNull((item as? ListItem.AppItem)?.entry)
+        is Two -> listOfNotNull(
+            (left as? ListItem.AppItem)?.entry,
+            (right as? ListItem.AppItem)?.entry,
+        )
     }
 }
 
@@ -50,6 +79,13 @@ data class CellModel(
     val letters: List<String> = letterIndex.map { it.first }
 }
 
+/** A laid-out row as the cell that draws it. */
+private fun itemAt(row: AppListRow): ListItem = when (row) {
+    is AppListRow.Entry -> ListItem.AppItem(row)
+    is AppListRow.FolderRow -> ListItem.FolderItem(row)
+    is AppListRow.Header -> error("a heading is never an item")
+}
+
 /**
  * Pairs neighboring entries that belong together — same letter, same section — and leaves
  * everything else (headings, loners at a group's end) one to a row. Pairing across a group
@@ -61,7 +97,8 @@ fun AppListModel.toCells(twoColumn: Boolean): CellModel {
             rows = rows.map { row ->
                 when (row) {
                     is AppListRow.Header -> CellRow.Header(row.text)
-                    is AppListRow.Entry -> CellRow.One(row)
+                    is AppListRow.Entry -> CellRow.One(ListItem.AppItem(row))
+                    is AppListRow.FolderRow -> CellRow.One(ListItem.FolderItem(row))
                 }
             },
             letterIndex = letterIndex,
@@ -82,7 +119,12 @@ fun AppListModel.toCells(twoColumn: Boolean): CellModel {
     }
     fun groupOf(index: Int): String {
         val row = rows[index]
-        if (row is AppListRow.Entry && row.section != null) return "s:${row.section}"
+        val section = when (row) {
+            is AppListRow.Entry -> row.section
+            is AppListRow.FolderRow -> row.section
+            is AppListRow.Header -> null
+        }
+        if (section != null) return "s:$section"
         return "l:${rowLetter[index]}"
     }
     val atRow: Map<Int, List<String>> = letterIndex.groupBy({ it.second }, { it.first })
@@ -104,14 +146,16 @@ fun AppListModel.toCells(twoColumn: Boolean): CellModel {
                 cellRows += CellRow.Header(row.text)
                 i++
             }
-            is AppListRow.Entry -> {
+            is AppListRow.Entry, is AppListRow.FolderRow -> {
                 val next = rows.getOrNull(i + 1)
-                if (next is AppListRow.Entry && groupOf(i + 1) == groupOf(i)) {
+                val pairs = next != null && next !is AppListRow.Header &&
+                    groupOf(i + 1) == groupOf(i)
+                if (pairs) {
                     recordLetter(i + 1)
-                    cellRows += CellRow.Two(row, next)
+                    cellRows += CellRow.Two(itemAt(row), itemAt(next!!))
                     i += 2
                 } else {
-                    cellRows += CellRow.One(row)
+                    cellRows += CellRow.One(itemAt(row))
                     i++
                 }
             }
@@ -126,7 +170,7 @@ fun CellModel.alphabetEnd(): Int {
     for (i in alphabetStart until rows.size) {
         when (val row = rows[i]) {
             is CellRow.Header -> if (row.text.length != 1) return i
-            is CellRow.One -> if (row.entry.section != null) return i
+            is CellRow.One -> if (row.item.section != null) return i
             is CellRow.Two ->
                 if (row.left.section != null || row.right?.section != null) return i
         }
@@ -167,6 +211,14 @@ sealed interface AppListRow {
      * screen down with it.
      */
     data class Entry(val app: AppInfo, val section: String? = null) : AppListRow
+
+    /**
+     * A folder standing in the alphabet by its own name.
+     *
+     * Only present when the list is set to show folders. A folder never leaves an app out of
+     * the alphabet: the apps inside it are still filed under their own letters.
+     */
+    data class FolderRow(val folder: Folder, val section: String? = null) : AppListRow
 }
 
 /**
@@ -200,6 +252,7 @@ fun AppListModel.alphabetEnd(): Int {
         val row = rows[i]
         when {
             row is AppListRow.Entry && row.section != null -> return i
+            row is AppListRow.FolderRow && row.section != null -> return i
             row is AppListRow.Header && row.text.length != 1 -> return i
         }
     }
@@ -234,13 +287,45 @@ internal fun filingLetter(
     shown: String,
     renamed: Boolean,
     pinyin: Boolean = false,
+    japanese: Boolean = false,
     english: () -> String?,
 ): Char {
     val own = indexLetter(shown, pinyin)
     if (own != '#') return own
+    // A Japanese reader looks for 天気 among the kana and kanji, not under W.
+    if (japanese) return japaneseHeading(shown) ?: '#'
     if (renamed) return '#'
     return english()?.let { indexLetter(it, pinyin) } ?: '#'
 }
+
+/**
+ * The kana row a Japanese name files under, in the order JIS X 4061 gives them after A-Z, or
+ * [KANJI_HEADING] for a name that starts with a kanji.
+ *
+ * Kanji are not given a row: which one depends on how the word is read, and nothing on the
+ * phone says that for an app's name.
+ */
+internal fun japaneseHeading(name: String): Char? {
+    val first = name.firstOrNull() ?: return null
+    if (runCatching { Character.UnicodeScript.of(first.code) }.getOrNull() == Character.UnicodeScript.HAN) {
+        return KANJI_HEADING
+    }
+    // Half-width katakana widened and voicing marks split off, so が files with か.
+    var kana = Normalizer.normalize(first.toString(), Normalizer.Form.NFKD).firstOrNull() ?: return null
+    if (kana in '\u30A1'..'\u30F6') kana -= 0x60
+    kana = SMALL_KANA[kana] ?: kana
+    if (kana !in '\u3041'..'\u3096') return null
+    return KANA_ROWS.last { it <= kana }
+}
+
+internal const val KANJI_HEADING = '漢'
+
+private val KANA_ROWS = listOf('あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 'や', 'ら', 'わ')
+
+/** Small kana that sort below their row's first letter, mapped to their full-size form. */
+private val SMALL_KANA = mapOf(
+    'ぁ' to 'あ', 'ゃ' to 'や', 'ゅ' to 'ゆ', 'ょ' to 'よ', 'ゎ' to 'わ', 'ゕ' to 'か', 'ゖ' to 'け',
+)
 
 /**
  * The letter a name files under, with [pinyin] for a list whose language is Chinese.
@@ -343,6 +428,15 @@ private val LATIN_STANDALONE = mapOf(
     'Þ' to 'T', 'Ħ' to 'H', 'Ŧ' to 'T', 'Ŋ' to 'N', 'Ə' to 'E', 'ẞ' to 'S', 'ß' to 'S',
 )
 
+/** One alphabet entry before it becomes a row: an app or a folder, sharing a sort. */
+private class AlphabetItem(
+    val app: AppInfo?,
+    val folder: Folder? = null,
+    val count: Int,
+    val order: String,
+    val key: String,
+)
+
 /**
  * [launchCounts] empty keeps every section alphabetical; otherwise the apps inside each letter
  * are ordered by how often they were opened from here. The letters themselves never move —
@@ -381,15 +475,26 @@ fun buildAppListModel(
     renamed: (AppInfo) -> Boolean = { false },
     /** Heading for a section of the private space's own apps, or null to leave them in the A-Z. */
     privateSectionLabel: String? = null,
+    /** Folders to file among the apps, each under the letter of its own name. */
+    folders: List<Folder> = emptyList(),
+    /** Whether folders stand in the alphabet. Off, the list is apps only. */
+    showFolders: Boolean = false,
     /** Heading and how many, for a section of what was installed most recently. */
     recentSection: Pair<String, Int>? = null,
+    /** Whether names that are not A-Z file under kana rows and kanji, as a Japanese phone sorts. */
+    japanese: Boolean = false,
     /** Apps gathered under a tag, each group with its own heading, across the alphabet. */
     tagSections: List<Pair<String, List<AppInfo>>> = emptyList(),
 ): AppListModel {
     val all = apps.filter { it.key !in hidden }
+    // The row that locks and unlocks the space goes at the very end rather than under P, where
+    // nobody looking for the space thinks to look.
+    val padlock = all.filter { it.kind == EntryKind.PRIVATE_SPACE }
     // Lifted out of the alphabet entirely rather than listed twice. A private app and its main
     // profile twin have the same name, which is the whole reason for asking.
-    val visible = if (privateSectionLabel == null) all else all.filterNot { it.privateProfile }
+    val visible = all.filterNot {
+        it.kind == EntryKind.PRIVATE_SPACE || (privateSectionLabel != null && it.privateProfile)
+    }
     val rows = mutableListOf<AppListRow>()
     val letterIndex = mutableListOf<Pair<String, Int>>()
 
@@ -434,32 +539,53 @@ fun buildAppListModel(
     val alphabetStart = rows.size
 
     val byLetter = visible.groupBy { app ->
-        filingLetter(displayName(app), renamed(app), pinyin) { englishName(app) }
+        filingLetter(displayName(app), renamed(app), pinyin, japanese) { englishName(app) }
+    }
+    // A folder files under the first letter of its own name, and sorts among the apps rather
+    // than in a section of its own: the point of having it in the list is to reach it where
+    // its name says it is.
+    val foldersByLetter = if (!showFolders) {
+        emptyMap()
+    } else {
+        folders.groupBy {
+            filingLetter(it.name, renamed = true, pinyin = pinyin, japanese = japanese) { null }
+        }
     }
 
-    byLetter.toSortedMap().forEach { (letter, list) ->
+    (byLetter.keys + foldersByLetter.keys).toSortedSet().forEach { letter ->
         letterIndex += letter.toString() to rows.size
         if (showHeaders) rows += AppListRow.Header(letter.toString())
-        list.sortedWith(
-            compareByDescending<AppInfo> { launchCounts[it.key] ?: 0 }
-                .thenBy(orderKey)
+        val items = mutableListOf<AlphabetItem>()
+        byLetter[letter]?.forEach { app ->
+            items += AlphabetItem(
+                app = app,
+                count = launchCounts[app.key] ?: 0,
+                order = orderKey(app),
+                key = app.key,
+            )
+        }
+        foldersByLetter[letter]?.forEach { folder ->
+            items += AlphabetItem(
+                app = null,
+                folder = folder,
+                count = 0,
+                order = folder.name.lowercase(java.util.Locale.ROOT),
+                key = folderToken(folder.id),
+            )
+        }
+        items.sortedWith(
+            compareByDescending<AlphabetItem> { it.count }
+                .thenBy { it.order }
                 .thenBy { it.key }
-        ).forEach { rows += AppListRow.Entry(it) }
+        ).forEach { item ->
+            rows += if (item.folder != null) AppListRow.FolderRow(item.folder)
+            else AppListRow.Entry(item.app!!)
+        }
     }
 
     // Appended after the alphabet, each under its own heading. Not given a letter of their
     // own: the strip is the alphabet, and a section that is not a letter has no business
     // claiming a place in it.
-    privateSectionLabel?.let { label ->
-        val privateApps = all.filter { it.privateProfile }
-        if (privateApps.isNotEmpty()) {
-            rows += AppListRow.Header(label)
-            privateApps.sortedWith(
-                compareBy(orderKey, { it.key })
-            ).forEach { rows += AppListRow.Entry(it, section = PRIVATE_SECTION) }
-        }
-    }
-
     recentSection?.let { (label, limit) ->
         val recent = visible.filter { it.installedAt > 0L }
             .sortedByDescending { it.installedAt }
@@ -469,6 +595,15 @@ fun buildAppListModel(
             recent.forEach { rows += AppListRow.Entry(it, section = RECENT_SECTION) }
         }
     }
+
+    // Last, so the padlock and the apps it lets out sit together at the bottom rather than
+    // under P, where nobody looking for the space thinks to look.
+    val privateApps = if (privateSectionLabel == null) emptyList() else all.filter { it.privateProfile }
+    if (privateApps.isNotEmpty()) rows += AppListRow.Header(privateSectionLabel!!)
+    padlock.forEach { rows += AppListRow.Entry(it) }
+    privateApps.sortedWith(
+        compareBy(orderKey, { it.key })
+    ).forEach { rows += AppListRow.Entry(it, section = PRIVATE_SECTION) }
 
     return AppListModel(rows, letterIndex, alphabetStart)
 }
@@ -506,6 +641,9 @@ fun AppListModel.filtered(match: (AppInfo) -> Boolean): AppListModel {
         }
         when (row) {
             is AppListRow.Header -> pendingHeader = row
+            // A query searches apps by name; a folder's members are still found by their own
+            // names under their own letters.
+            is AppListRow.FolderRow -> Unit
             is AppListRow.Entry -> if (match(row.app)) {
                 // Recorded before the heading is added, so the letter points at the heading
                 // where there is one and at its first app where there is not.

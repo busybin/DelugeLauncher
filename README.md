@@ -63,6 +63,14 @@ Wikimedia Commons.
 
 The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NOTICE](NOTICE).
 
+## Notification panel
+
+![Notification panel](screenshots/notifications.jpg)
+
+A deep pull down on the home screen opens the shade as the launcher draws it: each
+notification with its buttons and a reply box, dismissed or opened without leaving home.
+Needs notification access, off by default.
+
 ## Other changes in this fork
 
 - Faster start: icons cached on disk, icon-pack and navigation libraries removed.
@@ -70,7 +78,18 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
   and within thumb reach.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
 - Apps open out of their icon and shrink back into it on a gesture back.
-- Notification text under an app name in favorites, off by default.
+- Notification text under an app name in favorites, off by default: the app's newest three, each
+  one opening its own notification, with a text size of its own. A dot when icons are hidden.
+- Widgets can live inside a folder, above its apps, each with its own height.
+- Japanese app names file under kana rows, kanji under a row of their own.
+- The clock widget follows the launcher's font.
+- Folders file under their own names in the app list, so one is reachable by scrolling the
+  alphabet; a long press manages one, adds it to the home screen or deletes it.
+- Favorite rules show or hide favorites by Wi-Fi, time of day, headphones or a daily open
+  limit.
+- Private space apps get a padlock row at the end of the list that opens the space in place,
+  installs apps into it and reaches its settings; the freeze screen offers Android 15's stronger
+  isolation when the phone has it.
 - The A-Z strip's edge setting is the whole reach from the screen edge, so it leaves the icons alone.
 - Pinyin search by initials or full spelling, and pinyin ordering for Chinese app names.
 - Tags with scrubbing, and a Frequent tag that follows usage.

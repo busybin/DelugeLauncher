@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.common
 
-import android.app.Activity
-import android.app.KeyguardManager
 import android.content.pm.ShortcutInfo
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
@@ -32,6 +28,7 @@ import androidx.core.graphics.drawable.toBitmap
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.data.ShortcutSwipe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -63,18 +60,8 @@ fun AppShortcutItems(
     // A shortcut points into its publisher's app, so a locked app asks for the device lock here
     // too. Null until the store answers: a tap while loading asks rather than waves through.
     val lockedApps by delugeApp.prefs.lockedApps.collectAsState(initial = null)
-    val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
-    var pending by remember { mutableStateOf<Pair<AppInfo, ShortcutInfo>?>(null) }
-    val confirmLock = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        val waiting = pending
-        pending = null
-        if (waiting != null && result.resultCode == Activity.RESULT_OK) {
-            delugeApp.appRepository.startAppShortcut(waiting.first, waiting.second, LaunchOrigin.of(waiting.first))
-            onStarted()
-        }
-    }
+    val lockTimeout by delugeApp.prefs.appLockTimeout.collectAsState(initial = 0)
+    val requestUnlock = rememberAppLockRequest()
 
     LaunchedEffect(app.key, expanded) {
         if (!expanded) return@LaunchedEffect
@@ -103,25 +90,15 @@ fun AppShortcutItems(
             },
             onClick = {
                 val locked = lockedApps
-                val prompt = if (locked == null || app.lockedBy(locked)) {
-                    // No secure lock on the phone leaves nothing to ask for, and the shortcut
-                    // opens as usual rather than becoming unreachable.
-                    runCatching {
-                        keyguard?.createConfirmDeviceCredentialIntent(
-                            context.getString(R.string.app_lock_title),
-                            context.getString(R.string.app_lock_prompt, app.label),
-                        )
-                    }.getOrNull()
-                } else {
-                    null
-                }
-                // One prompt at a time: a second answer would open the wrong shortcut.
-                if (prompt == null) {
+                fun open() {
+                    AppLock.markOpen(app.key)
                     delugeApp.appRepository.startAppShortcut(app, shortcut, LaunchOrigin.of(app))
                     onStarted()
-                } else if (pending == null) {
-                    pending = app to shortcut
-                    confirmLock.launch(prompt)
+                }
+                if (locked == null || (app.lockedBy(locked) && !AppLock.isOpen(app.key, lockTimeout))) {
+                    requestUnlock(app.label) { open() }
+                } else {
+                    open()
                 }
             },
         )

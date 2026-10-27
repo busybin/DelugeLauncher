@@ -48,4 +48,35 @@ class FolderTest {
         val restored = foldersFromJson(foldersToJson(listOf(Folder("1", "Plain", emptyList()))))
         assertNull(restored.single().icon)
     }
+
+    @Test
+    fun `widgets in a folder survive a JSON round-trip`() {
+        val folders = listOf(
+            Folder(
+                id = "1",
+                name = "Music",
+                apps = listOf("a/A"),
+                widgets = listOf(FolderWidget(42, 200), FolderWidget(7, 96)),
+            ),
+            Folder(id = "2", name = "Plain", apps = emptyList()),
+        )
+        val restored = foldersFromJson(foldersToJson(folders))
+        assertEquals(folders, restored)
+    }
+
+    @Test
+    fun `a widget entry without a usable id is dropped, the rest of the folder stays`() {
+        val restored = foldersFromJson(
+            """[{"id":"1","name":"Mix","apps":[],"widgets":[{"id":-3,"h":90},{"id":8,"h":120}]}]"""
+        ).single()
+        assertEquals(listOf(FolderWidget(8, 120)), restored.widgets)
+    }
+
+    @Test
+    fun `a widget with no stored height takes the default`() {
+        val restored = foldersFromJson(
+            """[{"id":"1","name":"Mix","apps":[],"widgets":[{"id":5}]}]"""
+        ).single()
+        assertEquals(FOLDER_WIDGET_DEFAULT_HEIGHT_DP, restored.widgets.single().heightDp)
+    }
 }

@@ -39,6 +39,15 @@
          call goes the other way, reading the release page for a newer version. -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
 
+    <!-- Asked for only when a favorite rule is set to depend on a Wi-Fi network, never at
+         install: Android hides the network name from an app without it. Nothing about the
+         network is stored or sent; the rule itself only holds the names the user typed. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <!-- Read-only state, granted at install without a prompt: whether there is a network at
+         all, and which one, for that same rule. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+
     <!-- The automatic freeze needs to hear the screen go off, which is a broadcast only a
          registered receiver is given. That means a service that stays up, and a foreground
          service is the only kind the system leaves alone long enough to be worth anything.
@@ -53,6 +62,9 @@
          lets an app start one from the background. Without this, automatic freezing stayed
          off until the launcher was opened once after a reboot. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- The lock on a listed app is the device's own lock, asked for by the system sheet. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
 
     <!-- The flashlight, asked for the first time the corner button is set to it rather than at
          install: setTorchMode holds the camera open for as long as the light is on. Nothing is

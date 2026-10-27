@@ -10,22 +10,36 @@ class NotificationPreviewBusTest {
     private fun item(
         pkg: String = "com.example",
         serial: Long = 0L,
-        title: String = "Title",
         text: String = "Text",
         at: Long = 1L,
-    ) = NotificationPreview(pkg, serial, title, text, at)
+        clearable: Boolean = true,
+    ) = NotificationEntry(
+        packageName = pkg,
+        userSerial = serial,
+        title = "Title",
+        text = text,
+        postTime = at,
+        notificationKey = "$pkg:$at",
+        contentIntent = null,
+        actions = emptyList(),
+        canDismiss = clearable,
+    )
 
     @Test
-    fun `the newest notification of an app is the one kept`() {
+    fun `an app keeps its newest three, newest first`() {
         NotificationPreviewBus.clear()
         NotificationPreviewBus.update(
             listOf(
-                item(text = "old", at = 10),
-                item(text = "new", at = 20),
-                item(text = "middle", at = 15),
+                item(text = "oldest", at = 10),
+                item(text = "newest", at = 40),
+                item(text = "middle", at = 30),
+                item(text = "older", at = 20),
             ),
         )
-        assertEquals("new", NotificationPreviewBus.previews.value.values.single().text)
+        assertEquals(
+            listOf("newest", "middle", "older"),
+            NotificationPreviewBus.previews.value.values.single().map { it.text },
+        )
     }
 
     @Test
@@ -36,22 +50,23 @@ class NotificationPreviewBusTest {
         )
         val previews = NotificationPreviewBus.previews.value
         assertEquals(2, previews.size)
-        assertEquals("main", previews[NotificationPreviewBus.key("com.example", 0)]?.text)
-        assertEquals("private", previews[NotificationPreviewBus.key("com.example", 12)]?.text)
+        assertEquals("main", previews.getValue(NotificationPreviewBus.key("com.example", 0)).single().text)
+        assertEquals(
+            "private",
+            previews.getValue(NotificationPreviewBus.key("com.example", 12)).single().text,
+        )
     }
 
     @Test
-    fun `the line joins a title and a body once`() {
-        assertEquals("Title · Text", item().line)
-        assertEquals("Title", item(text = "Title").line)
-        assertEquals("Text", item(title = "").line)
-        assertEquals("", item(title = "", text = "").line)
+    fun `an ongoing notification is not a line to read`() {
+        NotificationPreviewBus.clear()
+        NotificationPreviewBus.update(listOf(item(text = "downloading", clearable = false)))
+        assertTrue(NotificationPreviewBus.previews.value.isEmpty())
     }
 
     @Test
-    fun `clearing empties the published map`() {
+    fun `clearing leaves nothing behind`() {
         NotificationPreviewBus.update(listOf(item()))
-        assertTrue(NotificationPreviewBus.previews.value.isNotEmpty())
         NotificationPreviewBus.clear()
         assertTrue(NotificationPreviewBus.previews.value.isEmpty())
     }

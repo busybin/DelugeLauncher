@@ -129,6 +129,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Velocity
@@ -137,8 +138,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.Folder
+import dev.delugelauncher.data.folderToken
+import dev.delugelauncher.ui.common.FolderIcon
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.EntryKind
+import dev.delugelauncher.data.PRIVATE_SPACE_UNLOCKED_CLASS
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.ShortcutSwipe
@@ -228,13 +234,24 @@ private const val EDGE_STRETCH_DAMPING = 0.55f
 private fun rowKey(row: AppListRow): String = when (row) {
     is AppListRow.Header -> "header:${row.text}"
     is AppListRow.Entry -> row.section?.let { "$it:${row.app.key}" } ?: row.app.key
+    is AppListRow.FolderRow -> foldrKey(row)
+}
+
+/** A folder's identity inside the list, distinct from any app's key. */
+private fun foldrKey(row: AppListRow.FolderRow): String =
+    row.section?.let { "$it:folder:${row.folder.id}" } ?: "folder:${row.folder.id}"
+
+/** One cell item's identity, section included. */
+private fun itemKey(item: ListItem): String = when (item) {
+    is ListItem.AppItem -> rowKey(item.entry)
+    is ListItem.FolderItem -> foldrKey(item.row)
 }
 
 /** One laid-out row's identity, pairing included. */
 private fun cellKey(cell: CellRow): String = when (cell) {
     is CellRow.Header -> "header:${cell.text}"
-    is CellRow.One -> rowKey(cell.entry)
-    is CellRow.Two -> rowKey(cell.left) + "|" + (cell.right?.let { rowKey(it) } ?: "")
+    is CellRow.One -> itemKey(cell.item)
+    is CellRow.Two -> itemKey(cell.left) + "|" + (cell.right?.let { itemKey(it) } ?: "")
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
@@ -250,6 +267,16 @@ fun AppListScreen(
     visible: Boolean,
     favoriteKeys: Set<String>,
     onLaunch: (AppInfo) -> Unit,
+    /** Opens a folder's own screen when the list is set to show folders. */
+    onOpenFolder: (Folder) -> Unit,
+    /** Whether a folder stands on the home screen too, so its menu can add or remove it. */
+    foldersOnHome: Set<String> = emptySet(),
+    onAddFolderToHome: (Folder) -> Unit = {},
+    onRemoveFolderFromHome: (Folder) -> Unit = {},
+    /** Deletes the folder itself. Its apps stay installed and stay in the list. */
+    onDeleteFolder: (Folder) -> Unit = {},
+    /** Every installed app, so a folder's preview can draw its members. */
+    appsByKey: Map<String, AppInfo> = emptyMap(),
     onSetFavorite: (AppInfo, Boolean) -> Unit,
     onSetName: (AppInfo, String?) -> Unit,
     onChangeIcon: (AppInfo) -> Unit,
@@ -410,8 +437,8 @@ fun AppListScreen(
     var columnAnchorKey by remember { mutableStateOf<String?>(null) }
     fun anchorOf(cell: CellRow): String? = when (cell) {
         is CellRow.Header -> null
-        is CellRow.One -> cell.entry.app.key
-        is CellRow.Two -> cell.left.app.key
+        is CellRow.One -> cell.item.key
+        is CellRow.Two -> cell.left.key
     }
     LaunchedEffect(cells) {
         snapshotFlow { listState.firstVisibleItemIndex }
@@ -422,8 +449,8 @@ fun AppListScreen(
         val idx = cells.rows.indexOfFirst { cell ->
             when (cell) {
                 is CellRow.Header -> false
-                is CellRow.One -> cell.entry.app.key == key
-                is CellRow.Two -> cell.left.app.key == key || cell.right?.app?.key == key
+                is CellRow.One -> cell.item.key == key
+                is CellRow.Two -> cell.left.key == key || cell.right?.key == key
             }
         }
         if (idx >= 0) listState.scrollToItem(idx)
@@ -1461,7 +1488,27 @@ fun AppListScreen(
                 },
             ) { index, cell ->
                 @Composable
-                fun EntryCell(entry: AppListRow.Entry) {
+                fun ItemCell(item: ListItem) {
+                    val entry = (item as? ListItem.AppItem)?.entry
+                    if (entry == null) {
+                        val folderRow = (item as ListItem.FolderItem).row
+                        FolderListRow(
+                            folder = folderRow.folder,
+                            members = folderRow.folder.apps.mapNotNull { appsByKey[it] },
+                            contentColor = contentColor,
+                            alignment = alignment,
+                            iconSide = iconSide,
+                            iconSizeDp = iconSizeDp,
+                            labelSizeSp = labelSizeSp,
+                            onHome = folderToken(folderRow.folder.id) in favoriteKeys,
+                            onOpen = { onOpenFolder(folderRow.folder) },
+                            onManage = { onOpenFolder(folderRow.folder) },
+                            onAddToHome = { onAddFolderToHome(folderRow.folder) },
+                            onRemoveFromHome = { onRemoveFolderFromHome(folderRow.folder) },
+                            onDelete = { onDeleteFolder(folderRow.folder) },
+                        )
+                        return
+                    }
                     AppRow(
                         shortcutSwipe = shortcutSwipe,
                         favoritesEditable = favoritesEditable,
@@ -1537,7 +1584,7 @@ fun AppListScreen(
                 ) {
                 when (cell) {
                     is CellRow.Header -> SectionHeader(cell.text, labelSizeSp, contentColor, alignment)
-                    is CellRow.One -> EntryCell(cell.entry)
+                    is CellRow.One -> ItemCell(cell.item)
                     // Sideways two apps share the row, each taking half, so the columns stay
                     // level. A group ending on an odd app leaves the half empty. Pulled
                     // together by one side inset: two rows side by side otherwise double the
@@ -1546,9 +1593,9 @@ fun AppListScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(-28.dp),
                     ) {
-                        Box(Modifier.weight(1f)) { EntryCell(cell.left) }
+                        Box(Modifier.weight(1f)) { ItemCell(cell.left) }
                         Box(Modifier.weight(1f)) {
-                            cell.right?.let { EntryCell(it) }
+                            cell.right?.let { ItemCell(it) }
                         }
                     }
                 }
@@ -1879,6 +1926,123 @@ private fun SectionHeader(text: String, labelSizeSp: Int, contentColor: Color, a
     }
 }
 
+/**
+ * A folder in the alphabet.
+ *
+ * Draws like the folder does on the home screen — its own icon when it has one, four of its
+ * members when it has not — and opens the folder's screen. No long-press menu: what a folder
+ * can do is all on that screen, and a second menu here would only be a shorter copy of it.
+ */
+@Composable
+private fun FolderListRow(
+    folder: Folder,
+    members: List<AppInfo>,
+    contentColor: Color,
+    alignment: HomeAlignment,
+    iconSide: IconSide,
+    iconSizeDp: Int,
+    labelSizeSp: Int,
+    onHome: Boolean,
+    onOpen: () -> Unit,
+    onManage: () -> Unit,
+    onAddToHome: () -> Unit,
+    onRemoveFromHome: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val showIcons = LocalIconConfig.current.showIcons
+    val density = LocalDensity.current
+    val touchPosition = remember { mutableStateOf(Offset.Zero) }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .recordTouchPosition(touchPosition)
+                .padding(horizontal = 20.dp)
+                .background(
+                    color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                    shape = RoundedCornerShape(18.dp),
+                )
+                .combinedClickable(
+                    interactionSource = interaction,
+                    indication = null,
+                    onClick = onOpen,
+                    // A folder has things done to it that its own screen does not offer:
+                    // whether it stands on the home screen, and deleting it.
+                    onLongClick = {
+                        menuOffset = with(density) {
+                            DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
+                        }
+                        menuExpanded = true
+                    },
+                )
+                .heightIn(min = MIN_ROW_HEIGHT)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = when (alignment) {
+                HomeAlignment.LEFT -> Arrangement.Start
+                HomeAlignment.CENTER -> Arrangement.Center
+                HomeAlignment.RIGHT -> Arrangement.End
+            },
+        ) {
+            val text: @Composable () -> Unit = {
+                Text(
+                    text = folder.name,
+                    color = contentColor,
+                    fontSize = labelSizeSp.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+            }
+            if (showIcons && iconSide == IconSide.LEFT) {
+                FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                Spacer(Modifier.width(16.dp))
+            }
+            text()
+            if (showIcons && iconSide == IconSide.RIGHT) {
+                Spacer(Modifier.width(16.dp))
+                FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+            }
+        }
+
+        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }, offset = menuOffset) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.home_folder_choose_apps)) },
+                leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                onClick = { menuExpanded = false; onManage() },
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        stringResource(
+                            if (onHome) R.string.folder_remove_from_home else R.string.folder_add_to_home
+                        )
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        if (onHome) DelugeIcons.StarBorder else Icons.Filled.Star,
+                        contentDescription = null,
+                    )
+                },
+                onClick = {
+                    menuExpanded = false
+                    if (onHome) onRemoveFromHome() else onAddToHome()
+                },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.home_folder_delete)) },
+                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                onClick = { menuExpanded = false; onDelete() },
+            )
+        }
+    }
+}
+
 @Composable
 private fun AppRow(
     shortcutSwipe: ShortcutSwipe,
@@ -2138,6 +2302,41 @@ private fun AppRow(
                     text = { Text(stringResource(R.string.action_remove_shortcut)) },
                     leadingIcon = { Icon(DelugeIcons.LinkOff, contentDescription = null) },
                     onClick = { onDismissMenu(); onUnpin() },
+                )
+            }
+            // The padlock is the space's own row, so what one does to a space lives on it.
+            if (app.kind == EntryKind.PRIVATE_SPACE) {
+                val context = LocalContext.current
+                val repo = (context.applicationContext as DelugeApp).appRepository
+                if (app.componentName.className == PRIVATE_SPACE_UNLOCKED_CLASS) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.private_space_install_apps)) },
+                        leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                        onClick = {
+                            onDismissMenu()
+                            if (!repo.openPrivateSpaceStore(context)) {
+                                Toast.makeText(
+                                    context,
+                                    R.string.private_space_install_failed,
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                        },
+                    )
+                }
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.private_space_settings)) },
+                    leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
+                    onClick = {
+                        onDismissMenu()
+                        if (!repo.openPrivateSpaceSettings(context)) {
+                            Toast.makeText(
+                                context,
+                                R.string.private_space_settings_failed,
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        }
+                    },
                 )
             }
             DropdownMenuItem(

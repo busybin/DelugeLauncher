@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
@@ -414,8 +415,20 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val delugeApp = context.applicationContext as DelugeApp
     val config = LocalIconConfig.current
-    // Nothing drawn and no space taken, so rows close up rather than leaving a hole.
-    if (!config.showIcons) return
+    // Nothing drawn and no space taken, so rows close up rather than leaving a hole. Except
+    // for a dot beside the name while the app has notifications, or a list with no icons
+    // could never show the count at all.
+    if (!config.showIcons) {
+        if (notificationBadgeCount(app) > 0) {
+            Box(
+                modifier
+                    .padding(horizontal = 6.dp)
+                    .size(8.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            )
+        }
+        return
+    }
     // Screenshot disguise: a plain initial tile in the fake name's color, and no badge — a
     // count would say which app this really is. Nothing is loaded, so there is nothing of
     // the real icon left to recognise.

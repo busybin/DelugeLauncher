@@ -1050,6 +1050,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             if (!already) {
                 val frozen = withContext(Dispatchers.IO) { frozenIn(mapOf(key to method), snapshot) }
                 if (key !in frozen) return@withLock FreezeOutcome.FAILED
+            } else {
+                // Already asleep: the only thing left is what it left behind — its card in
+                // recents and any notification in the shade.
+                withContext(Dispatchers.IO) {
+                    frozenIn(mapOf(key to FreezeMethod.STOP), snapshot)
+                }
             }
             prefs.setFreezeApplied(setOf(key), applied = true)
             _changes.value += 1
@@ -1158,6 +1164,16 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 // Only the apps that need it: after the first screen-off every screen-off reads the
                 // state of the list instead of running four commands per app all over again.
                 val done = withContext(Dispatchers.IO) { frozenIn(targets, snapshot) }
+                // An app already asleep is skipped above, which is what makes a second run cheap,
+                // but its card in recents and any notification left in the shade were drawn
+                // before it went to sleep. A force stop is the one command that clears both.
+                // Left out of the screen-off run: it freezes what a previous run already did,
+                // and paying for it every time the screen goes off buys nothing.
+                if (!auto && frozenBefore.isNotEmpty()) {
+                    withContext(Dispatchers.IO) {
+                        frozenIn(frozenBefore.associateWith { FreezeMethod.STOP }, snapshot)
+                    }
+                }
                 val failed = targets.keys - done
                 prefs.setFreezeApplied(frozenBefore.toSet() + done, applied = true)
                 _changes.value += 1
