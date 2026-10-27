@@ -284,6 +284,7 @@ class Prefs(private val context: Context) {
         val MARK_WORK_APPS = booleanPreferencesKey("mark_work_apps")
         val TEXT_SHADOW = booleanPreferencesKey("text_shadow")
         val TEXT_SHADOW_STRENGTH = intPreferencesKey("text_shadow_strength")
+        val SETTINGS_ADVANCED = booleanPreferencesKey("settings_advanced")
         val COMPACT_TAP_AREA = booleanPreferencesKey("compact_tap_area")
         val STAY_AFTER_PRIVATE_UNLOCK = booleanPreferencesKey("stay_after_private_unlock")
         val PRIVATE_SPACE_SECTION = booleanPreferencesKey("private_space_section")
@@ -817,6 +818,10 @@ class Prefs(private val context: Context) {
             ColorSchemeChoice.valueOf(it[Keys.COLOR_SCHEME] ?: ColorSchemeChoice.DELUGE_BLUE.name)
         }.getOrDefault(ColorSchemeChoice.DELUGE_BLUE)
     }.distinctUntilChanged()
+
+    /** Whether the settings screens expose the tuning rows most owners never touch. */
+    val settingsAdvanced: Flow<Boolean> =
+        data.map { it[Keys.SETTINGS_ADVANCED] ?: false }.distinctUntilChanged()
 
     val hideStatusBar: Flow<Boolean> = data.map { it[Keys.HIDE_STATUS_BAR] ?: false }.distinctUntilChanged()
 
@@ -1948,6 +1953,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setHideStatusBar(v: Boolean) {
         context.dataStore.edit { it[Keys.HIDE_STATUS_BAR] = v }
+    }
+
+    suspend fun setSettingsAdvanced(v: Boolean) {
+        context.dataStore.edit { it[Keys.SETTINGS_ADVANCED] = v }
     }
 
     suspend fun setDimWallpaperAlpha(v: Float) {

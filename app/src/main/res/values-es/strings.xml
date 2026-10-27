@@ -759,4 +759,26 @@
     <string name="settings_notification_text_size">Tamaño del texto</string>
     <string name="folder_remove_from_home">Quitar de la pantalla de inicio</string>
     <string name="folder_add_to_home">Añadir a la pantalla de inicio</string>
+    <string name="home_customize">Personalizar</string>
+    <string name="settings_section_apps_privacy">Aplicaciones y privacidad</string>
+    <string name="settings_section_system">Sistema</string>
+    <string name="settings_advanced">Mostrar ajustes avanzados</string>
+    <string name="settings_advanced_detail">Ajustes que la mayoría no necesita.</string>
+    <string name="settings_group_theme">Tema</string>
+    <string name="settings_group_icons_text">Iconos y texto</string>
+    <string name="settings_group_layout">Diseño</string>
+    <string name="settings_group_search">Búsqueda</string>
+    <string name="settings_group_sorting">Orden y secciones</string>
+    <string name="settings_group_az_strip">Barra A–Z</string>
+    <string name="settings_group_sections">Secciones e insignias</string>
+    <string name="settings_group_protection">Protección</string>
+    <string name="settings_group_effects">Efectos</string>
+    <string name="settings_status_bar">Barra de estado</string>
+    <string name="settings_status_bar_detail">Elige dónde se oculta y cuánto tiempo permanece.</string>
+    <string name="settings_dim_wallpaper">Oscurecer fondo</string>
+    <string name="settings_dim_wallpaper_detail">Ajusta la intensidad de la pantalla de inicio y la lista por separado.</string>
+    <string name="settings_two_columns">Dos columnas</string>
+    <string name="settings_two_columns_detail">Usa dos columnas en la pantalla de inicio y en la lista.</string>
+    <string name="settings_az_strip">Barra A–Z</string>
+    <string name="settings_az_strip_detail">Elige dónde aparece la barra de letras.</string>
 </resources>

@@ -73,6 +73,7 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenuItem
@@ -371,10 +372,6 @@ fun HomeScreen(
     freezeActions: FreezeActions? = null,
     /** Whether the freeze feature is on; its entries disappear from the background menu too. */
     freezeEnabled: Boolean = true,
-    /** Puts every app in the freeze list back. Runs from the background long-press menu. */
-    onFreezeAll: () -> Unit = {},
-    /** Pauses everything in the freeze list. */
-    onUnfreezeAll: () -> Unit = {},
     /** Opens the freeze screen itself from the same menu. */
     onOpenFreezeList: () -> Unit = {},
 ) {    // Appended at the point of showing rather than stored in the label, so a rename still
@@ -410,6 +407,7 @@ fun HomeScreen(
 
     var backgroundMenu by remember { mutableStateOf(false) }
     var backgroundMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
+    var customizeMenu by remember { mutableStateOf(false) }
 
     // A stepped value shows immediately and is written at the same time; holding them
     // locally as well means repeated taps compound instead of each one reading back the
@@ -1335,7 +1333,6 @@ fun HomeScreen(
                             onDismissMenu = { folderMenuFor = null },
                             onManage = { folderMenuFor = null; onManageFolder(item.folder) },
                             onEdit = { folderMenuFor = null; folderRenameFor = item.folder },
-                            onEditLayout = { folderMenuFor = null; onEditModeChange(true) },
                             onDelete = { folderMenuFor = null; onDeleteFolder(item.folder) },
                             onOpenApp = { member ->
                                 // Closed as the app starts rather than on the way back: there
@@ -1381,7 +1378,6 @@ fun HomeScreen(
                             onOpenMenu = { offset -> menuOffset = offset; menuForKey = item.app.key },
                             onDismissMenu = { menuForKey = null },
                             onMoveToFolder = { menuForKey = null; onMoveToFolder(item.app) },
-                            onEditLayout = { menuForKey = null; onEditModeChange(true) },
                             onAppInfo = { menuForKey = null; onAppInfo(item.app) },
                             onUninstall = { menuForKey = null; onUninstall(item.app) },
                             onToggleLock = { menuForKey = null; onToggleLock(item.app) },
@@ -1392,7 +1388,6 @@ fun HomeScreen(
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
                             onEditIconName = { menuForKey = null; renameDialogFor = item.app },
-                            onOpenSettings = { menuForKey = null; onOpenSettings() },
                             freezeActions = freezeActions,
                         )
                     }
@@ -1522,55 +1517,58 @@ fun HomeScreen(
             onBoundsChanged = onCornerBoundsChanged,
         )
 
+        LaunchedEffect(backgroundMenu) { if (backgroundMenu) customizeMenu = false }
         TouchAnchoredMenu(
             expanded = backgroundMenu,
             offset = backgroundMenuOffset,
             onDismissRequest = { backgroundMenu = false },
         ) {
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit_layout)) },
+                text = { Text(stringResource(R.string.home_customize)) },
                 leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
-                onClick = { backgroundMenu = false; onEditModeChange(true) },
+                onClick = { backgroundMenu = false; customizeMenu = true },
             )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.widget_add)) },
-                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                onClick = { backgroundMenu = false; widgetActions.onAddWidget() },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.home_choose_favorites)) },
-                leadingIcon = { Icon(DelugeIcons.Checklist, contentDescription = null) },
-                onClick = { backgroundMenu = false; onManageFavorites() },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_change_wallpaper)) },
-                leadingIcon = { Icon(DelugeIcons.Wallpaper, contentDescription = null) },
-                onClick = { backgroundMenu = false; onChangeWallpaper() },
-            )
-            HorizontalDivider()
             if (freezeEnabled) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.freeze_open_list)) },
                     leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
                     onClick = { backgroundMenu = false; onOpenFreezeList() },
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.freeze_freeze_all)) },
-                    leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
-                    onClick = { backgroundMenu = false; onFreezeAll() },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.freeze_unfreeze_all)) },
-                    leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
-                    onClick = { backgroundMenu = false; onUnfreezeAll() },
-                )
-                HorizontalDivider()
             }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open_settings)) },
                 leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                 onClick = { backgroundMenu = false; onOpenSettings() },
             )
+        }
+
+        if (customizeMenu) {
+            TouchAnchoredMenu(
+                expanded = true,
+                offset = backgroundMenuOffset,
+                onDismissRequest = { customizeMenu = false },
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit_layout)) },
+                    leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                    onClick = { customizeMenu = false; onEditModeChange(true) },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.widget_add)) },
+                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    onClick = { customizeMenu = false; widgetActions.onAddWidget() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.home_choose_favorites)) },
+                    leadingIcon = { Icon(DelugeIcons.Checklist, contentDescription = null) },
+                    onClick = { customizeMenu = false; onManageFavorites() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_change_wallpaper)) },
+                    leadingIcon = { Icon(DelugeIcons.Wallpaper, contentDescription = null) },
+                    onClick = { customizeMenu = false; onChangeWallpaper() },
+                )
+            }
         }
     }
 
@@ -1638,7 +1636,6 @@ private fun FavoriteRow(
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onMoveToFolder: () -> Unit,
-    onEditLayout: () -> Unit,
     onAppInfo: () -> Unit,
     onUninstall: () -> Unit,
     onToggleLock: () -> Unit,
@@ -1647,7 +1644,6 @@ private fun FavoriteRow(
     onUnpin: () -> Unit,
     onRemove: () -> Unit,
     onEditIconName: () -> Unit,
-    onOpenSettings: () -> Unit,
     freezeActions: FreezeActions?,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -1770,37 +1766,13 @@ private fun FavoriteRow(
 
         AppShortcutMenu(app, shortcutMenu, labelSizeSp) { shortcutMenu = false }
 
+        var moreMenu by remember { mutableStateOf(false) }
+        // The favorite's first level is about the row in front of you: lock it, put it in
+        // the private space, take it off the home screen, or go one step deeper. Editing
+        // and app management are not what a press on a favorite usually means.
+        LaunchedEffect(menuExpanded) { if (menuExpanded) moreMenu = false }
         TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_move_to_folder)) },
-                leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
-                onClick = onMoveToFolder,
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit_layout)) },
-                leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
-                onClick = onEditLayout,
-            )
-            // Only an installed app has a settings screen to open; a row that stands for
-            // something else — a shortcut, the private space — would send the system looking
-            // for a package that is not there.
-
             if (app.kind == EntryKind.APP) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_app_info)) },
-                    leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
-                    onClick = onAppInfo,
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(R.string.action_uninstall),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    },
-                    leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                    onClick = onUninstall,
-                )
                 DropdownMenuItem(
                     text = {
                         Text(
@@ -1824,12 +1796,6 @@ private fun FavoriteRow(
                         onClick = onAddToPrivateSpace,
                     )
                 }
-                FreezeMenuItems(
-                    app = app,
-                    actions = freezeActions,
-                    onDismissMenu = onDismissMenu,
-                    onChooseMethod = { onDismissMenu(); freezeChoosing = true },
-                )
             }
             // Distinct from Remove below, which only takes it off the home screen: this hands
             // it back to the app that pinned it, and it leaves the launcher entirely.
@@ -1845,18 +1811,51 @@ private fun FavoriteRow(
                 leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
                 onClick = onRemove,
             )
-            HorizontalDivider()
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
-                leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
-                onClick = onEditIconName,
+                text = { Text(stringResource(R.string.settings_more)) },
+                leadingIcon = { Icon(Icons.Filled.MoreVert, contentDescription = null) },
+                onClick = { onDismissMenu(); moreMenu = true },
             )
-            HorizontalDivider()
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_open_settings)) },
-                leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                onClick = onOpenSettings,
-            )
+        }
+
+        if (moreMenu) {
+            TouchAnchoredMenu(expanded = true, offset = menuOffset, onDismissRequest = { moreMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
+                    leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
+                    onClick = { moreMenu = false; onEditIconName() },
+                )
+                if (app.kind != EntryKind.PRIVATE_SPACE) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_move_to_folder)) },
+                        leadingIcon = { Icon(DelugeIcons.Folder, contentDescription = null) },
+                        onClick = { moreMenu = false; onMoveToFolder() },
+                    )
+                }
+                if (app.kind == EntryKind.APP) {
+                    FreezeMenuItems(
+                        app = app,
+                        actions = freezeActions,
+                        onDismissMenu = { moreMenu = false },
+                        onChooseMethod = { moreMenu = false; freezeChoosing = true },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_app_info)) },
+                        leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                        onClick = { moreMenu = false; onAppInfo() },
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(R.string.action_uninstall),
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        },
+                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
+                        onClick = { moreMenu = false; onUninstall() },
+                    )
+                }
+            }
         }
 
         FreezeMethodDialog(
@@ -1943,7 +1942,6 @@ private fun FolderRow(
     onDismissMenu: () -> Unit,
     onManage: () -> Unit,
     onEdit: () -> Unit,
-    onEditLayout: () -> Unit,
     onDelete: () -> Unit,
     onRemoveFromHome: (() -> Unit)?,
     widgetActions: WidgetSlotActions,
@@ -2060,11 +2058,6 @@ private fun FolderRow(
                     text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
                     leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     onClick = onEdit,
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_edit_layout)) },
-                    leadingIcon = { Icon(DelugeIcons.Tune, contentDescription = null) },
-                    onClick = onEditLayout,
                 )
                 HorizontalDivider()
                 onRemoveFromHome?.let { remove ->

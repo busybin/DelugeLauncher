@@ -759,4 +759,26 @@
     <string name="settings_notification_text_size">Text size</string>
     <string name="folder_remove_from_home">Remove from home screen</string>
     <string name="folder_add_to_home">Add to home screen</string>
+    <string name="home_customize">Customize</string>
+    <string name="settings_section_apps_privacy">Apps &amp; privacy</string>
+    <string name="settings_section_system">System</string>
+    <string name="settings_advanced">Show advanced settings</string>
+    <string name="settings_advanced_detail">Tuning rows most owners never need.</string>
+    <string name="settings_group_theme">Theme</string>
+    <string name="settings_group_icons_text">Icons &amp; text</string>
+    <string name="settings_group_layout">Layout</string>
+    <string name="settings_group_search">Search</string>
+    <string name="settings_group_sorting">Sorting &amp; sections</string>
+    <string name="settings_group_az_strip">A–Z strip</string>
+    <string name="settings_group_sections">Sections &amp; badges</string>
+    <string name="settings_group_protection">Protection</string>
+    <string name="settings_group_effects">Effects</string>
+    <string name="settings_status_bar">Status bar</string>
+    <string name="settings_status_bar_detail">Choose where it hides and how long it stays.</string>
+    <string name="settings_dim_wallpaper">Dim wallpaper</string>
+    <string name="settings_dim_wallpaper_detail">Set the home and app-list strength separately.</string>
+    <string name="settings_two_columns">Two columns</string>
+    <string name="settings_two_columns_detail">Use two columns on the home screen and in the app list.</string>
+    <string name="settings_az_strip">A–Z strip</string>
+    <string name="settings_az_strip_detail">Choose where the letter strip appears.</string>
 </resources>

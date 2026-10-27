@@ -771,4 +771,26 @@
     <string name="settings_notification_text_size">Размер текста</string>
     <string name="folder_remove_from_home">Убрать с главного экрана</string>
     <string name="folder_add_to_home">Добавить на главный экран</string>
+    <string name="home_customize">Настроить</string>
+    <string name="settings_section_apps_privacy">Приложения и конфиденциальность</string>
+    <string name="settings_section_system">Система</string>
+    <string name="settings_advanced">Показать дополнительные настройки</string>
+    <string name="settings_advanced_detail">Настройки, которые нужны немногим.</string>
+    <string name="settings_group_theme">Тема</string>
+    <string name="settings_group_icons_text">Значки и текст</string>
+    <string name="settings_group_layout">Макет</string>
+    <string name="settings_group_search">Поиск</string>
+    <string name="settings_group_sorting">Сортировка и разделы</string>
+    <string name="settings_group_az_strip">Панель A–Z</string>
+    <string name="settings_group_sections">Разделы и значки</string>
+    <string name="settings_group_protection">Защита</string>
+    <string name="settings_group_effects">Эффекты</string>
+    <string name="settings_status_bar">Строка состояния</string>
+    <string name="settings_status_bar_detail">Выберите, где она скрывается и как долго остаётся.</string>
+    <string name="settings_dim_wallpaper">Затемнить обои</string>
+    <string name="settings_dim_wallpaper_detail">Настройте интенсивность для главного экрана и списка отдельно.</string>
+    <string name="settings_two_columns">Два столбца</string>
+    <string name="settings_two_columns_detail">Использовать два столбца на главном экране и в списке.</string>
+    <string name="settings_az_strip">Панель A–Z</string>
+    <string name="settings_az_strip_detail">Выберите, где показывать панель букв.</string>
 </resources>

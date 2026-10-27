@@ -757,4 +757,26 @@
     <string name="settings_notification_text_size">文字サイズ</string>
     <string name="folder_remove_from_home">ホーム画面から削除</string>
     <string name="folder_add_to_home">ホーム画面に追加</string>
+    <string name="home_customize">カスタマイズ</string>
+    <string name="settings_section_apps_privacy">アプリとプライバシー</string>
+    <string name="settings_section_system">システム</string>
+    <string name="settings_advanced">詳細設定を表示</string>
+    <string name="settings_advanced_detail">ほとんどの人には不要な微調整。</string>
+    <string name="settings_group_theme">テーマ</string>
+    <string name="settings_group_icons_text">アイコンと文字</string>
+    <string name="settings_group_layout">レイアウト</string>
+    <string name="settings_group_search">検索</string>
+    <string name="settings_group_sorting">並べ替えとセクション</string>
+    <string name="settings_group_az_strip">A–Z バー</string>
+    <string name="settings_group_sections">セクションとバッジ</string>
+    <string name="settings_group_protection">保護</string>
+    <string name="settings_group_effects">効果</string>
+    <string name="settings_status_bar">ステータスバー</string>
+    <string name="settings_status_bar_detail">隠す場所と表示時間を選びます。</string>
+    <string name="settings_dim_wallpaper">壁紙を暗くする</string>
+    <string name="settings_dim_wallpaper_detail">ホーム画面とアプリ一覧の強さを別々に設定します。</string>
+    <string name="settings_two_columns">2列</string>
+    <string name="settings_two_columns_detail">ホーム画面とアプリ一覧で2列を使います。</string>
+    <string name="settings_az_strip">A–Z バー</string>
+    <string name="settings_az_strip_detail">文字バーを表示する場所を選びます。</string>
 </resources>

@@ -759,4 +759,26 @@
     <string name="settings_notification_text_size">حجم النص</string>
     <string name="folder_remove_from_home">إزالة من الشاشة الرئيسية</string>
     <string name="folder_add_to_home">إضافة إلى الشاشة الرئيسية</string>
+    <string name="home_customize">تخصيص</string>
+    <string name="settings_section_apps_privacy">التطبيقات والخصوصية</string>
+    <string name="settings_section_system">النظام</string>
+    <string name="settings_advanced">إظهار الإعدادات المتقدمة</string>
+    <string name="settings_advanced_detail">إعدادات دقيقة لا يحتاجها معظم المستخدمين.</string>
+    <string name="settings_group_theme">المظهر</string>
+    <string name="settings_group_icons_text">الأيقونات والنص</string>
+    <string name="settings_group_layout">التخطيط</string>
+    <string name="settings_group_search">البحث</string>
+    <string name="settings_group_sorting">الترتيب والأقسام</string>
+    <string name="settings_group_az_strip">شريط A–Z</string>
+    <string name="settings_group_sections">الأقسام والشارات</string>
+    <string name="settings_group_protection">الحماية</string>
+    <string name="settings_group_effects">التأثيرات</string>
+    <string name="settings_status_bar">شريط الحالة</string>
+    <string name="settings_status_bar_detail">اختر مكان إخفائه ومدة بقائه.</string>
+    <string name="settings_dim_wallpaper">تعتيم الخلفية</string>
+    <string name="settings_dim_wallpaper_detail">اضبط شدة الشاشة الرئيسية وقائمة التطبيقات بشكل منفصل.</string>
+    <string name="settings_two_columns">عمودان</string>
+    <string name="settings_two_columns_detail">استخدم عمودين في الشاشة الرئيسية وقائمة التطبيقات.</string>
+    <string name="settings_az_strip">شريط A–Z</string>
+    <string name="settings_az_strip_detail">اختر مكان ظهور شريط الحروف.</string>
 </resources>
