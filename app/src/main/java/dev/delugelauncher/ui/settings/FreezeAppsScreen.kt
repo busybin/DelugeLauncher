@@ -100,6 +100,8 @@ fun FreezeAppsScreen(
     freezeMethods: Map<String, FreezeMethod>,
     /** Packages on the list that are actually frozen right now. */
     freezeApplied: Set<String>,
+    /** Locked keys are owned by the lock screen; the freeze switch must not pretend otherwise. */
+    lockedApps: Set<String> = emptySet(),
     nameOverrides: Map<String, String>,
     iconSizeDp: Int,
     status: FreezeStatus,
@@ -337,22 +339,15 @@ fun FreezeAppsScreen(
                                 selected = index == tabIndex,
                                 onClick = { tabIndex = index },
                                 text = {
-                                    // The count keeps its width; a long method name shrinks instead,
-                                    // so the number is not the part that gets clipped.
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center,
-                                    ) {
-                                        Text(
-                                            methodName(m),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.weight(1f, fill = false),
-                                        )
-                                        if (count > 0) {
-                                            Text(" ($count)", maxLines = 1)
-                                        }
-                                    }
+                                    Text(
+                                        text = if (count > 0) {
+                                            stringResource(R.string.freeze_method_count, methodName(m), count)
+                                        } else {
+                                            methodName(m)
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
                                 },
                             )
                         }
@@ -427,19 +422,28 @@ fun FreezeAppsScreen(
                 if (listed.isNotEmpty()) {
                     item { ListSectionLabel(stringResource(R.string.freeze_list_section, listed.size)) }
                     items(listed, key = { "listed:" + it.key }) { app ->
+                        val isLocked = app.lockedBy(lockedApps)
                         FreezeRow(
                             app = app,
                             label = name(app),
                             iconSizeDp = iconSizeDp,
                             checked = true,
-                            enabled = canOperate,
-                            subtitle = stringResource(
-                                if (app.freezeKey in freezeApplied) R.string.freeze_state_frozen
-                                else R.string.freeze_state_pending
-                            ),
-                            onToggle = { onRemoveFromPlan(app) },
-                            onSetApplied = { freeze -> onSetApplied(app, freeze) },
-                            onRemove = { onRemoveFromPlan(app) },
+                            enabled = canOperate && !isLocked,
+                            subtitle = if (isLocked) {
+                                stringResource(R.string.freeze_locked_app)
+                            } else {
+                                stringResource(
+                                    if (app.freezeKey in freezeApplied) R.string.freeze_state_frozen
+                                    else R.string.freeze_state_pending
+                                )
+                            },
+                            onToggle = { if (!isLocked) onRemoveFromPlan(app) },
+                            onSetApplied = if (isLocked) null else {
+                                { freeze -> onSetApplied(app, freeze) }
+                            },
+                            onRemove = if (isLocked) null else {
+                                { onRemoveFromPlan(app) }
+                            },
                             onPin = {
                                 if (!FreezePinned.request(context, app, name(app))) {
                                     android.widget.Toast.makeText(
@@ -457,15 +461,20 @@ fun FreezeAppsScreen(
                     items(rest, key = { it.key }) { app ->
                         val other = freezeMethods[app.freezeKey]
                         val elsewhere = other != null && other != method
+                        val isLocked = app.lockedBy(lockedApps)
                         FreezeRow(
                             app = app,
                             label = name(app),
                             iconSizeDp = iconSizeDp,
                             checked = false,
-                            enabled = canOperate && !elsewhere,
-                            subtitle = other?.takeIf { it != method }
-                                ?.let { stringResource(R.string.freeze_listed_with, methodName(it)) },
-                            onToggle = { onAddToPlan(app, method) },
+                            enabled = canOperate && !elsewhere && !isLocked,
+                            subtitle = if (isLocked) {
+                                stringResource(R.string.freeze_locked_app)
+                            } else {
+                                other?.takeIf { it != method }
+                                    ?.let { stringResource(R.string.freeze_listed_with, methodName(it)) }
+                            },
+                            onToggle = { if (!isLocked) onAddToPlan(app, method) },
                             onSetApplied = null,
                             onRemove = null,
                         )

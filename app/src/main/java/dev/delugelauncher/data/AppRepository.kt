@@ -568,7 +568,7 @@ class AppRepository(
         LockCapabilities(
             canHide = canHideApps(),
             canSuspend = canSuspendApps(),
-            canGuard = shell().rootAvailable(),
+            canGuard = shell().rootAvailable() && lockGuard.canInstall(),
         )
     }
 
@@ -646,6 +646,13 @@ class AppRepository(
             ok
         }
 
+    /** Whether a main-profile lock covers [packageName], ignoring shortcut-only rows. */
+    private suspend fun isMainPackageLocked(packageName: String): Boolean =
+        prefs.lockedAppsNow().any { key ->
+            !EntryKeys.isShortcut(key) && !EntryKeys.isPrivateSpace(key) &&
+                EntryKeys.userSerial(key) == 0L && key.substringBefore('/') == packageName
+        }
+
     /**
      * Reveals a locked app just long enough to open it.
      *
@@ -655,30 +662,62 @@ class AppRepository(
      * suspended passes straight through, so a phone without root pays one package-manager
      * read.
      */
-    suspend fun revealForLock(packageName: String): Boolean = withContext(Dispatchers.IO) {
-        val hidden = isAppHidden(packageName)
-        val suspended = isAppSuspended(packageName)
-        if (!hidden && !suspended) {
+    suspend fun revealForLock(packageName: String, userSerial: Long = 0L): Boolean =
+        withContext(Dispatchers.IO) {
+            // A work-profile lock is the password gate alone; the main package of the same name
+            // may have its own lock and freeze record, and must not be touched for it.
+            if (userSerial != 0L || !isMainPackageLocked(packageName)) return@withContext true
+            // A lock added before this build may still sit on a freeze record. Authenticating the
+            // launch is the moment to drop it: a DISABLE state would survive the unhide/unsuspend
+            // below and the app would never start. The token goes up first so the package
+            // broadcasts the lift sends are not mistaken for someone unhiding it.
             markLockReveal(packageName)
             lockGuard.allow(packageName)
-            return@withContext true
+            val released = freezeManager.releaseForLock(packageName)
+            if (released == FreezeOutcome.NO_ACCESS || released == FreezeOutcome.FAILED) {
+                rehideLockedApps(only = packageName)
+                if (revealingPackage == packageName) {
+                    revealingPackage = null
+                    lockGuard.clearAllow(packageName)
+                }
+                return@withContext false
+            }
+            val hidden = isAppHidden(packageName)
+            val suspended = isAppSuspended(packageName)
+            if (!hidden && !suspended) {
+                return@withContext true
+            }
+            var ok = true
+            if (hidden) ok = setAppHidden(packageName, reveal = true) && ok
+            if (suspended) {
+                ok = setAppSuspended(packageName, suspend = false) && ok
+            } else if (hidden) {
+                // Some ROMs answer false to isPackageSuspended while the package is hidden.
+                // Lift it anyway, but do not fail the launch if it really was not suspended.
+                setAppSuspended(packageName, suspend = false)
+            }
+            if (!ok && revealingPackage == packageName) {
+                revealingPackage = null
+                lockGuard.clearAllow(packageName)
+            }
+            ok
         }
-        markLockReveal(packageName)
-        lockGuard.allow(packageName)
-        var ok = true
-        if (hidden) ok = setAppHidden(packageName, reveal = true) && ok
-        if (suspended) {
-            ok = setAppSuspended(packageName, suspend = false) && ok
-        } else if (hidden) {
-            // Some ROMs answer false to isPackageSuspended while the package is hidden.
-            // Lift it anyway, but do not fail the launch if it really was not suspended.
-            setAppSuspended(packageName, suspend = false)
-        }
-        if (!ok && revealingPackage == packageName) {
+
+    /**
+     * Confirms a locked launch really reached its app. A notification PendingIntent can be
+     * accepted by the system and still land nowhere; without this check the reveal layers
+     * would stay open until the launcher resumed or the screen went off.
+     */
+    fun scheduleRevealCheck(packageName: String) {
+        scope.launch {
+            delay(6_000)
+            if (revealingPackage != packageName) return@launch
+            val foreground = freezeManager.foregroundPackage() ?: return@launch
+            if (foreground == packageName) return@launch
             revealingPackage = null
             lockGuard.clearAllow(packageName)
+            rehideLockedApps(only = packageName)
         }
-        ok
     }
 
     /**
@@ -724,6 +763,9 @@ class AppRepository(
 
     /** Rewrites the guard's list after a lock was added or lifted and stops it when empty. */
     suspend fun onLockedAppsChanged(): Boolean = withContext(Dispatchers.IO) {
+        // A launch that was allowed before the list changed is over: leaving its token
+        // behind would tell the repair receiver to ignore the new lock's own hide.
+        revealingPackage = null
         lockGuard.clearAllow()
         lockGuard.sync(prefs.lockedAppsNow())
     }

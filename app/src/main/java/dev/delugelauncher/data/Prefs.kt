@@ -1545,12 +1545,31 @@ class Prefs(private val context: Context) {
     }
 
     /** Empties the freeze list and its applied set; used when the feature is turned off. */
-    suspend fun clearFreezePlan() {
+    suspend fun clearFreezePlan(except: Set<String> = emptySet()) {
         context.dataStore.edit { pref ->
-            pref.remove(Keys.FREEZE_METHODS)
-            pref.remove(Keys.FREEZE_APPLIED)
-            pref.remove(Keys.FREEZE_LABELS)
-            pref.remove(Keys.FREEZE_COMPONENTS)
+            if (except.isEmpty()) {
+                pref.remove(Keys.FREEZE_METHODS)
+                pref.remove(Keys.FREEZE_APPLIED)
+                pref.remove(Keys.FREEZE_LABELS)
+                pref.remove(Keys.FREEZE_COMPONENTS)
+            } else {
+                // A locked key keeps its record: the feature going away must not discard the
+                // only description of a state the lock still has to be able to undo.
+                val methods = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
+                val labels = jsonToMap(pref[Keys.FREEZE_LABELS]).toMutableMap()
+                val components = jsonToMap(pref[Keys.FREEZE_COMPONENTS]).toMutableMap()
+                val drop = (methods.keys + labels.keys + components.keys).filterNot { it in except }
+                drop.forEach {
+                    methods.remove(it)
+                    labels.remove(it)
+                    components.remove(it)
+                }
+                pref[Keys.FREEZE_METHODS] = mapToJson(methods)
+                pref[Keys.FREEZE_APPLIED] =
+                    (pref[Keys.FREEZE_APPLIED] ?: emptySet()).filterNot { it in except }.toSet()
+                pref[Keys.FREEZE_LABELS] = mapToJson(labels)
+                pref[Keys.FREEZE_COMPONENTS] = mapToJson(components)
+            }
             pref[Keys.FREEZE_AUTO_ENABLED] = false
             pref[Keys.FREEZE_SYSTEM_APPS] = false
         }
@@ -2285,6 +2304,16 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             val current = pref[Keys.LOCKED_APPS] ?: emptySet()
             pref[Keys.LOCKED_APPS] = EntryKeys.withAppLocked(current, key, locked)
+        }
+    }
+
+    /** Restores many lock keys in one edit; a reinstall must not pay one edit per app. */
+    suspend fun addAppLocks(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        context.dataStore.edit { pref ->
+            var current = pref[Keys.LOCKED_APPS] ?: emptySet()
+            keys.forEach { current = EntryKeys.withAppLocked(current, it, true) }
+            pref[Keys.LOCKED_APPS] = current
         }
     }
 

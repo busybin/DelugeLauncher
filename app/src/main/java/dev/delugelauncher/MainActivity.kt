@@ -42,6 +42,7 @@ import dev.delugelauncher.ui.theme.widgetTypeface
 import dev.delugelauncher.ui.common.LaunchOrigin
 import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.LocalIconConfig
+import dev.delugelauncher.ui.common.LocalLockedApps
 import dev.delugelauncher.ui.theme.DelugeTheme
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -183,6 +184,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
+            val lockedApps by app.prefs.lockedApps.collectAsState(initial = null)
 
             val iconOverrides by app.prefs.iconOverrides.collectAsState(initial = emptyMap())
             val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
@@ -213,7 +215,10 @@ class MainActivity : ComponentActivity() {
                 scheme = colorSchemeChoice,
                 forceDark = if (autoDark) nightNow else null,
             ) {
-                CompositionLocalProvider(LocalIconConfig provides iconConfig) {
+                CompositionLocalProvider(
+                    LocalIconConfig provides iconConfig,
+                    LocalLockedApps provides lockedApps,
+                ) {
                     DelugeNavHost(
                         app = app,
                         homeIntentTick = homeIntentTick,

@@ -11,8 +11,13 @@
         <item>A notification panel pulled down from the home screen: every notification with its buttons and a reply box.</item>
         <item>Favorite rules show or hide favorites by Wi-Fi, time of day, headphones or a daily open limit.</item>
         <item>The freeze screen explains Android 15\'s private space when the phone has it.</item>
+        <item>App lock now covers notifications, shortcuts, the now-playing card, the camera button and widgets: each asks for your screen lock before it opens the app.</item>
+        <item>A locked app no longer leaves a freeze record behind that could keep it disabled after unlocking, and the freeze list survives reinstalling Deluge.</item>
+        <item>The freeze method picker shows counts for installed apps, and favorites can be hidden from their long-press menu.</item>
+        <item>The app-lock timeout now says how long an unlocked app stays open before it locks again.</item>
         <item>All 8 languages complete.</item>
     </string-array>
+
     <string-array name="changelog_v26">
         <item>Protected apps, on by default: the current keyboard, the home app, accessibility services, Shizuku and root managers are never frozen.</item>
         <item>Work profile and private space apps can be frozen too, each profile kept apart even when the package name is the same.</item>

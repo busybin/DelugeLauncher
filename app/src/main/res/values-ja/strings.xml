@@ -216,6 +216,7 @@
     <string name="freeze_method_hide">非表示</string>
     <string name="freeze_method_suspend">一時停止</string>
     <string name="freeze_method_stop">停止</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">すべて解除</string>
     <string name="freeze_freeze_all">すべて凍結</string>
     <string name="freeze_working">アプリを凍結中…</string>
@@ -581,6 +582,8 @@
     <string name="action_lock_app">アプリをロック</string>
     <string name="action_add_to_private_space">プライベートスペースに追加</string>
     <string name="app_lock_reveal_failed">%1$s を表示できませんでした。ロックされたままです。</string>
+    <string name="app_lock_no_device_lock">アプリをロックする前に画面ロックを設定してください。</string>
+    <string name="app_lock_auth_failed">画面ロックを確認できませんでした。アプリはロックされたままです。</string>
     <string name="app_lock_system_failed">%1$s にシステムロックを適用できませんでした。ロックされていません。</string>
     <string name="app_lock_hide_failed">%1$s は起動をブロックされていますが、他のランチャーから隠せませんでした。</string>
     <string name="app_lock_guard_failed">ロックは有効ですが、root ガードをインストールできませんでした。Deluge を停止すると解除される可能性があります。</string>
@@ -626,7 +629,7 @@
     <string name="app_lock_space_keep">両方残す</string>
     <string name="app_lock_space_done">%1$s はプライベートスペース内にのみ存在します</string>
     <string name="app_lock_space_failed">プライベートスペースを開けませんでした</string>
-    <string name="settings_app_lock_timeout">再確認の間隔</string>
+    <string name="settings_app_lock_timeout">ロック解除したアプリ：再ロックまでの時間</string>
     <string name="settings_app_lock_every_time">毎回</string>
     <string name="settings_app_lock_minutes">%d 分</string>
     <string name="settings_app_lock_screen_off">画面オフでロック</string>
@@ -794,4 +797,9 @@
     <string name="settings_two_columns_detail">ホーム画面とアプリ一覧で2列を使います。</string>
     <string name="settings_az_strip">A–Z バー</string>
     <string name="settings_az_strip_detail">文字バーを表示する場所を選びます。</string>
+    <string name="notification_open_failed">この通知を開けませんでした</string>
+    <string name="app_lock_loading">ロックを読み込み中です。もう一度お試しください。</string>
+    <string name="app_lock_backup_failed">ロックは適用されましたが、復元用の記録を Deluge の外に保存できませんでした。</string>
+    <string name="freeze_locked_app">ロック中 — 先にアプリのロックを解除してください</string>
+    <string name="app_lock_unlocking">ロックを解除しています…</string>
 </resources>

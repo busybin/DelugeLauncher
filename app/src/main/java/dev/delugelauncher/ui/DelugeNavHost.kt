@@ -86,6 +86,8 @@ import androidx.compose.ui.res.stringResource
 import dev.delugelauncher.R
 import dev.delugelauncher.data.folderIdFromToken
 import dev.delugelauncher.data.stripsOtherProfiles
+import dev.delugelauncher.data.isPackageLocked
+import dev.delugelauncher.media.NotificationGateway
 import dev.delugelauncher.media.NotificationPanelBus
 import dev.delugelauncher.ui.notifications.NotificationPanelScreen
 import dev.delugelauncher.media.isListenerEnabled
@@ -658,7 +660,11 @@ fun DelugeNavHost(
     val notificationTextSp by app.prefs.notificationTextSp.collectAsState(initial = 12)
     val notificationPanel by app.prefs.notificationPanel.collectAsState(initial = false)
     val panelEntries by NotificationPanelBus.entries.collectAsState()
-    val lockedApps by app.prefs.lockedApps.collectAsState(initial = emptySet())
+    // Null until the store answers. The notification panel must not read an empty set as
+    // "nothing is locked": that was a one-frame window in which every lock was open.
+    val lockedAppsOrNull by app.prefs.lockedApps.collectAsState(initial = null)
+    val lockedApps = lockedAppsOrNull ?: emptySet()
+    val lockLoaded = lockedAppsOrNull != null
     val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
     val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
@@ -1259,35 +1265,77 @@ fun DelugeNavHost(
                     .associateBy { it.packageName + "|u" + it.userSerial }
             }
             val requestUnlock = rememberAppLockRequest()
+            // A locked app's notifications are not shown at all: the text would be readable
+            // here, and the card's content intent would open the app without asking. While
+            // the lock list is still loading, nothing is shown rather than everything.
+            val visiblePanelEntries = lockedAppsOrNull?.let { locked ->
+                panelEntries.filter { entry ->
+                    val appInfo = appsByAppKey[entry.appKey]
+                    val isLocked = appInfo?.lockedBy(locked)
+                        ?: isPackageLocked(locked, entry.packageName, entry.userSerial)
+                    !isLocked
+                }
+            } ?: emptyList()
             NotificationPanelScreen(
-                entries = panelEntries,
+                entries = visiblePanelEntries,
                 appsByAppKey = appsByAppKey,
                 accessGranted = listenerGranted,
                 panelEnabled = notificationPanel,
-                onOpenApp = { appInfo ->
-                    val open: () -> Unit = {
+                onOpenNotification = { entry, appInfo ->
+                    val locked = appInfo?.lockedBy(lockedApps)
+                        ?: isPackageLocked(lockedApps, entry.packageName, entry.userSerial)
+                    val label = appInfo?.label ?: entry.packageName
+                    fun open() {
                         scope.launch {
-                            val revealed = withContext(Dispatchers.IO) {
-                                app.appRepository.revealForLock(appInfo.packageName)
-                            }
-                            if (revealed) {
-                                app.appRepository.launch(appInfo)
-                                navController.popBackStack()
+                            val revealed = if (locked || !lockLoaded) {
+                                withContext(Dispatchers.IO) {
+                                    app.appRepository.revealForLock(entry.packageName, entry.userSerial)
+                                }
                             } else {
+                                true
+                            }
+                            if (!revealed) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(
-                                        R.string.app_lock_reveal_failed,
-                                        appInfo.label,
-                                    ),
+                                    context.getString(R.string.app_lock_reveal_failed, label),
                                     Toast.LENGTH_LONG,
                                 ).show()
+                                return@launch
                             }
+                            // The content intent lands on the screen the app chose. Only
+                            // when it cannot be sent does the launcher's own row take over.
+                            val opened = NotificationGateway.open(context, entry)
+                            val launched = if (!opened && appInfo != null) {
+                                app.appRepository.launch(appInfo)
+                            } else {
+                                opened
+                            }
+                            if (!launched && (locked || !lockLoaded)) {
+                                // A failed open must not leave the app revealed.
+                                withContext(Dispatchers.IO) {
+                                    app.appRepository.rehideLockedApps()
+                                }
+                            }
+                            if (opened && entry.dismissOnOpen) {
+                                NotificationGateway.dismiss(entry.notificationKey)
+                            }
+                            if (!launched) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(R.string.notification_open_failed),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                                return@launch
+                            }
+                            if (locked) app.appRepository.scheduleRevealCheck(entry.packageName)
+                            navController.popBackStack()
                         }
-                        Unit
                     }
-                    if (appInfo.lockedBy(lockedApps) && !AppLock.isOpen(appInfo.key, appLockTimeout)) {
-                        requestUnlock(appInfo.label, open)
+                    if (!lockLoaded ||
+                        (locked && (appInfo == null ||
+                            !AppLock.isOpen(appInfo.key, appLockTimeout)))
+                    ) {
+                        requestUnlock(label) { open() }
                     } else {
                         open()
                     }
@@ -1801,6 +1849,7 @@ fun DelugeNavHost(
             ManageFavoritesScreen(
                 allApps = allApps,
                 favoriteKeys = favoriteKeys,
+                hiddenApps = hiddenApps,
                 folders = folders,
                 privateSpace = privateSpace,
                 nameOverrides = nameOverrides,
@@ -1811,6 +1860,9 @@ fun DelugeNavHost(
                     scope.launch {
                         if (add) app.prefs.addFavorite(appInfo.key) else app.prefs.removeFavorite(appInfo.key)
                     }
+                },
+                onToggleHidden = { appInfo, hidden ->
+                    scope.launch { app.prefs.setHidden(appInfo.key, hidden) }
                 },
                 // Missing here can just mean a locked private space or a paused work profile,
                 // both of which come back — so this only drops the favorite, the same as
@@ -1941,6 +1993,7 @@ fun DelugeNavHost(
                 allApps = allApps,
                 freezeMethods = freezeMethods,
                 freezeApplied = freezeApplied,
+                lockedApps = lockedApps,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
                 status = freezeStatus,

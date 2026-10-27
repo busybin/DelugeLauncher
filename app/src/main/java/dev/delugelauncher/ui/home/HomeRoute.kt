@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.home
 
+import android.app.KeyguardManager
 import android.app.SearchManager
 import android.Manifest
 import android.content.Intent
@@ -91,6 +92,7 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.AppLock
+import dev.delugelauncher.data.isPackageLocked
 import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.PaddingSlot
@@ -98,6 +100,7 @@ import dev.delugelauncher.data.folderIdFromToken
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.media.NowPlayingBus
+import dev.delugelauncher.media.openNowPlayingApp
 import dev.delugelauncher.media.isListenerEnabled
 import dev.delugelauncher.service.SystemUi
 import dev.delugelauncher.ui.applist.AppListModel
@@ -359,7 +362,14 @@ fun HomeRoute(
     // The slide-up's own target; the tap keeps the button key and never shares it.
     val cornerSwipeKey by app.prefs.cornerSwipeKey.collectAsState(initial = null)
     // The freeze list, so a row menu can put an app back under the method it remembers.
-    val freezeActions = remember {
+    val freezeMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
+    // The picker counts what the freeze screen's tabs count: apps that are still installed.
+    // A record kept across an uninstall is useful, but counting it would make the same method
+    // read two different numbers in two places.
+    val installedFreezeKeys = remember(appsByKey) {
+        appsByKey.values.mapTo(mutableSetOf()) { it.freezeKey }
+    }
+    val freezeActions = remember(freezeMethods, installedFreezeKeys) {
         fun fail(res: Int, label: String) {
             Toast.makeText(context, context.getString(res, label), Toast.LENGTH_SHORT).show()
         }
@@ -420,6 +430,11 @@ fun HomeRoute(
                     )
                 }
             },
+            methodCounts = freezeMethods
+                .filterKeys { it in installedFreezeKeys }
+                .values
+                .groupingBy { it }
+                .eachCount(),
         )
     }
     // Portrait and landscape each keep their own position and never share: turning the
@@ -628,20 +643,22 @@ fun HomeRoute(
         if (notificationPanelEnabled) onNavigate("notifications") else expandShade()
     }
 
-    fun openCamera() {
+    fun resolveCameraIntent(): Intent? = runCatching {
         // Two ways in: the capture intent first, which hands the shot straight to whichever
         // camera app wants it, and the plain "show me the camera" action when nothing
         // answers that — a stripped-down camera app that only takes the second one.
+        listOf(
+            Intent(MediaStore.ACTION_IMAGE_CAPTURE),
+            Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
+        ).firstOrNull { it.resolveActivity(context.packageManager) != null }
+    }.getOrNull()
+
+    fun startCamera(target: Intent?): Boolean {
         val started = runCatching {
-            listOf(
-                Intent(MediaStore.ACTION_IMAGE_CAPTURE),
-                Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
-            ).firstOrNull { it.resolveActivity(context.packageManager) != null }
-                ?.let {
-                    context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                    true
-                }
-                ?: false
+            target?.let {
+                context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                true
+            } ?: false
         }.getOrDefault(false)
         if (!started) {
             Toast.makeText(
@@ -649,6 +666,32 @@ fun HomeRoute(
                 context.getString(R.string.corner_action_failed),
                 Toast.LENGTH_SHORT,
             ).show()
+        }
+        return started
+    }
+
+    fun openCamera() {
+        startCamera(resolveCameraIntent())
+    }
+
+    fun revealThenStartCamera(packageName: String, label: String, start: () -> Boolean) {
+        scope.launch {
+            val revealed = withContext(Dispatchers.IO) {
+                app.appRepository.revealForLock(packageName)
+            }
+            if (!revealed) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_reveal_failed, label),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return@launch
+            }
+            if (!start()) {
+                // Nothing came forward, so the lock's layers go back up instead of waiting
+                // for the launcher to resume.
+                withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
+            }
         }
     }
 
@@ -798,6 +841,11 @@ fun HomeRoute(
     val lockedApps = lockedAppsOrNull ?: emptySet()
     val lockLoaded = lockedAppsOrNull != null
     val lockTimeout by app.prefs.appLockTimeout.collectAsState(initial = 0)
+    // The device lock is the only credential the app lock accepts. Without one there is
+    // nothing to verify, so a new lock would only be a way to make the app unreachable.
+    fun deviceSecure(): Boolean = runCatching {
+        context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+    }.getOrDefault(false)
     val requestUnlock = rememberAppLockRequest()
     // Removing a lock is a change to the protection itself, so it asks the same question as
     // opening the app would; otherwise the menu item is a one-tap way around the lock.
@@ -805,6 +853,90 @@ fun HomeRoute(
         R.string.app_unlock_title,
         R.string.app_unlock_prompt,
     )
+
+    // The now-playing card starts the player directly, which is another way into a locked
+    // app: a session can outlive `pm suspend`, and the card would otherwise bring it forward
+    // without asking. It goes through the same gate as an app row.
+    fun openNowPlaying(): Boolean {
+        val packageName = NowPlayingBus.state.value?.controller?.packageName ?: return false
+        val entry = appsByKey.values.firstOrNull {
+            it.kind == EntryKind.APP && it.packageName == packageName && it.userSerial == 0L
+        }
+        // A hidden locked app may have no row in the list, but its session still names the
+        // package. The package-level answer closes the card's way around the lock.
+        val locked = entry?.lockedBy(lockedApps)
+            ?: isPackageLocked(lockedApps, packageName, 0L)
+        fun open() {
+            scope.launch {
+                val revealed = withContext(Dispatchers.IO) {
+                    app.appRepository.revealForLock(packageName)
+                }
+                if (!revealed) {
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            R.string.app_lock_reveal_failed,
+                            entry?.label ?: packageName,
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    return@launch
+                }
+                if (!openNowPlayingApp(context)) {
+                    withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.now_playing_open_failed),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }
+            }
+        }
+        if (!lockLoaded ||
+            (locked && (entry == null || !AppLock.isOpen(entry.key, lockTimeout)))
+        ) {
+            requestUnlock(entry?.label ?: packageName) { open() }
+            return true
+        }
+        if (locked) {
+            // The timeout lets it through without a prompt, but the app is still hidden:
+            // it needs the same reveal before it can come forward.
+            open()
+            return true
+        }
+        return openNowPlayingApp(context)
+    }
+
+    // The camera corner is another direct start. If the app that answers it is locked, it
+    // goes through the same prompt and reveal as an app row; otherwise the corner would be
+    // the one-tap way around the lock.
+    fun openCameraGated() {
+        val target = resolveCameraIntent() ?: run { openCamera(); return }
+        val packageName = context.packageManager
+            .resolveActivity(target, 0)?.activityInfo?.packageName
+            ?: run { startCamera(target); return }
+        val entry = appsByKey.values.firstOrNull {
+            it.kind == EntryKind.APP && it.packageName == packageName && it.userSerial == 0L
+        }
+        // A hidden locked camera has no row, but the resolver still names its package.
+        val locked = entry?.lockedBy(lockedApps)
+            ?: isPackageLocked(lockedApps, packageName, 0L)
+        val label = entry?.label ?: packageName
+        if (!lockLoaded ||
+            (locked && (entry == null || !AppLock.isOpen(entry.key, lockTimeout)))
+        ) {
+            requestUnlock(label) {
+                revealThenStartCamera(packageName, label) { startCamera(target) }
+            }
+            return
+        }
+        if (locked) {
+            // The timeout let it through without a prompt, but the app is still hidden.
+            revealThenStartCamera(packageName, label) { startCamera(target) }
+            return
+        }
+        startCamera(target)
+    }
 
     // Locking an app in the main profile asks one question beyond the lock itself: whether to
     // move it behind the private space, the only boundary Android gives a launcher without
@@ -875,6 +1007,8 @@ fun HomeRoute(
             !EntryKeys.isShortcut(it) && it.substringBefore('/') == entry.packageName &&
                 EntryKeys.userSerial(it) == 0L
         }.forEach { app.prefs.setAppLocked(it, false) }
+        // The collector is asynchronous; make the removal durable before the process can die.
+        runCatching { app.freezeManager.writeBackup() }
     }
 
     fun applyProtectStep(entry: AppInfo, step: ProtectStep) {
@@ -885,7 +1019,13 @@ fun HomeRoute(
                 context.getString(R.string.app_lock_space_done, protectLabel(entry)),
                 Toast.LENGTH_LONG,
             ).show()
-            scope.launch { forgetOutsideLocks(entry) }
+            scope.launch {
+                forgetOutsideLocks(entry)
+                // The guard still has the old key until it is told; without this the moved
+                // app stays suspended and hidden after its lock record is gone.
+                app.appRepository.onLockedAppsChanged()
+                onAppsChanged()
+            }
             stopProtection()
         } else if (step != ProtectStep.NONE) {
             protectStep = step
@@ -896,11 +1036,35 @@ fun HomeRoute(
         scope.launch { applyProtectStep(entry, nextProtectStep(entry, from)) }
     }
 
-    fun startProtection(entry: AppInfo) {
-        if (!canProtect(entry)) return
+    fun beginProtection(entry: AppInfo) {
         protectTarget = entry
         protectStep = ProtectStep.NONE
         advanceProtection(entry)
+    }
+
+    fun startProtection(entry: AppInfo) {
+        if (!canProtect(entry)) return
+        // The lock list decides whether this removes protection, so nothing is moved until it
+        // has answered. An empty read here would wave a locked app through.
+        if (!lockLoaded) {
+            Toast.makeText(context, R.string.app_lock_loading, Toast.LENGTH_SHORT).show()
+            return
+        }
+        // Moving the outside copy into the private space drops the outside lock. That is a
+        // protection change, so a locked app asks for the same credential as unlocking it.
+        if (entry.lockedBy(lockedApps)) {
+            if (!deviceSecure()) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_no_device_lock),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return
+            }
+            requestUnlockRemoval(entry.label) { beginProtection(entry) }
+            return
+        }
+        beginProtection(entry)
     }
 
     fun unlockProtectionSpace(entry: AppInfo) {
@@ -989,13 +1153,50 @@ fun HomeRoute(
         scope.launch {
             val mainApp = entry.kind == EntryKind.APP && entry.userSerial == 0L &&
                 !entry.privateProfile
+            val previousFreeze = if (mainApp) {
+                withContext(Dispatchers.IO) { app.prefs.freezeMethodsNow()[entry.freezeKey] }
+            } else {
+                null
+            }
+            suspend fun restorePreviousFreeze() {
+                val method = previousFreeze ?: return
+                withContext(Dispatchers.IO) {
+                    app.freezeManager.addToPlan(entry, method)
+                    app.freezeManager.freeze(entry)
+                }
+            }
             if (mainApp) {
+                // The lock and the freeze list cannot both own suspend/hide, and a DISABLE
+                // left by the freeze list would survive revealForLock. Detach it first; if
+                // that fails, no lock record is written, so the app is never left locked in
+                // a state the launcher cannot open.
+                val released = withContext(Dispatchers.IO) {
+                    app.freezeManager.releaseForLock(entry.packageName)
+                }
+                if (released != FreezeOutcome.DONE) {
+                    Toast.makeText(
+                        context,
+                        context.getString(
+                            if (released == FreezeOutcome.NO_ACCESS) {
+                                R.string.freeze_needs_access
+                            } else {
+                                R.string.freeze_unfreeze_failed
+                            },
+                            entry.label,
+                        ),
+                        Toast.LENGTH_LONG,
+                    ).show()
+                    return@launch
+                }
                 if (capabilities.canSuspend) {
                     val suspended = withContext(Dispatchers.IO) {
                         app.appRepository.setAppSuspended(entry.packageName) &&
                             app.appRepository.isAppSuspended(entry.packageName)
                     }
                     if (!suspended) {
+                        // releaseForLock already removed the old record; put the freeze
+                        // back instead of leaving the app neither locked nor frozen.
+                        restorePreviousFreeze()
                         Toast.makeText(
                             context,
                             context.getString(R.string.app_lock_system_failed, entry.label),
@@ -1028,30 +1229,90 @@ fun HomeRoute(
                 ).show()
             }
             onAppsChanged()
+            // The lock record is now the only way back into an app that is hidden and
+            // suspended; write it out before the user can leave this screen.
+            val backedUp = withContext(Dispatchers.IO) {
+                runCatching { app.freezeManager.writeBackup() }.getOrDefault(false)
+            }
+            if (!backedUp) {
+                Toast.makeText(
+                    context,
+                    R.string.app_lock_backup_failed,
+                    Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
+    }
+
+    fun removeLock(entry: AppInfo) {
+        scope.launch {
+            var finished = false
+            val notice = launch {
+                delay(1_200)
+                if (!finished) {
+                    Toast.makeText(context, R.string.app_lock_unlocking, Toast.LENGTH_SHORT).show()
+                }
+            }
+            val revealed = try {
+                withContext(Dispatchers.IO) {
+                    app.appRepository.revealForLock(entry.packageName, entry.userSerial)
+                }
+            } finally {
+                finished = true
+                notice.cancel()
+            }
+            if (!revealed) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_reveal_failed, entry.label),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return@launch
+            }
+            // A frozen app can come back under a different launcher activity, so the stored
+            // key may not be the component this row names now. Every lock for the package in
+            // this profile goes, or the menu still reads as locked after unlocking.
+            val stored = app.prefs.lockedAppsNow()
+            // A shortcut into a locked app is covered by the app's lock. Removing the lock
+            // from that row must remove the app lock too, not just a key the row never wrote.
+            val keys = if (entry.kind == EntryKind.APP || entry.kind == EntryKind.SHORTCUT) {
+                stored.filter {
+                    !EntryKeys.isShortcut(it) &&
+                        it.substringBefore('/') == entry.packageName &&
+                        EntryKeys.userSerial(it) == entry.userSerial
+                }.toSet() + entry.key
+            } else {
+                setOf(entry.key)
+            }
+            keys.forEach { app.prefs.setAppLocked(it, false) }
+            app.appRepository.onLockedAppsChanged()
+            onAppsChanged()
+            withContext(Dispatchers.IO) { runCatching { app.freezeManager.writeBackup() } }
         }
     }
 
     fun toggleLock(entry: AppInfo) {
+        // Until the store answers, the row cannot tell a lock from its absence. Doing nothing
+        // for that first frame is the only answer that cannot remove a lock without asking.
+        if (!lockLoaded) return
         if (entry.lockedBy(lockedApps)) {
-            requestUnlockRemoval(entry.label) {
-                scope.launch {
-                    val revealed = withContext(Dispatchers.IO) {
-                        app.appRepository.revealForLock(entry.packageName)
-                    }
-                    if (!revealed) {
-                        Toast.makeText(
-                            context,
-                            context.getString(R.string.app_lock_reveal_failed, entry.label),
-                            Toast.LENGTH_LONG,
-                        ).show()
-                        return@launch
-                    }
-                    app.prefs.setAppLocked(entry.key, false)
-                    app.appRepository.onLockedAppsChanged()
-                    onAppsChanged()
-                }
+            // A device that lost its screen lock has no credential left to ask for. Refusing
+            // removal would trap the app behind a gate nobody can pass, so removing the lock
+            // is the one action that stays available.
+            if (!deviceSecure()) {
+                removeLock(entry)
+                return
             }
+            requestUnlockRemoval(entry.label) { removeLock(entry) }
         } else {
+            if (!deviceSecure()) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_no_device_lock),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return
+            }
             scope.launch {
                 // Asked here rather than from the click: this is the moment a root prompt or
                 // a Shizuku grant should be picked up, not a cached answer from last week.
@@ -1081,7 +1342,7 @@ fun HomeRoute(
         // for as long as it is on screen.
         scope.launch {
             val revealed = withContext(Dispatchers.IO) {
-                app.appRepository.revealForLock(entry.packageName)
+                app.appRepository.revealForLock(entry.packageName, entry.userSerial)
             }
             if (!revealed) {
                 Toast.makeText(
@@ -1091,7 +1352,11 @@ fun HomeRoute(
                 ).show()
                 return@launch
             }
-            actuallyLaunch(entry)
+            if (!actuallyLaunch(entry)) {
+                // Nothing came forward, so the app must not stay revealed for the rest of
+                // the timeout: put the lock's own layers back before the tap is forgotten.
+                withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
+            }
         }
     }
 
@@ -1187,7 +1452,7 @@ fun HomeRoute(
             }
             CornerAction.APP_LIST -> openCornerList()
             CornerAction.SEARCH -> openCornerSearch()
-            CornerAction.CAMERA -> openCamera()
+            CornerAction.CAMERA -> openCameraGated()
             CornerAction.FLASHLIGHT -> setTorchWanted(!torchOn)
             CornerAction.SHADE -> expandShade()
             CornerAction.NOTIFICATIONS -> onNavigate("notifications")
@@ -1486,7 +1751,9 @@ fun HomeRoute(
                 hiddenApps = hiddenApps,
                 overlayOpen = appListVisible,
                 nameOverrides = nameOverrides,
-                notificationPreviews = if (previewWanted) previews else emptyMap(),
+                // Before the lock list has answered, a preview is a one-tap way to the app
+                // behind its content intent. Nothing is drawn until the list is known.
+                notificationPreviews = if (previewWanted && lockLoaded) previews else emptyMap(),
                 notificationTextSp = notificationTextSp,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
@@ -1512,6 +1779,7 @@ fun HomeRoute(
                 onResizeNowPlaying = { scope.launch { app.prefs.setNowPlayingHeightDp(it) } },
                 widgetActions = widgetActions,
                 onLaunch = { launchEntry(it) },
+                onOpenNowPlaying = { openNowPlaying() },
                 // Remove means the same thing to whoever taps it either way: take this off my
                 // home screen. Which list it writes to depends on which list is being shown —
                 // against the computed favorites it used to edit the manual list nobody could
@@ -1524,6 +1792,9 @@ fun HomeRoute(
                             app.prefs.removeFavorite(it.key)
                         }
                     }
+                },
+                onHideFavorite = { appInfo ->
+                    scope.launch { app.prefs.setHidden(appInfo.key, true) }
                 },
                 onOpenFolderApp = { launchEntry(it) },
                 onRenameFolder = { folder, name ->

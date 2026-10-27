@@ -11,8 +11,13 @@
         <item>Um painel de notificações puxado da tela inicial: cada notificação com seus botões e uma caixa de resposta.</item>
         <item>As regras de favoritos mostram ou ocultam favoritos por Wi-Fi, horário, fones ou limite diário de aberturas.</item>
         <item>A tela de congelamento explica o espaço privado do Android 15 quando o telefone tem um.</item>
+        <item>O bloqueio de apps agora cobre notificações, atalhos, o cartão em reprodução, o botão da câmera e widgets: todos pedem o bloqueio de tela antes de abrir.</item>
+        <item>Um app bloqueado não deixa mais um registro de congelamento que poderia mantê-lo desativado após desbloquear; a lista de congelamento sobrevive à reinstalação do Deluge.</item>
+        <item>O seletor de método de congelamento mostra quantos apps instalados há em cada método, e os favoritos podem ser ocultados pelo menu de toque longo.</item>
+        <item>O tempo do bloqueio de apps agora indica quanto tempo um app desbloqueado fica aberto antes de bloquear de novo.</item>
         <item>Os 8 idiomas completos.</item>
     </string-array>
+
     <string-array name="changelog_v26">
         <item>Apps protegidos, ativado por padrão: o teclado atual, o app inicial, os serviços de acessibilidade, o Shizuku e os gerenciadores de root nunca são congelados.</item>
         <item>Apps do perfil de trabalho e do espaço privado também podem ser congelados, cada perfil separado mesmo com o mesmo nome de pacote.</item>

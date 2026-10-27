@@ -41,20 +41,29 @@ class FreezeSelectionTest {
     }
 
     @Test
-    fun `lift takes the record and the live state, and leaves stopped apps alone`() {
+    fun `lift trusts live state and only keeps a HIDE record`() {
         val applied = setOf("com.example.disabled", "com.example.stopped")
         val targets = FreezeSelection.toLift(
             plan.keys + applied,
             applied,
             plan,
-            { it == "com.example.suspended" },
+            isFrozen = { it == "com.example.suspended" },
         )
-        // disabled is recorded, suspended is reported held, loose is neither, stopped has
-        // nothing to undo.
-        assertEquals(
-            listOf("com.example.disabled", "com.example.suspended"),
-            targets,
+        // suspended is reported held; disabled and stopped have a readable state that says
+        // free, so their stale records are dropped instead of asking for access.
+        assertEquals(listOf("com.example.suspended"), targets)
+    }
+
+    @Test
+    fun `a reinstalled app with a stale DISABLE record is not lifted`() {
+        val applied = setOf("com.example.disabled")
+        val targets = FreezeSelection.toLift(
+            applied,
+            applied,
+            plan,
+            isFrozen = { false },
         )
+        assertEquals(emptyList<String>(), targets)
     }
 
     @Test
@@ -65,9 +74,21 @@ class FreezeSelectionTest {
             hidePlan.keys,
             hidePlan.keys,
             hidePlan,
-            { false },
+            isFrozen = { false },
         )
         assertEquals(listOf("com.example.hidden"), targets)
+    }
+
+    @Test
+    fun `a locked app is never lifted by the freeze list`() {
+        val applied = setOf("com.example.disabled", "com.example.suspended", "com.example.stopped")
+        val targets = FreezeSelection.toLift(
+            plan.keys + applied,
+            applied,
+            plan,
+            locked = setOf("com.example.disabled", "com.example.suspended"),
+        ) { it == "com.example.stopped" }
+        assertEquals(listOf("com.example.stopped"), targets)
     }
 
     @Test

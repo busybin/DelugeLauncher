@@ -216,6 +216,7 @@
     <string name="freeze_method_hide">Скрыть</string>
     <string name="freeze_method_suspend">Приостановить</string>
     <string name="freeze_method_stop">Остановить</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">Разморозить все</string>
     <string name="freeze_freeze_all">Заморозить все</string>
     <string name="freeze_working">Замораживание приложений…</string>
@@ -589,6 +590,8 @@
     <string name="action_lock_app">Заблокировать приложение</string>
     <string name="action_add_to_private_space">Добавить в приватное пространство</string>
     <string name="app_lock_reveal_failed">Не удалось показать %1$s. Приложение всё ещё заблокировано.</string>
+    <string name="app_lock_no_device_lock">Установите блокировку экрана, прежде чем блокировать приложения.</string>
+    <string name="app_lock_auth_failed">Не удалось подтвердить блокировку экрана. Приложение остаётся заблокированным.</string>
     <string name="app_lock_system_failed">Не удалось применить системную блокировку к %1$s. Приложение не заблокировано.</string>
     <string name="app_lock_hide_failed">%1$s не может запускаться, но его не удалось скрыть от других лаунчеров.</string>
     <string name="app_lock_guard_failed">Блокировка включена, но root-страж не установлен. Она может не пережить остановку Deluge.</string>
@@ -634,7 +637,7 @@
     <string name="app_lock_space_keep">Оставить обе</string>
     <string name="app_lock_space_done">%1$s теперь существует только в приватном пространстве</string>
     <string name="app_lock_space_failed">Не удалось открыть приватное пространство</string>
-    <string name="settings_app_lock_timeout">Спрашивать снова через</string>
+    <string name="settings_app_lock_timeout">Разблокированные приложения: время до повторной блокировки</string>
     <string name="settings_app_lock_every_time">Каждый раз</string>
     <string name="settings_app_lock_minutes">%d мин</string>
     <string name="settings_app_lock_screen_off">Блокировать при выключении экрана</string>
@@ -808,4 +811,9 @@
     <string name="settings_two_columns_detail">Использовать два столбца на главном экране и в списке.</string>
     <string name="settings_az_strip">Панель A–Z</string>
     <string name="settings_az_strip_detail">Выберите, где показывать панель букв.</string>
+    <string name="notification_open_failed">Не удалось открыть это уведомление</string>
+    <string name="app_lock_loading">Блокировки ещё загружаются. Повторите попытку.</string>
+    <string name="app_lock_backup_failed">Блокировка включена, но запись для восстановления не удалось сохранить вне Deluge.</string>
+    <string name="freeze_locked_app">Заблокировано — сначала снимите блокировку приложения</string>
+    <string name="app_lock_unlocking">Снимаем блокировку…</string>
 </resources>

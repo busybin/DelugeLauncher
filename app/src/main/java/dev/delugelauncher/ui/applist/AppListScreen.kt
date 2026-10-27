@@ -2299,6 +2299,7 @@ private fun AppRow(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = onDismissMenu,
+                        locked = isLocked,
                         onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                     )
                     DropdownMenuItem(
@@ -2422,6 +2423,7 @@ private fun AppRow(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
+                        locked = isLocked,
                     )
                     DropdownMenuItem(
                         text = {
@@ -2462,6 +2464,7 @@ private fun AppRow(
         FreezeMethodDialog(
             app = if (freezeChoosing) app else null,
             label = label,
+            counts = freezeActions?.methodCounts ?: emptyMap(),
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false

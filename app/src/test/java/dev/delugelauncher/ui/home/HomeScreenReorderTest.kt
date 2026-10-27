@@ -105,6 +105,7 @@ class HomeScreenReorderTest {
                 ),
                 onLaunch = {},
                 onRemoveFavorite = {},
+                onHideFavorite = {},
                 onOpenFolderApp = {},
                 onRemoveFromFolder = { _, _ -> },
                 onRenameFolder = { _, _ -> },

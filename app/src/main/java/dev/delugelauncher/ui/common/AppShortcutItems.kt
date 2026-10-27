@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.common
 
 import android.content.pm.ShortcutInfo
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
@@ -13,6 +14,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -31,6 +33,7 @@ import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.data.ShortcutSwipe
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.abs
 
@@ -62,6 +65,7 @@ fun AppShortcutItems(
     val lockedApps by delugeApp.prefs.lockedApps.collectAsState(initial = null)
     val lockTimeout by delugeApp.prefs.appLockTimeout.collectAsState(initial = 0)
     val requestUnlock = rememberAppLockRequest()
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(app.key, expanded) {
         if (!expanded) return@LaunchedEffect
@@ -91,9 +95,33 @@ fun AppShortcutItems(
             onClick = {
                 val locked = lockedApps
                 fun open() {
-                    AppLock.markOpen(app.key)
-                    delugeApp.appRepository.startAppShortcut(app, shortcut, LaunchOrigin.of(app))
-                    onStarted()
+                    scope.launch {
+                        val revealed = withContext(Dispatchers.IO) {
+                            delugeApp.appRepository.revealForLock(app.packageName, app.userSerial)
+                        }
+                        if (!revealed) {
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.app_lock_reveal_failed, app.label),
+                                Toast.LENGTH_LONG,
+                            ).show()
+                            return@launch
+                        }
+                        AppLock.markOpen(app.key)
+                        if (delugeApp.appRepository.startAppShortcut(
+                                app,
+                                shortcut,
+                                LaunchOrigin.of(app),
+                            )
+                        ) {
+                            onStarted()
+                        } else {
+                            // Nothing came forward, so the lock's layers go back up.
+                            withContext(Dispatchers.IO) {
+                                delugeApp.appRepository.rehideLockedApps()
+                            }
+                        }
+                    }
                 }
                 if (locked == null || (app.lockedBy(locked) && !AppLock.isOpen(app.key, lockTimeout))) {
                     requestUnlock(app.label) { open() }

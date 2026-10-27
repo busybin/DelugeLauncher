@@ -216,6 +216,7 @@
     <string name="freeze_method_hide">Ocultar</string>
     <string name="freeze_method_suspend">Suspender</string>
     <string name="freeze_method_stop">Parar</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">Descongelar tudo</string>
     <string name="freeze_freeze_all">Congelar tudo</string>
     <string name="freeze_working">Congelando aplicativos…</string>
@@ -581,6 +582,8 @@
     <string name="action_lock_app">Bloquear app</string>
     <string name="action_add_to_private_space">Adicionar ao espaço privado</string>
     <string name="app_lock_reveal_failed">Não foi possível revelar %1$s. O app continua bloqueado.</string>
+    <string name="app_lock_no_device_lock">Defina um bloqueio de tela antes de bloquear apps.</string>
+    <string name="app_lock_auth_failed">Não foi possível confirmar o bloqueio de tela. O app continua bloqueado.</string>
     <string name="app_lock_system_failed">Não foi possível aplicar o bloqueio do sistema a %1$s. Ela não foi bloqueada.</string>
     <string name="app_lock_hide_failed">%1$s está impedido de iniciar, mas não pôde ser ocultado de outros lançadores.</string>
     <string name="app_lock_guard_failed">O bloqueio está ativo, mas não foi possível instalar o guardião root. Ele pode não sobreviver ao encerramento do Deluge.</string>
@@ -626,7 +629,7 @@
     <string name="app_lock_space_keep">Manter as duas</string>
     <string name="app_lock_space_done">%1$s agora existe apenas no espaço privado</string>
     <string name="app_lock_space_failed">Não foi possível abrir o espaço privado</string>
-    <string name="settings_app_lock_timeout">Pedir novamente após</string>
+    <string name="settings_app_lock_timeout">Apps desbloqueados: tempo antes de bloquear de novo</string>
     <string name="settings_app_lock_every_time">Sempre</string>
     <string name="settings_app_lock_minutes">%d min</string>
     <string name="settings_app_lock_screen_off">Bloquear quando a tela desligar</string>
@@ -796,4 +799,9 @@
     <string name="settings_two_columns_detail">Use duas colunas na tela inicial e na lista de aplicativos.</string>
     <string name="settings_az_strip">Faixa A–Z</string>
     <string name="settings_az_strip_detail">Escolha onde a faixa de letras aparece.</string>
+    <string name="notification_open_failed">Não foi possível abrir essa notificação</string>
+    <string name="app_lock_loading">Os bloqueios ainda estão carregando. Tente novamente.</string>
+    <string name="app_lock_backup_failed">Bloqueio aplicado, mas o registro de recuperação não pôde ser salvo fora do Deluge.</string>
+    <string name="freeze_locked_app">Bloqueado — remova primeiro o bloqueio do app</string>
+    <string name="app_lock_unlocking">Desbloqueando…</string>
 </resources>

@@ -17,6 +17,8 @@
     <string name="action_lock_app">قفل التطبيق</string>
     <string name="action_add_to_private_space">إضافة إلى المساحة الخاصة</string>
     <string name="app_lock_reveal_failed">تعذّر إظهار %1$s. ما زال مقفلًا.</string>
+    <string name="app_lock_no_device_lock">عيّن قفل شاشة قبل قفل التطبيقات.</string>
+    <string name="app_lock_auth_failed">تعذّر تأكيد قفل الشاشة. سيبقى التطبيق مقفلًا.</string>
     <string name="app_lock_system_failed">تعذّر تطبيق القفل النظامي على %1$s. لم يتم قفله.</string>
     <string name="app_lock_hide_failed">%1$s محظور من التشغيل، لكن تعذّر إخفاؤه عن المشغّلات الأخرى.</string>
     <string name="app_lock_guard_failed">القفل مفعّل، لكن تعذّر تثبيت حارس root. قد لا يصمد عند إيقاف Deluge.</string>
@@ -69,7 +71,7 @@
     <string name="app_lock_space_keep">الإبقاء على الاثنتين</string>
     <string name="app_lock_space_done">%1$s موجود الآن في المساحة الخاصة فقط</string>
     <string name="app_lock_space_failed">تعذّر فتح المساحة الخاصة</string>
-    <string name="settings_app_lock_timeout">اطلب مجددًا بعد</string>
+    <string name="settings_app_lock_timeout">التطبيقات غير المقفلة: الوقت قبل القفل مجددًا</string>
     <string name="settings_app_lock_every_time">في كل مرة</string>
     <string name="settings_app_lock_minutes">%d دقيقة</string>
     <string name="settings_app_lock_screen_off">القفل عند إطفاء الشاشة</string>
@@ -330,6 +332,7 @@
     <string name="freeze_method_hide">إخفاء</string>
     <string name="freeze_method_suspend">تعليق</string>
     <string name="freeze_method_stop">إيقاف</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">إلغاء تجميد الكل</string>
     <string name="freeze_freeze_all">تجميد الكل</string>
     <string name="freeze_working">جارٍ تجميد التطبيقات…</string>
@@ -796,4 +799,9 @@
     <string name="settings_two_columns_detail">استخدم عمودين في الشاشة الرئيسية وقائمة التطبيقات.</string>
     <string name="settings_az_strip">شريط A–Z</string>
     <string name="settings_az_strip_detail">اختر مكان ظهور شريط الحروف.</string>
+    <string name="notification_open_failed">تعذّر فتح هذا الإشعار</string>
+    <string name="app_lock_loading">لا تزال الأقفال قيد التحميل. حاول مرة أخرى.</string>
+    <string name="app_lock_backup_failed">تم تطبيق القفل، لكن تعذّر حفظ سجل الاستعادة خارج Deluge.</string>
+    <string name="freeze_locked_app">مقفلة — أزل قفل التطبيق أولاً</string>
+    <string name="app_lock_unlocking">جارٍ إلغاء القفل…</string>
 </resources>

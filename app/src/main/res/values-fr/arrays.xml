@@ -11,8 +11,13 @@
         <item>Un panneau de notifications tiré depuis l\'écran d\'accueil : chaque notification avec ses boutons et une zone de réponse.</item>
         <item>Les règles de favoris affichent ou masquent des favoris selon le Wi-Fi, l\'heure, le casque ou une limite d\'ouvertures par jour.</item>
         <item>L\'écran de gel explique l\'espace privé d\'Android 15 quand le téléphone en a un.</item>
+        <item>Le verrouillage d\'apps couvre désormais les notifications, les raccourcis, la carte en cours de lecture, le bouton appareil photo et les widgets : chacun demande votre verrouillage d\'écran avant d\'ouvrir.</item>
+        <item>Une app verrouillée ne laisse plus d\'enregistrement de gel qui pourrait la garder désactivée après le déverrouillage ; la liste de gel survit à une réinstallation de Deluge.</item>
+        <item>Le sélecteur de méthode de gel affiche le nombre d\'apps installées par méthode, et les favoris peuvent être masqués depuis leur menu d\'appui long.</item>
+        <item>Le délai de verrouillage indique maintenant combien de temps une appli déverrouillée reste ouverte avant le reblocage.</item>
         <item>Les 8 langues complètes.</item>
     </string-array>
+
     <string-array name="changelog_v26">
         <item>Applications protégées, activé par défaut : le clavier en cours, l\'application d\'accueil, les services d\'accessibilité, Shizuku et les gestionnaires root ne sont jamais gelés.</item>
         <item>Les applications du profil professionnel et de l\'espace privé peuvent aussi être gelées, chaque profil étant séparé même à nom de paquet identique.</item>

@@ -171,19 +171,24 @@ object FreezeSelection {
         .map { it.key }
 
     /**
-     * The apps a whole-list lift has to touch: everything recorded as frozen, plus anything the
-     * device still reports as held. A STOP app has nothing to undo and is left out unless it is
-     * genuinely held, which saves a full round of no-op commands per listed app.
+     * The apps a whole-list lift has to touch: anything the device still reports as held,
+     * plus a HIDE record because that state cannot be read back. A DISABLE or SUSPEND record
+     * on an app the platform reports as free is stale — a reinstall leaves exactly that —
+     * and asking for access to lift nothing would block the list on a device without root.
+     * A STOP app has nothing to undo and is left out unless it is genuinely held.
      */
     fun toLift(
         candidates: Collection<String>,
         applied: Set<String>,
         plan: Map<String, FreezeMethod>,
+        locked: Set<String> = emptySet(),
         isFrozen: (String) -> Boolean,
     ): List<String> = candidates.filter { packageName ->
+        if (packageName in locked) return@filter false
+        val method = plan[packageName]
         val frozen = isFrozen(packageName)
-        if (plan[packageName] == FreezeMethod.STOP && !frozen) false
-        else packageName in applied || frozen
+        if (method == FreezeMethod.STOP && !frozen) false
+        else frozen || (packageName in applied && method == FreezeMethod.HIDE)
     }
 
     /**
@@ -248,6 +253,13 @@ class FreezeSnapshot private constructor(
 
     private val others = mutableMapOf<String, FreezeAppState?>()
     private val othersLock = Any()
+
+    /**
+     * Whether the main-profile read succeeded and simply does not contain this package.
+     * An empty map is a failed read, not proof that every app is gone.
+     */
+    fun isKnownAbsent(target: FreezeTarget): Boolean =
+        target.userSerial == 0L && main.isNotEmpty() && target.packageName !in main
 
     fun state(target: FreezeTarget): FreezeAppState? {
         if (target.userSerial == 0L) return main[target.packageName]
@@ -613,6 +625,9 @@ class FreezeShell(private val context: Context) {
     /** Whether Shizuku is running with access granted. */
     fun shizukuAvailable(): Boolean = shizukuReady()
 
+    /** Whether a channel is already known to work, so a command cannot raise a prompt. */
+    fun quietAccess(): Boolean = shizukuReady() || rootState != null
+
     private fun execute(command: String): Pair<Int, String>? = runScript(command, COMMAND_TIMEOUT_MS)
 
     private fun runScript(command: String, timeoutMs: Long, root: Boolean? = null): Pair<Int, String>? = when {
@@ -770,14 +785,157 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     private var protectedSet: Set<String> = emptySet()
 
     /**
+     * Set once the external backup has been read, even when it is missing. Without this the
+     * first write after every change would probe the file again; a missing file is an answer
+     * too, and the next write replaces it with the current list.
+     */
+    private var backupRead = false
+
+    /** The backup outlives this package's app data and is readable through root/Shizuku. */
+    private val backupPath: String
+        get() = "/data/local/tmp/.deluge-launcher-freeze-u" +
+            android.os.Process.myUserHandle().hashCode() + ".json"
+
+    /**
      * The full picture: who can freeze, what the device no longer holds, and which pause
      * records died while the screen was away. Asked when the freeze screen opens.
      */
     suspend fun refreshAccess() {
         probeAccess(force = true)
+        // A reinstall has empty app data. Restore the list before reconciling it, so the
+        // frozen apps are still described by the screen that is about to be drawn.
+        restoreBackupIfNeeded()
         reconcile()
         upgradeSuspendDialog()
+        // Existing plans written by a build without a backup get one on the first visit.
+        writeBackup()
     }
+
+    /**
+     * Whether the external backup can be read without raising a root prompt.
+     *
+     * The backup is only useful after a reinstall, when the app data is gone. Reading it on
+     * every cold start through a root prompt would make a normal launch ask for root for no
+     * reason; Shizuku already granted is the one channel that can answer silently.
+     */
+    fun canUseBackupQuietly(): Boolean = shell.quietAccess()
+
+    /** Whether there is anything worth writing at a cold start. */
+    suspend fun hasFreezePlan(): Boolean =
+        prefs.freezeMethodsNow().isNotEmpty() || prefs.freezeRowsNow().isNotEmpty()
+
+    /** Whether a lock record would be lost with this package's data. */
+    suspend fun hasLockedApps(): Boolean = prefs.lockedAppsNow().isNotEmpty()
+
+    /** The package actually on top, used only to confirm a locked launch made it. */
+    suspend fun foregroundPackage(): String? = withContext(Dispatchers.IO) {
+        if (!shell.quietAccess()) return@withContext null
+        val output = shell.output(
+            "dumpsys activity activities | grep -E 'topResumedActivity|mResumedActivity|mFocusedApp'"
+        ) ?: return@withContext null
+        FreezeGuards.foregroundPackage(output)
+    }
+
+    /**
+     * Restores the list kept outside app data after this package was reinstalled.
+     *
+     * The comparison is against the package's first install time, not its data: an update
+     * keeps the data and the time, while uninstall/reinstall changes both. Merging instead
+     * of replacing also covers a freeze made in the moment before the restore runs.
+     */
+    suspend fun restoreBackupIfNeeded(): Boolean = gate.withLock {
+        val restored = restoreBackupLocked()
+        if (restored) writeBackupLocked()
+        restored
+    }
+
+    /**
+     * Writes the current plan outside app data, so uninstalling Deluge does not strand the
+     * apps it froze. Called after a freeze state change and when the freeze screen opens.
+     */
+    suspend fun writeBackup(): Boolean = gate.withLock {
+        if (!shell.quietAccess()) return@withLock false
+        if (!backupRead) restoreBackupLocked()
+        if (!backupRead) return@withLock false
+        writeBackupLocked()
+    }
+
+    private suspend fun restoreBackupLocked(): Boolean {
+        if (backupRead) return false
+        val text = withContext(Dispatchers.IO) { shell.output("cat $backupPath") } ?: return false
+        backupRead = true
+        val backup = FreezeBackup.decode(text) ?: return false
+        // Same install normally means this build's own state is current. The exception is a
+        // data wipe: firstInstallTime survives it, but the plan, rows and lock list do not.
+        // Restoring in that case is the only way to get the hidden, suspended apps back.
+        val currentHasState = prefs.freezeMethodsNow().isNotEmpty() ||
+            prefs.freezeRowsNow().isNotEmpty() ||
+            prefs.lockedAppsNow().isNotEmpty()
+        if (backup.firstInstallTime == firstInstallTime() && currentHasState) return false
+        // Current values win: the user may already have added something after the reinstall,
+        // and a restore must not undo that. Everything else comes from the backup.
+        val methods = backup.methods + prefs.freezeMethodsNow()
+        prefs.setFreezeMethods(methods)
+        prefs.setFreezeRows(backup.rows + prefs.freezeRowsNow())
+        val applied = (backup.applied + prefs.freezeAppliedNow())
+            .filterTo(mutableSetOf()) { it in methods }
+        prefs.setFreezeApplied(applied, applied = true)
+        prefs.setFreezeEnabled(backup.enabled)
+        prefs.setFreezeSystemApps(backup.systemApps)
+        prefs.setFreezeProtect(backup.protect)
+        // A locked app is hidden and suspended, so the list that names it is the only way back
+        // into it after this package's data was lost. Merge rather than replace: a lock added
+        // in the moment before the restore runs must survive too.
+        val currentLocks = prefs.lockedAppsNow()
+        prefs.addAppLocks(backup.locked.filterNot { it in currentLocks })
+        _changes.value += 1
+        return true
+    }
+
+    private suspend fun writeBackupLocked(): Boolean {
+        val snapshot = FreezeBackup.Snapshot(
+            firstInstallTime = firstInstallTime(),
+            enabled = prefs.freezeEnabledNow(),
+            systemApps = prefs.freezeSystemAppsNow(),
+            protect = prefs.freezeProtectNow(),
+            methods = prefs.freezeMethodsNow(),
+            applied = prefs.freezeAppliedNow(),
+            rows = prefs.freezeRowsNow(),
+            locked = prefs.lockedAppsNow(),
+        )
+        val encoded = android.util.Base64.encodeToString(
+            FreezeBackup.encode(snapshot).toByteArray(Charsets.UTF_8),
+            android.util.Base64.NO_WRAP,
+        )
+        val temporary = "$backupPath.tmp"
+        return withContext(Dispatchers.IO) {
+            // Readable by whichever channel writes next: a root-written 0600 file would be
+            // invisible to Shizuku after a reinstall. The rename also replaces a file owned
+            // by the other channel, which a plain redirect could not open for writing.
+            shell.run(
+                "umask 077; rm -f $temporary; echo $encoded | base64 -d > $temporary && " +
+                    "chmod 0644 $temporary && mv -f $temporary $backupPath",
+            )
+        }
+    }
+
+    /**
+     * Loads the backup before a state-changing run, so a reinstall restores the old list
+     * before that run decides what to freeze or lift.
+     */
+    private suspend fun loadBackupLocked() {
+        if (!backupRead && shell.quietAccess()) restoreBackupLocked()
+    }
+
+    /** The write side of [writeBackup] for callers already holding [gate]. */
+    private suspend fun persistBackupLocked() {
+        if (!backupRead || !shell.quietAccess()) return
+        writeBackupLocked()
+    }
+
+    private fun firstInstallTime(): Long = runCatching {
+        context.packageManager.getPackageInfo(context.packageName, 0).firstInstallTime
+    }.getOrDefault(0L)
 
     /**
      * The channel, asked again only when the last answer is old.
@@ -826,29 +984,29 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     /**
      * Brings the applied set back in line with the device, without touching the list.
      *
-     * Three things are corrected. An app that is gone leaves the list. An app that is
-     * recorded as frozen but is not — the user re-enabled it in Settings, or a STOP did not
-     * survive a reboot — stops being drawn as frozen; only the states the platform answers
-     * are checked, because HIDE has no public answer. And an app whose pause was lifted by
-     * the system's own "Unpause and open" button — which only unsuspends — gets its
-     * background app-ops un-restricted and leaves the applied set, so a lift is a lift.
+     * The list is the user's choice and outlives an uninstall of the app it names: an app
+     * removed and installed again must come back with the method it was given. Only the
+     * applied state is corrected here. An app that is gone has nothing frozen, an app that
+     * is recorded as frozen but is not — the user re-enabled it in Settings, or a STOP did
+     * not survive a reboot — stops being drawn as frozen, and an app whose pause was lifted
+     * by the system's own "Unpause and open" button gets its background app-ops
+     * un-restricted. Only states the platform answers are checked, because HIDE has no
+     * public answer.
      */
     private suspend fun reconcile() {
         val plan = prefs.freezeMethodsNow()
         val applied = prefs.freezeAppliedNow()
         if (plan.isEmpty() && applied.isEmpty()) return
+        val locked = lockedMainKeys()
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
-        val gone = plan.keys.filter { key ->
-            val target = targetOf(key) ?: return@filter true
-            snapshot.state(target)?.installed != true
-        }
         val noLonger = applied.filter { key ->
+            val target = targetOf(key) ?: return@filter true
+            if (snapshot.state(target)?.installed == false || snapshot.isKnownAbsent(target)) {
+                return@filter true
+            }
             when (val method = plan[key]) {
                 null -> true
-                FreezeMethod.DISABLE, FreezeMethod.STOP -> {
-                    val target = targetOf(key) ?: return@filter true
-                    !isHeld(snapshot, target, method)
-                }
+                FreezeMethod.DISABLE, FreezeMethod.STOP -> !isHeld(snapshot, target, method)
                 else -> false
             }
         }
@@ -856,22 +1014,24 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         // with the same confidence, and a wrong "free" there would drop a real record.
         val unpaused = withContext(Dispatchers.IO) {
             applied.filter { key ->
-                plan[key] == FreezeMethod.SUSPEND &&
+                key !in locked &&
+                    plan[key] == FreezeMethod.SUSPEND &&
                     FreezeTargetKey.userSerial(key) == 0L &&
-                    targetOf(key)?.let { !suspendedNow(it) && snapshot.state(it)?.enabled != false } == true
+                    targetOf(key)?.let {
+                        snapshot.state(it)?.installed != false &&
+                            !suspendedNow(it) && snapshot.state(it)?.enabled != false
+                    } == true
             }
         }
         if (unpaused.isNotEmpty()) {
             restoreBackground(unpaused, snapshot)
             prefs.setFreezeApplied(unpaused.toSet(), applied = false)
         }
-        if (gone.isEmpty() && noLonger.isEmpty()) {
+        if (noLonger.isEmpty()) {
             if (unpaused.isNotEmpty()) _changes.value += 1
             return
         }
-        gone.forEach { prefs.removeFreezeTarget(it) }
-        val drop = noLonger.toSet() - gone.toSet()
-        if (drop.isNotEmpty()) prefs.setFreezeApplied(drop, applied = false)
+        prefs.setFreezeApplied(noLonger.toSet(), applied = false)
         _changes.value += 1
     }
 
@@ -922,18 +1082,19 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             return FreezeBatchResult()
         }
         return gate.withLock {
+            loadBackupLocked()
             val applied = prefs.freezeAppliedNow()
             val plan = prefs.freezeMethodsNow()
+            val locked = lockedMainKeys()
             val resolved = (plan.keys + applied).distinct()
+                .filterNot { it in locked }
                 .mapNotNull { key -> targetOf(key)?.let { key to it } }
             val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
             // Every listed app is restored, not only the ones the applied record remembers: a
             // crash between a freeze and its record would otherwise leave an app stuck with the
             // feature gone and no screen left to lift it.
             val targets = resolved.filter { (key, target) ->
-                (key in applied && plan[key] != FreezeMethod.STOP) ||
-                    plan[key] == FreezeMethod.HIDE ||
-                    looksFrozen(snapshot, target)
+                mustLift(key, plan[key], applied, snapshot, target)
             }
             var lifted = 0
             if (targets.isNotEmpty()) {
@@ -948,10 +1109,11 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     return@withLock FreezeBatchResult(done = lifted, failed = targets.size - done.size)
                 }
             }
-            prefs.clearFreezePlan()
+            prefs.clearFreezePlan(locked)
             prefs.clearFreezeActionBindings()
             prefs.setFreezeEnabled(false)
             _changes.value += 1
+            persistBackupLocked()
             FreezeBatchResult(done = lifted)
         }
     }
@@ -964,16 +1126,20 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      */
     suspend fun invertPlan(apps: List<AppInfo>, method: FreezeMethod): FreezeBatchResult = gate.withLock {
         if (!prefs.freezeEnabledNow()) return@withLock FreezeBatchResult()
+        loadBackupLocked()
         val current = prefs.freezeMethodsNow()
         val unique = apps.distinctBy { it.freezeKey }
         val listed = unique.filter { current[it.freezeKey] == method }
         val unlisted = unique.filter { current[it.freezeKey] == null }
         if (listed.isEmpty() && unlisted.isEmpty()) return@withLock FreezeBatchResult()
         val applied = prefs.freezeAppliedNow()
+        val locked = lockedMainKeys()
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
         val toLift = withContext(Dispatchers.IO) {
             listed.filter { app ->
-                app.freezeKey in applied || targetOf(app.freezeKey)?.let { looksFrozen(snapshot, it) } == true
+                val target = targetOf(app.freezeKey) ?: return@filter false
+                app.freezeKey !in locked &&
+                    mustLift(app.freezeKey, current[app.freezeKey], applied, snapshot, target)
             }
         }
         var done = 0
@@ -987,17 +1153,20 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             done += lifted.size
             if (lifted.size != toLift.size) {
                 _changes.value += 1
+                persistBackupLocked()
                 return@withLock FreezeBatchResult(done = done, failed = toLift.size - lifted.size)
             }
         }
         val liftedKeys = toLift.mapTo(mutableSetOf()) { it.freezeKey }
-        val plainRemovals = listed.filterNot { it.freezeKey in liftedKeys }
+        val plainRemovals = listed.filterNot { it.freezeKey in liftedKeys || it.freezeKey in locked }
         prefs.removeFreezeTargets(plainRemovals.map { it.freezeKey })
+        prefs.setFreezeApplied(plainRemovals.mapTo(mutableSetOf()) { it.freezeKey }, applied = false)
         done += plainRemovals.size
         val guarded = protectedPackages()
         val joining = unlisted.filter { app ->
             val target = targetOf(app.freezeKey) ?: return@filter false
-            target.packageName !in guarded && systemAllowed(target, snapshot)
+            app.freezeKey !in locked &&
+                target.packageName !in guarded && systemAllowed(target, snapshot)
         }
         if (joining.isNotEmpty()) {
             prefs.setFreezeRows(
@@ -1009,6 +1178,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             done += joining.size
         }
         _changes.value += 1
+        persistBackupLocked()
         FreezeBatchResult(done = done)
     }
 
@@ -1022,10 +1192,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         // The rows already carry this: one less whole-device read for a screen of toggles.
         val systemEnabled = prefs.freezeSystemAppsNow()
         val guarded = protectedPackages()
+        val locked = lockedMainKeys()
         val taken = apps.filter { app ->
             app.kind == EntryKind.APP &&
                 app.packageName != context.packageName &&
                 app.packageName !in guarded &&
+                app.freezeKey !in locked &&
                 (systemEnabled || !app.system)
         }
         if (taken.isEmpty()) return 0
@@ -1048,6 +1220,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         system: Boolean? = null,
     ): FreezeOutcome {
         if (!prefs.freezeEnabledNow()) return FreezeOutcome.DISABLED
+        if (key in lockedMainKeys()) return FreezeOutcome.DONE
         val target = targetOf(key) ?: return FreezeOutcome.FAILED
         if (target.packageName == context.packageName) return FreezeOutcome.FAILED
         val isSystem = system ?: withContext(Dispatchers.IO) {
@@ -1069,6 +1242,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     suspend fun freezeKey(key: String, label: String? = null, component: String? = null): FreezeOutcome =
         gate.withLock {
             if (!prefs.freezeEnabledNow()) return@withLock FreezeOutcome.DISABLED
+            // The lock owns this app's suspend/hide state. Freezing it again, especially with
+            // DISABLE, would change a state the lock is about to need back.
+            if (key in lockedMainKeys()) return@withLock FreezeOutcome.DONE
+            loadBackupLocked()
             val target = targetOf(key) ?: return@withLock FreezeOutcome.FAILED
             if (target.packageName == context.packageName) return@withLock FreezeOutcome.FAILED
             val method = prefs.freezeMethodsNow()[key] ?: return@withLock FreezeOutcome.NOT_LISTED
@@ -1076,6 +1253,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             if (!systemAllowed(target, snapshot)) return@withLock FreezeOutcome.SYSTEM_APPS_OFF
             if (target.packageName in protectedPackages()) return@withLock FreezeOutcome.PROTECTED
             if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeOutcome.NO_ACCESS
+            // The first load ran before access was proved; now a root/Shizuku-only backup
+            // can be read before this freeze writes over it.
+            loadBackupLocked()
             if (label != null || component != null) prefs.setFreezeRow(key, FreezeRow(label, component))
             val already = key in prefs.freezeAppliedNow() && isHeld(snapshot, target, method)
             if (!already) {
@@ -1090,6 +1270,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             }
             prefs.setFreezeApplied(setOf(key), applied = true)
             _changes.value += 1
+            persistBackupLocked()
             FreezeOutcome.DONE
         }
 
@@ -1113,33 +1294,107 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
 
     suspend fun unfreezeKey(key: String): FreezeOutcome = gate.withLock {
         val target = targetOf(key) ?: return@withLock FreezeOutcome.FAILED
-        // A record or a live state either way: an app frozen by another tool has no record,
-        // and a hidden one cannot be read back, so the record decides for it.
+        // A locked app's suspend/hide layers are the lock's to lift, and only after the
+        // device has authenticated the launch. An unfreeze here would be a free way in.
+        if (key in lockedMainKeys()) return@withLock FreezeOutcome.DONE
+        loadBackupLocked()
+        // The record alone is not a reason to ask for root. After a reinstall the package is
+        // enabled again but the old applied entry remains; that entry must be dropped without
+        // access, or the app looks frozen and cannot open. HIDE is the one state the platform
+        // cannot report back, so there the record still decides.
+        val applied = prefs.freezeAppliedNow()
+        val plan = prefs.freezeMethodsNow()
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
-        val needsLift = key in prefs.freezeAppliedNow() || looksFrozen(snapshot, target)
-        if (!needsLift) return@withLock FreezeOutcome.DONE
+        val method = plan[key]
+        val needsLift = mustLift(key, method, applied, snapshot, target)
+        if (!needsLift) {
+            if (key in applied) {
+                prefs.setFreezeApplied(setOf(key), applied = false)
+                _changes.value += 1
+                persistBackupLocked()
+            }
+            return@withLock FreezeOutcome.DONE
+        }
         if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeOutcome.NO_ACCESS
-        val method = prefs.freezeMethodsNow()[key]
+        loadBackupLocked()
         val lifted = withContext(Dispatchers.IO) {
             liftedIn(listOf(key to method))
         }
         if (key !in lifted) return@withLock FreezeOutcome.FAILED
         prefs.setFreezeApplied(setOf(key), applied = false)
         _changes.value += 1
+        persistBackupLocked()
         FreezeOutcome.DONE
     }
 
     /** Takes an app off the list for good, unfreezing it if it was frozen. */
     suspend fun removeFromPlan(app: AppInfo): FreezeOutcome = removeKey(app.freezeKey)
 
-    suspend fun removeKey(key: String): FreezeOutcome = gate.withLock {
-        val target = targetOf(key)
+    /**
+     * Releases a freeze record that predates the app lock, then drops it.
+     *
+     * A locked app must not be left in a state only the freeze list knows how to undo: the
+     * lock hides and suspends by itself, and `revealForLock` does not re-enable a package
+     * frozen with DISABLE. This bypasses the ordinary lock filter because the caller has
+     * already authenticated the app; it is the one path allowed to lift that state.
+     */
+    suspend fun releaseForLock(packageName: String): FreezeOutcome = gate.withLock {
+        val key = FreezeTargetKey.of(packageName, 0L)
+        val target = targetOf(key) ?: return@withLock FreezeOutcome.FAILED
+        loadBackupLocked()
+        val plan = prefs.freezeMethodsNow()
+        val applied = prefs.freezeAppliedNow()
+        if (key !in plan && key !in applied) return@withLock FreezeOutcome.DONE
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
-        val needsLift = key in prefs.freezeAppliedNow() ||
-            (target != null && looksFrozen(snapshot, target))
+        val method = plan[key]
+        val needsLift = mustLift(key, method, applied, snapshot, target)
         if (needsLift) {
             if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeOutcome.NO_ACCESS
+            val lifted = withContext(Dispatchers.IO) {
+                liftedIn(listOf(key to method), ignoreLock = true)
+            }
+            if (key !in lifted) return@withLock FreezeOutcome.FAILED
+        }
+        prefs.setFreezeApplied(setOf(key), applied = false)
+        prefs.removeFreezeTarget(key)
+        _changes.value += 1
+        persistBackupLocked()
+        FreezeOutcome.DONE
+    }
+
+    suspend fun removeKey(key: String): FreezeOutcome = gate.withLock {
+        loadBackupLocked()
+        // Removing the row must not take the lock's suspend/hide with it. The lock stays in
+        // force and the freeze record simply stops claiming ownership of it. DISABLE is the
+        // exception: the lock never owns that state, so dropping its only record would leave
+        // the app disabled after the lock is removed. Lift that one before forgetting it.
+        if (key in lockedMainKeys()) {
             val method = prefs.freezeMethodsNow()[key]
+            val target = targetOf(key)
+            if (method == FreezeMethod.DISABLE && target != null) {
+                val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+                val applied = prefs.freezeAppliedNow()
+                if (mustLift(key, method, applied, snapshot, target)) {
+                    if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeOutcome.NO_ACCESS
+                    val lifted = withContext(Dispatchers.IO) {
+                        liftedIn(listOf(key to method), ignoreLock = true)
+                    }
+                    if (key !in lifted) return@withLock FreezeOutcome.FAILED
+                }
+            }
+            prefs.setFreezeApplied(setOf(key), applied = false)
+            prefs.removeFreezeTarget(key)
+            _changes.value += 1
+            persistBackupLocked()
+            return@withLock FreezeOutcome.DONE
+        }
+        val target = targetOf(key)
+        val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+        val applied = prefs.freezeAppliedNow()
+        val method = prefs.freezeMethodsNow()[key]
+        val needsLift = target != null && mustLift(key, method, applied, snapshot, target)
+        if (needsLift) {
+            if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeOutcome.NO_ACCESS
             val lifted = withContext(Dispatchers.IO) {
                 liftedIn(listOf(key to method))
             }
@@ -1149,6 +1404,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         }
         prefs.removeFreezeTarget(key)
         _changes.value += 1
+        persistBackupLocked()
         FreezeOutcome.DONE
     }
 
@@ -1167,19 +1423,26 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             gate.withLock {
                 if (!prefs.freezeEnabledNow()) return@withLock FreezeBatchResult()
                 if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeBatchResult(noAccess = true)
-                // After the access check: reconciling may have dropped apps that are gone.
+                // A reinstall's first trigger should work from the old list, not an empty one.
+                loadBackupLocked()
                 val plan = prefs.freezeMethodsNow()
                 if (plan.isEmpty()) return@withLock FreezeBatchResult()
+                val locked = lockedMainKeys()
                 val guarded = protectedPackages()
                 val systemEnabled = prefs.freezeSystemAppsNow()
                 val skip = if (auto) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
                 val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
                 val (frozenBefore, targets) = withContext(Dispatchers.IO) {
                     val allowed = plan.filterKeys { key ->
+                        if (key in locked) return@filterKeys false
                         val target = targetOf(key) ?: return@filterKeys false
-                        target.packageName != context.packageName &&
+                        val state = snapshot.state(target)
+                        // An uninstall keeps the list entry for the reinstall, but there is
+                        // no package to command until it comes back.
+                        state?.installed != false &&
+                            target.packageName != context.packageName &&
                             target.packageName !in guarded &&
-                            (systemEnabled || snapshot.state(target)?.system != true)
+                            (systemEnabled || state?.system != true)
                     }
                     // One state read per app, shared by the skip decision and the record.
                     val seen = mutableMapOf<String, Boolean>()
@@ -1208,6 +1471,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 val failed = targets.keys - done
                 prefs.setFreezeApplied(frozenBefore.toSet() + done, applied = true)
                 _changes.value += 1
+                persistBackupLocked()
                 FreezeBatchResult(done = done.size, failed = failed.size)
             }
         }
@@ -1219,28 +1483,47 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      */
     suspend fun unfreezeAll(): FreezeBatchResult = withContext(NonCancellable) {
         gate.withLock {
+            // The first Unfreeze all after a reinstall must see the list the old install
+            // froze, or it would have nothing to lift.
+            loadBackupLocked()
             val appliedNow = prefs.freezeAppliedNow()
             val plan = prefs.freezeMethodsNow()
             if (appliedNow.isEmpty() && plan.isEmpty()) return@withLock FreezeBatchResult()
-            if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeBatchResult(noAccess = true)
+            val locked = lockedMainKeys()
             val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
-            val candidates = (appliedNow + plan.keys).distinct()
+            val candidates = (appliedNow + plan.keys).distinct().filterNot { it in locked }
             val targets = withContext(Dispatchers.IO) {
-                // The record is the answer for anything the platform cannot report back, and the
-                // live state catches apps frozen without one.
-                candidates.filter { key ->
-                    val target = targetOf(key) ?: return@filter false
-                    val held = looksFrozen(snapshot, target)
-                    if (plan[key] == FreezeMethod.STOP && !held) false
-                    else key in appliedNow || held
-                }
+                // The record is the answer only for HIDE, whose state cannot be read back; a
+                // record left on an enabled app by a reinstall must not demand access.
+                val held = candidates.mapNotNull { key ->
+                    val target = targetOf(key) ?: return@mapNotNull null
+                    // A package that is gone has nothing to lift, even when the old record
+                    // was HIDE. Leaving it out lets a no-access unfreezeAll drop the record.
+                    if (snapshot.state(target)?.installed == false || snapshot.isKnownAbsent(target)) {
+                        return@mapNotNull null
+                    }
+                    key to looksFrozen(snapshot, target)
+                }.toMap()
+                FreezeSelection.toLift(held.keys, appliedNow, plan, locked) { held[it] == true }
             }
+            if (targets.isEmpty()) {
+                if (appliedNow.any { it !in locked }) {
+                    prefs.setFreezeApplied(appliedNow - locked, applied = false)
+                    _changes.value += 1
+                    persistBackupLocked()
+                }
+                return@withLock FreezeBatchResult()
+            }
+            if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeBatchResult(noAccess = true)
             val done = withContext(Dispatchers.IO) {
                 liftedIn(targets.map { it to plan[it] })
             }
             val failed = targets.filter { it !in done }
-            prefs.setFreezeApplied(appliedNow - failed.toSet(), applied = false)
+            // Locked apps keep their freeze record: the lock still holds them, and this run
+            // deliberately did not lift them.
+            prefs.setFreezeApplied(appliedNow - failed.toSet() - locked, applied = false)
             _changes.value += 1
+            persistBackupLocked()
             FreezeBatchResult(done = done.size, failed = failed.size)
         }
     }
@@ -1251,20 +1534,23 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * the user no way back to them.
      */
     suspend fun setSystemAppsEnabled(enabled: Boolean): FreezeBatchResult = gate.withLock {
+        loadBackupLocked()
         var unfrozen = 0
         if (!enabled) {
             val plan = prefs.freezeMethodsNow()
+            val locked = lockedMainKeys()
             val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
             val applied = prefs.freezeAppliedNow()
             val systemPlan = plan.keys.filter { key ->
                 targetOf(key)?.let { snapshot.state(it)?.system == true } == true
             }
             val frozen = systemPlan.filter { key ->
-                // Same as turning the feature off: a hidden app cannot be read back, so its
-                // own record or its HIDE listing has to be enough.
-                key in applied ||
-                    targetOf(key)?.let { looksFrozen(snapshot, it) } == true ||
-                    plan[key] == FreezeMethod.HIDE
+                // The lock owns a locked app's suspend/hide state; turning the system section
+                // off must not take that layer away.
+                key !in locked &&
+                    targetOf(key)?.let {
+                        mustLift(key, plan[key], applied, snapshot, it)
+                    } == true
             }
             unfrozen = frozen.size
             if (frozen.isNotEmpty()) {
@@ -1280,10 +1566,15 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     )
                 }
             }
-            prefs.removeFreezeTargets(systemPlan)
+            // Keep a locked app's record: the lock may still be sitting on a freeze state,
+            // and dropping the only record of it would leave no way to lift that state.
+            val removable = systemPlan.filterNot { it in locked }
+            prefs.removeFreezeTargets(removable)
+            prefs.setFreezeApplied(removable.toSet(), applied = false)
         }
         prefs.setFreezeSystemApps(enabled)
         _changes.value += 1
+        persistBackupLocked()
         FreezeBatchResult(done = unfrozen)
     }
 
@@ -1378,7 +1669,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         snapshot: FreezeSnapshot,
     ): Set<String> {
         if (targets.isEmpty()) return emptySet()
-        val resolved = targets.mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
+        val locked = lockedMainKeys()
+        val resolved = targets
+            .filterKeys { it !in locked }
+            .mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
         if (resolved.isEmpty()) return emptySet()
         val done = mutableSetOf<String>()
         val canHide = binder.available() && binder.canHide()
@@ -1433,9 +1727,15 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * root" after the record had already been cleared. Anything still held after the binder
      * pass is retried through the root shell, which can undo root.
      */
-    private suspend fun liftedIn(targets: List<Pair<String, FreezeMethod?>>): Set<String> {
+    private suspend fun liftedIn(
+        targets: List<Pair<String, FreezeMethod?>>,
+        /** The app lock calls this for a package it owns; it is the one allowed past the filter. */
+        ignoreLock: Boolean = false,
+    ): Set<String> {
         if (targets.isEmpty()) return emptySet()
+        val locked = if (ignoreLock) emptySet() else lockedMainKeys()
         val resolved = targets.distinctBy { it.first }
+            .filterNot { it.first in locked }
             .mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
         if (resolved.isEmpty()) return emptySet()
         var states = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
@@ -1515,6 +1815,18 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         }
     }
 
+    /**
+     * The freeze keys whose suspend/hide state belongs to the app lock, not to this list.
+     *
+     * Only the main profile can be hidden or suspended by the lock; a work-profile lock is
+     * the password gate alone and must keep freezing normally.
+     */
+    private suspend fun lockedMainKeys(): Set<String> =
+        prefs.lockedAppsNow().asSequence()
+            .filterNot { EntryKeys.isShortcut(it) || EntryKeys.isPrivateSpace(it) }
+            .filter { EntryKeys.userSerial(it) == 0L }
+            .mapTo(mutableSetOf()) { FreezeTargetKey.of(it.substringBefore('/'), 0L) }
+
     private fun targetOf(key: String): FreezeTarget? {
         val packageName = FreezeTargetKey.packageName(key)
         if (!FreezeCommands.isPackageName(packageName)) return null
@@ -1529,9 +1841,31 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
 
     /** Whether the device reports the app as held, using the one state read of this pass. */
     private fun looksFrozen(snapshot: FreezeSnapshot, target: FreezeTarget): Boolean {
+        if (snapshot.isKnownAbsent(target)) return false
         val state = snapshot.state(target) ?: return true
         if (state.hidden || state.suspended) return true
         return !state.enabled && !parkedByPlatform(target)
+    }
+
+    /**
+     * Whether lifting [key] is actually needed.
+     *
+     * The applied record used to count on its own. That is wrong after an uninstall and
+     * reinstall: the new package is enabled and free, but the old record remains, and asking
+     * for root before dropping it leaves the app looking frozen on a device where access was
+     * lost. DISABLE and SUSPEND have readable state; HIDE does not, so only HIDE still trusts
+     * the record. A package that is gone has nothing to lift.
+     */
+    private fun mustLift(
+        key: String,
+        method: FreezeMethod?,
+        applied: Set<String>,
+        snapshot: FreezeSnapshot,
+        target: FreezeTarget,
+    ): Boolean {
+        if (snapshot.state(target)?.installed == false) return false
+        return looksFrozen(snapshot, target) ||
+            (key in applied && method == FreezeMethod.HIDE)
     }
 
     /** The platform's own "disabled until used" spot is neither a freeze nor ours to lift. */
@@ -1634,6 +1968,155 @@ object FreezePlanFile {
     private const val MAX_ENTRIES = 5_000
     private const val MAX_LABEL = 120
 }
+
+/**
+ * The freeze list plus its applied state, kept outside the app's data directory.
+ *
+ * The exported plan file is for moving to another phone and deliberately omits applied
+ * state. This one has the opposite job: after Deluge itself is uninstalled and installed
+ * again, the apps it froze are still held by the system, and without their old records the
+ * fresh install has no screen that knows how to lift them. It is written through the same
+ * root/Shizuku channel the freeze itself needs, so it is no wider access than the feature.
+ */
+object FreezeBackup {
+
+    data class Snapshot(
+        val firstInstallTime: Long,
+        val enabled: Boolean = true,
+        val systemApps: Boolean = false,
+        val protect: Boolean = true,
+        val methods: Map<String, FreezeMethod> = emptyMap(),
+        val applied: Set<String> = emptySet(),
+        val rows: Map<String, FreezeRow> = emptyMap(),
+        /** Lock keys, so a reinstall can still lift hide/suspend the lock applied. */
+        val locked: Set<String> = emptySet(),
+    )
+
+    fun encode(snapshot: Snapshot): String {
+        val methods = org.json.JSONObject()
+        snapshot.methods.forEach { (key, method) ->
+            if (validKey(key)) methods.put(key, method.name)
+        }
+        val rows = org.json.JSONObject()
+        snapshot.rows.forEach { (key, row) ->
+            if (!validKey(key)) return@forEach
+            val item = org.json.JSONObject()
+            row.label?.takeIf { it.isNotBlank() }
+                ?.take(MAX_LABEL)
+                ?.filterNot { Character.isISOControl(it) }
+                ?.let { item.put("label", it) }
+            row.component?.takeIf { it.isNotBlank() }
+                ?.take(MAX_COMPONENT)
+                ?.filterNot { Character.isISOControl(it) }
+                ?.let { item.put("component", it) }
+            if (item.length() > 0) rows.put(key, item)
+        }
+        val applied = org.json.JSONArray()
+        snapshot.applied.filter(::validKey).forEach { applied.put(it) }
+        val locked = org.json.JSONArray()
+        snapshot.locked.filter(::validLockKey).forEach { locked.put(it) }
+        return org.json.JSONObject()
+            .put("version", VERSION)
+            .put("firstInstall", snapshot.firstInstallTime)
+            .put("enabled", snapshot.enabled)
+            .put("systemApps", snapshot.systemApps)
+            .put("protect", snapshot.protect)
+            .put("methods", methods)
+            .put("applied", applied)
+            .put("rows", rows)
+            .put("locked", locked)
+            .toString()
+    }
+
+    /** Null for anything that is not a backup this build wrote. */
+    fun decode(text: String): Snapshot? = runCatching {
+        if (text.length > MAX_FILE_CHARS) return null
+        val root = org.json.JSONObject(text)
+        if (root.optInt("version") != VERSION) return null
+        val methods = root.optJSONObject("methods") ?: org.json.JSONObject()
+        if (methods.length() > MAX_ENTRIES) return null
+        val decodedMethods = buildMap {
+            val keys = methods.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (!validKey(key)) continue
+                val method = FreezeMethod.entries
+                    .firstOrNull { it.name == methods.optString(key) } ?: continue
+                put(key, method)
+            }
+        }
+        val appliedArray = root.optJSONArray("applied") ?: org.json.JSONArray()
+        val decodedApplied = buildSet {
+            for (index in 0 until minOf(appliedArray.length(), MAX_ENTRIES)) {
+                val key = appliedArray.optString(index)
+                if (key in decodedMethods) add(key)
+            }
+        }
+        val rows = root.optJSONObject("rows") ?: org.json.JSONObject()
+        val decodedRows = buildMap {
+            val keys = rows.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (!validKey(key)) continue
+                val item = rows.optJSONObject(key) ?: continue
+                val label = item.optString("label")
+                    .takeIf { it.isNotBlank() }
+                    ?.take(MAX_LABEL)
+                    ?.filterNot { Character.isISOControl(it) }
+                val component = item.optString("component")
+                    .takeIf { it.isNotBlank() }
+                    ?.take(MAX_COMPONENT)
+                    ?.filterNot { Character.isISOControl(it) }
+                if (label != null || component != null) put(key, FreezeRow(label, component))
+            }
+        }
+        val lockedArray = root.optJSONArray("locked") ?: org.json.JSONArray()
+        val decodedLocked = buildSet {
+            for (index in 0 until minOf(lockedArray.length(), MAX_ENTRIES)) {
+                val key = lockedArray.optString(index)
+                if (validLockKey(key)) add(key)
+            }
+        }
+        Snapshot(
+            firstInstallTime = root.optLong("firstInstall", 0L),
+            enabled = root.optBoolean("enabled", true),
+            systemApps = root.optBoolean("systemApps", false),
+            protect = root.optBoolean("protect", true),
+            methods = decodedMethods,
+            applied = decodedApplied,
+            rows = decodedRows,
+            locked = decodedLocked,
+        )
+    }.getOrNull()
+
+    private fun validKey(key: String): Boolean {
+        val packageName = FreezeTargetKey.packageName(key)
+        if (!FreezeCommands.isPackageName(packageName)) return false
+        return key == FreezeTargetKey.of(packageName, FreezeTargetKey.userSerial(key))
+    }
+
+    /** Lock keys can name an app, a shortcut, the private space or search, not only a package. */
+    private fun validLockKey(key: String): Boolean {
+        if (key.isEmpty() || key.length > MAX_LOCK_KEY) return false
+        if (key.any { Character.isISOControl(it) }) return false
+        if (key == EntryKeys.SEARCH || key == EntryKeys.PRIVATE_SPACE) return true
+        if (EntryKeys.isShortcut(key)) return EntryKeys.parseShortcut(key) != null
+        val slash = key.indexOf('/')
+        if (slash <= 0) return false
+        val packageName = key.substring(0, slash)
+        if (!FreezeCommands.isPackageName(packageName)) return false
+        // The class part may move after an update, but it must still look like a component.
+        return key.substring(slash + 1).substringBefore('|').isNotEmpty()
+    }
+
+    private const val VERSION = 1
+    private const val MAX_FILE_CHARS = 1_000_000
+    private const val MAX_ENTRIES = 5_000
+    private const val MAX_LABEL = 120
+    private const val MAX_COMPONENT = 512
+    private const val MAX_LOCK_KEY = 1_200
+}
+
 /**
  * The freeze screen's order, kept out of the composable so a test can pin the rule.
  *

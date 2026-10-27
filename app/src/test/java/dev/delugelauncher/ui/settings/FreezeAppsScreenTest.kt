@@ -112,20 +112,18 @@ class FreezeAppsScreenTest {
     }
 
     @Test
-    fun `the method count is its own label so a long name cannot clip it`() {
+    fun `the method count uses the translated label`() {
         showScreen()
-        // English keeps the stop tab at two listed apps; the count is a sibling of the name,
-        // not part of it, so the name is what gives way when the tab is narrow.
-        compose.onNodeWithText("Stop", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText(" (2)", useUnmergedTree = true).assertExists()
+        // English keeps the stop tab at two listed apps. The count is part of the translated
+        // label, so RTL languages can place it on the correct side.
+        compose.onNodeWithText("Stop · 2", useUnmergedTree = true).assertExists()
     }
 
     @Test
     @Config(qualifiers = "fr-rFR-w411dp-h891dp-xxhdpi")
     fun `the count is still there under a long method name`() {
         showScreen()
-        compose.onNodeWithText("Suspendre", useUnmergedTree = true).assertExists()
-        compose.onNodeWithText(" (2)", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Arrêter · 2", useUnmergedTree = true).assertExists()
     }
 
     @Test

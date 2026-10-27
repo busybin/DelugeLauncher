@@ -151,7 +151,6 @@ import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.data.PaddingSlot
 import dev.delugelauncher.media.NowPlayingWidget
-import dev.delugelauncher.media.openNowPlayingApp
 import dev.delugelauncher.service.HapticUtil
 import androidx.compose.runtime.CompositionLocalProvider
 import dev.delugelauncher.ui.common.AppIcon
@@ -282,7 +281,11 @@ fun HomeScreen(
     onResizeNowPlaying: (Int) -> Unit,
     widgetActions: WidgetSlotActions,
     onLaunch: (AppInfo) -> Unit,
+    /** Starts whatever is playing, through the app lock gate when it is a locked app. */
+    onOpenNowPlaying: () -> Boolean = { false },
     onRemoveFavorite: (AppInfo) -> Unit,
+    /** Hides a favorite from the home screen and the app list. */
+    onHideFavorite: (AppInfo) -> Unit,
     onOpenFolderApp: (AppInfo) -> Unit,
     onRemoveFromFolder: (Folder, AppInfo) -> Unit,
     onRenameFolder: (Folder, String) -> Unit,
@@ -1078,6 +1081,7 @@ fun HomeScreen(
                     touchPosition = touchPosition,
                     menuExpanded = nowPlayingMenu,
                     menuOffset = nowPlayingMenuOffset,
+                    onOpenNowPlaying = onOpenNowPlaying,
                     onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
                     onDismissMenu = { nowPlayingMenu = false },
                     onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
@@ -1392,6 +1396,7 @@ fun HomeScreen(
                             isLocked = item.app.lockedBy(lockedApps),
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
+                            onHide = { menuForKey = null; onHideFavorite(item.app) },
                             onEditIconName = { menuForKey = null; renameDialogFor = item.app },
                             freezeActions = freezeActions,
                         )
@@ -1433,6 +1438,7 @@ fun HomeScreen(
                             touchPosition = touchPosition,
                             menuExpanded = nowPlayingMenu,
                             menuOffset = nowPlayingMenuOffset,
+                            onOpenNowPlaying = onOpenNowPlaying,
                             onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
                             onDismissMenu = { nowPlayingMenu = false },
                             onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
@@ -1660,6 +1666,7 @@ private fun FavoriteRow(
     isLocked: Boolean,
     onUnpin: () -> Unit,
     onRemove: () -> Unit,
+    onHide: () -> Unit,
     onEditIconName: () -> Unit,
     freezeActions: FreezeActions?,
 ) {
@@ -1810,8 +1817,18 @@ private fun FavoriteRow(
                     app = app,
                     actions = freezeActions,
                     onDismissMenu = onDismissMenu,
+                    locked = isLocked,
                     onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                 )
+                // A locked app must be unlocked before it can be hidden, as in the app list:
+                // hiding is a launcher action and the lock still owns the package state.
+                if (!isLocked) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.applist_hide)) },
+                        leadingIcon = { Icon(DelugeIcons.VisibilityOff, contentDescription = null) },
+                        onClick = { onDismissMenu(); onHide() },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_app_info)) },
                     leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
@@ -1865,6 +1882,7 @@ private fun FavoriteRow(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
+                        locked = isLocked,
                     )
                     DropdownMenuItem(
                         text = {
@@ -1883,6 +1901,7 @@ private fun FavoriteRow(
         FreezeMethodDialog(
             app = if (freezeChoosing) app else null,
             label = label,
+            counts = freezeActions?.methodCounts ?: emptyMap(),
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false
@@ -2278,6 +2297,7 @@ private fun NowPlayingBlock(
     touchPosition: MutableState<Offset>,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
+    onOpenNowPlaying: () -> Boolean,
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onEditLayout: () -> Unit,
@@ -2310,7 +2330,7 @@ private fun NowPlayingBlock(
                     // card itself — which should get you to what is playing. Say so when it
                     // can't, rather than leaving a tap that looks ignored.
                     onClick = {
-                        if (!openNowPlayingApp(context)) {
+                        if (!onOpenNowPlaying()) {
                             Toast.makeText(
                                 context,
                                 context.getString(R.string.now_playing_open_failed),

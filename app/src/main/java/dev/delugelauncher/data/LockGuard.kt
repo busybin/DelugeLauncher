@@ -2,6 +2,7 @@
 package dev.delugelauncher.data
 
 import android.content.Context
+import android.os.Process
 import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -62,6 +63,11 @@ class LockGuard(
         }
     }
 
+    /** Whether this root setup can hold the script across a stop. */
+    fun canInstall(): Boolean = shell.runAsRoot(
+        "mkdir -p /data/adb/service.d && [ -w /data/adb/service.d ]",
+    )
+
     /** Lets one authenticated launch through until Deluge comes back or the screen goes off. */
     fun allow(packageName: String) {
         if (!FreezeCommands.isPackageName(packageName)) return
@@ -87,7 +93,11 @@ class LockGuard(
         if (running && guardAlive()) return true
         running = false
         val encoded = Base64.encodeToString(
-            SCRIPT_TEMPLATE.replace("__APP__", context.packageName).replace('§', '$')
+            SCRIPT_TEMPLATE
+                .replace("__APP__", context.packageName)
+                .replace("__DATA__", context.filesDir.absolutePath)
+                .replace("__USER__", Process.myUserHandle().hashCode().toString())
+                .replace('§', '$')
                 .toByteArray(Charsets.UTF_8),
             Base64.NO_WRAP,
         )
@@ -183,7 +193,8 @@ class LockGuard(
         val SCRIPT_TEMPLATE = """
             #!/system/bin/sh
             APP=__APP__
-            DATA=/data/user/0/§APP/files
+            DATA=__DATA__
+            USER=__USER__
             LIST=§DATA/lock_guard.list
             ALLOW=§DATA/lock_guard.allow
             PIDFILE=$PID_FILE
@@ -203,7 +214,7 @@ class LockGuard(
             empty=0
             loop=0
             while true; do
-              if ! pm list packages 2>/dev/null | grep -q "package:§APP"; then
+              if ! pm list packages --user "§USER" 2>/dev/null | grep -q "package:§APP"; then
                 rm -f "§0" "§PIDFILE"
                 exit 0
               fi
@@ -227,28 +238,33 @@ class LockGuard(
                 continue
               fi
               empty=0
-              if [ -f "§ALLOW" ]; then
-                if ! dumpsys power 2>/dev/null | grep -q 'mWakefulness=Awake'; then
-                  rm -f "§ALLOW"
-                fi
+              awake=0
+              if dumpsys power 2>/dev/null | grep -q 'mWakefulness=Awake'; then
+                awake=1
+              fi
+              if [ "§awake" -eq 0 ]; then
+                rm -f "§ALLOW"
+                # Nothing here needs repairing while the screen is off; waking checks again.
+                sleep 15
+                continue
               fi
               now=§(date +%s)
-              visible=§(pm list packages 2>/dev/null)
+              visible=§(pm list packages --user "§USER" 2>/dev/null)
               loop=§((loop + 1))
               while IFS= read -r pkg; do
                 [ -n "§pkg" ] || continue
                 if is_allowed "§pkg"; then continue; fi
                 if printf '%s\n' "§visible" | grep -Fqx "package:§pkg"; then
-                  pm suspend --user 0 "§pkg" >/dev/null 2>&1
-                  pm hide --user 0 "§pkg" >/dev/null 2>&1
+                  pm suspend --user "§USER" "§pkg" >/dev/null 2>&1
+                  pm hide --user "§USER" "§pkg" >/dev/null 2>&1
                   if is_allowed "§pkg"; then
-                    pm unsuspend --user 0 "§pkg" >/dev/null 2>&1
-                    pm unhide --user 0 "§pkg" >/dev/null 2>&1
+                    pm unsuspend --user "§USER" "§pkg" >/dev/null 2>&1
+                    pm unhide --user "§USER" "§pkg" >/dev/null 2>&1
                   fi
                 elif [ "§loop" -ge 20 ] && [ §((loop % 20)) -eq 0 ]; then
-                  pm suspend --user 0 "§pkg" >/dev/null 2>&1
+                  pm suspend --user "§USER" "§pkg" >/dev/null 2>&1
                   if is_allowed "§pkg"; then
-                    pm unsuspend --user 0 "§pkg" >/dev/null 2>&1
+                    pm unsuspend --user "§USER" "§pkg" >/dev/null 2>&1
                   fi
                 fi
               done < "§LIST"

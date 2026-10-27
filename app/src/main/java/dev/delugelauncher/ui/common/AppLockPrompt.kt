@@ -9,6 +9,7 @@ import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
 import android.os.Build
 import android.os.CancellationSignal
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
@@ -26,8 +27,8 @@ import dev.delugelauncher.R
  * Asks for the device lock, then runs [onUnlocked].
  *
  * A phone with biometrics gets the system's own sheet, which takes a fingerprint or the screen
- * lock; older phones get the credential screen. A phone with no secure lock at all opens the
- * app rather than making it unreachable.
+ * lock; older phones get the credential screen. A phone with no secure lock at all has nothing
+ * to verify against, so the request is refused and the app stays shut.
  *
  * One prompt at a time: a second tap while a sheet is up is dropped, since handing it the
  * first answer would open the wrong app.
@@ -56,6 +57,9 @@ fun rememberAppLockRequest(
     return remember(context, activity, keyguard, title, prompt) {
         { label, onUnlocked ->
             val subtitle = prompt.format(label)
+            fun refuse(res: Int) {
+                Toast.makeText(context, res, Toast.LENGTH_LONG).show()
+            }
             // The credential screen is the floor: it is there on every phone that has a
             // secure lock, and it is also what a failed biometric sheet falls back to.
             fun askForCredential() {
@@ -63,14 +67,21 @@ fun rememberAppLockRequest(
                     keyguard?.createConfirmDeviceCredentialIntent(title, subtitle)
                 }.getOrNull()
                 if (intent == null) {
-                    onUnlocked()
+                    // No screen to ask on means no answer to trust. Opening here would make
+                    // the lock a decoration, so the app stays shut and says why.
+                    refuse(R.string.app_lock_auth_failed)
                 } else {
                     pending = onUnlocked
-                    credential.launch(intent)
+                    runCatching { credential.launch(intent) }.onFailure {
+                        pending = null
+                        refuse(R.string.app_lock_auth_failed)
+                    }
                 }
             }
             when {
-                keyguard?.isDeviceSecure != true -> onUnlocked()
+                // Without a secure lock there is nothing to verify against. Opening anyway
+                // was the largest hole in the old gate.
+                keyguard?.isDeviceSecure != true -> refuse(R.string.app_lock_no_device_lock)
                 prompting || pending != null -> Unit
                 Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && activity != null -> {
                     prompting = true

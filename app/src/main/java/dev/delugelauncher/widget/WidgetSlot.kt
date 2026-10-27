@@ -58,9 +58,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.isPackageLocked
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
+import dev.delugelauncher.ui.common.rememberAppLockRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -280,16 +284,63 @@ internal fun WidgetPage(
     val frozenApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
     val frozenMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
     val widgetProviders by app.prefs.widgetProviders.collectAsState(initial = emptyMap())
+    val lockedApps by app.prefs.lockedApps.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
+    val requestUnlock = rememberAppLockRequest()
     // A dead provider names no package, so the mapping written at bind time answers instead.
     val providerPackage = providerInfo?.provider?.packageName ?: widgetProviders[widgetId]
+    // Null until the store answers: a tap is asked for credentials rather than waved through.
+    val providerLocked = providerPackage?.let { pkg ->
+        lockedApps?.let { isPackageLocked(it, pkg, 0L) } ?: true
+    } ?: false
     // A stopped app starts again on a tap, so only the methods that hold it need the lift.
     val frozen = providerPackage != null &&
         providerPackage in frozenApplied &&
         frozenMethods[providerPackage] != FreezeMethod.STOP
 
+    fun startWidgetApp(packageName: String) {
+        val label = runCatching {
+            context.packageManager.getApplicationInfo(packageName, 0)
+                .loadLabel(context.packageManager).toString()
+        }.getOrDefault(packageName)
+        scope.launch {
+            val revealed = withContext(Dispatchers.IO) {
+                app.appRepository.revealForLock(packageName)
+            }
+            if (!revealed) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_reveal_failed, label),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return@launch
+            }
+            runCatching {
+                context.packageManager.getLaunchIntentForPackage(packageName)?.let {
+                    context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    true
+                } ?: false
+            }.getOrDefault(false).let { launched ->
+                // A tap that could not start the app must not leave the lock's layers up.
+                if (!launched) {
+                    withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
+                }
+            }
+        }
+    }
+
     fun lift(open: Boolean) {
+        // Nothing is known about the locks yet; a tap here cannot open anything safely.
+        if (lockedApps == null) return
         val packageName = providerPackage ?: return
+        // The lock owns this app's suspend/hide state, so a tap here must not unfreeze it.
+        // Opening needs the same credential as an app row; without an open there is nothing
+        // safe to do, and the long-press menu is still available to remove the widget.
+        if (providerLocked) {
+            if (!open) return
+            requestUnlock(packageName) { startWidgetApp(packageName) }
+            return
+        }
         scope.launch {
             when (app.freezeManager.unfreeze(packageName)) {
                 FreezeOutcome.DONE -> if (open) runCatching {
@@ -339,6 +390,37 @@ internal fun WidgetPage(
             ) {
                 Text(
                     stringResource(if (frozen) R.string.freeze_menu_unfreeze else R.string.widget_unavailable),
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+            }
+        }
+        return
+    }
+
+    // An app widget can carry its provider's own PendingIntent, which would start a locked
+    // app without ever reaching the launcher's credential prompt. Keep the provider's view
+    // off screen while the lock is on; a tap asks for the lock, a long press still edits.
+    if (providerLocked) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .pointerInput(widgetId, providerLocked) {
+                    detectTapGestures(
+                        onTap = { lift(open = true) },
+                        onLongPress = { offset -> onPressAndHold(offset.x, offset.y) },
+                    )
+                },
+            color = Color.Black.copy(alpha = 0.25f),
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    stringResource(R.string.app_lock_title),
                     color = Color.White.copy(alpha = 0.8f),
                 )
             }

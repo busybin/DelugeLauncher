@@ -216,6 +216,7 @@
     <string name="freeze_method_hide">Masquer</string>
     <string name="freeze_method_suspend">Suspendre</string>
     <string name="freeze_method_stop">Arrêter</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">Tout dégeler</string>
     <string name="freeze_freeze_all">Tout geler</string>
     <string name="freeze_working">Gel des applications…</string>
@@ -581,6 +582,8 @@
     <string name="action_lock_app">Verrouiller l\'app</string>
     <string name="action_add_to_private_space">Ajouter à l\'espace privé</string>
     <string name="app_lock_reveal_failed">Impossible d\'afficher %1$s. Elle reste verrouillée.</string>
+    <string name="app_lock_no_device_lock">Définissez un verrouillage d’écran avant de verrouiller des applis.</string>
+    <string name="app_lock_auth_failed">Impossible de confirmer le verrouillage de l’écran. L’appli reste verrouillée.</string>
     <string name="app_lock_system_failed">Impossible d\'appliquer le verrou système à %1$s. Elle n\'a pas été verrouillée.</string>
     <string name="app_lock_hide_failed">%1$s est bloquée au lancement, mais n\'a pas pu être masquée des autres lanceurs.</string>
     <string name="app_lock_guard_failed">Le verrou est actif, mais le garde root n\'a pas pu être installé. Il risque de ne pas résister à l\'arrêt de Deluge.</string>
@@ -626,7 +629,7 @@
     <string name="app_lock_space_keep">Garder les deux</string>
     <string name="app_lock_space_done">%1$s n’existe plus que dans l’espace privé</string>
     <string name="app_lock_space_failed">Impossible d’ouvrir l’espace privé</string>
-    <string name="settings_app_lock_timeout">Redemander après</string>
+    <string name="settings_app_lock_timeout">Applis déverrouillées : délai avant reblocage</string>
     <string name="settings_app_lock_every_time">À chaque fois</string>
     <string name="settings_app_lock_minutes">%d min</string>
     <string name="settings_app_lock_screen_off">Verrouiller à l\'extinction de l\'écran</string>
@@ -796,4 +799,9 @@
     <string name="settings_two_columns_detail">Utilisez deux colonnes sur l’accueil et dans la liste.</string>
     <string name="settings_az_strip">Bande A–Z</string>
     <string name="settings_az_strip_detail">Choisissez où la bande de lettres apparaît.</string>
+    <string name="notification_open_failed">Impossible d’ouvrir cette notification</string>
+    <string name="app_lock_loading">Les verrouillages sont encore en cours de chargement. Réessayez.</string>
+    <string name="app_lock_backup_failed">Verrouillage appliqué, mais son enregistrement de récupération n’a pas pu être sauvegardé hors de Deluge.</string>
+    <string name="freeze_locked_app">Verrouillée — retirez d’abord le verrou de l’application</string>
+    <string name="app_lock_unlocking">Déverrouillage…</string>
 </resources>

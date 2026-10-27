@@ -399,6 +399,9 @@ data class IconConfig(
     val shape: IconShape,
 )
 
+/** Null until the lock list has loaded; then the keys the launcher must not advertise. */
+val LocalLockedApps = staticCompositionLocalOf<Set<String>?> { null }
+
 val LocalIconConfig = staticCompositionLocalOf {
     IconConfig(
         pack = null,
@@ -533,6 +536,10 @@ private fun ScreenshotTile(name: String, sizeDp: Int, modifier: Modifier = Modif
 @Composable
 private fun notificationBadgeCount(app: AppInfo): Int {
     if (!LocalIconConfig.current.notificationBadges) return 0
+    val locked = LocalLockedApps.current
+    // The panel already hides a locked app's notification text. A badge would still say how
+    // many are waiting, so it fails closed until the list has loaded.
+    if (locked == null || app.lockedBy(locked)) return 0
     // Per package, not the whole map: any app's count changing used to recompose every
     // visible row; this only emits when this package's own number moves.
     val count by NotificationCountBus.countFor(app.componentName.packageName)

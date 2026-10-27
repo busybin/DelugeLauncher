@@ -17,6 +17,8 @@
     <string name="action_lock_app">锁定应用</string>
     <string name="action_add_to_private_space">加入私密空间</string>
     <string name="app_lock_reveal_failed">无法显示 %1$s，它仍处于锁定状态。</string>
+    <string name="app_lock_no_device_lock">锁定应用前请先设置屏幕锁。</string>
+    <string name="app_lock_auth_failed">无法确认屏幕锁，应用将保持锁定。</string>
     <string name="app_lock_system_failed">无法对 %1$s 应用系统级锁定，因此没有锁上。</string>
     <string name="app_lock_hide_failed">%1$s 已被阻止启动，但无法从其他启动器隐藏。</string>
     <string name="app_lock_guard_failed">已锁定，但无法安装 root 守护。Deluge 被停止后锁定可能失效。</string>
@@ -69,7 +71,7 @@
     <string name="app_lock_space_keep">两个都保留</string>
     <string name="app_lock_space_done">%1$s 现在只存在于私密空间中</string>
     <string name="app_lock_space_failed">无法打开私密空间</string>
-    <string name="settings_app_lock_timeout">再次验证间隔</string>
+    <string name="settings_app_lock_timeout">已解锁应用：再次锁定前的停留时间</string>
     <string name="settings_app_lock_every_time">每次</string>
     <string name="settings_app_lock_minutes">%d 分钟</string>
     <string name="settings_app_lock_screen_off">熄屏后重新上锁</string>
@@ -311,6 +313,7 @@
     <string name="freeze_method_hide">隐藏</string>
     <string name="freeze_method_suspend">暂停</string>
     <string name="freeze_method_stop">停止</string>
+    <string name="freeze_method_count">%1$s · %2$d</string>
     <string name="freeze_unfreeze_all">全部解冻</string>
     <string name="freeze_freeze_all">全部冻结</string>
     <string name="freeze_working">正在冻结应用…</string>
@@ -794,4 +797,9 @@
     <string name="settings_two_columns_detail">在主屏和应用列表中使用双列。</string>
     <string name="settings_az_strip">A–Z 字母条</string>
     <string name="settings_az_strip_detail">选择字母条出现的位置。</string>
+    <string name="notification_open_failed">无法打开该通知</string>
+    <string name="app_lock_loading">应用锁仍在加载，请重试。</string>
+    <string name="app_lock_backup_failed">锁已生效，但无法在 Deluge 外部保存恢复记录。</string>
+    <string name="freeze_locked_app">已锁定 — 请先移除应用锁</string>
+    <string name="app_lock_unlocking">正在解除锁定…</string>
 </resources>

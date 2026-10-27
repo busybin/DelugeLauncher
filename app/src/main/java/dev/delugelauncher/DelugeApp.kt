@@ -18,6 +18,8 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 class DelugeApp : Application() {
@@ -72,6 +74,34 @@ class DelugeApp : Application() {
         prefs = Prefs(this)
         freezeManager = FreezeManager(this, prefs)
         appRepository = AppRepository(this, prefs, appScope, freezeManager)
+        // A reinstall starts with empty app data while the apps Deluge froze or locked stay
+        // held by the system. The list is kept outside the package for exactly that case;
+        // read it back off the main thread without asking for root here, and leave the prompt
+        // for the freeze screen.
+        appScope.launch {
+            if (!freezeManager.canUseBackupQuietly()) return@launch
+            val restored = runCatching { freezeManager.restoreBackupIfNeeded() }
+                .getOrDefault(false)
+            if (!restored) return@launch
+            if (freezeManager.hasFreezePlan() || freezeManager.hasLockedApps()) {
+                // Only a restore needs its layers rebuilt here. A normal cold start must not
+                // suspend/hide a locked app the owner is already using.
+                runCatching { appRepository.rehideLockedApps() }
+                runCatching { appRepository.syncLockGuard() }
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
+        appScope.launch {
+            freezeManager.changes.filter { it > 0 }.collect {
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
+        // Locks hide and suspend apps too; their record needs the same out-of-data copy.
+        appScope.launch {
+            prefs.lockedApps.drop(1).collect {
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
         // A list saved by an older build has no guard yet. This writes it before the first
         // lock tap, and does nothing where root is unavailable.
         appScope.launch { runCatching { appRepository.syncLockGuard() } }
@@ -108,6 +138,9 @@ class DelugeApp : Application() {
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
                     val packageName = intent.data?.schemeSpecificPart ?: return
+                    // Freeze records survive this package's uninstall and reinstall on purpose:
+                    // the list is the user's choice, not a fact that dies with the APK. Only
+                    // the lock's own hide/suspend layer is repaired here.
                     appScope.launch {
                         if (!appRepository.isLockRevealActive(packageName)) {
                             appRepository.rehideLockedApps(only = packageName)
