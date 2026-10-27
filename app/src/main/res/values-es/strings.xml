@@ -587,6 +587,8 @@
     <string name="tag_remove">Quitar etiqueta</string>
     <string name="app_lock_title">Desbloquear para abrir</string>
     <string name="app_lock_prompt">Confirma el bloqueo de pantalla para abrir %1$s</string>
+    <string name="app_unlock_title">Quitar el bloqueo</string>
+    <string name="app_unlock_prompt">Confirma el bloqueo de pantalla para quitar el bloqueo de %1$s</string>
     <string name="settings_app_lock_timeout">Volver a pedir tras</string>
     <string name="settings_app_lock_every_time">Cada vez</string>
     <string name="settings_app_lock_minutes">%d min</string>

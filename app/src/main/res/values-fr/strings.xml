@@ -587,6 +587,8 @@
     <string name="tag_remove">Retirer l\'étiquette</string>
     <string name="app_lock_title">Déverrouiller pour ouvrir</string>
     <string name="app_lock_prompt">Confirme le verrouillage pour ouvrir %1$s</string>
+    <string name="app_unlock_title">Retirer le verrou</string>
+    <string name="app_unlock_prompt">Confirmez le verrouillage de l\'écran pour retirer le verrou de %1$s</string>
     <string name="settings_app_lock_timeout">Redemander après</string>
     <string name="settings_app_lock_every_time">À chaque fois</string>
     <string name="settings_app_lock_minutes">%d min</string>

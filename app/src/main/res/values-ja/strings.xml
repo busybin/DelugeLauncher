@@ -587,6 +587,8 @@
     <string name="tag_remove">タグを外す</string>
     <string name="app_lock_title">開くにはロック解除</string>
     <string name="app_lock_prompt">%1$sを開くには画面ロックを認証してください</string>
+    <string name="app_unlock_title">アプリのロックを解除</string>
+    <string name="app_unlock_prompt">%1$sのロックを解除するには画面ロックを認証してください</string>
     <string name="settings_app_lock_timeout">再確認の間隔</string>
     <string name="settings_app_lock_every_time">毎回</string>
     <string name="settings_app_lock_minutes">%d 分</string>

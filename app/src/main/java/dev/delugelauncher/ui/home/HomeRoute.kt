@@ -788,6 +788,12 @@ fun HomeRoute(
     val lockLoaded = lockedAppsOrNull != null
     val lockTimeout by app.prefs.appLockTimeout.collectAsState(initial = 0)
     val requestUnlock = rememberAppLockRequest()
+    // Removing a lock is a change to the protection itself, so it asks the same question as
+    // opening the app would; otherwise the menu item is a one-tap way around the lock.
+    val requestUnlockRemoval = rememberAppLockRequest(
+        R.string.app_unlock_title,
+        R.string.app_unlock_prompt,
+    )
 
     /** Opens an app the lock has just been lifted for, waking it first if it is also asleep. */
     fun openUnlocked(entry: AppInfo) {
@@ -1320,7 +1326,15 @@ fun HomeRoute(
                 pinchToResize = settings.pinchToResize,
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 lockedApps = lockedApps,
-                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, !it.lockedBy(lockedApps)) } },
+                onToggleLock = { entry ->
+                    if (entry.lockedBy(lockedApps)) {
+                        requestUnlockRemoval(entry.label) {
+                            scope.launch { app.prefs.setAppLocked(entry.key, false) }
+                        }
+                    } else {
+                        scope.launch { app.prefs.setAppLocked(entry.key, true) }
+                    }
+                },
                 alignment = settings.alignment,
                 iconSide = settings.iconSide,
                 editMode = homeEditMode,
@@ -1538,7 +1552,15 @@ fun HomeRoute(
                 dimPausedApps = settings.dimPausedApps,
                 reduceMotion = settings.reduceMotion,
                 lockedApps = lockedApps,
-                onToggleLock = { scope.launch { app.prefs.setAppLocked(it.key, !it.lockedBy(lockedApps)) } },
+                onToggleLock = { entry ->
+                    if (entry.lockedBy(lockedApps)) {
+                        requestUnlockRemoval(entry.label) {
+                            scope.launch { app.prefs.setAppLocked(entry.key, false) }
+                        }
+                    } else {
+                        scope.launch { app.prefs.setAppLocked(entry.key, true) }
+                    }
+                },
                 freezeActions = if (freezeEnabled) freezeActions else null,
                 appTags = appTags,
                 allTags = allTags,

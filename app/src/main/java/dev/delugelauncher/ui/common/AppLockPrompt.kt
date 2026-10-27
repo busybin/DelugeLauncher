@@ -33,12 +33,15 @@ import dev.delugelauncher.R
  * first answer would open the wrong app.
  */
 @Composable
-fun rememberAppLockRequest(): (label: String, onUnlocked: () -> Unit) -> Unit {
+fun rememberAppLockRequest(
+    titleRes: Int = R.string.app_lock_title,
+    promptRes: Int = R.string.app_lock_prompt,
+): (label: String, onUnlocked: () -> Unit) -> Unit {
     val context = LocalContext.current
     val activity = remember(context) { context.findActivity() }
     val keyguard = remember(context) { context.getSystemService(KeyguardManager::class.java) }
-    val title = stringResource(R.string.app_lock_title)
-    val prompt = stringResource(R.string.app_lock_prompt)
+    val title = stringResource(titleRes)
+    val prompt = stringResource(promptRes)
 
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
     var prompting by remember { mutableStateOf(false) }

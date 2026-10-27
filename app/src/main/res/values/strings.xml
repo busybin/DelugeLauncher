@@ -30,6 +30,8 @@
     <string name="tag_remove">Remove tag</string>
     <string name="app_lock_title">Unlock to open</string>
     <string name="app_lock_prompt">Confirm your screen lock to open %1$s</string>
+    <string name="app_unlock_title">Remove the app lock</string>
+    <string name="app_unlock_prompt">Confirm your screen lock to remove the lock from %1$s</string>
     <string name="settings_app_lock_timeout">Ask again after</string>
     <string name="settings_app_lock_every_time">Every time</string>
     <string name="settings_app_lock_minutes">%d min</string>

@@ -595,6 +595,8 @@
     <string name="tag_remove">Убрать тег</string>
     <string name="app_lock_title">Разблокируйте, чтобы открыть</string>
     <string name="app_lock_prompt">Подтвердите блокировку экрана, чтобы открыть %1$s</string>
+    <string name="app_unlock_title">Снять блокировку</string>
+    <string name="app_unlock_prompt">Подтвердите блокировку экрана, чтобы снять блокировку с %1$s</string>
     <string name="settings_app_lock_timeout">Спрашивать снова через</string>
     <string name="settings_app_lock_every_time">Каждый раз</string>
     <string name="settings_app_lock_minutes">%d мин</string>

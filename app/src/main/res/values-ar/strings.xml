@@ -30,6 +30,8 @@
     <string name="tag_remove">إزالة العلامة</string>
     <string name="app_lock_title">ألغِ القفل للفتح</string>
     <string name="app_lock_prompt">أكّد قفل الشاشة لفتح %1$s</string>
+    <string name="app_unlock_title">إزالة قفل التطبيق</string>
+    <string name="app_unlock_prompt">أكّد قفل الشاشة لإزالة القفل عن %1$s</string>
     <string name="settings_app_lock_timeout">اطلب مجددًا بعد</string>
     <string name="settings_app_lock_every_time">في كل مرة</string>
     <string name="settings_app_lock_minutes">%d دقيقة</string>

@@ -587,6 +587,8 @@
     <string name="tag_remove">Remover marcador</string>
     <string name="app_lock_title">Desbloquear para abrir</string>
     <string name="app_lock_prompt">Confirme o bloqueio de tela para abrir %1$s</string>
+    <string name="app_unlock_title">Remover o bloqueio</string>
+    <string name="app_unlock_prompt">Confirme o bloqueio da tela para remover o bloqueio de %1$s</string>
     <string name="settings_app_lock_timeout">Pedir novamente após</string>
     <string name="settings_app_lock_every_time">Sempre</string>
     <string name="settings_app_lock_minutes">%d min</string>
