@@ -14,6 +14,13 @@ import android.os.UserHandle
  * state rather than three. What [Absent] never covers is a read that failed: a failure means we
  * do not know, and not knowing is [Uncertain], which conceals.
  */
+/**
+ * The user id behind a profile handle. `UserHandle` has no public getter for it, but its own
+ * string is `UserHandle{10}`, which is the reading the freeze targets already use.
+ */
+val UserHandle.userId: Int?
+    get() = toString().substringAfter('{', "").substringBefore('}').toIntOrNull()
+
 sealed interface PrivateSpace {
 
     /** The profile this pass positively found, or null when it found none it could name. */

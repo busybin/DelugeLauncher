@@ -599,6 +599,10 @@
     <string name="app_lock_space_install_title">%1$s をプライベートスペースにインストール</string>
     <string name="app_lock_space_install_body">このアプリをプライベートスペース内にインストールしてから戻ってください。Deluge が再確認し、最後の手順に進みます。</string>
     <string name="app_lock_space_install_action">プライベートスペースのストアを開く</string>
+    <string name="app_lock_space_install_auto_body">Deluge がプライベートスペース内に新しいコピーをインストールします。外のコピーのデータは、削除するまで残ります。</string>
+    <string name="app_lock_space_install_auto_action">プライベートスペースにインストール</string>
+    <string name="app_lock_space_installing">%1$s をプライベートスペースにインストールしています…</string>
+    <string name="app_lock_space_install_failed">%1$s をプライベートスペースにインストールできませんでした</string>
     <string name="app_lock_space_remove_title">%1$s はプライベートスペースにあります</string>
     <string name="app_lock_space_remove_body">スペースがロックされている間も、外にあるコピーは Android の設定から開けます。この経路をふさぐには外のコピーを削除してください。アプリのデータは移動しません。プライベートスペース内でアプリを設定し直してください。</string>
     <string name="app_lock_space_remove_action">外のコピーを削除</string>

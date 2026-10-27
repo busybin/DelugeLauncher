@@ -33,10 +33,16 @@ fun PrivateSpaceProtectDialog(
             R.string.app_lock_space_unlock_action,
             R.string.app_lock_space_later,
         )
-        ProtectStep.INSTALL -> ProtectText(
+        ProtectStep.INSTALL_STORE -> ProtectText(
             R.string.app_lock_space_install_title,
             R.string.app_lock_space_install_body,
             R.string.app_lock_space_install_action,
+            R.string.app_lock_space_later,
+        )
+        ProtectStep.INSTALL_AUTO -> ProtectText(
+            R.string.app_lock_space_install_title,
+            R.string.app_lock_space_install_auto_body,
+            R.string.app_lock_space_install_auto_action,
             R.string.app_lock_space_later,
         )
         ProtectStep.REMOVE_MAIN -> ProtectText(

@@ -1490,11 +1490,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         val serial = FreezeTargetKey.userSerial(key)
         if (serial == 0L) return FreezeTarget(packageName, 0, 0L)
         // A command takes the user id, while the key carries the serial every other list uses.
-        // UserHandle exposes no public way back from a handle to its id; its own string does.
         val user = runCatching { userManager.getUserForSerialNumber(serial) }.getOrNull()
             ?: return null
-        val userId = user.toString().substringAfter('{', "").substringBefore('}').toIntOrNull()
-            ?: return null
+        val userId = user.userId ?: return null
         return FreezeTarget(packageName, userId, serial)
     }
 

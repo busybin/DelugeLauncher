@@ -599,6 +599,10 @@
     <string name="app_lock_space_install_title">Instalar %1$s no espaço privado</string>
     <string name="app_lock_space_install_body">Instale este app dentro do espaço privado e volte. O Deluge verifica de novo e passa para a última etapa.</string>
     <string name="app_lock_space_install_action">Abrir a loja do espaço privado</string>
+    <string name="app_lock_space_install_auto_body">O Deluge vai instalar uma cópia nova dentro do espaço privado. A cópia de fora mantém os dados até você removê-la.</string>
+    <string name="app_lock_space_install_auto_action">Instalar no espaço privado</string>
+    <string name="app_lock_space_installing">Instalando %1$s no espaço privado…</string>
+    <string name="app_lock_space_install_failed">Não foi possível instalar %1$s no espaço privado</string>
     <string name="app_lock_space_remove_title">%1$s está no espaço privado</string>
     <string name="app_lock_space_remove_body">A cópia de fora ainda pode ser aberta pelas Configurações do Android enquanto o espaço estiver bloqueado. Remova-a para fechar esse caminho. Os dados do app não são movidos — configure-o novamente dentro do espaço privado.</string>
     <string name="app_lock_space_remove_action">Remover a cópia de fora</string>

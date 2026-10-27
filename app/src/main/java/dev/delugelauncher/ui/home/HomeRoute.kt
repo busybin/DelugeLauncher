@@ -80,6 +80,7 @@ import dev.delugelauncher.data.ProtectStep
 import dev.delugelauncher.data.protectStepFor
 import dev.delugelauncher.data.protectionKind
 import dev.delugelauncher.data.restoreConcealed
+import dev.delugelauncher.data.userId
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.FavoritesSource
@@ -820,7 +821,8 @@ fun HomeRoute(
 
     /** Whether the private space can be reached from here at all. */
     fun canProtect(entry: AppInfo): Boolean =
-        entry.kind == EntryKind.APP && entry.userSerial == 0L && !entry.privateProfile &&
+        entry.kind == EntryKind.APP && entry.packageName != context.packageName &&
+            entry.userSerial == 0L && !entry.privateProfile &&
             android.os.Build.VERSION.SDK_INT >= PRIVATE_SPACE_SDK &&
             runCatching {
                 context.getSystemService(android.app.role.RoleManager::class.java)
@@ -830,10 +832,21 @@ fun HomeRoute(
     suspend fun nextProtectStep(entry: AppInfo, from: ProtectStep): ProtectStep =
         withContext(Dispatchers.IO) {
             val space = app.appRepository.privateSpace()
+            val shell = app.appRepository.shellAvailable()
+            val profile = space.user?.userId
+            // With a shell the profile can be read while it is locked, which is what lets a
+            // sideloaded app be installed without opening the space or visiting a store.
+            val installedInSpace = if (shell && profile != null) {
+                app.appRepository.profileHas(entry.packageName, profile)
+                    ?: app.appRepository.privateSpaceHas(entry.packageName)
+            } else {
+                app.appRepository.privateSpaceHas(entry.packageName)
+            }
             protectStepFor(
                 space = space.protectionKind,
-                installedInSpace = app.appRepository.privateSpaceHas(entry.packageName),
+                installedInSpace = installedInSpace,
                 installedInMain = app.appRepository.mainProfileHas(entry.packageName),
+                shellAvailable = shell,
                 afterRemoval = from == ProtectStep.REMOVE_MAIN,
             )
         }
@@ -901,14 +914,51 @@ fun HomeRoute(
                 }
             }
             ProtectStep.UNLOCK -> unlockProtectionSpace(entry)
-            ProtectStep.INSTALL -> {
+            ProtectStep.INSTALL_STORE -> {
                 if (!app.appRepository.openPrivateSpaceStore(context, entry.packageName)) {
                     Toast.makeText(context, R.string.app_lock_space_failed, Toast.LENGTH_SHORT).show()
                 }
             }
-            // The system uninstaller asks for its own confirmation; the flow waits for the
-            // answer and re-checks the package when the launcher resumes.
-            ProtectStep.REMOVE_MAIN -> app.appRepository.uninstall(entry)
+            ProtectStep.INSTALL_AUTO -> {
+                scope.launch {
+                    val label = protectLabel(entry)
+                    val profile = app.appRepository.privateSpaceUser()
+                    if (profile == null) {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_space_install_failed, label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                        return@launch
+                    }
+                    Toast.makeText(
+                        context,
+                        context.getString(R.string.app_lock_space_installing, label),
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                    if (app.appRepository.installInProfile(entry.packageName, profile)) {
+                        advanceProtection(entry, ProtectStep.INSTALL_AUTO)
+                    } else {
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.app_lock_space_install_failed, label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+            }
+            // The shell does the removal without a second system screen when it can. Without
+            // one, the system uninstaller asks its own confirmation and the flow finishes when
+            // the launcher resumes; either way the private copy stays.
+            ProtectStep.REMOVE_MAIN -> {
+                scope.launch {
+                    if (app.appRepository.removeFromMainProfile(entry.packageName)) {
+                        applyProtectStep(entry, ProtectStep.DONE)
+                    } else {
+                        app.appRepository.uninstall(entry)
+                    }
+                }
+            }
             ProtectStep.NONE, ProtectStep.DONE -> Unit
         }
     }

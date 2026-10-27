@@ -42,6 +42,10 @@
     <string name="app_lock_space_install_title">تثبيت %1$s في المساحة الخاصة</string>
     <string name="app_lock_space_install_body">ثبّت هذا التطبيق داخل المساحة الخاصة ثم عُد. سيتحقق Deluge مرة أخرى وينتقل إلى الخطوة الأخيرة.</string>
     <string name="app_lock_space_install_action">فتح متجر المساحة الخاصة</string>
+    <string name="app_lock_space_install_auto_body">سيُثبّت Deluge نسخة جديدة داخل المساحة الخاصة. تحتفظ النسخة الخارجية ببياناتها إلى أن تزيلها.</string>
+    <string name="app_lock_space_install_auto_action">تثبيت في المساحة الخاصة</string>
+    <string name="app_lock_space_installing">جارٍ تثبيت %1$s في المساحة الخاصة…</string>
+    <string name="app_lock_space_install_failed">تعذّر تثبيت %1$s في المساحة الخاصة</string>
     <string name="app_lock_space_remove_title">%1$s موجود في المساحة الخاصة</string>
     <string name="app_lock_space_remove_body">لا تزال النسخة الخارجية قابلة للفتح من إعدادات Android أثناء قفل المساحة. أزلها لسد هذا المسار. لا تنتقل بيانات التطبيق — أعد إعداده داخل المساحة الخاصة.</string>
     <string name="app_lock_space_remove_action">إزالة النسخة الخارجية</string>

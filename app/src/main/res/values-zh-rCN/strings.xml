@@ -42,6 +42,10 @@
     <string name="app_lock_space_install_title">在私密空间中安装 %1$s</string>
     <string name="app_lock_space_install_body">请把这个应用装进私密空间，然后返回。Deluge 会重新检查并进入最后一步。</string>
     <string name="app_lock_space_install_action">打开私密空间应用商店</string>
+    <string name="app_lock_space_install_auto_body">Deluge 会在私密空间里安装一份全新的副本。外面的副本会保留数据，直到你移除它。</string>
+    <string name="app_lock_space_install_auto_action">安装到私密空间</string>
+    <string name="app_lock_space_installing">正在把 %1$s 安装到私密空间…</string>
+    <string name="app_lock_space_install_failed">无法把 %1$s 安装到私密空间</string>
     <string name="app_lock_space_remove_title">%1$s 已在私密空间中</string>
     <string name="app_lock_space_remove_body">私密空间锁定时，外面的副本仍可从 Android 设置打开。移除外面的副本才能堵住这条路径。应用数据不会迁移——请在私密空间中重新设置应用。</string>
     <string name="app_lock_space_remove_action">移除外面的副本</string>

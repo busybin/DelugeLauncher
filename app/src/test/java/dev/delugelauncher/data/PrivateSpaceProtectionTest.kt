@@ -15,27 +15,73 @@ class PrivateSpaceProtectionTest {
     fun `no private space asks for one first`() {
         assertEquals(
             ProtectStep.CREATE,
-            protectStepFor(PrivateSpaceKind.ABSENT, installedInSpace = null, installedInMain = true),
+            protectStepFor(
+                PrivateSpaceKind.ABSENT,
+                installedInSpace = null,
+                installedInMain = true,
+                shellAvailable = true,
+            ),
         )
     }
 
     @Test
-    fun `a locked space is opened before anything is decided about the package`() {
+    fun `a locked space without a shell is opened before anything is decided`() {
         assertEquals(
             ProtectStep.UNLOCK,
-            protectStepFor(PrivateSpaceKind.LOCKED, installedInSpace = null, installedInMain = true),
+            protectStepFor(
+                PrivateSpaceKind.LOCKED,
+                installedInSpace = null,
+                installedInMain = true,
+                shellAvailable = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `a locked space with a shell installs without opening it`() {
+        assertEquals(
+            ProtectStep.INSTALL_AUTO,
+            protectStepFor(
+                PrivateSpaceKind.LOCKED,
+                installedInSpace = false,
+                installedInMain = true,
+                shellAvailable = true,
+            ),
         )
     }
 
     @Test
     fun `an open space without the app asks for the install`() {
         assertEquals(
-            ProtectStep.INSTALL,
-            protectStepFor(PrivateSpaceKind.UNLOCKED, installedInSpace = false, installedInMain = true),
+            ProtectStep.INSTALL_STORE,
+            protectStepFor(
+                PrivateSpaceKind.UNLOCKED,
+                installedInSpace = false,
+                installedInMain = true,
+                shellAvailable = false,
+            ),
         )
         assertEquals(
-            ProtectStep.INSTALL,
-            protectStepFor(PrivateSpaceKind.UNLOCKED, installedInSpace = null, installedInMain = true),
+            ProtectStep.INSTALL_STORE,
+            protectStepFor(
+                PrivateSpaceKind.UNLOCKED,
+                installedInSpace = null,
+                installedInMain = true,
+                shellAvailable = false,
+            ),
+        )
+    }
+
+    @Test
+    fun `an open space with a shell installs without the store`() {
+        assertEquals(
+            ProtectStep.INSTALL_AUTO,
+            protectStepFor(
+                PrivateSpaceKind.UNLOCKED,
+                installedInSpace = false,
+                installedInMain = true,
+                shellAvailable = true,
+            ),
         )
     }
 
@@ -43,7 +89,12 @@ class PrivateSpaceProtectionTest {
     fun `a copy in both places asks for the outside one to be removed`() {
         assertEquals(
             ProtectStep.REMOVE_MAIN,
-            protectStepFor(PrivateSpaceKind.UNLOCKED, installedInSpace = true, installedInMain = true),
+            protectStepFor(
+                PrivateSpaceKind.UNLOCKED,
+                installedInSpace = true,
+                installedInMain = true,
+                shellAvailable = false,
+            ),
         )
     }
 
@@ -51,7 +102,12 @@ class PrivateSpaceProtectionTest {
     fun `only the private copy means there is nothing left to ask`() {
         assertEquals(
             ProtectStep.DONE,
-            protectStepFor(PrivateSpaceKind.UNLOCKED, installedInSpace = true, installedInMain = false),
+            protectStepFor(
+                PrivateSpaceKind.UNLOCKED,
+                installedInSpace = true,
+                installedInMain = false,
+                shellAvailable = false,
+            ),
         )
     }
 
@@ -66,6 +122,7 @@ class PrivateSpaceProtectionTest {
                 PrivateSpaceKind.LOCKED,
                 installedInSpace = null,
                 installedInMain = false,
+                shellAvailable = false,
                 afterRemoval = true,
             ),
         )
@@ -79,6 +136,7 @@ class PrivateSpaceProtectionTest {
                 PrivateSpaceKind.UNLOCKED,
                 installedInSpace = true,
                 installedInMain = true,
+                shellAvailable = false,
                 afterRemoval = true,
             ),
         )

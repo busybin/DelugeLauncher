@@ -42,6 +42,10 @@
     <string name="app_lock_space_install_title">Install %1$s in the private space</string>
     <string name="app_lock_space_install_body">Install this app inside the private space, then come back. Deluge checks again and moves to the last step.</string>
     <string name="app_lock_space_install_action">Open the private space store</string>
+    <string name="app_lock_space_install_auto_body">Deluge will install a fresh copy inside the private space. The copy outside keeps its data until you remove it.</string>
+    <string name="app_lock_space_install_auto_action">Install in the private space</string>
+    <string name="app_lock_space_installing">Installing %1$s in the private space…</string>
+    <string name="app_lock_space_install_failed">Couldn\'t install %1$s in the private space</string>
     <string name="app_lock_space_remove_title">%1$s is in the private space</string>
     <string name="app_lock_space_remove_body">The copy outside can still be opened from Android Settings while the space is locked. Remove it to close that way in. App data does not move — set the app up again inside the private space.</string>
     <string name="app_lock_space_remove_action">Remove the outside copy</string>

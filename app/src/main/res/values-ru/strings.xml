@@ -607,6 +607,10 @@
     <string name="app_lock_space_install_title">Установить %1$s в приватное пространство</string>
     <string name="app_lock_space_install_body">Установите это приложение в приватном пространстве и вернитесь. Deluge проверит снова и перейдёт к последнему шагу.</string>
     <string name="app_lock_space_install_action">Открыть магазин приватного пространства</string>
+    <string name="app_lock_space_install_auto_body">Deluge установит новую копию в приватном пространстве. Внешняя копия сохранит данные, пока вы её не удалите.</string>
+    <string name="app_lock_space_install_auto_action">Установить в приватное пространство</string>
+    <string name="app_lock_space_installing">Установка %1$s в приватное пространство…</string>
+    <string name="app_lock_space_install_failed">Не удалось установить %1$s в приватное пространство</string>
     <string name="app_lock_space_remove_title">%1$s уже в приватном пространстве</string>
     <string name="app_lock_space_remove_body">Внешнюю копию всё ещё можно открыть из «Настроек» Android, пока пространство заблокировано. Удалите её, чтобы закрыть этот путь. Данные приложения не переносятся — настройте его заново в приватном пространстве.</string>
     <string name="app_lock_space_remove_action">Удалить внешнюю копию</string>

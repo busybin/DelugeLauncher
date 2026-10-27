@@ -449,6 +449,62 @@ class AppRepository(
     }.getOrDefault(false)
 
     /**
+     * The shell that can provision a private space without opening it, made once so its root
+     * probe is answered once per process.
+     */
+    @Volatile
+    private var provisionShell: FreezeShell? = null
+
+    private fun shell(): FreezeShell =
+        provisionShell ?: FreezeShell(context.applicationContext).also { provisionShell = it }
+
+    /** Whether Shizuku or root can carry the private-space steps that need a shell. */
+    suspend fun shellAvailable(): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val shell = shell()
+            // Shizuku first: asking root can raise a prompt, and a working Shizuku means the
+            // shell is already answered.
+            shell.shizukuAvailable() || shell.rootAvailable()
+        }.getOrDefault(false)
+    }
+
+    /** The private profile's user id, readable while the space is locked. */
+    suspend fun privateSpaceUser(): Int? = withContext(Dispatchers.IO) {
+        privateSpace().user?.userId
+    }
+
+    /**
+     * Whether [packageName] is installed for [userId], asked of the package manager instead of
+     * LauncherApps so a locked private space still answers. Null when there is no shell or the
+     * answer could not be read.
+     */
+    suspend fun profileHas(packageName: String, userId: Int): Boolean? =
+        withContext(Dispatchers.IO) {
+            if (userId <= 0 || !FreezeCommands.isPackageName(packageName)) return@withContext null
+            val out = shell().output("pm list packages --user $userId $packageName")
+                ?: return@withContext null
+            out.lineSequence().any { it.trim() == "package:$packageName" }
+        }
+
+    /**
+     * Installs the existing main-profile package into [userId] as a fresh copy, the way
+     * `pm install-existing` does for a work profile. No store and no APK are needed, which is
+     * what makes this work for a sideloaded app; its data is not copied.
+     */
+    suspend fun installInProfile(packageName: String, userId: Int): Boolean =
+        withContext(Dispatchers.IO) {
+            if (userId <= 0 || !FreezeCommands.isPackageName(packageName)) return@withContext false
+            shell().run("pm install-existing --user $userId $packageName")
+        }
+
+    /** Removes the main-profile copy through the shell, keeping the private profile's copy. */
+    suspend fun removeFromMainProfile(packageName: String): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!FreezeCommands.isPackageName(packageName)) return@withContext false
+            shell().run("pm uninstall --user 0 $packageName")
+        }
+
+    /**
      * Opens the system's private space settings. The launcher-facing intent is what the stock
      * launcher uses and it runs as the main user, which its "Install available apps" page
      * needs; older builds only expose the settings action itself.
