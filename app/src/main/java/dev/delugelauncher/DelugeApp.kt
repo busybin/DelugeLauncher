@@ -72,6 +72,9 @@ class DelugeApp : Application() {
         prefs = Prefs(this)
         freezeManager = FreezeManager(this, prefs)
         appRepository = AppRepository(this, prefs, appScope, freezeManager)
+        // A list saved by an older build has no guard yet. This writes it before the first
+        // lock tap, and does nothing where root is unavailable.
+        appScope.launch { runCatching { appRepository.syncLockGuard() } }
         iconPackRepository = IconPackRepository(this)
         widgetHost = DelugeAppWidgetHost(this, HOST_ID)
         // Nothing else keeps the clock widget's battery line current; see the object.
