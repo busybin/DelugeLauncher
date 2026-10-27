@@ -17,6 +17,18 @@ A hard fork of [Victoria Launcher](https://github.com/adelmonte/victoria-launche
 This fork exists for freezing, then for speed and feel: fast cold start, a thumb-reachable A-Z
 strip, gestures that hold up under a real finger.
 
+| App freezing | Home | App list | Long-press menu |
+| ------------ | ---- | -------- | --------------- |
+| ![App freezing](screenshots/freeze.jpg) | ![Home](screenshots/home.jpg) | ![App list](screenshots/app-list.jpg) | ![Long-press menu](screenshots/menu.jpg) |
+| Folder | Search | Edit layout | Scrubbing the A-Z strip |
+| ![Folder](screenshots/folder.jpg) | ![Search](screenshots/search.jpg) | ![Edit layout](screenshots/edit-layout.jpg) | ![Scrubbing the A-Z strip](screenshots/scrub.jpg) |
+| Edit icon & name | Settings | Gestures | Corner button |
+| ![Edit icon and name](screenshots/icon-edit.jpg) | ![Settings](screenshots/settings.jpg) | ![Gestures](screenshots/gestures.jpg) | ![Corner button](screenshots/corner-button.jpg) |
+
+Screenshots are 720×1600. Wallpaper: *Dystopian cyberpunk city* by
+Matankic (DALL·E) — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0), via
+Wikimedia Commons.
+
 ## App freezing
 
 - **The freeze list is the home screen.** No second list to maintain, no second place to look.
