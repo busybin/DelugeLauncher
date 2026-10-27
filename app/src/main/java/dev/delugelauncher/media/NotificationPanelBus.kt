@@ -37,6 +37,8 @@ data class NotificationEntry(
     val text: String,
     val postTime: Long,
     val canDismiss: Boolean,
+    /** Whether the app itself would take the notification away once it is opened. */
+    val dismissOnOpen: Boolean = false,
     val actions: List<NotificationAction> = emptyList(),
     val contentIntent: PendingIntent? = null,
 ) {

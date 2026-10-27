@@ -278,6 +278,7 @@ class Prefs(private val context: Context) {
         val QUICK_LAUNCH_LEFT_ACTION = stringPreferencesKey("quick_launch_left_action")
         val QUICK_LAUNCH_RIGHT_ACTION = stringPreferencesKey("quick_launch_right_action")
         val LAYOUT_DEFAULTS_VERSION = intPreferencesKey("layout_defaults_version")
+        val CLOCK_DEFAULT_SEEDED = booleanPreferencesKey("clock_default_seeded")
         val WELCOME_SEEN = booleanPreferencesKey("welcome_seen")
         val DIM_OTHERS_SCRUBBING = booleanPreferencesKey("dim_others_scrubbing")
         val MARK_WORK_APPS = booleanPreferencesKey("mark_work_apps")
@@ -1436,6 +1437,10 @@ class Prefs(private val context: Context) {
     val layoutDefaultsVersion: Flow<Int?> =
         data.map { it[Keys.LAYOUT_DEFAULTS_VERSION] }.distinctUntilChanged()
 
+    /** Whether the first-run clock has already been offered, so a removed one never returns. */
+    val clockDefaultSeeded: Flow<Boolean> =
+        data.map { it[Keys.CLOCK_DEFAULT_SEEDED] ?: false }.distinctUntilChanged()
+
     val welcomeSeen: Flow<Boolean> = data.map { it[Keys.WELCOME_SEEN] ?: false }.distinctUntilChanged()
 
     /** True once any padding has been set by hand, which retires the computed first-run layout. */
@@ -2548,15 +2553,24 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.WELCOME_SEEN] = v }
     }
 
+    suspend fun setClockDefaultSeeded(v: Boolean) {
+        context.dataStore.edit { it[Keys.CLOCK_DEFAULT_SEEDED] = v }
+    }
+
     /**
-     * Stamps whether this install is new, once. Nothing writes to the store before the user
-     * changes something, so an empty store is the one reliable signal of a first run — which
-     * is why this has to run before any other setter can muddy it.
+     * Stamps whether this install is new, once. The store cannot answer that: startup migrations
+     * write to it before the first frame, so an empty store only means "no migration has run".
+     * The package's own install times can: a package that was never updated has the same first
+     * and last update time, while an upgrade is later than the install.
      */
     suspend fun ensureInstallMarker() {
+        val info = runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        }.getOrNull()
+        val freshInstall = info != null && info.lastUpdateTime <= info.firstInstallTime
         context.dataStore.edit { pref ->
             if (pref[Keys.LAYOUT_DEFAULTS_VERSION] == null) {
-                pref[Keys.LAYOUT_DEFAULTS_VERSION] = if (pref.asMap().isEmpty()) 1 else 0
+                pref[Keys.LAYOUT_DEFAULTS_VERSION] = if (freshInstall) 1 else 0
             }
         }
     }

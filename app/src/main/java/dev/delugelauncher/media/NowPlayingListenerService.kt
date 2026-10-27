@@ -243,6 +243,8 @@ class NowPlayingListenerService : NotificationListenerService() {
             text = text,
             postTime = postTime,
             canDismiss = isClearable,
+            dismissOnOpen = isClearable &&
+                (notification.flags and Notification.FLAG_AUTO_CANCEL) != 0,
             actions = actions,
             contentIntent = notification.contentIntent,
         )

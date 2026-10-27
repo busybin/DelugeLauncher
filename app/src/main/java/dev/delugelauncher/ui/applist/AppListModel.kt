@@ -325,6 +325,8 @@ private val KANA_ROWS = listOf('あ', 'か', 'さ', 'た', 'な', 'は', 'ま', 
 /** Small kana that sort below their row's first letter, mapped to their full-size form. */
 private val SMALL_KANA = mapOf(
     'ぁ' to 'あ', 'ゃ' to 'や', 'ゅ' to 'ゆ', 'ょ' to 'よ', 'ゎ' to 'わ', 'ゕ' to 'か', 'ゖ' to 'け',
+    // ゔ is う with a voicing mark, so JIS X 4061 puts it in the あ row, not at the end of わ.
+    'ゔ' to 'う',
 )
 
 /**
@@ -675,6 +677,7 @@ fun AppListModel.rankedBy(
     renamed: (AppInfo) -> Boolean = { false },
     englishName: (AppInfo) -> String? = { null },
     pinyin: Boolean = false,
+    japanese: Boolean = false,
 ): AppListModel {
     val entries = rows.filterIsInstance<AppListRow.Entry>()
     val sorted = entries.sortedBy { rank(it.app) }
@@ -683,7 +686,7 @@ fun AppListModel.rankedBy(
     // result is not a letter's worth of apps anyway. Indexed by the shown name, not the
     // package label: a rename files the row where it is drawn.
     val letterIndex = sorted.mapIndexedNotNull { index, row ->
-        val letter = filingLetter(displayName(row.app), renamed(row.app), pinyin) {
+        val letter = filingLetter(displayName(row.app), renamed(row.app), pinyin, japanese) {
             englishName(row.app)
         }
         letter.takeIf {
@@ -691,6 +694,7 @@ fun AppListModel.rankedBy(
                 displayName(sorted[index - 1].app),
                 renamed(sorted[index - 1].app),
                 pinyin,
+                japanese,
             ) { englishName(sorted[index - 1].app) }
         }?.let { it.toString() to index }
     }

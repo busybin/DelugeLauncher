@@ -25,7 +25,7 @@ strip, gestures that hold up under a real finger.
 | Edit icon & name | Settings | Gestures | Corner button |
 | ![Edit icon and name](screenshots/icon-edit.jpg) | ![Settings](screenshots/settings.jpg) | ![Gestures](screenshots/gestures.jpg) | ![Corner button](screenshots/corner-button.jpg) |
 
-Taken on an Android 14 emulator at 1080×2400. Wallpaper: *Dystopian cyberpunk city* by
+Screenshots are 720×1600. Wallpaper: *Dystopian cyberpunk city* by
 Matankic (DALL·E) — [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0), via
 Wikimedia Commons.
 

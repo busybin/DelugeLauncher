@@ -1459,6 +1459,7 @@ fun HomeRoute(
                 nameOverrides = nameOverrides,
                 englishName = { app.appRepository.englishLabel(it) },
                 pinyinSort = pinyinSort,
+                japaneseSort = japaneseSort,
                 isRenamed = { it.key in nameOverrides },
                 scrub = scrub,
                 iconSizeDp = settings.iconSizeDp,

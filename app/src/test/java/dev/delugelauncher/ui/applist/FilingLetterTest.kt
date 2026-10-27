@@ -40,6 +40,8 @@ class FilingLetterTest {
         assertEquals('あ', filingLetter("ぁい", renamed = false, japanese = true) { null })
         assertEquals('や', filingLetter("ゆき", renamed = false, japanese = true) { null })
         assertEquals('は', filingLetter("ブルー", renamed = false, japanese = true) { "Blue" })
+        assertEquals('あ', filingLetter("ヴァイオリン", renamed = false, japanese = true) { null })
+        assertEquals('あ', filingLetter("ゔ", renamed = false, japanese = true) { null })
     }
 
     @Test

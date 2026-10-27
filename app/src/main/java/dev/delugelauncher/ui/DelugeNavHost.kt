@@ -694,21 +694,41 @@ fun DelugeNavHost(
     val statusBarPeekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
     val scrubBand by app.prefs.scrubBand.collectAsState(initial = null)
     val layoutDefaultsVersion by app.prefs.layoutDefaultsVersion.collectAsState(initial = null)
+    val clockDefaultSeeded by app.prefs.clockDefaultSeeded.collectAsState(initial = false)
+
+    // Binding a widget is refused until this launcher holds the home role, and the first run
+    // usually happens before the user grants it. Watching the role on resume is what lets the
+    // clock be bound once it is granted, without waiting for another launch.
+    var homeRoleHeld by remember { mutableStateOf(isDefaultHome(context)) }
+    val homeRoleLifecycle = LocalLifecycleOwner.current
+    DisposableEffect(homeRoleLifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) homeRoleHeld = isDefaultHome(context)
+        }
+        homeRoleLifecycle.lifecycle.addObserver(observer)
+        onDispose { homeRoleLifecycle.lifecycle.removeObserver(observer) }
+    }
 
     // A brand new launcher gets its own clock, so the home screen is not simply empty on first
-    // sight. Only ever on an install that has never been set up — the marker is written once,
-    // before anything the user does — and only while there is no widget at all, so nobody's
-    // arrangement is added to and a widget they removed does not come back.
-    LaunchedEffect(layoutDefaultsVersion, widgetIds) {
-        if (layoutDefaultsVersion != 1 || widgetIds.isNotEmpty()) return@LaunchedEffect
+    // sight. Only ever on an install that has never been set up: the marker is written once,
+    // along with `clock_default_seeded`, so nobody's arrangement is added to and a widget they
+    // removed does not come back.
+    LaunchedEffect(layoutDefaultsVersion, widgetIds, homeRoleHeld, clockDefaultSeeded) {
+        if (clockDefaultSeeded) return@LaunchedEffect
+        if (layoutDefaultsVersion == null) return@LaunchedEffect
+        if (layoutDefaultsVersion != 1 || widgetIds.isNotEmpty()) {
+            app.prefs.setClockDefaultSeeded(true)
+            return@LaunchedEffect
+        }
+        if (!homeRoleHeld) return@LaunchedEffect
         val manager = AppWidgetManager.getInstance(context)
         val id = app.widgetHost.allocateAppWidgetId()
         val bound = runCatching {
             manager.bindAppWidgetIdIfAllowed(id, ClockWidgetProvider.componentName(context))
         }.getOrDefault(false)
         if (!bound) {
-            // Binding is refused unless this launcher holds the home role, which it may not
-            // yet on the very first run. The id is given back rather than left stranded.
+            // The role can still be in the middle of changing hands; the id is given back and
+            // the next resume tries again.
             runCatching { app.widgetHost.deleteAppWidgetId(id) }
             return@LaunchedEffect
         }
@@ -716,6 +736,7 @@ fun DelugeNavHost(
         app.prefs.addWidgetId(id)
         // The provider is known here, at bind time — see widgetProviders on why it is written.
         app.prefs.setWidgetProvider(id, ClockWidgetProvider.componentName(context).packageName)
+        app.prefs.setClockDefaultSeeded(true)
     }
     val welcomeSeen by app.prefs.welcomeSeen.collectAsState(initial = true)
     val hasCustomLayout by app.prefs.hasCustomLayout.collectAsState(initial = true)

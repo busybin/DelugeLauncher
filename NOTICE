@@ -29,7 +29,7 @@ Changes began in October 2026 and consist of:
     class names and resources renamed.
   * A new visual identity: a blue Material 3 colour scheme and a new adaptive launcher
     icon, replacing the original theme and icon.
-  * Translations: ten languages plus Traditional Chinese, and an in-app language picker.
+  * Translations: eight languages, and an in-app language picker.
   * The navigation library was removed and replaced with an in-app router; the
     material-icons-extended dependency was removed and the handful of icons it
     provided are now drawn in this project.

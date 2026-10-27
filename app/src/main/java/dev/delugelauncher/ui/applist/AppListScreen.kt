@@ -350,6 +350,8 @@ fun AppListScreen(
     englishName: (AppInfo) -> String? = { null },
     /** Whether the launcher is in Chinese, so Han names file under their pinyin like the list. */
     pinyinSort: Boolean = false,
+    /** Whether the launcher is in Japanese, so kana names keep their rows in search results. */
+    japaneseSort: Boolean = false,
     /** Whether the shown name was typed by hand, which files '#' as '#' itself. */
     isRenamed: (AppInfo) -> Boolean = { false },
     searchEnabled: Boolean,
@@ -419,6 +421,7 @@ fun AppListScreen(
                     renamed = { isRenamed(it) },
                     englishName = { englishName(it) },
                     pinyin = pinyinSort,
+                    japanese = japaneseSort,
                 )
         }
     }

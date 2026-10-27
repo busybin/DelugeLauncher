@@ -1856,7 +1856,9 @@ private fun FavoriteRow(
             },
         )
     }
-    if (!editMode && notificationLines.isNotEmpty()) {
+    // A locked app keeps its notifications to itself: the text would be readable on the home
+    // screen, and the line's tap reaches the app's own activity without the lock.
+    if (!editMode && !isLocked && notificationLines.isNotEmpty()) {
         val context = LocalContext.current
         Column(
             Modifier
@@ -1883,7 +1885,7 @@ private fun FavoriteRow(
                         .clickable {
                             if (!NotificationGateway.open(context, line)) {
                                 onLaunch()
-                            } else if (line.canDismiss) {
+                            } else if (line.dismissOnOpen) {
                                 NotificationGateway.dismiss(line.notificationKey)
                             }
                         },
