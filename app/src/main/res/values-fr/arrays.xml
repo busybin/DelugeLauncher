@@ -4,7 +4,7 @@
         <item>Le texte des notifications sous les favoris affiche jusqu\'à trois notifications par application, les plus récentes d\'abord. Touchez-en une pour l\'ouvrir, et réglez sa taille de texte.</item>
         <item>Un point à côté du nom quand les icônes sont masquées et que l\'application a des notifications.</item>
         <item>Sur un téléphone en japonais, les noms se classent par lignes de kana, et les noms en kanji sur une ligne à part.</item>
-        <item>Le cadenas de l\'espace privé termine la liste ; son menu installe des applications dans l\'espace et ouvre ses paramètres.</item>
+        <item>Le cadenas de l’espace privé termine la liste ; son menu installe des applications dans l’espace et ouvre ses paramètres. Verrouiller une application propose désormais le même parcours : créer l’espace, l’y installer et supprimer la copie extérieure.</item>
         <item>Les widgets peuvent vivre dans les dossiers, au-dessus des applications, avec leur propre hauteur et menu de réglages.</item>
         <item>Les dossiers de la liste ont un menu par appui long : gérer les applications, ajouter à ou retirer de l\'écran d\'accueil, supprimer.</item>
         <item>Le widget horloge suit la police du lanceur.</item>

@@ -68,8 +68,9 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 - Favorite rules show or hide favorites by Wi-Fi, time of day, headphones or a daily open
   limit.
 - Private space apps get a padlock row at the end of the list that opens the space in place,
-  installs apps into it and reaches its settings; the freeze screen offers Android 15's stronger
-  isolation when the phone has it.
+  installs apps into it and reaches its settings; locking an app offers the same path from
+  creating the space to removing the copy outside. The freeze screen offers Android 15's
+  stronger isolation when the phone has it.
 - The A-Z strip's edge setting is the whole reach from the screen edge, so it leaves the icons alone.
 - Pinyin search by initials or full spelling, and pinyin ordering for Chinese app names.
 - Tags with scrubbing, and a Frequent tag that follows usage.
