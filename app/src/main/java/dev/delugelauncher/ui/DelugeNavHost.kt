@@ -60,6 +60,9 @@ import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.RippleParams
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
@@ -561,6 +564,9 @@ fun DelugeNavHost(
     val nowPlayingHeightDp by app.prefs.nowPlayingHeightDp.collectAsState(initial = 64)
     val homePaddings by app.prefs.homePaddings.collectAsState(initial = HomePaddings.Default)
     val edgeSide by app.prefs.edgeSide.collectAsState(initial = EdgeSide.BOTH)
+    val scrubStyle by app.prefs.scrubStyle.collectAsState(initial = ScrubStyle.BELL)
+    val scrubBubbleShape by app.prefs.scrubBubbleShape.collectAsState(initial = ScrubBubbleShape.ROUNDED)
+    val rippleParams by app.prefs.rippleParams.collectAsState(initial = RippleParams())
     val azStripVisibility by app.prefs.azStripVisibility.collectAsState(initial = AzStripVisibility.NEVER)
     val showAlphabet by app.prefs.showAlphabet.collectAsState(initial = true)
     val alignRight by app.prefs.alignRight.collectAsState(initial = false)
@@ -576,6 +582,7 @@ fun DelugeNavHost(
     val widgetId by app.prefs.widgetId.collectAsState(initial = -1)
     val widgetPosition by app.prefs.widgetPosition.collectAsState(initial = 0)
     val widgetHeightDp by app.prefs.widgetHeightDp.collectAsState(initial = 180)
+    val widgetsStacked by app.prefs.widgetsStacked.collectAsState(initial = false)
     val hasCustomWidgetHeight by app.prefs.hasCustomWidgetHeight.collectAsState(initial = true)
     val defaultPromptDismissed by app.prefs.defaultPromptDismissed.collectAsState(initial = false)
     val nowPlayingEnabled by app.prefs.nowPlayingEnabled.collectAsState(initial = false)
@@ -985,6 +992,10 @@ fun DelugeNavHost(
         nowPlayingHeightDp = nowPlayingHeightDp,
         nowPlayingEnabled = nowPlayingEnabled,
         edgeSide = edgeSide,
+        scrubStyle = scrubStyle,
+        scrubBubbleShape = scrubBubbleShape,
+        rippleParams = rippleParams,
+        widgetsStacked = widgetsStacked,
         azStripVisibility = azStripVisibility,
         shortcutSwipe = shortcutSwipe,
         showAlphabet = showAlphabet,
@@ -1138,6 +1149,9 @@ fun DelugeNavHost(
             },
             onResizeFolderWidget = { folderId, id, height ->
                 scope.launch { app.prefs.setFolderWidgetHeight(folderId, id, height) }
+            },
+            onSetFolderNowPlaying = { folderId, on ->
+                scope.launch { app.prefs.setFolderNowPlaying(folderId, on) }
             },
         )
     }
@@ -1728,6 +1742,10 @@ fun DelugeNavHost(
                 appLockScreenOff = appLockScreenOff,
                 onSetAppLockScreenOff = { enabled -> scope.launch { app.prefs.setAppLockScreenOff(enabled) } },
                 edgeSide = edgeSide,
+                scrubStyle = scrubStyle,
+                scrubBubbleShape = scrubBubbleShape,
+                rippleParams = rippleParams,
+                widgetsStacked = widgetsStacked,
                 edgeZoneWidthDp = edgeZoneWidthDp,
                 azStripVisibility = azStripVisibility,
                 showAlphabet = showAlphabet,
@@ -1769,6 +1787,10 @@ fun DelugeNavHost(
                 onPickFontFile = actionsB.onPickFontFile,
                 onSetDoubleTapToLock = actionsB.onSetDoubleTapToLock,
                 onSetEdgeSide = actionsB.onSetEdgeSide,
+                onSetScrubStyle = { scope.launch { app.prefs.setScrubStyle(it) } },
+                onSetScrubBubbleShape = { scope.launch { app.prefs.setScrubBubbleShape(it) } },
+                onSetRippleParams = { scope.launch { app.prefs.setRippleParams(it) } },
+                onSetWidgetsStacked = { scope.launch { app.prefs.setWidgetsStacked(it) } },
                 onSetEdgeZoneWidth = actionsB.onSetEdgeZoneWidth,
                 onSetAzStripVisibility = actionsB.onSetAzStripVisibility,
                 onSetShowAlphabet = actionsB.onSetShowAlphabet,

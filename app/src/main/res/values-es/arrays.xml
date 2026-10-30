@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v28">
+        <item>Las carpetas pueden llevar la tarjeta En reproducción: mantén pulsada una carpeta y elige «Añadir En reproducción». La tarjeta se abre con la carpeta, aunque no suene nada.</item>
+        <item>Los deslizamientos de inicio rápido llegan ahora al borde inferior de la pantalla de inicio, aunque los favoritos lo llenen.</item>
+        <item>Los botones dentro de una carpeta abierta ya no pierden sus toques contra la franja del borde que abre la lista de aplicaciones.</item>
+        <item>Con la barra de estado a 0 segundos, la barra se oculta al instante, también al volver desde una aplicación.</item>
+        <item>Todos los widgets de inicio se pueden apilar, cada uno con su altura.</item>
+        <item>La tira A-Z puede moverse como una campana o como una onda, con controles de velocidad, amortiguación y rigidez.</item>
+        <item>La burbuja de la letra en la tira A-Z puede ser redondeada, circular, cuadrada u oculta.</item>
+        <item>Los miembros de una carpeta muestran sus notificaciones más recientes, y un deslizamiento lateral borra una línea.</item>
+        <item>El ajuste de atenuar el fondo ahora indica que atenúa el fondo de pantalla.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>El texto de las notificaciones bajo los favoritos muestra hasta tres por aplicación, las más recientes primero. Toca una para abrirla, y ajusta su tamaño de letra.</item>
         <item>Un punto junto al nombre cuando los iconos están ocultos y la aplicación tiene notificaciones.</item>

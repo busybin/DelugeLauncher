@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v28">
+        <item>Un dossier peut contenir la carte En cours de lecture : appui long sur un dossier, puis « Ajouter En cours de lecture ». La carte s\'ouvre avec le dossier, même sans lecture en cours.</item>
+        <item>Les balayages de lancement rapide atteignent maintenant le bas de l\'écran d\'accueil, même quand les favoris le remplissent.</item>
+        <item>Les boutons d\'un dossier ouvert ne perdent plus leurs appuis au profit de la bande de bord qui ouvre la liste des applications.</item>
+        <item>Avec la barre d\'état réglée sur 0 seconde, elle se masque aussitôt, y compris au retour d\'une application.</item>
+        <item>Tous les widgets de l\'accueil peuvent être empilés, chacun gardant sa hauteur.</item>
+        <item>La bande A-Z peut onduler comme une cloche ou une vague, avec des réglages de vitesse, d\'amortissement et de raideur.</item>
+        <item>La bulle de lettre de la bande A-Z peut être arrondie, circulaire, carrée ou masquée.</item>
+        <item>Les membres d\'un dossier affichent leurs dernières notifications, et un balayage latéral efface une ligne.</item>
+        <item>Le réglage d\'assombrissement indique maintenant qu\'il assombrit le fond d\'écran.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>Le texte des notifications sous les favoris affiche jusqu\'à trois notifications par application, les plus récentes d\'abord. Touchez-en une pour l\'ouvrir, et réglez sa taille de texte.</item>
         <item>Un point à côté du nom quand les icônes sont masquées et que l\'application a des notifications.</item>

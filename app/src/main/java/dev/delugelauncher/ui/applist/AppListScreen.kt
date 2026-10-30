@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -108,6 +109,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -143,6 +145,9 @@ import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.ui.common.FolderIcon
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.RippleParams
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.PRIVATE_SPACE_UNLOCKED_CLASS
@@ -312,6 +317,9 @@ fun AppListScreen(
     onDismiss: () -> Unit,
     contentColor: Color,
     showAlphabet: Boolean,
+    scrubStyle: ScrubStyle = ScrubStyle.BELL,
+    scrubBubbleShape: ScrubBubbleShape = ScrubBubbleShape.ROUNDED,
+    rippleParams: RippleParams = RippleParams(),
     /** Hoisted so a swipe that overshoots the opening animation can keep scrolling it. */
     listState: LazyListState,
     /** How far the list still has to travel to be fully open; 0 once it has arrived. */
@@ -1686,6 +1694,8 @@ fun AppListScreen(
                 pullPx = pullPx,
                 band = band,
                 stripSide = stripSide,
+                scrubStyle = scrubStyle,
+                rippleParams = rippleParams,
                 modifier = Modifier.align(
                     if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
                 ),
@@ -1828,13 +1838,17 @@ fun AppListScreen(
         }
 
         // Bubble for the current letter, dragged out from the strip and springing back.
-        if (scrubLetter != null) {
+        if (scrubLetter != null && scrubBubbleShape != ScrubBubbleShape.HIDDEN) {
             val bubble = 72.dp
             val halfPx = with(density) { (bubble / 2).toPx() }
             val insetPx = with(density) { SCRUB_BUBBLE_INSET_DP.dp.toPx() }
             Surface(
                 color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(22.dp),
+                shape = when (scrubBubbleShape) {
+                    ScrubBubbleShape.CIRCLE -> CircleShape
+                    ScrubBubbleShape.SQUARE -> RectangleShape
+                    else -> RoundedCornerShape(22.dp)
+                },
                 modifier = Modifier
                     .align(if (activeSide == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
                     .offset {
@@ -2491,6 +2505,8 @@ private fun AlphabetSpyStrip(
     band: ScrubBand,
     /** Which side the strip is drawn on: the one the rows are not aligned against. */
     stripSide: EdgeSide,
+    scrubStyle: ScrubStyle,
+    rippleParams: RippleParams,
     modifier: Modifier = Modifier,
 ) {
     val scrubLetter = scrub.letter
@@ -2515,6 +2531,8 @@ private fun AlphabetSpyStrip(
         // leave their left side free, so that is where the strip goes.
         side = stripSide,
         spotlights = scrubLetter?.let { setOf(it) } ?: visibleLetters,
+        style = scrubStyle,
+        ripple = rippleParams,
         modifier = modifier,
     )
 }

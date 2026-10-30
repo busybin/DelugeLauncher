@@ -85,6 +85,9 @@ import dev.delugelauncher.data.restoreConcealed
 import dev.delugelauncher.data.userId
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.RippleParams
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HomeAlignment
@@ -1552,6 +1555,19 @@ fun HomeRoute(
         settings.edgeZoneInsetDp
     }
 
+    // How much of each side the edge zone actually takes. Controls inside an open folder are
+    // kept clear of it, or the zone opens the app list instead of the control they aimed at.
+    val zoneWidthStartDp = if (settings.edgeSide != EdgeSide.RIGHT) {
+        edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetLeftDp.dp)
+    } else {
+        0.dp
+    }
+    val zoneWidthEndDp = if (settings.edgeSide != EdgeSide.LEFT) {
+        edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetRightDp.dp)
+    } else {
+        0.dp
+    }
+
     LaunchedEffect(settings.edgeSide, settings.edgeZoneWidthDp, insetLeftDp, insetRightDp, view, band) {
         view.post {
             val density = view.resources.displayMetrics.density
@@ -1761,6 +1777,8 @@ fun HomeRoute(
                 sidePaddingDp = settings.sidePaddingDp,
                 widgetSidePaddingDp = settings.widgetSidePaddingDp,
                 widgetOffsetXDp = settings.widgetOffsetXDp,
+                edgeZoneStartDp = zoneWidthStartDp,
+                edgeZoneEndDp = zoneWidthEndDp,
                 onSetSidePadding = { scope.launch { app.prefs.setSidePaddingDp(it) } },
                 onSetWidgetSidePadding = { scope.launch { app.prefs.setWidgetSidePaddingDp(it) } },
                 onSetWidgetOffsetX = { scope.launch { app.prefs.setWidgetOffsetXDp(it) } },
@@ -1772,6 +1790,7 @@ fun HomeRoute(
                 folderDisguise = folderDisguise,
                 widgetPosition = widgetPosition,
                 widgetHeightDp = widgetHeightDp,
+                widgetsStacked = settings.widgetsStacked,
                 widgetTick = widgetTick,
                 hapticFeedback = settings.hapticFeedback,
                 nowPlayingEnabled = settings.nowPlayingEnabled,
@@ -2092,6 +2111,9 @@ fun HomeRoute(
                 onDismiss = { closeAppList() },
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
+                scrubStyle = settings.scrubStyle,
+                scrubBubbleShape = settings.scrubBubbleShape,
+                rippleParams = settings.rippleParams,
                 statusBarHidden = settings.hideStatusBarAppList,
                 searchModel = searchModel,
                 dimPausedApps = settings.dimPausedApps,
@@ -2186,6 +2208,8 @@ fun HomeRoute(
                 // right leave their left side free, so that is where the strip goes.
                 coveredPx = stripCoveredPx,
                 side = if (settings.alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT,
+                style = settings.scrubStyle,
+                ripple = settings.rippleParams,
                 modifier = Modifier.align(
                     if (settings.alignment == HomeAlignment.RIGHT) Alignment.CenterStart else Alignment.CenterEnd
                 ),
@@ -2347,6 +2371,10 @@ data class HomeSettings(
     val nowPlayingHeightDp: Int,
     val nowPlayingEnabled: Boolean,
     val edgeSide: EdgeSide,
+    val scrubStyle: ScrubStyle,
+    val scrubBubbleShape: ScrubBubbleShape,
+    val rippleParams: RippleParams,
+    val widgetsStacked: Boolean,
     val azStripVisibility: AzStripVisibility,
     val shortcutSwipe: ShortcutSwipe,
     val showAlphabet: Boolean,

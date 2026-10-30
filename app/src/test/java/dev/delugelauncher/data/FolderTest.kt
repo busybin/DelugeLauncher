@@ -79,4 +79,11 @@ class FolderTest {
         ).single()
         assertEquals(FOLDER_WIDGET_DEFAULT_HEIGHT_DP, restored.widgets.single().heightDp)
     }
+
+    @Test
+    fun `a folder keeps its Now Playing card`() {
+        val folders = listOf(Folder(id = "1", name = "Audio", apps = listOf("a/A"), nowPlaying = true))
+        assertEquals(folders, foldersFromJson(foldersToJson(folders)))
+        assertEquals(false, foldersFromJson("""[{"id":"1","name":"Old","apps":["a/A"]}]""").single().nowPlaying)
+    }
 }

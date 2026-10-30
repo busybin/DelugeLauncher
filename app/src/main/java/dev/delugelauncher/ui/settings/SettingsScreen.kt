@@ -132,6 +132,9 @@ import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.RippleParams
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.EDGE_ZONE_INSET_RANGE
 import dev.delugelauncher.data.HOLD_SCROLL_RANGE
 import dev.delugelauncher.data.NOTIFICATION_TEXT_SP_RANGE
@@ -192,6 +195,10 @@ class SettingsScreenModel(
     val appLockScreenOff: Boolean,
     val onSetAppLockScreenOff: (Boolean) -> Unit,
     val edgeSide: EdgeSide,
+    val scrubStyle: ScrubStyle,
+    val scrubBubbleShape: ScrubBubbleShape,
+    val rippleParams: RippleParams,
+    val widgetsStacked: Boolean,
     val azStripVisibility: AzStripVisibility,
     val showAlphabet: Boolean,
     val sortByUsage: Boolean,
@@ -313,6 +320,10 @@ class SettingsScreenModel(
     val onSetDoubleTapToLock: (Boolean) -> Unit,
     val edgeZoneWidthDp: Int,
     val onSetEdgeSide: (EdgeSide) -> Unit,
+    val onSetScrubStyle: (ScrubStyle) -> Unit,
+    val onSetScrubBubbleShape: (ScrubBubbleShape) -> Unit,
+    val onSetRippleParams: (RippleParams) -> Unit,
+    val onSetWidgetsStacked: (Boolean) -> Unit,
     val onSetEdgeZoneWidth: (Int) -> Unit,
     val onSetAzStripVisibility: (AzStripVisibility) -> Unit,
     val onSetShowAlphabet: (Boolean) -> Unit,
@@ -663,6 +674,13 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = closeFolderOnLaunch, onCheckedChange = onSetCloseFolderOnLaunch,
             )
         },
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_widgets_stacked), "widgets stack all at once") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_widgets_stacked),
+                detail = stringResource(R.string.settings_widgets_stacked_detail),
+                checked = widgetsStacked, onCheckedChange = onSetWidgetsStacked,
+            )
+        },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_status_bar), "status bar hide peek") {
             BackupRow(
                 label = stringResource(R.string.settings_status_bar),
@@ -756,6 +774,50 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 label = stringResource(R.string.settings_az_strip),
                 detail = stringResource(R.string.settings_az_strip_detail),
                 onClick = { azDialog = true },
+            )
+        },
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_scrub_style), "a-z strip animation ripple wave bell") {
+            ScrubStyleRow(scrubStyle, onSetScrubStyle)
+        },
+        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_scrub_bubble), "a-z bubble shape letter") {
+            ScrubBubbleShapeRow(scrubBubbleShape, onSetScrubBubbleShape)
+        },
+        SettingsEntry(
+            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_speed), "a-z ripple wave",
+            visible = scrubStyle == ScrubStyle.RIPPLE,
+         advanced = true) {
+            val context = LocalContext.current
+            SliderRow(
+                label = stringResource(R.string.settings_ripple_speed),
+                value = rippleParams.speed,
+                range = RippleParams.SPEED_RANGE,
+                valueLabel = { context.getString(R.string.settings_ripple_speed_value, it) },
+                onValueChange = { onSetRippleParams(rippleParams.copy(speed = it)) },
+            )
+        },
+        SettingsEntry(
+            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_damping), "a-z ripple wave damping",
+            visible = scrubStyle == ScrubStyle.RIPPLE,
+         advanced = true) {
+            SliderRow(
+                label = stringResource(R.string.settings_ripple_damping),
+                value = rippleParams.damping,
+                range = RippleParams.DAMPING_RANGE,
+                valueLabel = { String.format(java.util.Locale.getDefault(), "%.1f", it) },
+                onValueChange = { onSetRippleParams(rippleParams.copy(damping = it)) },
+            )
+        },
+        SettingsEntry(
+            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_stiffness), "a-z ripple wave stiffness",
+            visible = scrubStyle == ScrubStyle.RIPPLE,
+         advanced = true) {
+            SliderRow(
+                label = stringResource(R.string.settings_ripple_stiffness),
+                value = rippleParams.stiffness,
+                range = RippleParams.STIFFNESS_RANGE,
+                valueLabel = { it.roundToInt().toString() },
+                onValueChange = { onSetRippleParams(rippleParams.copy(stiffness = it)) },
+                step = 10f,
             )
         },
         SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_side), "a-z strip left right", advanced = true) {
@@ -1651,7 +1713,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                         SliderRow(
                             label = stringResource(R.string.settings_status_bar_timeout),
                             value = statusBarPeekSeconds.toFloat(),
-                            range = 1f..30f,
+                            range = 0f..30f,
                             valueLabel = { "${it.roundToInt()}s" },
                             onValueChange = { onSetStatusBarPeekSeconds(it.roundToInt()) },
                         )
@@ -3065,6 +3127,42 @@ private fun ShortcutSwipeRow(selected: ShortcutSwipe, onSelect: (ShortcutSwipe) 
         ) {
             ShortcutSwipe.entries.forEach { mode ->
                 FilledChip(stringResource(mode.labelRes()), selected == mode) { onSelect(mode) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScrubStyleRow(selected: ScrubStyle, onSelect: (ScrubStyle) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_scrub_style), style = MaterialTheme.typography.bodyMedium)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ScrubStyle.entries.forEach { style ->
+                FilledChip(stringResource(style.labelRes()), selected == style) { onSelect(style) }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ScrubBubbleShapeRow(selected: ScrubBubbleShape, onSelect: (ScrubBubbleShape) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_scrub_bubble), style = MaterialTheme.typography.bodyMedium)
+        // Wraps: four labels do not fit one line in Arabic or Russian, and a Row answers that
+        // by breaking the last one down the screen a letter at a time.
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ScrubBubbleShape.entries.forEach { shape ->
+                FilledChip(stringResource(shape.labelRes()), selected == shape) { onSelect(shape) }
             }
         }
     }

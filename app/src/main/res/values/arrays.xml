@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v28">
+        <item>Folders can hold the Now Playing card: long-press a folder and pick \"Add Now Playing\". The card opens with the folder, even when nothing is playing yet.</item>
+        <item>The quick-launch swipes now reach the bottom of the home screen, even when favorites fill it.</item>
+        <item>Buttons inside an open folder no longer lose their taps to the edge strip that opens the app list.</item>
+        <item>With the status bar peek set to 0 seconds, the bar hides at once, including when you come back from an app.</item>
+        <item>All home widgets can be stacked, each keeping its own height.</item>
+        <item>The A-Z strip can move as a bell or as a ripple, with speed, damping and stiffness sliders.</item>
+        <item>The letter bubble on the A-Z strip can be rounded, circular, square or hidden.</item>
+        <item>Folder members show their newest notifications, and a sideways swipe clears a line.</item>
+        <item>The wallpaper dim setting now says that it dims the wallpaper.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>Notification text under favorites shows up to three notifications per app, newest first. Tap one to open that notification, and set its own text size.</item>
         <item>A dot beside the name when icons are hidden and the app has notifications.</item>

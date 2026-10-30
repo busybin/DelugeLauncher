@@ -72,7 +72,13 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 - Apps open out of their icon and shrink back into it on a gesture back.
 - Notification text under an app name in favorites, off by default: the app's newest three, each
   one opening its own notification, with a text size of its own. A dot when icons are hidden.
-- Widgets can live inside a folder, above its apps, each with its own height.
+- Widgets can live inside a folder, above its apps, each with its own height, and a folder can
+  carry the Now Playing card even when nothing is playing.
+- Quick-launch swipes work along the bottom of the home screen too, and buttons inside an open
+  folder keep their taps clear of the edge strip that opens the app list.
+- The A-Z strip can move as a bell or a ripple, with speed, damping and stiffness, and its letter
+  bubble can be rounded, circular, square or hidden.
+- All home widgets can be stacked, each keeping its own height.
 - Japanese app names file under kana rows, kanji under a row of their own.
 - The clock widget follows the launcher's font.
 - Folders file under their own names in the app list, so one is reachable by scrolling the

@@ -88,6 +88,7 @@ class HomeScreenTwoColumnTest {
                 folderDisguise = emptyMap(),
                 widgetPosition = 0,
                 widgetHeightDp = 180,
+                widgetsStacked = false,
                 widgetTick = 0,
                 hapticFeedback = HapticFeedback.OFF,
                 nowPlayingEnabled = false,

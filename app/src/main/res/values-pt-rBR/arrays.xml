@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v28">
+        <item>As pastas podem ter o cartão Em reprodução: toque e segure uma pasta e escolha «Adicionar Em reprodução». O cartão abre junto com a pasta, mesmo sem nada tocando.</item>
+        <item>Os deslizes de atalho agora chegam à parte inferior da tela inicial, mesmo quando os favoritos a preenchem.</item>
+        <item>Os botões dentro de uma pasta aberta não perdem mais os toques para a faixa da borda que abre a lista de aplicativos.</item>
+        <item>Com a barra de status em 0 segundo, ela se esconde na hora, inclusive ao voltar de um aplicativo.</item>
+        <item>Todos os widgets da tela inicial podem ser empilhados, cada um com sua altura.</item>
+        <item>A tira A-Z pode se mover como sino ou como onda, com controles de velocidade, amortecimento e rigidez.</item>
+        <item>O balão da letra na tira A-Z pode ser arredondado, circular, quadrado ou oculto.</item>
+        <item>Os membros da pasta mostram as notificações mais recentes, e um deslize lateral limpa uma linha.</item>
+        <item>O ajuste de escurecer o plano de fundo agora diz que escurece o papel de parede.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>O texto das notificações sob os favoritos mostra até três notificações por aplicativo, as mais recentes primeiro. Toque em uma para abri-la, e ajuste o tamanho do texto.</item>
         <item>Um ponto ao lado do nome quando os ícones estão ocultos e o aplicativo tem notificações.</item>

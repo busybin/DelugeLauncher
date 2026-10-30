@@ -68,6 +68,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
@@ -92,6 +93,7 @@ import androidx.compose.material3.LocalTextStyle
 import dev.delugelauncher.ui.theme.launcherTextShadow
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -150,6 +152,7 @@ import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.data.PaddingSlot
+import dev.delugelauncher.media.NowPlayingBus
 import dev.delugelauncher.media.NowPlayingWidget
 import dev.delugelauncher.service.HapticUtil
 import androidx.compose.runtime.CompositionLocalProvider
@@ -259,6 +262,9 @@ fun HomeScreen(
     sidePaddingDp: Int,
     widgetSidePaddingDp: Int,
     widgetOffsetXDp: Int,
+    /** How wide the edge zone's live strip is on each side, so folder controls stay clear. */
+    edgeZoneStartDp: Dp = 0.dp,
+    edgeZoneEndDp: Dp = 0.dp,
     onSetSidePadding: (Int) -> Unit,
     onSetWidgetSidePadding: (Int) -> Unit,
     onSetWidgetOffsetX: (Int) -> Unit,
@@ -273,6 +279,7 @@ fun HomeScreen(
     folderDisguise: Map<String, String>,
     widgetPosition: Int,
     widgetHeightDp: Int,
+    widgetsStacked: Boolean,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
     widgetTick: Int,
     hapticFeedback: HapticFeedback,
@@ -683,6 +690,14 @@ fun HomeScreen(
     val gestureInsetRightPx = WindowInsets.systemGestures.getRight(density, layoutDir).toFloat()
     /** Where a grab handle at the end of a row sits: clear of the back gesture. */
     val dragHandleInsetDp = with(density) { gestureInsetRightPx.toDp() } + EDIT_CONTROL_END_INSET
+    // Controls inside an open folder — the Now Playing card's buttons, a widget's height
+    // stepper — run to the far end, which is where the edge zone that opens the app list
+    // lives. They make up that width so the zone does not take their taps.
+    val folderControlsInset = if (edgeZoneStartDp == 0.dp && edgeZoneEndDp == 0.dp) {
+        Modifier
+    } else {
+        Modifier.padding(start = edgeZoneStartDp, end = edgeZoneEndDp)
+    }
     // The button's placement frame and the spot it should be at: the stored value once
     // there is one, otherwise the default. Computed, never stored, so a fresh install and
     // a rotation both land somewhere sane.
@@ -893,9 +908,14 @@ fun HomeScreen(
                         var travelled = 0f
                         detectHorizontalDragGestures(
                             onDragStart = { start ->
-                                // The empty space under the whole stack. Anywhere higher is a
-                                // row, the widget, or Now Playing, and belongs to them.
-                                eligible = !editMode && start.y > offsetY.value + contentHeight
+                                // The empty space under the whole stack, and the bottom of the
+                                // screen even when the favorites reach it, for a list too long
+                                // to leave any space. A row that swipes for its shortcuts
+                                // still claims the gesture first.
+                                eligible = !editMode && (
+                                    start.y > offsetY.value + contentHeight ||
+                                        start.y > size.height * (1f - QUICK_LAUNCH_BOTTOM_FRACTION)
+                                    )
                                 travelled = 0f
                             },
                             onDragEnd = {
@@ -1252,6 +1272,7 @@ fun HomeScreen(
                             WidgetSlot(
                                 widgetIds = widgetIds,
                                 heightDp = widgetHeightDp,
+                                stacked = widgetsStacked,
                                 refreshTick = widgetTick,
                                 onEditLayout = { onEditModeChange(true) },
                                 actions = widgetActions,
@@ -1287,10 +1308,12 @@ fun HomeScreen(
                             iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
+                            controlsInset = folderControlsInset,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
                             alignment = alignment,
                             iconSide = iconSide,
+                            onOpenNowPlaying = onOpenNowPlaying,
                             menuExpanded = folderMenuFor == item.folder.id,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -1358,6 +1381,9 @@ fun HomeScreen(
                             onMemberEditIconName = { member -> renameDialogFor = member },
                             onOpenSettings = onOpenSettings,
                             dimPausedApps = dimPausedApps,
+                            notificationPreviews = notificationPreviews,
+                            notificationTextSp = notificationTextSp,
+                            lockedApps = lockedApps,
                         )
 
                         is HomeItem.Favorite -> FavoriteRow(
@@ -1912,7 +1938,6 @@ private fun FavoriteRow(
     // A locked app keeps its notifications to itself: the text would be readable on the home
     // screen, and the line's tap reaches the app's own activity without the lock.
     if (!editMode && !isLocked && notificationLines.isNotEmpty()) {
-        val context = LocalContext.current
         Column(
             Modifier
                 .fillMaxWidth()
@@ -1923,27 +1948,14 @@ private fun FavoriteRow(
                     bottom = 2.dp,
                 )
         ) {
-            notificationLines.forEach { line ->
-                Text(
-                    line.line,
-                    color = contentColor.copy(alpha = 0.65f),
-                    fontSize = notificationTextSp.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = alignment.textAlign(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // Each line opens its own notification, as the shade would; an app
-                        // that gave us nothing to open still opens.
-                        .clickable {
-                            if (!NotificationGateway.open(context, line)) {
-                                onLaunch()
-                            } else if (line.dismissOnOpen) {
-                                NotificationGateway.dismiss(line.notificationKey)
-                            }
-                        },
-                )
-            }
+            NotificationLines(
+                lines = notificationLines,
+                alignment = alignment,
+                contentColor = contentColor,
+                textSizeSp = notificationTextSp,
+                interactive = true,
+                onFallback = onLaunch,
+            )
         }
     }
     }
@@ -1966,10 +1978,14 @@ private fun FolderRow(
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
+    /** Keeps this folder's own controls out from under the edge zone. */
+    controlsInset: Modifier,
     contentColor: Color,
     showLabels: Boolean,
     alignment: HomeAlignment,
     iconSide: IconSide,
+    /** Starts whatever is playing, through the app lock gate when it is a locked app. */
+    onOpenNowPlaying: () -> Boolean,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -1996,6 +2012,11 @@ private fun FolderRow(
     onOpenSettings: () -> Unit,
     /** Whether a paused (suspended) app is shown greyed out, like outside folders. */
     dimPausedApps: Boolean,
+    /** Newest notifications per app, for the lines under its name. */
+    notificationPreviews: Map<String, List<NotificationEntry>>,
+    notificationTextSp: Int,
+    /** Keys that ask for the device lock before opening. */
+    lockedApps: Set<String>,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -2013,7 +2034,7 @@ private fun FolderRow(
     Column {
         // An emptied folder keeps its row (deleting it silently would surprise), but there
         // is nothing to open: no chevron, and a tap does nothing.
-        val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty()
+        val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty() || folder.nowPlaying
         Box(Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -2096,6 +2117,21 @@ private fun FolderRow(
                     onClick = { onDismissMenu(); widgetActions.onAddWidgetToFolder(folder.id) },
                 )
                 DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (folder.nowPlaying) R.string.folder_remove_now_playing
+                                else R.string.folder_add_now_playing
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                    onClick = {
+                        onDismissMenu()
+                        widgetActions.onSetFolderNowPlaying(folder.id, !folder.nowPlaying)
+                    },
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
                     leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
                     onClick = onEdit,
@@ -2129,7 +2165,40 @@ private fun FolderRow(
             ) {
                 // Above the apps, so a folder's widget is what it opens onto.
                 folder.widgets.forEach { widget ->
-                    key(widget.id) { FolderWidgetBlock(folder.id, widget, widgetTick, widgetActions) }
+                    key(widget.id) {
+                        FolderWidgetBlock(folder.id, widget, widgetTick, widgetActions, controlsInset)
+                    }
+                }
+                if (folder.nowPlaying) {
+                    // Shown even when silent: it was put here on purpose, and a folder that
+                    // opens without it looks like it lost it. Only a playing card is a way in;
+                    // an empty one is a placeholder, so it does not pretend to be tappable.
+                    val context = LocalContext.current
+                    val playing by NowPlayingBus.state.collectAsState()
+                    NowPlayingWidget(
+                        contentColor = contentColor,
+                        alignment = alignment,
+                        showPlaceholder = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(controlsInset)
+                            .padding(horizontal = sidePaddingDp.dp)
+                            .then(
+                                if (playing == null) {
+                                    Modifier
+                                } else {
+                                    Modifier.clickable {
+                                        if (!onOpenNowPlaying()) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.now_playing_open_failed),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            ),
+                    )
                 }
                 members.forEach { member ->
                     // Keyed so each member keeps its own press state: an unkeyed remember in
@@ -2189,19 +2258,37 @@ private fun FolderRow(
                                 }
                             },
                         ) { labelModifier ->
-                            Text(
-                                displayName(member),
-                                color = if (member.disabled || member.frozen != null ||
-                                    (dimPausedApps && member.suspended)
-                                ) {
-                                    contentColor.copy(alpha = 0.5f)
-                                } else {
-                                    contentColor
-                                },
-                                fontSize = labelSizeSp.sp,
-                                modifier = labelModifier,
-                                textAlign = alignment.textAlign(),
-                            )
+                            Column(
+                                labelModifier,
+                                horizontalAlignment = alignment.columnAlignment(),
+                            ) {
+                                Text(
+                                    displayName(member),
+                                    color = if (member.disabled || member.frozen != null ||
+                                        (dimPausedApps && member.suspended)
+                                    ) {
+                                        contentColor.copy(alpha = 0.5f)
+                                    } else {
+                                        contentColor
+                                    },
+                                    fontSize = labelSizeSp.sp,
+                                    textAlign = alignment.textAlign(),
+                                )
+                                // A locked app keeps its notifications to itself, as it does
+                                // outside a folder: the text would be readable here.
+                                if (!member.lockedBy(lockedApps)) {
+                                    NotificationLines(
+                                        lines = notificationPreviews[
+                                            NotificationPreviewBus.key(member.packageName, member.userSerial)
+                                        ].orEmpty(),
+                                        alignment = alignment,
+                                        contentColor = contentColor,
+                                        textSizeSp = notificationTextSp,
+                                        interactive = true,
+                                        onFallback = { onOpenApp(member) },
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -2389,6 +2476,7 @@ private fun FolderWidgetBlock(
     widget: FolderWidget,
     refreshTick: Int,
     actions: WidgetSlotActions,
+    controlsInset: Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
@@ -2430,7 +2518,7 @@ private fun FolderWidgetBlock(
             }
         }
         if (resizing) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = controlsInset, verticalAlignment = Alignment.CenterVertically) {
                 StepperRow(
                     label = stringResource(R.string.handle_widget_height),
                     value = liveHeight,
@@ -2514,6 +2602,9 @@ private val MAX_CONTENT_WIDTH = 600.dp
  * range: three icons' worth of length past where the content stops.
  */
 private const val BOTTOM_ROOM_ROWS = 3
+
+/** How much of the bottom of the home screen always answers the quick-launch swipes. */
+private const val QUICK_LAUNCH_BOTTOM_FRACTION = 0.2f
 
 /** The same span the icon-size slider offers, so a pinch cannot go where a drag cannot. */
 private const val MIN_ICON_DP = 12
@@ -2603,6 +2694,77 @@ private fun HomeAlignment.textAlign() = when (this) {
     HomeAlignment.LEFT -> TextAlign.Start
     HomeAlignment.CENTER -> TextAlign.Center
     HomeAlignment.RIGHT -> TextAlign.End
+}
+
+private fun HomeAlignment.columnAlignment() = when (this) {
+    HomeAlignment.LEFT -> Alignment.Start
+    HomeAlignment.CENTER -> Alignment.CenterHorizontally
+    HomeAlignment.RIGHT -> Alignment.End
+}
+
+/**
+ * An app's notifications, a line each. A tap opens that one and a sideways swipe clears it,
+ * as in the shade.
+ */
+@Composable
+private fun NotificationLines(
+    lines: List<NotificationEntry>,
+    alignment: HomeAlignment,
+    contentColor: Color,
+    textSizeSp: Int,
+    interactive: Boolean,
+    onFallback: () -> Unit,
+) {
+    val context = LocalContext.current
+    lines.forEach { line ->
+        key(line.notificationKey) {
+            val offset = remember { Animatable(0f) }
+            val scope = rememberCoroutineScope()
+            var width by remember { mutableStateOf(1) }
+            Text(
+                line.line,
+                color = contentColor.copy(
+                    alpha = 0.65f * (1f - (abs(offset.value) / width).coerceIn(0f, 1f))
+                ),
+                fontSize = textSizeSp.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = alignment.textAlign(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { width = it.width.coerceAtLeast(1) }
+                    .graphicsLayer { translationX = offset.value }
+                    .then(
+                        if (!interactive) Modifier else Modifier
+                            // Each line opens its own notification, as the shade would; an
+                            // app that gave us nothing to open still opens.
+                            .clickable {
+                                if (!NotificationGateway.open(context, line)) {
+                                    onFallback()
+                                } else if (line.dismissOnOpen) {
+                                    NotificationGateway.dismiss(line.notificationKey)
+                                }
+                            }
+                            .draggable(
+                                orientation = Orientation.Horizontal,
+                                state = rememberDraggableState { delta ->
+                                    scope.launch { offset.snapTo(offset.value + delta) }
+                                },
+                                onDragStopped = {
+                                    if (abs(offset.value) > width / 3f) {
+                                        offset.animateTo(
+                                            if (offset.value > 0) width.toFloat() else -width.toFloat()
+                                        )
+                                        NotificationGateway.dismiss(line.notificationKey)
+                                    } else {
+                                        offset.animateTo(0f)
+                                    }
+                                },
+                            )
+                    ),
+            )
+        }
+    }
 }
 
 private fun HomeAlignment.arrangement() = when (this) {

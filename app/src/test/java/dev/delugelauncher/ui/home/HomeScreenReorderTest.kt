@@ -90,6 +90,7 @@ class HomeScreenReorderTest {
                 // Last, so the favorites the drag needs are the rows on screen.
                 widgetPosition = 4,
                 widgetHeightDp = 180,
+                widgetsStacked = false,
                 widgetTick = 0,
                 hapticFeedback = HapticFeedback.OFF,
                 nowPlayingEnabled = false,

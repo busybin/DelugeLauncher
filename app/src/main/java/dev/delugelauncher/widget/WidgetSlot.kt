@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -82,12 +84,15 @@ data class WidgetSlotActions(
     val onAddWidgetToFolder: (folderId: String) -> Unit = {},
     val onRemoveFolderWidget: (folderId: String, widgetId: Int) -> Unit = { _, _ -> },
     val onResizeFolderWidget: (folderId: String, widgetId: Int, heightDp: Int) -> Unit = { _, _, _ -> },
+    /** Adds or removes the Now Playing card in a folder. */
+    val onSetFolderNowPlaying: (folderId: String, on: Boolean) -> Unit = { _, _ -> },
     /** Null while the height is automatic, so the menu offers no reset for it. */
     val onResetHeight: (() -> Unit)? = null,
 )
 
 /**
- * The home screen's widget area: one widget on screen at a time, swiped between.
+ * The home screen's widget area: one widget on screen at a time, swiped between, or with
+ * [stacked] all of them one under another.
  *
  * Every page shares [heightDp] rather than carrying its own, so swiping never moves the
  * favorites underneath — a widget that changed the layout of the rest of the screen as it
@@ -97,6 +102,7 @@ data class WidgetSlotActions(
 fun WidgetSlot(
     widgetIds: List<Int>,
     heightDp: Int,
+    stacked: Boolean,
     onEditLayout: () -> Unit,
     actions: WidgetSlotActions,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
@@ -116,8 +122,23 @@ fun WidgetSlot(
         menuExpanded = true
     }
 
-    Box(modifier = modifier.height(heightDp.dp)) {
-        if (widgetIds.isEmpty()) {
+    val rows = if (stacked) widgetIds.size.coerceAtLeast(1) else 1
+    Box(modifier = modifier.height((heightDp * rows).dp)) {
+        if (stacked && widgetIds.isNotEmpty()) {
+            Column(Modifier.fillMaxSize()) {
+                widgetIds.forEach { id ->
+                    key(id) {
+                        Box(Modifier.fillMaxWidth().height(heightDp.dp)) {
+                            WidgetPage(
+                                widgetId = id,
+                                refreshTick = refreshTick,
+                                onPressAndHold = { x, y -> openMenu(id, x, y) },
+                            )
+                        }
+                    }
+                }
+            }
+        } else if (widgetIds.isEmpty()) {
             Surface(
                 modifier = Modifier
                     .fillMaxSize()

@@ -23,6 +23,32 @@ import org.json.JSONObject
 
 enum class EdgeSide { LEFT, RIGHT, BOTH }
 
+/** How the A-Z strip moves under a fingertip. */
+enum class ScrubStyle { BELL, RIPPLE }
+
+/** The bubble that shows the letter under a finger on the A-Z strip, or none at all. */
+enum class ScrubBubbleShape { ROUNDED, CIRCLE, SQUARE, HIDDEN }
+
+/**
+ * Tunables for the ripple strip's wave simulation.
+ *
+ * @property speed how fast ripples travel along the strip, in letters per second
+ * @property damping how quickly they die out (1/s); low values ring for longer
+ * @property stiffness how hard the strip is pulled toward the bell under the finger; low
+ *   values lag and wobble, high values track tightly
+ */
+data class RippleParams(
+    val speed: Float = 30f,
+    val damping: Float = 20f,
+    val stiffness: Float = 600f,
+) {
+    companion object {
+        val SPEED_RANGE = 4f..60f
+        val DAMPING_RANGE = 0.5f..40f
+        val STIFFNESS_RANGE = 5f..1200f
+    }
+}
+
 /**
  * Which way an app row is swiped to reach the shortcuts it publishes.
  *
@@ -245,6 +271,11 @@ class Prefs(private val context: Context) {
         val TEXT_COLOR_MODE = stringPreferencesKey("text_color_mode")
         val DOUBLE_TAP_TO_LOCK = booleanPreferencesKey("double_tap_to_lock")
         val EDGE_SIDE = stringPreferencesKey("edge_side")
+        val SCRUB_STYLE = stringPreferencesKey("scrub_style")
+        val SCRUB_BUBBLE_SHAPE = stringPreferencesKey("scrub_bubble_shape")
+        val RIPPLE_SPEED = floatPreferencesKey("ripple_speed")
+        val RIPPLE_DAMPING = floatPreferencesKey("ripple_damping")
+        val RIPPLE_STIFFNESS = floatPreferencesKey("ripple_stiffness")
         val ALWAYS_SHOW_AZ = booleanPreferencesKey("always_show_az")
         val AZ_STRIP_VISIBILITY = stringPreferencesKey("az_strip_visibility")
         val HAPTIC_FEEDBACK = stringPreferencesKey("haptic_feedback")
@@ -261,6 +292,7 @@ class Prefs(private val context: Context) {
         val WIDGET_HEIGHT_DP = intPreferencesKey("widget_height_dp")
         val DEFAULT_PROMPT_DISMISSED = booleanPreferencesKey("default_prompt_dismissed")
         val WIDGET_IDS = stringPreferencesKey("widget_ids")
+        val WIDGETS_STACKED = booleanPreferencesKey("widgets_stacked")
         val WIDGET_PROVIDERS = stringPreferencesKey("widget_providers")
         val WIDGET_SIDE_PADDING_DP = intPreferencesKey("widget_side_padding_dp")
         val WIDGET_OFFSET_X_DP = intPreferencesKey("widget_offset_x_dp")
@@ -866,6 +898,26 @@ class Prefs(private val context: Context) {
         runCatching { EdgeSide.valueOf(it[Keys.EDGE_SIDE] ?: EdgeSide.BOTH.name) }.getOrDefault(EdgeSide.BOTH)
     }.distinctUntilChanged()
 
+    val scrubStyle: Flow<ScrubStyle> = data.map {
+        runCatching { ScrubStyle.valueOf(it[Keys.SCRUB_STYLE] ?: ScrubStyle.BELL.name) }
+            .getOrDefault(ScrubStyle.BELL)
+    }.distinctUntilChanged()
+
+    val scrubBubbleShape: Flow<ScrubBubbleShape> = data.map {
+        runCatching {
+            ScrubBubbleShape.valueOf(it[Keys.SCRUB_BUBBLE_SHAPE] ?: ScrubBubbleShape.ROUNDED.name)
+        }.getOrDefault(ScrubBubbleShape.ROUNDED)
+    }.distinctUntilChanged()
+
+    val rippleParams: Flow<RippleParams> = data.map {
+        val d = RippleParams()
+        RippleParams(
+            speed = (it[Keys.RIPPLE_SPEED] ?: d.speed).coerceIn(RippleParams.SPEED_RANGE),
+            damping = (it[Keys.RIPPLE_DAMPING] ?: d.damping).coerceIn(RippleParams.DAMPING_RANGE),
+            stiffness = (it[Keys.RIPPLE_STIFFNESS] ?: d.stiffness).coerceIn(RippleParams.STIFFNESS_RANGE),
+        )
+    }.distinctUntilChanged()
+
     /** Keep the A-Z strip on screen even when the app list is closed. */
     /**
      * When the strip sits on the home screen with no app list open.
@@ -905,6 +957,10 @@ class Prefs(private val context: Context) {
     /** Index into the merged (favorites + widget) home list where the widget sits. 0 = top. */
     val widgetPosition: Flow<Int> = data.map { it[Keys.WIDGET_POSITION] ?: 0 }.distinctUntilChanged()
     val widgetHeightDp: Flow<Int> = data.map { it[Keys.WIDGET_HEIGHT_DP] ?: 180 }.distinctUntilChanged()
+
+    /** Home widgets one under another instead of swiped between. */
+    val widgetsStacked: Flow<Boolean> =
+        data.map { it[Keys.WIDGETS_STACKED] ?: false }.distinctUntilChanged()
 
     val widgetIds: Flow<List<Int>> = data.map { readWidgetIds(it) }.distinctUntilChanged()
 
@@ -1813,6 +1869,10 @@ class Prefs(private val context: Context) {
         it.copy(widgets = it.widgets.map { w -> if (w.id == widgetId) w.copy(heightDp = heightDp) else w })
     }
 
+    suspend fun setFolderNowPlaying(folderId: String, on: Boolean) = updateFolder(folderId) {
+        it.copy(nowPlaying = on)
+    }
+
     suspend fun upsertFolder(folder: Folder) {
         context.dataStore.edit { pref ->
             val existing = foldersFromJson(pref[Keys.FOLDERS])
@@ -2041,6 +2101,22 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.EDGE_SIDE] = v.name }
     }
 
+    suspend fun setScrubStyle(v: ScrubStyle) {
+        context.dataStore.edit { it[Keys.SCRUB_STYLE] = v.name }
+    }
+
+    suspend fun setScrubBubbleShape(v: ScrubBubbleShape) {
+        context.dataStore.edit { it[Keys.SCRUB_BUBBLE_SHAPE] = v.name }
+    }
+
+    suspend fun setRippleParams(v: RippleParams) {
+        context.dataStore.edit {
+            it[Keys.RIPPLE_SPEED] = v.speed
+            it[Keys.RIPPLE_DAMPING] = v.damping
+            it[Keys.RIPPLE_STIFFNESS] = v.stiffness
+        }
+    }
+
     suspend fun setIconPackPackage(pkg: String?) {
         context.dataStore.edit { pref ->
             if (pkg.isNullOrBlank()) pref.remove(Keys.ICON_PACK_PACKAGE) else pref[Keys.ICON_PACK_PACKAGE] = pkg
@@ -2061,6 +2137,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setWidgetHeightDp(v: Int) {
         context.dataStore.edit { it[Keys.WIDGET_HEIGHT_DP] = v }
+    }
+
+    suspend fun setWidgetsStacked(v: Boolean) {
+        context.dataStore.edit { it[Keys.WIDGETS_STACKED] = v }
     }
 
     /**
