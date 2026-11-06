@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.data
 
+import android.app.AlarmManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,6 +13,8 @@ import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.os.UserManager
 import android.provider.Settings
+import android.provider.Telephony
+import android.telecom.TelecomManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,13 +45,18 @@ enum class FreezeMethod {
 }
 
 /** What the device gives this app to work with. */
-enum class FreezeAccess { ROOT, SHIZUKU, NONE }
+enum class FreezeAccess { ROOT, SHIZUKU, DEVICE_OWNER, DHIZUKU, NONE }
 
 /** Which root implementation answered `su`. */
 enum class RootProvider { MAGISK, KERNELSU, APATCH, SUPERSU, OTHER, NONE }
 
 /** The permission picture the freeze screen reports. */
 data class FreezeStatus(
+    /**
+     * Whether a real probe has run. Until it has, every field below is a placeholder, and
+     * no screen may read a false value as "not installed" or "no access".
+     */
+    val checked: Boolean = false,
     val access: FreezeAccess = FreezeAccess.NONE,
     /** Root may exist without being the channel in use: hiding apps needs it either way. */
     val rootGranted: Boolean = false,
@@ -57,8 +65,55 @@ data class FreezeStatus(
     val shizukuInstalled: Boolean = false,
     val shizukuRunning: Boolean = false,
     val shizukuAuthorized: Boolean = false,
+    /** The manager's package, so a fork is named instead of being called "Shizuku". */
+    val shizukuManagerPackage: String? = null,
+    /** The manager's own versionName (Shevery 14.6.0), not the binder API level. */
+    val shizukuManagerVersion: String? = null,
+    /** The Shizuku binder API level. */
     val shizukuVersion: Int = 0,
-)
+    /** The admin component is enabled; a plain device admin can still lock the screen. */
+    val deviceAdmin: Boolean = false,
+    /** This app owns the phone, so the suspend and hide policy calls answer. */
+    val deviceOwner: Boolean = false,
+    /** The Dhizuku app is installed and answering. */
+    val dhizukuInstalled: Boolean = false,
+    /** The user let this app use Dhizuku at all. */
+    val dhizukuPermission: Boolean = false,
+    /** Dhizuku delegated package access, which is what makes suspend and hide answer. */
+    val dhizukuDelegated: Boolean = false,
+) {
+    /**
+     * Whether a method can run with the channels this phone offers. A device owner — this
+     * app's own, or Dhizuku on its behalf — adds suspend and hide; disabling and
+     * force-stopping still need a shell.
+     */
+    fun supports(method: FreezeMethod): Boolean = when (method) {
+        FreezeMethod.SUSPEND -> access != FreezeAccess.NONE
+        FreezeMethod.HIDE -> deviceOwner || dhizukuDelegated || rootGranted
+        FreezeMethod.DISABLE, FreezeMethod.STOP -> rootGranted || shizukuAuthorized
+    }
+
+    /**
+     * The same question for an app in a specific profile.
+     *
+     * A device owner only manages the profile its process runs in, so offering it a
+     * work-profile hide or suspend is a tab that can never work. Root and Shizuku can act on
+     * another profile with `--user`; hiding still needs root.
+     */
+    /** What a picker may offer: everything until the first probe has answered. */
+    fun offered(method: FreezeMethod, userSerial: Long = 0L): Boolean =
+        !checked || supports(method, userSerial)
+
+    fun supports(method: FreezeMethod, userSerial: Long): Boolean {
+        if (!checked) return true
+        if (userSerial == 0L) return supports(method)
+        val shell = rootGranted || shizukuAuthorized
+        return when (method) {
+            FreezeMethod.HIDE -> rootGranted
+            FreezeMethod.DISABLE, FreezeMethod.STOP, FreezeMethod.SUSPEND -> shell
+        }
+    }
+}
 
 /** How one freeze or unfreeze ended, so the caller can say why instead of failing silently. */
 enum class FreezeOutcome {
@@ -391,42 +446,76 @@ object FreezeState {
     }
 
     /**
-     * `PRIVATE_FLAG_HIDDEN` has no public accessor. Reflection is best-effort: where it is
-     * refused the caller falls back to "absent from the launcher's list", which hidden apps
-     * are anyway.
+     * `PRIVATE_FLAG_HIDDEN` has no public accessor. Reflection is best-effort: null means the
+     * field could not be read, which is different from "visible" and must not be treated as a
+     * confirmed lift.
      */
-    fun isHidden(info: ApplicationInfo): Boolean = runCatching {
+    fun hiddenState(info: ApplicationInfo): Boolean? = runCatching {
         val field = ApplicationInfo::class.java.getField("privateFlags")
         field.getInt(info) and 1 != 0
-    }.getOrDefault(false)
+    }.getOrNull()
+
+    fun isHidden(info: ApplicationInfo): Boolean = hiddenState(info) ?: false
 }
 
 /**
  * The apps a freeze must never touch while the guard is on: the current keyboard, the home
- * app, enabled accessibility services, and the tools that grant this feature its power.
- * Freezing any of them can leave the phone unusable with no way back into the screen that
- * would lift them.
+ * app, enabled accessibility services, the tools that grant this feature its power, and the
+ * three apps whose absence is felt as a broken phone rather than a tidier one.
+ *
+ * The last group is what automatic freezing made urgent. A rule that sleeps "everything" at
+ * night would otherwise take the clock with the pending morning alarm, the dialer that has to
+ * ring, and the messenger that receives the code. None of them is safe to freeze by accident,
+ * and none of them is listed anywhere the user would think to check.
  */
 object FreezeProtection {
-    fun packages(context: Context, privileged: Set<String>): Set<String> = buildSet {
-        runCatching {
-            Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
-        }.getOrNull()?.substringBefore('/')?.let { if (FreezeCommands.isPackageName(it)) add(it) }
-        runCatching {
-            context.packageManager.resolveActivity(
-                Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
-                PackageManager.MATCH_DEFAULT_ONLY,
-            )?.activityInfo?.packageName
-        }.getOrNull()?.let { add(it) }
-        runCatching {
-            Settings.Secure.getString(
-                context.contentResolver,
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
-            )
-        }.getOrNull()?.split(':')?.forEach { service ->
-            service.substringBefore('/').takeIf { FreezeCommands.isPackageName(it) }?.let(::add)
+    fun packages(context: Context, privileged: Set<String>): Set<String> {
+        val base = buildSet {
+            runCatching {
+                Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+            }.getOrNull()?.substringBefore('/')?.let { if (FreezeCommands.isPackageName(it)) add(it) }
+            runCatching {
+                context.packageManager.resolveActivity(
+                    Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
+                    PackageManager.MATCH_DEFAULT_ONLY,
+                )?.activityInfo?.packageName
+            }.getOrNull()?.let { add(it) }
+            runCatching {
+                Settings.Secure.getString(
+                    context.contentResolver,
+                    Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+                )
+            }.getOrNull()?.split(':')?.forEach { service ->
+                service.substringBefore('/').takeIf { FreezeCommands.isPackageName(it) }?.let(::add)
+            }
+            addAll(privileged)
         }
-        addAll(privileged)
+
+        val roles = listOfNotNull(
+            // The role holders API is gone from newer SDKs, but these two getters still
+            // answer the same question, and they work back to API 26.
+            runCatching {
+                context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage
+            }.getOrNull(),
+            @Suppress("DEPRECATION")
+            runCatching { Telephony.Sms.getDefaultSmsPackage(context) }.getOrNull(),
+        )
+        // Whatever app owns the next alarm. This is the clock in practice, but an OEM clock
+        // or a third-party alarm app answers the same way, and freezing the owner is what
+        // makes the alarm silent.
+        val alarm = runCatching {
+            context.getSystemService(AlarmManager::class.java)
+                ?.nextAlarmClock?.showIntent?.creatorPackage
+        }.getOrNull()
+        return merge(base, roles + listOfNotNull(alarm))
+    }
+
+    /** [base] plus the packages a shell or the system named, with blanks and junk dropped. */
+    internal fun merge(base: Set<String>, extra: Collection<String?>): Set<String> = buildSet {
+        addAll(base)
+        extra.forEach { name ->
+            name?.takeIf { FreezeCommands.isPackageName(it) }?.let(::add)
+        }
     }
 }
 
@@ -435,19 +524,35 @@ class FreezeShell(private val context: Context) {
 
     private data class RootState(val provider: RootProvider, val version: String?)
 
+    private val policy = DeviceOwnerPolicy(context)
+    private val dhizuku = DhizukuPolicy(context)
+
     private var rootState: RootState? = null
 
     /** When `su` last refused; avoids turning every resume into another prompt. */
     private var rootMissAt = 0L
 
-    fun status(): FreezeStatus {
-        val root = rootState()
+    /**
+     * The channel picture. [probeRoot] stays true for every action and for the freeze screen;
+     * a quiet startup probe passes false so a launcher without root never raises `su`.
+     */
+    fun status(probeRoot: Boolean = true): FreezeStatus {
+        val root = rootState ?: if (probeRoot) rootState() else null
         val running = shizukuRunning()
         val authorized = running && shizukuAuthorized()
+        val manager = shizukuManager()
+        val owner = policy.active
+        val dhizukuDelegated = dhizuku.delegated
         return FreezeStatus(
-            // Shizuku first: its shell starts in a few milliseconds, while `su` has to set up
-            // a mount namespace every time. Root stays for hiding apps and as the fallback.
+            checked = true,
+            // Both policy channels need no external process, so they win when set up; the
+            // owner this app holds is direct where Dhizuku routes through its own app.
+            // Shizuku is next because its shell starts in a few milliseconds, while `su`
+            // has to set up a mount namespace every time. Root stays for hiding apps and
+            // as the fallback.
             access = when {
+                owner -> FreezeAccess.DEVICE_OWNER
+                dhizukuDelegated -> FreezeAccess.DHIZUKU
                 authorized -> FreezeAccess.SHIZUKU
                 root != null -> FreezeAccess.ROOT
                 else -> FreezeAccess.NONE
@@ -455,14 +560,32 @@ class FreezeShell(private val context: Context) {
             rootGranted = root != null,
             rootProvider = root?.provider ?: RootProvider.NONE,
             rootVersion = root?.version,
-            shizukuInstalled = shizukuInstalled(),
+            shizukuInstalled = manager != null,
             shizukuRunning = running,
             shizukuAuthorized = authorized,
+            shizukuManagerPackage = manager,
+            shizukuManagerVersion = manager?.let(::managerVersion),
             shizukuVersion = if (running) runCatching { rikka.shizuku.Shizuku.getVersion() }.getOrDefault(0) else 0,
+            deviceAdmin = policy.adminActive,
+            deviceOwner = owner,
+            dhizukuInstalled = dhizuku.installed,
+            dhizukuPermission = dhizuku.permitted,
+            dhizukuDelegated = dhizukuDelegated,
         )
     }
 
     fun access(): FreezeAccess = status().access
+
+    /** Whether a root manager is installed, so a startup probe cannot raise a surprise prompt. */
+    fun rootManagerInstalled(): Boolean = ROOT_PACKAGES.keys.any(::installed)
+
+    private fun installed(packageName: String): Boolean = runCatching {
+        context.packageManager.getPackageInfo(packageName, 0)
+    }.isSuccess
+
+    private fun managerVersion(packageName: String): String? = runCatching {
+        context.packageManager.getPackageInfo(packageName, 0).versionName
+    }.getOrNull()?.takeIf { it.isNotBlank() }
 
     /**
      * Asks `su` once per process, and asks again after a refusal: a prompt that timed out is
@@ -506,6 +629,9 @@ class FreezeShell(private val context: Context) {
         }
     }
 
+    /** Re-asks Dhizuku after the user installed or started it. */
+    fun invalidateDhizuku() = dhizuku.refresh()
+
     /**
      * A hidden root manager can leave no directory behind, so the installed package is the
      * second answer. Unknown is still root; the provider is only a label.
@@ -529,13 +655,30 @@ class FreezeShell(private val context: Context) {
      *
      * Any manager that can serve this API has to declare that permission — official Shizuku,
      * Shizuku-Next and Shevery all do — so this finds the family by contract instead of by a
-     * package name, and a future fork needs no change here.
+     * package name, and a future fork needs no change here. The known packages are a fallback
+     * for ROMs where a custom permission is not visible to another app.
      */
-    private fun shizukuManager(): String? = runCatching {
-        context.packageManager.getPermissionInfo(SHIZUKU_PERMISSION, 0).packageName
-    }.getOrNull()
+    private fun shizukuManager(): String? {
+        val declared = runCatching {
+            context.packageManager.getPermissionInfo(SHIZUKU_PERMISSION, 0).packageName
+        }.getOrNull()
+        if (declared != null && installed(declared)) return declared
+        return SHIZUKU_MANAGERS.firstOrNull(::installed)
+    }
 
     fun shizukuInstalled(): Boolean = shizukuManager() != null
+
+    /** Opens the Dhizuku app, where it is turned on or its shared scopes are changed. */
+    fun openDhizuku(): Boolean = dhizuku.open()
+
+    /**
+     * Starts Dhizuku's permission dialog and takes the package-access scope when the user
+     * agrees. [onResult] runs on the main thread.
+     */
+    fun grantDhizuku(onResult: (Boolean) -> Unit) {
+        dhizuku.refresh()
+        dhizuku.requestPermission(onResult)
+    }
 
     fun openShizuku(): Boolean = runCatching {
         val manager = shizukuManager() ?: return false
@@ -684,6 +827,15 @@ class FreezeShell(private val context: Context) {
 
         /** The manager's activity; forks keep the name so Shizuku-aware apps still open them. */
         private const val SHIZUKU_MAIN_ACTIVITY = "moe.shizuku.manager.MainActivity"
+
+        /**
+         * API-compatible managers that shipped under their own package name. The permission
+         * owner above is the primary answer; these cover a ROM that hides a custom permission.
+         */
+        private val SHIZUKU_MANAGERS = listOf(
+            "moe.shizuku.privileged.api",
+            "com.hamondev.shevery",
+        )
         private const val ROOT_TIMEOUT_MS = 15_000L
         /** A refusal is retried after this, not before; a grant needs no restart. */
         private const val ROOT_RETRY_MS = 15_000L
@@ -761,13 +913,16 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
 
     private val shell = FreezeShell(context)
     private val binder = FreezeBinder(context)
+    private val policy = DeviceOwnerPolicy(context)
+    private val dhizuku = DhizukuPolicy(context)
     private val userManager: UserManager get() = context.getSystemService(UserManager::class.java)
 
     /** One whole-list run at a time: a second tap waits instead of racing the first. */
     private val gate = Mutex()
 
-    // Checked only when the freeze screen asks: probing root can raise a prompt, which has no
-    // business happening during a cold start.
+    // Filled by a quiet probe at process start and on return, and by a full probe when the
+    // freeze or access screen asks. Root is the only part that can raise a prompt, so the
+    // quiet pass checks it only when freezing is already in use.
     private val _status = MutableStateFlow(FreezeStatus())
     val status: StateFlow<FreezeStatus> = _status
 
@@ -777,6 +932,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     /** When the channel last answered; see [ensureAccess]. Under the [gate] or a lucky read. */
     @Volatile
     private var probedAt = 0L
+
+    /** A second entry point must not start a parallel probe, and another `su` prompt. */
+    private val probeGate = Mutex()
 
     @Volatile
     private var protectedAt = 0L
@@ -801,6 +959,8 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * records died while the screen was away. Asked when the freeze screen opens.
      */
     suspend fun refreshAccess() {
+        // The user may have installed or started Dhizuku since the last look.
+        dhizuku.refresh()
         probeAccess(force = true)
         // A reinstall has empty app data. Restore the list before reconciling it, so the
         // frozen apps are still described by the screen that is about to be drawn.
@@ -809,6 +969,20 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         upgradeSuspendDialog()
         // Existing plans written by a build without a backup get one on the first visit.
         writeBackup()
+    }
+
+    /**
+     * Lifts the list and gives up device ownership, in that order.
+     *
+     * The platform normally clears the owner's policy state with the admin, but a removal
+     * that fails halfway must not leave an app hidden, so the list is released first.
+     */
+    suspend fun removeDeviceOwner(): Boolean {
+        if (!policy.active) return false
+        runCatching { unfreezeAll() }
+        val removed = withContext(Dispatchers.IO) { policy.removeDeviceOwner() }
+        if (removed) refreshAccess()
+        return removed
     }
 
     /**
@@ -910,11 +1084,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         val temporary = "$backupPath.tmp"
         return withContext(Dispatchers.IO) {
             // Readable by whichever channel writes next: a root-written 0600 file would be
-            // invisible to Shizuku after a reinstall. The rename also replaces a file owned
-            // by the other channel, which a plain redirect could not open for writing.
+            // invisible to Shizuku after a reinstall. 0640 with the shell group is enough for
+            // root and Shizuku, and keeps ordinary apps on /data/local/tmp out of the list.
             shell.run(
                 "umask 077; rm -f $temporary; echo $encoded | base64 -d > $temporary && " +
-                    "chmod 0644 $temporary && mv -f $temporary $backupPath",
+                    "chmod 0640 $temporary && (chown root:shell $temporary 2>/dev/null || true) && " +
+                    "mv -f $temporary $backupPath",
             )
         }
     }
@@ -946,12 +1121,44 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      */
     private suspend fun ensureAccess(): FreezeAccess = probeAccess(force = false)
 
-    private suspend fun probeAccess(force: Boolean): FreezeAccess {
+    /**
+     * The first probe of a process. It runs off the main thread and never blocks a frame.
+     *
+     * Shizuku is checked first because pinging its binder and reading its permission cannot
+     * raise a prompt. Root is probed only when the user already uses freezing and a root
+     * manager is installed, so a launcher that merely sits on the home screen never asks `su`.
+     */
+    suspend fun checkAccessOnStart() {
+        if (probedAt != 0L) return
+        probeAccess(force = true, quietRoot = true)
+    }
+
+    /** A cheap foreground re-probe, for a Shizuku service started after the launcher. */
+    suspend fun refreshAccessQuietly() {
+        probeAccess(force = false, quietRoot = true)
+    }
+
+    private suspend fun probeAccess(force: Boolean, quietRoot: Boolean = false): FreezeAccess {
         val now = SystemClock.elapsedRealtime()
         if (!force && now - probedAt < PROBE_TTL_MS) return _status.value.access
-        _status.value = withContext(Dispatchers.IO) { shell.status() }
-        probedAt = SystemClock.elapsedRealtime()
-        return _status.value.access
+        // Wait for an in-flight probe instead of answering with its stale placeholder: a
+        // screen-off run and a tap in the same tick used to make the tap read the initial
+        // NONE and report "no access" until it was pressed again.
+        return probeGate.withLock {
+            val afterWait = SystemClock.elapsedRealtime()
+            if (!force && afterWait - probedAt < PROBE_TTL_MS) return@withLock _status.value.access
+            try {
+                val probeRoot = !quietRoot ||
+                    (shell.rootManagerInstalled() &&
+                        (prefs.freezeEnabledNow() || prefs.freezeMethodsNow().isNotEmpty()))
+                _status.value = withContext(Dispatchers.IO) { shell.status(probeRoot = probeRoot) }
+                probedAt = SystemClock.elapsedRealtime()
+                _status.value.access
+            } catch (t: Throwable) {
+                // A failed probe is not an answer: leave the old one and let the caller carry on.
+                _status.value.access
+            }
+        }
     }
 
     /**
@@ -993,20 +1200,23 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * un-restricted. Only states the platform answers are checked, because HIDE has no
      * public answer.
      */
-    private suspend fun reconcile() {
+    private suspend fun reconcile() = gate.withLock {
         val plan = prefs.freezeMethodsNow()
         val applied = prefs.freezeAppliedNow()
-        if (plan.isEmpty() && applied.isEmpty()) return
+        if (plan.isEmpty() && applied.isEmpty()) return@withLock
         val locked = lockedMainKeys()
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
         val noLonger = applied.filter { key ->
+            // The lock owns these; reconcile must not drop a record the lock is still using.
+            if (key in locked) return@filter false
             val target = targetOf(key) ?: return@filter true
-            if (snapshot.state(target)?.installed == false || snapshot.isKnownAbsent(target)) {
-                return@filter true
-            }
-            when (val method = plan[key]) {
+            val method = plan[key]
+            if (snapshot.isKnownAbsent(target)) return@filter true
+            if (snapshot.state(target)?.installed == false) return@filter true
+            when (method) {
                 null -> true
-                FreezeMethod.DISABLE, FreezeMethod.STOP -> !isHeld(snapshot, target, method)
+                FreezeMethod.DISABLE, FreezeMethod.STOP ->
+                    !isHeld(snapshot, target, method)
                 else -> false
             }
         }
@@ -1029,7 +1239,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         }
         if (noLonger.isEmpty()) {
             if (unpaused.isNotEmpty()) _changes.value += 1
-            return
+            return@withLock
         }
         prefs.setFreezeApplied(noLonger.toSet(), applied = false)
         _changes.value += 1
@@ -1057,6 +1267,14 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     fun shizukuInstalled(): Boolean = shell.shizukuInstalled()
 
     fun openShizuku(): Boolean = shell.openShizuku()
+
+    fun openDhizuku(): Boolean = shell.openDhizuku()
+
+    /** Dhizuku's permission dialog, then the package-access scope it needs. */
+    fun grantDhizuku(onResult: (Boolean) -> Unit) = shell.grantDhizuku(onResult)
+
+    /** Permission is already there; this only takes the package-access scope. */
+    fun enableDhizuku(): Boolean = dhizuku.ensureDelegation()
 
     /** Whether the package is preinstalled, asked before a system app may join the list. */
     fun isSystemApp(packageName: String): Boolean = FreezeState.isSystemApp(context, packageName)
@@ -1186,6 +1404,13 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     suspend fun addToPlan(app: AppInfo, method: FreezeMethod): FreezeOutcome =
         addToPlanKey(app.freezeKey, app.label, app.componentName.flattenToString(), method, app.system)
 
+    /**
+     * Adds one key that carries no [AppInfo] — the unused-apps list has only what the store
+     * recorded. Nothing is frozen by this; the next trigger does that.
+     */
+    suspend fun addKeyToPlan(key: String, method: FreezeMethod = FreezeMethod.SUSPEND): FreezeOutcome =
+        addToPlanKey(key, label = null, component = null, method = method)
+
     /** Adds a batch to the list with one method — Select all. Nothing is frozen by this. */
     suspend fun addManyToPlan(apps: List<AppInfo>, method: FreezeMethod): Int {
         if (!prefs.freezeEnabledNow()) return 0
@@ -1198,7 +1423,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 app.packageName != context.packageName &&
                 app.packageName !in guarded &&
                 app.freezeKey !in locked &&
-                (systemEnabled || !app.system)
+                (systemEnabled || !app.system) &&
+                // A device owner cannot act on another profile; listing the app there would
+                // only produce a row that fails on every trigger.
+                _status.value.offered(method, app.userSerial)
         }
         if (taken.isEmpty()) return 0
         prefs.setFreezeRows(
@@ -1220,9 +1448,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         system: Boolean? = null,
     ): FreezeOutcome {
         if (!prefs.freezeEnabledNow()) return FreezeOutcome.DISABLED
-        if (key in lockedMainKeys()) return FreezeOutcome.DONE
+        if (key in lockedMainKeys()) return FreezeOutcome.PROTECTED
         val target = targetOf(key) ?: return FreezeOutcome.FAILED
         if (target.packageName == context.packageName) return FreezeOutcome.FAILED
+        if (!_status.value.offered(method, target.userSerial)) return FreezeOutcome.FAILED
         val isSystem = system ?: withContext(Dispatchers.IO) {
             FreezeSnapshot.read(context).state(target)?.system == true
         }
@@ -1242,9 +1471,17 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     suspend fun freezeKey(key: String, label: String? = null, component: String? = null): FreezeOutcome =
         gate.withLock {
             if (!prefs.freezeEnabledNow()) return@withLock FreezeOutcome.DISABLED
+            // The focus session is showing this app; freezing it would take the only thing
+            // on screen away. It is not a freeze feature, so it must not disturb one either.
+            val focus = prefs.focusNow()
+            // Freeze keys carry a profile suffix (`pkg|u<serial>`); comparing the raw key
+            // would only ever match the main-profile spelling of a package.
+            if (focus.active && FreezeTargetKey.packageName(key) == focus.packageName) {
+                return@withLock FreezeOutcome.PROTECTED
+            }
             // The lock owns this app's suspend/hide state. Freezing it again, especially with
             // DISABLE, would change a state the lock is about to need back.
-            if (key in lockedMainKeys()) return@withLock FreezeOutcome.DONE
+            if (key in lockedMainKeys()) return@withLock FreezeOutcome.PROTECTED
             loadBackupLocked()
             val target = targetOf(key) ?: return@withLock FreezeOutcome.FAILED
             if (target.packageName == context.packageName) return@withLock FreezeOutcome.FAILED
@@ -1288,6 +1525,41 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
 
     /** Unfreezes one app for now; it stays on the list. */
     suspend fun unfreeze(app: AppInfo): FreezeOutcome = unfreezeKey(app.freezeKey)
+    /**
+     * Freezes a group — today a folder — without asking for a method again.
+     *
+     * Each app keeps the method it already has; one that was never listed joins under
+     * Suspend, the gentlest method every channel can do. Progress stops at the first
+     * missing channel instead of raising the same prompt once per app.
+     */
+    suspend fun freezeMany(apps: List<AppInfo>): FreezeBatchResult {
+        var done = 0
+        var failed = 0
+        for (app in apps) {
+            val method = prefs.freezeMethodsNow()[app.freezeKey] ?: FreezeMethod.SUSPEND
+            when (freezeNow(app, method)) {
+                FreezeOutcome.DONE -> done++
+                FreezeOutcome.NO_ACCESS -> return FreezeBatchResult(done, failed, noAccess = true)
+                else -> failed++
+            }
+        }
+        return FreezeBatchResult(done = done, failed = failed)
+    }
+
+    /** Releases a group, leaving every app on the list for the next trigger. */
+    suspend fun unfreezeMany(apps: List<AppInfo>): FreezeBatchResult {
+        var done = 0
+        var failed = 0
+        for (app in apps) {
+            when (unfreeze(app)) {
+                FreezeOutcome.DONE -> done++
+                FreezeOutcome.NO_ACCESS -> return FreezeBatchResult(done, failed, noAccess = true)
+                else -> failed++
+            }
+        }
+        return FreezeBatchResult(done = done, failed = failed)
+    }
+
 
     /** The same for a caller that only knows the main profile's package name. */
     suspend fun unfreeze(packageName: String): FreezeOutcome = unfreezeKey(packageName)
@@ -1413,12 +1685,14 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      *
      * [auto] is the screen-off run: it leaves out the app on screen and any app with a
      * notification, so the thing the user is listening to or looking at does not disappear.
+     * A handover asks for the same background run but must not skip those: the guest is
+     * holding the phone, and an app left awake is exactly what the handover promised to sleep.
      *
      * The run itself is not cancellable: the commands and the record they end with belong
      * together, and a screen that goes away mid-run must not leave an app frozen with
      * nothing on record to lift it.
      */
-    suspend fun freezeAll(auto: Boolean = false): FreezeBatchResult =
+    suspend fun freezeAll(auto: Boolean = false, skipInUse: Boolean = auto): FreezeBatchResult =
         withContext(NonCancellable) {
             gate.withLock {
                 if (!prefs.freezeEnabledNow()) return@withLock FreezeBatchResult()
@@ -1428,17 +1702,21 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 val plan = prefs.freezeMethodsNow()
                 if (plan.isEmpty()) return@withLock FreezeBatchResult()
                 val locked = lockedMainKeys()
-                val guarded = protectedPackages()
+                // The focus session's target stays awake even when the user's freeze rules
+                // would otherwise sleep everything.
+                val focusPackage = prefs.focusNow()
+                    .takeIf { it.active }
+                    ?.packageName
+                    ?.takeIf { it.isNotBlank() }
+                val guarded = protectedPackages() + listOfNotNull(focusPackage)
                 val systemEnabled = prefs.freezeSystemAppsNow()
-                val skip = if (auto) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
+                val skip = if (skipInUse) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
                 val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
                 val (frozenBefore, targets) = withContext(Dispatchers.IO) {
                     val allowed = plan.filterKeys { key ->
                         if (key in locked) return@filterKeys false
                         val target = targetOf(key) ?: return@filterKeys false
                         val state = snapshot.state(target)
-                        // An uninstall keeps the list entry for the reinstall, but there is
-                        // no package to command until it comes back.
                         state?.installed != false &&
                             target.packageName != context.packageName &&
                             target.packageName !in guarded &&
@@ -1448,7 +1726,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     val seen = mutableMapOf<String, Boolean>()
                     val isFrozen: (String) -> Boolean = { key ->
                         seen.getOrPut(key) {
-                            targetOf(key)?.let { looksFrozen(snapshot, it) } == true
+                            targetOf(key)?.let { looksFrozen(snapshot, it, plan[key]) } == true
                         }
                     }
                     val already = allowed.keys.filter { it !in skip && isFrozen(it) }
@@ -1499,10 +1777,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     val target = targetOf(key) ?: return@mapNotNull null
                     // A package that is gone has nothing to lift, even when the old record
                     // was HIDE. Leaving it out lets a no-access unfreezeAll drop the record.
-                    if (snapshot.state(target)?.installed == false || snapshot.isKnownAbsent(target)) {
-                        return@mapNotNull null
-                    }
-                    key to looksFrozen(snapshot, target)
+                    if (snapshot.isKnownAbsent(target)) return@mapNotNull null
+                    if (snapshot.state(target)?.installed == false) return@mapNotNull null
+                    key to looksFrozen(snapshot, target, plan[key])
                 }.toMap()
                 FreezeSelection.toLift(held.keys, appliedNow, plan, locked) { held[it] == true }
             }
@@ -1675,8 +1952,33 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             .mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
         if (resolved.isEmpty()) return emptySet()
         val done = mutableSetOf<String>()
+        if (policy.active) {
+            val ownerDone = withContext(Dispatchers.IO) {
+                resolved.mapNotNull { (key, pair) ->
+                    val (method, target) = pair
+                    if (policy.freeze(target.packageName, method, target.userId) == true) key else null
+                }
+            }
+            done += ownerDone
+        }
+        if (dhizuku.active) {
+            val dhizukuDone = withContext(Dispatchers.IO) {
+                resolved.mapNotNull { (key, pair) ->
+                    if (key in done) return@mapNotNull null
+                    val (method, target) = pair
+                    if (dhizuku.freeze(target.packageName, method, target.userId) == true) {
+                        key
+                    } else {
+                        null
+                    }
+                }
+            }
+            done += dhizukuDone
+        }
         val canHide = binder.available() && binder.canHide()
-        val binderable = resolved.filter { (_, pair) -> pair.first != FreezeMethod.HIDE || canHide }
+        val binderable = resolved.filter { (key, pair) ->
+            key !in done && (pair.first != FreezeMethod.HIDE || canHide)
+        }
         if (binder.available() && binderable.isNotEmpty()) {
             val results = withContext(Dispatchers.IO) {
                 binderable.map { (key, pair) ->
@@ -1739,6 +2041,24 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             .mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
         if (resolved.isEmpty()) return emptySet()
         var states = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+        if (policy.active) {
+            withContext(Dispatchers.IO) {
+                resolved.map { (_, pair) ->
+                    val target = pair.second
+                    async { policy.unfreeze(target.packageName, target.userId) }
+                }.awaitAll()
+            }
+            states = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+        }
+        if (dhizuku.active) {
+            withContext(Dispatchers.IO) {
+                resolved.map { (_, pair) ->
+                    val target = pair.second
+                    async { dhizuku.unfreeze(target.packageName, target.userId) }
+                }.awaitAll()
+            }
+            states = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+        }
         if (binder.available()) {
             withContext(Dispatchers.IO) {
                 resolved.map { (key, pair) ->
@@ -1755,11 +2075,15 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             }
             states = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
         }
-        val canHide = binder.available() && binder.canHide()
+        val canHide = policy.active || dhizuku.active || (binder.available() && binder.canHide())
         var pending = withContext(Dispatchers.IO) {
             resolved.filter { (_, pair) ->
                 val (method, target) = pair
-                !freeNow(states, target) || (method == FreezeMethod.HIDE && !canHide)
+                val hiddenUnknown = method == FreezeMethod.HIDE &&
+                    FreezeState.applicationInfo(context, target.packageName, target.userSerial)
+                        ?.let { FreezeState.hiddenState(it) == null } == true
+                !freeNow(states, target, method) ||
+                    (method == FreezeMethod.HIDE && (!canHide || hiddenUnknown))
             }.map { it.first to it.second.first }
         }
         // A suspension is recorded against whoever made it and only that identity can lift it,
@@ -1807,10 +2131,17 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             resolved.filterIndexed { index, (_, pair) ->
                 val (method, target) = pair
                 val answered = answers.getOrNull(index) == true
-                // Hiding cannot be read back, and another profile's flags are read through
-                // LauncherApps only: a clean command is the only answer there is.
-                val verifiable = FreezeSelection.verifiable(method) && target.userSerial == 0L
-                !answered || (verifiable && !freeNow(states, target))
+                // Hiding has no public state to read; when the hidden flag can be read, it is
+                // the only proof the app came back. Another profile's flags are read through
+                // LauncherApps only, so a clean command is the only answer there is.
+                val verifiable = if (method == FreezeMethod.HIDE) {
+                    target.userSerial == 0L &&
+                        FreezeState.applicationInfo(context, target.packageName, 0L)
+                            ?.let { FreezeState.hiddenState(it) != null } == true
+                } else {
+                    FreezeSelection.verifiable(method) && target.userSerial == 0L
+                }
+                !answered || (verifiable && !freeNow(states, target, method))
             }.map { it.first to it.second.first }
         }
     }
@@ -1840,9 +2171,14 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     }
 
     /** Whether the device reports the app as held, using the one state read of this pass. */
-    private fun looksFrozen(snapshot: FreezeSnapshot, target: FreezeTarget): Boolean {
+    private fun looksFrozen(
+        snapshot: FreezeSnapshot,
+        target: FreezeTarget,
+        method: FreezeMethod?,
+    ): Boolean {
         if (snapshot.isKnownAbsent(target)) return false
         val state = snapshot.state(target) ?: return true
+        if (!state.installed) return false
         if (state.hidden || state.suspended) return true
         return !state.enabled && !parkedByPlatform(target)
     }
@@ -1864,7 +2200,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         target: FreezeTarget,
     ): Boolean {
         if (snapshot.state(target)?.installed == false) return false
-        return looksFrozen(snapshot, target) ||
+        return looksFrozen(snapshot, target, method) ||
             (key in applied && method == FreezeMethod.HIDE)
     }
 
@@ -1892,8 +2228,20 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * behind a record that says it was lifted. Another profile cannot be asked that way, so
      * there the snapshot's flag is all there is.
      */
-    private fun freeNow(snapshot: FreezeSnapshot, target: FreezeTarget): Boolean {
+    private fun freeNow(
+        snapshot: FreezeSnapshot,
+        target: FreezeTarget,
+        method: FreezeMethod?,
+    ): Boolean {
         val state = snapshot.state(target) ?: return true
+        if (!state.installed) return true
+        // Hiding is a separate flag; an enabled app can still be hidden, and the old check
+        // only looked at enabled/suspended, so a failed unhide was read as a success.
+        if (method == FreezeMethod.HIDE) {
+            val info = FreezeState.applicationInfo(context, target.packageName, target.userSerial)
+                ?: return true
+            return FreezeState.hiddenState(info)?.not() ?: false
+        }
         if (!state.enabled && !parkedByPlatform(target)) return false
         return if (target.userSerial == 0L) !suspendedNow(target) else !state.suspended
     }

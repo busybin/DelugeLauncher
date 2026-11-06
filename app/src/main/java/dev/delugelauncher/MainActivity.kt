@@ -21,22 +21,29 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowCompat
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.FocusSession
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.media.NowPlayingListenerService
+import dev.delugelauncher.service.FreezeAutoService
+import dev.delugelauncher.service.FreezeIntents
 import dev.delugelauncher.service.StatusBarFader
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.ui.DelugeNavHost
+import dev.delugelauncher.ui.focus.FocusOverlay
 import dev.delugelauncher.ui.common.IconConfig
 import dev.delugelauncher.ui.theme.widgetTypeface
 import dev.delugelauncher.ui.common.LaunchOrigin
@@ -218,6 +225,7 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
+            val focus by app.prefs.focus.collectAsState(initial = FocusSession())
             DelugeTheme(
                 font = font,
                 fontFile = fontFile,
@@ -228,20 +236,28 @@ class MainActivity : ComponentActivity() {
                     LocalIconConfig provides iconConfig,
                     LocalLockedApps provides lockedApps,
                 ) {
-                    DelugeNavHost(
-                        app = app,
-                        homeIntentTick = homeIntentTick,
-                        typedToSearch = typedToSearch,
-                        onTypedToSearchHandled = { handled -> typedToSearch = typedToSearch - handled.toSet() },
-                        font = font,
-                        hideStatusBar = hideStatusBar,
-                        hideStatusBarAppList = hideStatusBarAppList,
-                        iconPackPackage = iconPackPackage,
+                    Box(Modifier.fillMaxSize()) {
+                        DelugeNavHost(
+                            app = app,
+                            homeIntentTick = homeIntentTick,
+                            typedToSearch = typedToSearch,
+                            onTypedToSearchHandled = { handled -> typedToSearch = typedToSearch - handled.toSet() },
+                            font = font,
+                            hideStatusBar = hideStatusBar,
+                            hideStatusBarAppList = hideStatusBarAppList,
+                            iconPackPackage = iconPackPackage,
 
-                        iconOverrides = iconOverrides,
-                        onPeekStatusBar = { if (peekSeconds > 0) statusBarPeek = true },
-                        onAppListVisibleChange = { appListOpen = it },
-                    )
+                            iconOverrides = iconOverrides,
+                            onPeekStatusBar = { if (peekSeconds > 0) statusBarPeek = true },
+                            onAppListVisibleChange = { appListOpen = it },
+                        )
+                        if (focus.active) {
+                            FocusOverlay(
+                                session = focus,
+                                onExit = { app.runInBackground { app.prefs.setFocus(FocusSession()) } },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -377,6 +393,10 @@ class MainActivity : ComponentActivity() {
             ACTION_UNFREEZE_ALL -> false
             else -> return false
         }
+        // The activity is exported, so an action alone proves nothing: anyone could send it.
+        // The token is written into the shortcut when it is published; keep it before the
+        // action is consumed below.
+        val token = intent.getStringExtra(FreezeIntents.EXTRA_TOKEN)
         // Consumed here: a configuration change hands the same intent to onCreate again, and
         // freezing the whole list twice for one tap is not what the shortcut meant.
         intent.action = null
@@ -384,18 +404,29 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             // A stale shortcut pressed after the feature was switched off must do nothing.
             if (!app.prefs.freezeEnabledNow()) return@launch
+            if (!FreezeIntents.matches(app.prefs.externalControlTokenNow(), token)) return@launch
             FreezeToast.progress(
                 this@MainActivity,
                 if (freeze) R.string.freeze_working else R.string.unfreeze_working,
             )
             val toast = if (freeze) {
-                val result = app.freezeManager.freezeAll()
-                if (result.noAccess) getString(R.string.freeze_needs_access)
-                else getString(R.string.freeze_many_done, result.done)
+                // A shortcut can be pressed while the phone is in use; keep the app in
+                // front (and anything with a notification) out of the batch.
+                val result = app.freezeManager.freezeAll(auto = true)
+                when {
+                    result.noAccess -> getString(R.string.freeze_needs_access)
+                    result.failed > 0 ->
+                        getString(R.string.freeze_many_partial, result.done, result.failed)
+                    else -> getString(R.string.freeze_many_done, result.done)
+                }
             } else {
                 val result = app.freezeManager.unfreezeAll()
-                if (result.noAccess) getString(R.string.freeze_needs_access)
-                else getString(R.string.freeze_all_done)
+                when {
+                    result.noAccess -> getString(R.string.freeze_needs_access)
+                    result.failed > 0 ->
+                        getString(R.string.unfreeze_many_partial, result.done, result.failed)
+                    else -> getString(R.string.freeze_all_done)
+                }
             }
             FreezeToast.result(this@MainActivity, toast)
         }
@@ -418,6 +449,17 @@ class MainActivity : ComponentActivity() {
         // it stops being the thing on screen. Hiding it also force-stops it, so nothing of it
         // keeps running behind the lock.
         app.runInBackground { runCatching { app.appRepository.rehideLockedApps() } }
+        // Shizuku can be started after the launcher was already running; re-ping on every
+        // return, but the manager's TTL keeps that to one probe per ten seconds.
+        app.runInBackground { runCatching { app.freezeManager.refreshAccessQuietly() } }
+        // Sleep rules share the freeze watcher. Starting it from the Application could be
+        // refused on Android 12+ because there was no foreground at that moment; here there
+        // is one, and a rule that exists gets a service that can actually hear the network.
+        app.runInBackground {
+            if (app.prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.sync(this, enabled = true)
+            }
+        }
         // The clock widget's own rows go stale on their own — an event passes, an alarm is
         // set, "in 20 minutes" stops being true. Half an hour is the shortest the system will
         // wake a widget on a schedule, so the other half of keeping it honest is redrawing it

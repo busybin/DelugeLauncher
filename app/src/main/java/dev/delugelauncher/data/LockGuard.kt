@@ -68,6 +68,19 @@ class LockGuard(
         "mkdir -p /data/adb/service.d && [ -w /data/adb/service.d ]",
     )
 
+    /**
+     * The packages the last sync wrote, or none when the list is gone.
+     *
+     * Plain package names, because that is what the shell script compares. It is also the only
+     * record of the lock set that survives a settings file the store had to salvage.
+     */
+    fun listed(): Set<String> = runCatching {
+        listFile.readLines()
+            .map { it.trim() }
+            .filter { FreezeCommands.isPackageName(it) }
+            .toSet()
+    }.getOrDefault(emptySet())
+
     /** Lets one authenticated launch through until Deluge comes back or the screen goes off. */
     fun allow(packageName: String) {
         if (!FreezeCommands.isPackageName(packageName)) return
@@ -103,7 +116,13 @@ class LockGuard(
         )
         val ok = shell.runAsRoot(
             """
-            if [ -f $PID_FILE ]; then kill -9 $(cat $PID_FILE) 2>/dev/null; rm -f $PID_FILE; fi
+            # Only kill our own script: a stale PID file otherwise makes PID reuse kill a
+            # root process that happens to have taken the number.
+            if [ -f $PID_FILE ] && kill -0 $(cat $PID_FILE) 2>/dev/null &&
+                grep -q deluge-lock-guard /proc/$(cat $PID_FILE)/cmdline 2>/dev/null; then
+                kill -9 $(cat $PID_FILE) 2>/dev/null
+            fi
+            rm -f $PID_FILE
             mkdir -p /data/adb/service.d
             echo $encoded | base64 -d > $SCRIPT_FILE
             chmod 755 $SCRIPT_FILE
@@ -119,8 +138,11 @@ class LockGuard(
     private fun stop() {
         shell.runAsRoot(
             """
-            if [ -f $PID_FILE ]; then kill -9 $(cat $PID_FILE) 2>/dev/null; rm -f $PID_FILE; fi
-            rm -f $SCRIPT_FILE
+            if [ -f $PID_FILE ] && kill -0 $(cat $PID_FILE) 2>/dev/null &&
+                grep -q deluge-lock-guard /proc/$(cat $PID_FILE)/cmdline 2>/dev/null; then
+                kill -9 $(cat $PID_FILE) 2>/dev/null
+            fi
+            rm -f $PID_FILE $SCRIPT_FILE
             """.trimIndent(),
         )
         running = false
@@ -200,7 +222,8 @@ class LockGuard(
             PIDFILE=$PID_FILE
             if [ -f "§PIDFILE" ]; then
               old=§(cat "§PIDFILE" 2>/dev/null)
-              if [ -n "§old" ] && kill -0 "§old" 2>/dev/null; then exit 0; fi
+              if [ -n "§old" ] && kill -0 "§old" 2>/dev/null &&
+                grep -q deluge-lock-guard "/proc/§old/cmdline" 2>/dev/null; then exit 0; fi
             fi
             echo §§ > "§PIDFILE"
             trap 'rm -f "§PIDFILE"' EXIT

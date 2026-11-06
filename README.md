@@ -43,9 +43,11 @@ Wikimedia Commons.
 - **Fast by design.** One package-manager pass reads every app's state, a run only touches what
   is not already asleep, and through Shizuku each app is a single binder call — hiding included
   when the manager runs as root. A 170-app list settles in well under a second of IPC.
-- **Root or Shizuku.** Shizuku is recommended and works without root (Android 11+, over wireless
-  debugging). Hide needs root. The screen names what answered, with its version. Any manager that
-  declares the Shizuku API is found, including Shizuku-Next and Shevery.
+- **Root, Shizuku or device owner.** Shizuku is recommended and works without root (Android
+  11+, over wireless debugging). Hide needs root or a device owner. A device owner needs neither:
+  the same screen shows the one adb command that sets it up. The screen names what answered,
+  with its version. Any manager that declares the Shizuku API is found, including Shizuku-Next
+  and Shevery.
 - **A paused app opened from elsewhere** gets an Unpause and open button in the system dialog
   instead of a dead end.
 - **Widgets and pinned shortcuts** stay, greyed, and a tap unfreezes.
@@ -104,8 +106,9 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 
 ## Install
 
-Android 8.0 (API 26) or newer. Freezing needs root (Magisk, KernelSU or APatch) or
-[Shizuku](https://shizuku.rikka.app/).
+Android 8.0 (API 26) or newer. Freezing needs root (Magisk, KernelSU or APatch),
+[Shizuku](https://shizuku.rikka.app/), or Deluge set as the device owner (Settings → Freezing
+access shows the adb command).
 
 Pick Deluge Launcher under **Settings → Apps → Default apps → Home app**.
 

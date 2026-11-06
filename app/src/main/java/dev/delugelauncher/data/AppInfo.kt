@@ -48,6 +48,11 @@ data class AppInfo(
      */
     val suspended: Boolean = false,
     /**
+     * This row's work profile is paused. Kept apart from [suspended]: the profile is quiet,
+     * not the app, and a focus session should not report a frozen app for it.
+     */
+    val quietProfile: Boolean = false,
+    /**
      * The method currently holding this app frozen, or null when it is free. Rows that only
      * exist because they were frozen carry it too, so they can offer a one-tap unfreeze.
      */

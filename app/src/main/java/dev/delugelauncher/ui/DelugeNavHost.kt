@@ -4,6 +4,7 @@ package dev.delugelauncher.ui
 import android.app.Activity.RESULT_OK
 import android.Manifest
 import android.app.role.RoleManager
+import android.app.KeyguardManager
 import android.os.Build
 import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
@@ -19,7 +20,9 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -37,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -57,6 +61,7 @@ import dev.delugelauncher.data.SlotKind
 import dev.delugelauncher.data.SlotTarget
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
+import dev.delugelauncher.data.FocusSession
 import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
@@ -66,7 +71,9 @@ import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.EntryKeys
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.BackupCrypto
 import dev.delugelauncher.data.FreezeSort
+import dev.delugelauncher.data.Hibernation
 import dev.delugelauncher.data.FreezeSourceFilter
 import dev.delugelauncher.data.FreezeStateFilter
 import dev.delugelauncher.data.needsTimes
@@ -118,6 +125,9 @@ import dev.delugelauncher.ui.home.HomeSettings
 import dev.delugelauncher.ui.settings.AppPickerScreen
 import dev.delugelauncher.ui.settings.FolderAppsScreen
 import dev.delugelauncher.ui.settings.FreezeAppsScreen
+import dev.delugelauncher.ui.settings.AccessScreen
+import dev.delugelauncher.ui.focus.LocalFocusStarter
+import dev.delugelauncher.ui.settings.SleepRulesScreen
 import dev.delugelauncher.ui.settings.HiddenAppsScreen
 import dev.delugelauncher.ui.settings.ChangelogScreen
 import dev.delugelauncher.ui.settings.LanguageScreen
@@ -517,6 +527,8 @@ fun DelugeNavHost(
     val hiddenApps by app.prefs.hiddenApps.collectAsState(initial = emptySet())
     val settingsAdvanced by app.prefs.settingsAdvanced.collectAsState(initial = false)
     val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
+    val externalControlEnabled by app.prefs.externalControlEnabled.collectAsState(initial = false)
+    val externalControlToken by app.prefs.externalControlToken.collectAsState(initial = null)
     val freezeMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
     val freezeApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
     val freezeAutoEnabled by app.prefs.freezeAutoEnabled.collectAsState(initial = false)
@@ -665,6 +677,7 @@ fun DelugeNavHost(
     val notificationBadges by app.prefs.notificationBadges.collectAsState(initial = false)
     val notificationPreview by app.prefs.notificationPreview.collectAsState(initial = false)
     val notificationTextSp by app.prefs.notificationTextSp.collectAsState(initial = 12)
+    val notificationColor by app.prefs.notificationColor.collectAsState(initial = 0)
     val notificationPanel by app.prefs.notificationPanel.collectAsState(initial = false)
     val panelEntries by NotificationPanelBus.entries.collectAsState()
     // Null until the store answers. The notification panel must not read an empty set as
@@ -915,6 +928,37 @@ fun DelugeNavHost(
     // Written through the document picker rather than to a path of our own: the file is the
     // user's to keep, and this way it lands wherever they keep things without the app asking
     // for storage it otherwise never needs.
+    // A settings export names the apps the owner arranged, and the ones hidden or locked. It
+    // leaves the phone as plain text unless a password is given here.
+    var exportAsk by remember { mutableStateOf(false) }
+    var exportPassword by remember { mutableStateOf("") }
+    var exportEncrypt by remember { mutableStateOf(true) }
+    var importAsk by remember { mutableStateOf(false) }
+    var importCipher by remember { mutableStateOf("") }
+    var importPassword by remember { mutableStateOf("") }
+    var importWrong by remember { mutableStateOf(false) }
+
+    fun finishImport(text: String) {
+        scope.launch {
+            val ok = app.prefs.importJson(text)
+            // A shortcut lives on the launcher's behalf rather than in the file, so a
+            // restored favorite naming one comes back as a row that resolves to nothing
+            // until the system is asked for it again. Done here, right after the file is
+            // in place, and before the reload the shortcut change triggers.
+            if (ok) {
+                val restored = withContext(Dispatchers.IO) {
+                    runCatching { app.prefs.favorites.first() }.getOrDefault(emptyList())
+                }
+                withContext(Dispatchers.Default) { app.appRepository.repinShortcuts(restored) }
+            }
+            Toast.makeText(
+                context,
+                if (ok) R.string.settings_import_done else R.string.settings_backup_failed,
+                Toast.LENGTH_SHORT,
+            ).show()
+        }
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.CreateDocument("application/json")
     ) { uri ->
@@ -927,7 +971,12 @@ fun DelugeNavHost(
             val omittedPrivateSpace = withContext(Dispatchers.IO) {
                 runCatching {
                     val result = app.prefs.exportJson(stripOtherProfiles)
-                    context.contentResolver.openOutputStream(uri)?.use { it.write(result.json.toByteArray()) }
+                    val payload = if (exportEncrypt && exportPassword.isNotBlank()) {
+                        BackupCrypto.encrypt(result.json, exportPassword.toCharArray())
+                    } else {
+                        result.json
+                    }
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(payload.toByteArray()) }
                         ?: return@runCatching null
                     result.omittedPrivateSpace
                 }.getOrNull()
@@ -951,23 +1000,116 @@ fun DelugeNavHost(
                     context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
                 }.getOrNull()
             }
-            val ok = text != null && app.prefs.importJson(text)
-            // A shortcut lives on the launcher's behalf rather than in the file, so a
-            // restored favorite naming one comes back as a row that resolves to nothing
-            // until the system is asked for it again. Done here, right after the file is
-            // in place, and before the reload the shortcut change triggers.
-            if (ok) {
-                val restored = withContext(Dispatchers.IO) {
-                    runCatching { app.prefs.favorites.first() }.getOrDefault(emptyList())
-                }
-                withContext(Dispatchers.Default) { app.appRepository.repinShortcuts(restored) }
+            if (text == null) {
+                Toast.makeText(context, R.string.settings_backup_failed, Toast.LENGTH_SHORT).show()
+                return@launch
             }
-            Toast.makeText(
-                context,
-                if (ok) R.string.settings_import_done else R.string.settings_backup_failed,
-                Toast.LENGTH_SHORT,
-            ).show()
+            if (BackupCrypto.isEncrypted(text)) {
+                importWrong = false
+                importPassword = ""
+                importCipher = text
+                importAsk = true
+            } else {
+                finishImport(text)
+            }
         }
+    }
+
+    if (exportAsk) {
+        AlertDialog(
+            onDismissRequest = { exportAsk = false },
+            title = { Text(stringResource(R.string.settings_export_encrypt_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.settings_export_encrypt_body))
+                    OutlinedTextField(
+                        value = exportPassword,
+                        onValueChange = { exportPassword = it.take(64) },
+                        label = { Text(stringResource(R.string.settings_export_password)) },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    if (exportPassword.isBlank()) {
+                        Text(
+                            stringResource(R.string.settings_export_password_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = exportPassword.isNotBlank(),
+                    onClick = {
+                        exportEncrypt = true
+                        exportAsk = false
+                        exportLauncher.launch("deluge-launcher-settings.json")
+                    },
+                ) { Text(stringResource(R.string.settings_export_encrypt_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    exportEncrypt = false
+                    exportPassword = ""
+                    exportAsk = false
+                    exportLauncher.launch("deluge-launcher-settings.json")
+                }) { Text(stringResource(R.string.settings_export_plain)) }
+            },
+        )
+    }
+
+    if (importAsk) {
+        AlertDialog(
+            onDismissRequest = { importAsk = false },
+            title = { Text(stringResource(R.string.settings_import_password_title)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.settings_import_password_body))
+                    OutlinedTextField(
+                        value = importPassword,
+                        onValueChange = { importPassword = it.take(64); importWrong = false },
+                        label = { Text(stringResource(R.string.settings_export_password)) },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                    )
+                    if (importWrong) {
+                        Text(
+                            stringResource(R.string.settings_import_password_wrong),
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = importPassword.isNotBlank(),
+                    onClick = {
+                        // PBKDF2 at 600k rounds takes a noticeable moment by design; run it
+                        // off the frame thread instead of freezing the dialog.
+                        val entered = importPassword.toCharArray()
+                        scope.launch {
+                            val plain = withContext(Dispatchers.IO) {
+                                BackupCrypto.decrypt(importCipher, entered)
+                            }
+                            entered.fill('\u0000')
+                            if (plain == null) {
+                                importWrong = true
+                            } else {
+                                importAsk = false
+                                importPassword = ""
+                                finishImport(plain)
+                            }
+                        }
+                    },
+                ) { Text(stringResource(R.string.settings_import_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { importAsk = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
     }
 
     // The watcher is a foreground service, so its notification is the only evidence it is
@@ -1171,6 +1313,40 @@ fun DelugeNavHost(
     // screens above home are the launcher's own, so back has to mean back.
     BackHandler(enabled = navController.stack.size > 1) { navController.popBackStack() }
 
+    // Long-press one app to narrow the launcher to it. Validation happens here rather than in
+    // the menu so both the home and the app list share one answer; a target that is frozen,
+    // locked or hidden stays a normal app until the owner lifts that state.
+    val startFocus: (AppInfo) -> Unit = { entry ->
+        fun say(res: Int) = Toast.makeText(context, res, Toast.LENGTH_LONG).show()
+        val secure = runCatching {
+            context.getSystemService(KeyguardManager::class.java)?.isDeviceSecure == true
+        }.getOrDefault(false)
+        when {
+            entry.kind != EntryKind.APP || entry.userSerial != 0L -> Unit
+            entry.packageName == context.packageName -> Unit
+            entry.frozen != null || entry.freezeKey in freezeApplied -> say(R.string.focus_needs_thaw)
+            entry.lockedBy(lockedApps) -> say(R.string.focus_needs_unlock)
+            entry.suspended || entry.quietProfile || entry.key in hiddenApps -> say(R.string.focus_failed)
+            !secure -> say(R.string.app_lock_no_device_lock)
+            else -> scope.launch {
+                app.prefs.setFocus(
+                    FocusSession(
+                        active = true,
+                        targetKey = entry.key,
+                        packageName = entry.packageName,
+                        label = entry.label,
+                    )
+                )
+                val opened = runCatching { app.appRepository.launch(entry) }.getOrDefault(false)
+                if (!opened) {
+                    app.prefs.setFocus(FocusSession())
+                    say(R.string.focus_failed)
+                }
+            }
+        }
+    }
+
+    CompositionLocalProvider(LocalFocusStarter provides startFocus) {
     RouterHost(router = navController) {
         composable("home") {
             // Fake names for the screenshot disguise, or nothing. Scoped to home and its
@@ -1487,7 +1663,7 @@ fun DelugeNavHost(
                     onSetDimColor = { scope.launch { app.prefs.setDimColor(it) } },
                     onSetAllowRotation = { scope.launch { app.prefs.setAllowRotation(it) } },
                     onSetShortcutSwipe = { scope.launch { app.prefs.setShortcutSwipe(it) } },
-                            onExportSettings = { exportLauncher.launch("deluge-launcher-settings.json") },
+                            onExportSettings = { exportAsk = true },
                     onImportSettings = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
                     onSetIconShape = { scope.launch { app.prefs.setIconShape(it); clearIconCache() } },
                     onSetThemedIcons = { scope.launch { app.prefs.setThemedIcons(it); clearIconCache() } },
@@ -1621,7 +1797,17 @@ fun DelugeNavHost(
                 },
                 frozenCount = frozenShownCount,
                 freezeEnabled = freezeEnabled,
+                freezeHasAccess = freezeStatus.access != dev.delugelauncher.data.FreezeAccess.NONE,
+                freezeAccessChecked = freezeStatus.checked,
                 onOpenFreezeApps = { navController.navigate("settings/freeze") },
+                externalControlEnabled = externalControlEnabled,
+                onSetExternalControl = { enabled ->
+                    scope.launch { app.prefs.setExternalControlEnabled(enabled) }
+                },
+                externalControlToken = externalControlToken,
+                onRegenerateExternalToken = {
+                    scope.launch { app.prefs.regenerateExternalControlToken() }
+                },
                 onSetFreezeEnabled = { enabled ->
                     scope.launch {
                         val result = app.freezeManager.setEnabled(enabled)
@@ -1684,6 +1870,8 @@ fun DelugeNavHost(
                 onSetNotificationBadges = actionsA.onSetNotificationBadges,
                 notificationPreview = notificationPreview,
                 notificationTextSp = notificationTextSp,
+                notificationColor = notificationColor,
+                onSetNotificationColor = { value -> scope.launch { app.prefs.setNotificationColor(value) } },
                 onSetNotificationTextSp = actionsA.onSetNotificationTextSp,
                 onSetNotificationPreview = actionsA.onSetNotificationPreview,
                 notificationPanel = notificationPanel,
@@ -1848,6 +2036,8 @@ fun DelugeNavHost(
                 onOpenFavorites = actionsB.onOpenFavorites,
                 favoriteRuleCount = favoriteRules.count { it.enabled },
                 onOpenFavoriteRules = { navController.navigate("settings/favoritesrules") },
+                onOpenSleepRules = { navController.navigate("settings/sleeprules") },
+                onOpenAccess = { navController.navigate("settings/access") },
                 onOpenLanguage = actionsB.onOpenLanguage,
                 onOpenChangelog = actionsB.onOpenChangelog,
                 updateChecking = updateChecking,
@@ -2127,10 +2317,16 @@ fun DelugeNavHost(
                                 context,
                                 if (result.noAccess) {
                                     context.getString(R.string.freeze_needs_access)
+                                } else if (result.failed > 0) {
+                                    context.getString(
+                                        R.string.freeze_many_partial,
+                                        result.done,
+                                        result.failed,
+                                    )
                                 } else {
                                     context.getString(R.string.freeze_many_done, result.done)
                                 },
-                                long = result.noAccess,
+                                long = result.noAccess || result.failed > 0,
                             )
                         }
                     }
@@ -2144,10 +2340,16 @@ fun DelugeNavHost(
                                 context,
                                 if (result.noAccess) {
                                     context.getString(R.string.freeze_needs_access)
+                                } else if (result.failed > 0) {
+                                    context.getString(
+                                        R.string.unfreeze_many_partial,
+                                        result.done,
+                                        result.failed,
+                                    )
                                 } else {
                                     context.getString(R.string.freeze_all_done)
                                 },
-                                long = result.noAccess,
+                                long = result.noAccess || result.failed > 0,
                             )
                         }
                     }
@@ -2314,6 +2516,180 @@ fun DelugeNavHost(
             )
         }
 
+        composable("settings/sleeprules") {
+            var grantTick by remember { mutableIntStateOf(0) }
+            val locationGranted = remember(grantTick) {
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) ==
+                    PackageManager.PERMISSION_GRANTED
+            }
+            val locationLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.RequestPermission()
+            ) { grantTick++ }
+            val currentSsid = remember(grantTick) { readWifiSsid(context) }
+            val rules by app.prefs.sleepRules.collectAsState(initial = emptyList())
+            val runLog by app.prefs.freezeRun.collectAsState(initial = null)
+            val planned by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
+            val rows by app.prefs.freezeRows.collectAsState(initial = emptyMap())
+            val limits by app.prefs.openLimits.collectAsState(initial = emptyMap())
+            val lastLaunch by app.prefs.lastLaunch.collectAsState(initial = emptyMap())
+            val status by app.freezeManager.status.collectAsState()
+            // Planned keys are freeze keys (`pkg`, `pkg|u10`); the app map is keyed by the
+            // row key (`pkg/Activity`). Looking one up in the other always missed, so renames
+            // and work labels never reached these lists.
+            val appsByFreezeKey = remember(appsByKey) {
+                appsByKey.values.associateBy { it.freezeKey }
+            }
+            val workSuffix = stringResource(R.string.app_work_suffix)
+            fun labelFor(key: String): String {
+                val app = appsByFreezeKey[key]
+                if (app != null) {
+                    val base = nameOverrides[app.key] ?: app.label
+                    return if (app.work) base + workSuffix else base
+                }
+                return rows[key]?.label ?: key.substringBefore('|')
+            }
+            val listedApps = remember(planned, appsByFreezeKey, rows, nameOverrides, workSuffix) {
+                planned.keys.sorted().map { key -> key to labelFor(key) }
+            }
+            val unusedApps = remember(lastLaunch, planned, appsByKey, nameOverrides, workSuffix) {
+                // The launch log is keyed by freeze key, so this list was never built from
+                // the row map at all. Ask the installed set for the labels instead.
+                val tracked = appsByFreezeKey.keys
+                val stale = Hibernation.staleKeys(
+                    lastLaunch = lastLaunch,
+                    tracked = tracked,
+                    nowMillis = System.currentTimeMillis(),
+                    days = Hibernation.DEFAULT_DAYS,
+                    installedAt = appsByFreezeKey.mapValues { it.value.installedAt },
+                ) - planned.keys
+                stale.sorted().map { key -> key to labelFor(key) }
+            }
+            SleepRulesScreen(
+                rules = rules,
+                runLog = runLog,
+                listedCount = planned.size,
+                hasAccess = status.access != dev.delugelauncher.data.FreezeAccess.NONE,
+                listedApps = listedApps,
+                ruleLimit = dev.delugelauncher.data.MAX_SLEEP_RULES,
+                openLimits = limits,
+                unusedApps = unusedApps,
+                currentSsid = if (locationGranted) currentSsid else null,
+                locationGranted = locationGranted,
+                onRequestLocation = {
+                    locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                },
+                onSave = { rule ->
+                    scope.launch {
+                        val replacing = rules.any { it.id == rule.id }
+                        if (!replacing && rules.size >= dev.delugelauncher.data.MAX_SLEEP_RULES) {
+                            // Rare race against the screen's own cap check; refuse instead of
+                            // appending past the end and losing the new rule to take().
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(
+                                    context,
+                                    context.getString(
+                                        R.string.sleep_rules_full,
+                                        dev.delugelauncher.data.MAX_SLEEP_RULES,
+                                    ),
+                                    Toast.LENGTH_LONG,
+                                ).show()
+                            }
+                        } else {
+                            app.prefs.setSleepRules(
+                                (rules.filterNot { it.id == rule.id } + rule)
+                                    .take(dev.delugelauncher.data.MAX_SLEEP_RULES)
+                            )
+                            // The watcher is what hears the network and the clock; a saved
+                            // rule that is on has to have somewhere to run.
+                            if (rule.enabled) FreezeAutoService.sync(context, enabled = true)
+                        }
+                    }
+                },
+                onDelete = { id ->
+                    scope.launch { app.prefs.setSleepRules(rules.filterNot { it.id == id }) }
+                },
+                onUndoRun = { log ->
+                    scope.launch {
+                        log.frozen.forEach { app.freezeManager.unfreezeKey(it) }
+                        // The run also woke apps; putting only the frozen ones back would
+                        // leave the phone in a state the log says never happened.
+                        val methods = app.prefs.freezeMethodsNow()
+                        log.thawed.forEach { key ->
+                            if (methods.containsKey(key)) app.freezeManager.freezeKey(key)
+                        }
+                        app.prefs.clearFreezeRun()
+                    }
+                },
+                onSetLimit = { key, value -> scope.launch { app.prefs.setOpenLimit(key, value) } },
+                onUnusedAdd = { key -> scope.launch { app.freezeManager.addKeyToPlan(key) } },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable("settings/access") {
+            val status by app.freezeManager.status.collectAsState()
+            fun openShizukuDownload() {
+                context.startActivity(
+                    Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/"))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            fun openDhizukuDownload() {
+                context.startActivity(
+                    Intent(
+                        Intent.ACTION_VIEW,
+                        Uri.parse("https://github.com/iamr0s/Dhizuku/releases/latest"),
+                    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                )
+            }
+            AccessScreen(
+                status = status,
+                onRefresh = { scope.launch { runCatching { app.freezeManager.refreshAccess() } } },
+                onOpenShizuku = {
+                    // FreezeManager resolves the package that owns the API permission, so a
+                    // Shevery install opens Shevery instead of failing on the official name.
+                    if (!app.freezeManager.openShizuku()) openShizukuDownload()
+                },
+                onGetShizuku = ::openShizukuDownload,
+                onRemoveDeviceOwner = {
+                    scope.launch {
+                        val removed = runCatching {
+                            app.freezeManager.removeDeviceOwner()
+                        }.getOrDefault(false)
+                        // The manager only re-probes on success; a failed removal used to
+                        // leave the card claiming a channel that was no longer there.
+                        runCatching { app.freezeManager.refreshAccess() }
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                context,
+                                if (removed) R.string.access_owner_removed
+                                else R.string.access_owner_remove_failed,
+                                Toast.LENGTH_LONG,
+                            ).show()
+                        }
+                    }
+                },
+                onGrantDhizuku = {
+                    app.freezeManager.grantDhizuku {
+                        // The dialog is another app's, and its answer arrives after the screen
+                        // has been drawn; re-probe so the card and the chips catch up.
+                        scope.launch { runCatching { app.freezeManager.refreshAccess() } }
+                    }
+                },
+                onEnableDhizuku = {
+                    scope.launch {
+                        app.freezeManager.enableDhizuku()
+                        runCatching { app.freezeManager.refreshAccess() }
+                    }
+                },
+                onOpenDhizuku = {
+                    if (!app.freezeManager.openDhizuku()) openDhizukuDownload()
+                },
+                onGetDhizuku = ::openDhizukuDownload,
+                onBack = { navController.popBackStack() },
+            )
+        }
+
         composableArgs("iconpicker/{key}") { entry ->
             // Decoded once already by the router: decoding again turns a literal %25
             // in a shortcut id into % and then into whatever follows it.
@@ -2404,6 +2780,7 @@ fun DelugeNavHost(
                 }
             },
         )
+    }
     }
 }
 

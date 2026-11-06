@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.applist
 
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.ui.focus.FocusMenuItem
 import dev.delugelauncher.data.Pinyin
 
 import androidx.compose.animation.core.Animatable
@@ -2120,7 +2121,7 @@ private fun AppRow(
     var freezeChoosing by remember { mutableStateOf(false) }
     // A paused app fades the way a hidden one does, when the setting asks; the icon goes with
     // the name so the whole row reads as set aside.
-    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
+    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
 
     Box {
         Row(
@@ -2309,6 +2310,7 @@ private fun AppRow(
                             onClick = { onDismissMenu(); onHide() },
                         )
                     }
+                    FocusMenuItem(app = app, onDismiss = onDismissMenu)
                     FreezeMenuItems(
                         app = app,
                         actions = freezeActions,
@@ -2479,6 +2481,7 @@ private fun AppRow(
             app = if (freezeChoosing) app else null,
             label = label,
             counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false

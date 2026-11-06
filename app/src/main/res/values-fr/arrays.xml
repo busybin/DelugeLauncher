@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v29">
+        <item>Le gel a son propre écran : Arrêter, Suspendre, Désactiver et Masquer ont chacun un onglet, et un tableau dit quel canal peut quoi.</item>
+        <item>Gelez sans root ni Shizuku : faites de Deluge le propriétaire de l\'appareil, ou laissez Dhizuku prêter ses droits, et Suspendre ou Masquer marche depuis le téléphone seul.</item>
+        <item>Appui long sur un dossier pour geler ou dégeler d\'un coup toutes les applis qu\'il contient.</item>
+        <item>Pilotez-le par script : des diffusions et des liens deluge:// gèlent ou dégèlent une appli ou toute la liste, donc Tasker et les raccourcis aussi.</item>
+        <item>Règles de sommeil : gelez ou réveillez la liste selon le Wi-Fi, le casque, une plage horaire, la charge ou la batterie.</item>
+        <item>Limites quotidiennes : choisissez combien de fois une appli peut s\'ouvrir par jour ; atteint, elle reste gelée jusqu\'à demain.</item>
+        <item>Pas ouvert depuis 90 jours : une liste en un geste des applis oubliées ; ajoutez-les à la liste de gel depuis là.</item>
+        <item>Mode concentration : appui long sur une appli pour ne montrer qu\'elle ; le déverrouillage ramène le reste.</item>
+        <item>Mode remise et deux nouveaux tuiles : remettez le téléphone avec tout gelé, et verrouillez l\'espace privé depuis le volet.</item>
+        <item>Sauvegardes chiffrées : exportez avec un mot de passe ; un mauvais mot de passe à l\'import laisse la configuration intacte.</item>
+        <item>La couleur des notifications se choisit, et les applis en pause d\'un profil professionnel grisent comme les suspendues.</item>
+        <item>Petits correctifs : les réglages survivent à un fichier de préférences abîmé, et les verrous d\'applis sont reconstruits ensuite.</item>
+</string-array>
     <string-array name="changelog_v28">
         <item>Un dossier peut contenir la carte En cours de lecture : appui long sur un dossier, puis « Ajouter En cours de lecture ». La carte s\'ouvre avec le dossier, même sans lecture en cours.</item>
         <item>Les balayages de lancement rapide atteignent maintenant le bas de l\'écran d\'accueil, même quand les favoris le remplissent.</item>

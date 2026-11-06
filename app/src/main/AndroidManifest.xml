@@ -107,12 +107,6 @@
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-            <!-- Actions the dynamic freeze shortcuts send; see FreezeShortcuts. -->
-            <intent-filter>
-                <action android:name="dev.delugelauncher.action.FREEZE_ALL" />
-                <action android:name="dev.delugelauncher.action.UNFREEZE_ALL" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
 
         <activity
@@ -232,6 +226,60 @@
             </intent-filter>
         </receiver>
 
+        <!-- Optional device-owner channel: lets the launcher suspend and hide apps without
+             root or Shizuku. Not exported; only the system binds a device admin. -->
+        <receiver
+            android:name=".service.DelugeDeviceAdminReceiver"
+            android:exported="false"
+            android:label="@string/access_owner"
+            android:description="@string/access_owner_desc"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- The automation door: freeze or release the list, or one package, from a script.
+             Exported on purpose — a Tasker profile is not signed with this key — but it does
+             nothing unless external control is on and the intent carries the token from
+             settings; see FreezeIntents.dispatch. -->
+        <receiver
+            android:name=".service.FreezeActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="dev.delugelauncher.action.FREEZE" />
+                <action android:name="dev.delugelauncher.action.UNFREEZE" />
+                <action android:name="dev.delugelauncher.action.FREEZE_ALL" />
+                <action android:name="dev.delugelauncher.action.UNFREEZE_ALL" />
+            </intent-filter>
+        </receiver>
+
+        <!-- The same actions as links, and as `am start -a`, without drawing anything. -->
+        <activity
+            android:name=".service.FreezeActionActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="deluge" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="dev.delugelauncher.action.FREEZE" />
+                <action android:name="dev.delugelauncher.action.UNFREEZE" />
+                <action android:name="dev.delugelauncher.action.FREEZE_ALL" />
+                <action android:name="dev.delugelauncher.action.UNFREEZE_ALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
         <!-- One tap in the shade: freeze the whole list, or lift it. The system binds this
              one, hence the permission and the export. -->
         <service
@@ -254,6 +302,30 @@
             android:excludeFromRecents="true"
             android:taskAffinity=""
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
+        <!-- Hand the phone over: freeze the list, restore on the second tap. -->
+        <service
+            android:name=".service.HandoverTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_freeze_notification"
+            android:label="@string/handover_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <!-- One tap to lock the private space; opening one still needs the credential. -->
+        <service
+            android:name=".service.PrivateSpaceTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_freeze_notification"
+            android:label="@string/private_space_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
 
     </application>
 </manifest>

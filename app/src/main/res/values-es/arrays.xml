@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v29">
+        <item>Congelar tiene su propia pantalla: Detener, Suspender, Desactivar y Ocultar tienen pestaña, y una tabla dice qué canal puede con cada una.</item>
+        <item>Congela sin root ni Shizuku: haz que Deluge sea el propietario del dispositivo, o deja que Dhizuku preste sus permisos, y Suspender u Ocultar funciona solo con el teléfono.</item>
+        <item>Mantén pulsada una carpeta para congelar o descongelar de una vez todas las apps que contiene.</item>
+        <item>Contrólalo desde un script: emisiones y enlaces deluge:// congelan o descongelan una app o toda la lista, así que Tasker y los atajos también pueden.</item>
+        <item>Reglas de sueño: congela o despierta la lista por Wi-Fi, auriculares, franja horaria, carga o nivel de batería.</item>
+        <item>Límites diarios: elige cuántas veces puede abrirse una app al día; al llegar, queda congelada hasta mañana.</item>
+        <item>Sin abrir en 90 días: una lista de un toque con las apps olvidadas; añádelas a la lista de congelación desde ahí.</item>
+        <item>Modo concentración: mantén pulsada una app para entregar el teléfono mostrando solo esa; al desbloquear vuelve el resto.</item>
+        <item>Modo entrega y dos mosaicos nuevos: entrega el teléfono con todo congelado y bloquea el espacio privado desde el panel.</item>
+        <item>Copias cifradas: exporta con contraseña; una contraseña incorrecta al importar no toca la configuración actual.</item>
+        <item>El color de las notificaciones ahora se elige, y las apps en pausa de un perfil de trabajo se atenúan como las suspendidas.</item>
+        <item>Arreglos menores: los ajustes sobreviven a un archivo de preferencias dañado, y los bloqueos de apps se reconstruyen después.</item>
+</string-array>
     <string-array name="changelog_v28">
         <item>Las carpetas pueden llevar la tarjeta En reproducción: mantén pulsada una carpeta y elige «Añadir En reproducción». La tarjeta se abre con la carpeta, aunque no suene nada.</item>
         <item>Los deslizamientos de inicio rápido llegan ahora al borde inferior de la pantalla de inicio, aunque los favoritos lo llenen.</item>

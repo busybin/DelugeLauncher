@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v29">
+        <item>Freezing has a screen of its own: Stop, Suspend, Disable and Hide each get a tab, and a table says which channel can run which.</item>
+        <item>Freeze without root or Shizuku: make Deluge the device owner, or let Dhizuku lend its owner rights, and Suspend or Hide works from the phone alone.</item>
+        <item>Long-press a folder to freeze or thaw every app inside it at once.</item>
+        <item>Drive it from a script: broadcasts and deluge:// links freeze or thaw one app or the whole list, so Tasker and shortcuts can do it too.</item>
+        <item>Sleep rules: freeze or wake the list by Wi-Fi, headphones, a time window, charging or battery level.</item>
+        <item>Daily limits: set how many times an app may open per day; once it is reached the app is frozen until tomorrow.</item>
+        <item>Not opened in 90 days: a one-tap list of apps you have forgotten; add them to the freeze list from there.</item>
+        <item>Focus mode: long-press an app to hand the phone over showing only that app; unlocking brings the rest back.</item>
+        <item>Handover mode and two new tiles: hand the phone over with everything frozen, and lock the private space from the shade.</item>
+        <item>Encrypted backups: export with a password; a wrong password on import leaves the current setup untouched.</item>
+        <item>Notification colour is now a choice, and apps paused in a work profile grey out like suspended ones.</item>
+        <item>Smaller fixes: settings survive a damaged preferences file, and app locks are rebuilt after one.</item>
+</string-array>
     <string-array name="changelog_v28">
         <item>Folders can hold the Now Playing card: long-press a folder and pick \"Add Now Playing\". The card opens with the folder, even when nothing is playing yet.</item>
         <item>The quick-launch swipes now reach the bottom of the home screen, even when favorites fill it.</item>

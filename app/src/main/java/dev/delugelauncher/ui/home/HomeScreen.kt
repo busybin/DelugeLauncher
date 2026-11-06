@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.home
 
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.ui.focus.FocusMenuItem
 
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
@@ -256,6 +257,7 @@ fun HomeScreen(
     notificationPreviews: Map<String, List<NotificationEntry>> = emptyMap(),
     /** Point size for those lines. */
     notificationTextSp: Int = 12,
+    notificationColor: Int = 0,
     iconSizeDp: Int,
     labelSizeSp: Int,
     itemSpacingDp: Int,
@@ -302,6 +304,9 @@ fun HomeScreen(
     /** Set when folders are also in the app list, where one taken off here still lives. */
     onRemoveFolderFromHome: ((Folder) -> Unit)? = null,
     onManageFolder: (Folder) -> Unit,
+    /** Freezes or releases every member of a folder; null when freezing is switched off. */
+    onFreezeFolder: ((List<AppInfo>) -> Unit)? = null,
+    onUnfreezeFolder: ((List<AppInfo>) -> Unit)? = null,
     onMoveToFolder: (AppInfo) -> Unit,
     appsByKey: Map<String, AppInfo>,
     onReorderHome: (newFavoriteKeys: List<String>, newWidgetPosition: Int) -> Unit,
@@ -398,6 +403,10 @@ fun HomeScreen(
         val base = nameOverrides[app.key] ?: app.label
         return if (markWorkApps && app.work) base + workSuffix else base
     }
+
+    // What a folder holds right now, computed the same way the row draws it.
+    fun folderMembers(folder: Folder): List<AppInfo> =
+        folder.apps.mapNotNull { appsByKey[it] }.filterNot { it.key in hiddenApps }
 
     var menuForKey by remember { mutableStateOf<String?>(null) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
@@ -641,7 +650,10 @@ fun HomeScreen(
     // Survives rotation and trips to settings: without it every return lands back on top,
     // which on a long favorites list is losing your place for nothing.
     var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
-    var offsetRestored by rememberSaveable { mutableStateOf(false) }
+    // Not saveable on purpose: it records "this composition has already run the restore",
+    // and a restored true would skip the very restore it is meant to gate, leaving the
+    // freshly created Animatable at zero after a rotation.
+    var offsetRestored by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         onDispose { savedOffsetY = offsetY.value }
     }
@@ -1299,8 +1311,7 @@ fun HomeScreen(
                             compactTapArea = compactTapArea,
                             shortcutSwipe = shortcutSwipe,
                             folder = item.folder,
-                            members = item.folder.apps.mapNotNull { appsByKey[it] }
-                                .filterNot { it.key in hiddenApps },
+                            members = folderMembers(item.folder),
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
                             dragHandle = dragHandle,
@@ -1364,6 +1375,12 @@ fun HomeScreen(
                             onOpenMenu = { offset -> menuOffset = offset; folderMenuFor = item.folder.id },
                             onDismissMenu = { folderMenuFor = null },
                             onManage = { folderMenuFor = null; onManageFolder(item.folder) },
+                            onFreeze = onFreezeFolder?.let { freeze ->
+                                { folderMenuFor = null; freeze(folderMembers(item.folder)) }
+                            },
+                            onUnfreeze = onUnfreezeFolder?.let { release ->
+                                { folderMenuFor = null; release(folderMembers(item.folder)) }
+                            },
                             onEdit = { folderMenuFor = null; folderRenameFor = item.folder },
                             onDelete = { folderMenuFor = null; onDeleteFolder(item.folder) },
                             onOpenApp = { member ->
@@ -1383,6 +1400,7 @@ fun HomeScreen(
                             dimPausedApps = dimPausedApps,
                             notificationPreviews = notificationPreviews,
                             notificationTextSp = notificationTextSp,
+                            notificationColor = notificationColor,
                             lockedApps = lockedApps,
                         )
 
@@ -1395,6 +1413,7 @@ fun HomeScreen(
                                 NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
                             ].orEmpty(),
                             notificationTextSp = notificationTextSp,
+                            notificationColor = notificationColor,
                             editMode = editMode,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
@@ -1665,6 +1684,7 @@ private fun FavoriteRow(
     notificationLines: List<NotificationEntry>,
     /** Point size for those lines. */
     notificationTextSp: Int,
+    notificationColor: Int = 0,
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
@@ -1757,7 +1777,7 @@ private fun FavoriteRow(
         ) {
             // A paused app fades the same way a retired shortcut does, when the setting asks;
             // the icon goes with the name so the whole row reads as set aside.
-            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
+            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
@@ -1839,6 +1859,7 @@ private fun FavoriteRow(
                     },
                     onClick = onToggleLock,
                 )
+                FocusMenuItem(app = app, onDismiss = onDismissMenu)
                 FreezeMenuItems(
                     app = app,
                     actions = freezeActions,
@@ -1928,6 +1949,7 @@ private fun FavoriteRow(
             app = if (freezeChoosing) app else null,
             label = label,
             counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false
@@ -1951,7 +1973,7 @@ private fun FavoriteRow(
             NotificationLines(
                 lines = notificationLines,
                 alignment = alignment,
-                contentColor = contentColor,
+                contentColor = notificationTint(contentColor, notificationColor),
                 textSizeSp = notificationTextSp,
                 interactive = true,
                 onFallback = onLaunch,
@@ -1998,6 +2020,8 @@ private fun FolderRow(
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onManage: () -> Unit,
+    onFreeze: (() -> Unit)?,
+    onUnfreeze: (() -> Unit)?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRemoveFromHome: (() -> Unit)?,
@@ -2015,6 +2039,7 @@ private fun FolderRow(
     /** Newest notifications per app, for the lines under its name. */
     notificationPreviews: Map<String, List<NotificationEntry>>,
     notificationTextSp: Int,
+    notificationColor: Int = 0,
     /** Keys that ask for the device lock before opening. */
     lockedApps: Set<String>,
 ) {
@@ -2111,6 +2136,22 @@ private fun FolderRow(
                     leadingIcon = { Icon(DelugeIcons.Checklist, contentDescription = null) },
                     onClick = onManage,
                 )
+                onFreeze?.let { freeze ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_freeze)) },
+                        leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                        enabled = members.isNotEmpty(),
+                        onClick = freeze,
+                    )
+                }
+                onUnfreeze?.let { release ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_unfreeze)) },
+                        leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
+                        enabled = members.isNotEmpty(),
+                        onClick = release,
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.widget_add)) },
                     leadingIcon = { Icon(DelugeIcons.Height, contentDescription = null) },
@@ -2248,7 +2289,7 @@ private fun FolderRow(
                                 // the setting asks; the icon goes with the name so the whole
                                 // row reads as set aside.
                                 val dimmed = member.disabled || member.frozen != null ||
-                                    (dimPausedApps && member.suspended)
+                                    (dimPausedApps && (member.suspended || member.quietProfile))
                                 Box(
                                     Modifier
                                         .pressPop(memberPress)
@@ -2265,7 +2306,7 @@ private fun FolderRow(
                                 Text(
                                     displayName(member),
                                     color = if (member.disabled || member.frozen != null ||
-                                        (dimPausedApps && member.suspended)
+                                        (dimPausedApps && (member.suspended || member.quietProfile))
                                     ) {
                                         contentColor.copy(alpha = 0.5f)
                                     } else {
@@ -2282,8 +2323,8 @@ private fun FolderRow(
                                             NotificationPreviewBus.key(member.packageName, member.userSerial)
                                         ].orEmpty(),
                                         alignment = alignment,
-                                        contentColor = contentColor,
                                         textSizeSp = notificationTextSp,
+                                        contentColor = notificationTint(contentColor, notificationColor),
                                         interactive = true,
                                         onFallback = { onOpenApp(member) },
                                     )
@@ -2804,3 +2845,7 @@ private fun FolderEditDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
+
+/** A notification preview follows the theme unless the owner picked a colour for it. */
+private fun notificationTint(base: Color, argb: Int): Color =
+    if (argb == 0) base else Color(argb)

@@ -19,6 +19,7 @@ import android.os.UserManager
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.provider.Settings
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import dev.delugelauncher.R
@@ -27,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -60,6 +62,33 @@ class AppRepository(
     @Volatile
     private var lastKnownPrivateSerial: Long = 0L
     private val LOCK_REVEAL_GUARD_MS = 2 * 60 * 60 * 1000L
+
+    /** Whether the damaged-store check has run; it is only worth one look per process. */
+    @Volatile
+    private var salvageChecked = false
+
+    /** What the daily limits need at the moment of a tap, without a suspend read. */
+    private data class UsageSnapshot(
+        val day: String = "",
+        val limits: Map<String, Int> = emptyMap(),
+        val opens: Map<String, Int> = emptyMap(),
+        val frozen: Set<String> = emptySet(),
+    )
+
+    private val usage = MutableStateFlow(UsageSnapshot())
+
+    init {
+        scope.launch {
+            combine(prefs.openLimits, prefs.dailyOpens, prefs.limitFrozen) { limits, daily, frozen ->
+                UsageSnapshot(
+                    day = daily.day,
+                    limits = limits,
+                    opens = daily.counts,
+                    frozen = if (frozen.day == daily.day) frozen.keys else emptySet(),
+                )
+            }.collect { usage.value = it }
+        }
+    }
 
     /**
      * The last list handed to the UI, kept for the life of this process so a
@@ -150,6 +179,11 @@ class AppRepository(
                 val serial = listableSerial(user, mainUser) ?: return@flatMap emptyList()
                 val work = isWorkProfile(user, mainUser)
                 val privateProfile = userType(user) == USER_TYPE_PROFILE_PRIVATE
+                // A paused work profile is not a suspended package, but from the owner's side
+                // it is the same thing: the app cannot be opened until the profile is back.
+                val quiet = user != mainUser && runCatching {
+                    userManager.isQuietModeEnabled(user)
+                }.getOrDefault(false)
                 // One call for the lot: asking per package turns a list build into
                 // hundreds of round trips to the package manager.
                 // Asking about a profile we are not the launcher for throws rather than
@@ -179,6 +213,7 @@ class AppRepository(
                             } else {
                                 false
                             },
+                            quietProfile = user != mainUser && quiet,
                             // A disabled or hidden app is not listed by LauncherApps at all,
                             // and whether it is frozen is the manager's own record rather than
                             // anything re-derived here: the platform's answer for a suspended
@@ -239,6 +274,7 @@ class AppRepository(
         val serial = FreezeTargetKey.userSerial(key)
         val packageName = FreezeTargetKey.packageName(key)
         val info = FreezeState.applicationInfo(context, packageName, serial) ?: return@mapNotNull null
+        // Every method needs the package to still be installed.
         if (info.flags and ApplicationInfo.FLAG_INSTALLED == 0) return@mapNotNull null
         // Hidden apps are absent from the launcher by definition; a disabled one must still
         // report disabled, or the user re-enabled it themselves and this entry is stale.
@@ -672,7 +708,9 @@ class AppRepository(
             // below and the app would never start. The token goes up first so the package
             // broadcasts the lift sends are not mistaken for someone unhiding it.
             markLockReveal(packageName)
-            lockGuard.allow(packageName)
+            // A write failure here must not take the process down on the unlock path; the
+            // reveal check still re-hides the app if the launch does not arrive.
+            runCatching { lockGuard.allow(packageName) }
             val released = freezeManager.releaseForLock(packageName)
             if (released == FreezeOutcome.NO_ACCESS || released == FreezeOutcome.FAILED) {
                 rehideLockedApps(only = packageName)
@@ -721,6 +759,29 @@ class AppRepository(
     }
 
     /**
+     * Puts back the lock records a damaged settings file dropped.
+     *
+     * Runs at most once per process, before the guard's list is written: that write is what
+     * would otherwise replace the only remaining record of which apps the system is holding.
+     * The packages are enough; the component is resolved the way a hidden row resolves it.
+     */
+    private suspend fun recoverLocksAfterDamage() {
+        if (salvageChecked) return
+        val current = prefs.lockedAppsNow()
+        salvageChecked = true
+        if (!prefs.recoveredFromDamage) return
+        val orphans = LockRecovery.orphanedPackages(lockGuard.listed(), current)
+        if (orphans.isEmpty()) return
+        val keys = orphans.mapNotNull { packageName ->
+            FreezeState.launcherComponent(context, packageName)
+                ?.let { EntryKeys.app(it.flattenToString()) }
+        }
+        if (keys.isEmpty()) return
+        prefs.addAppLocks(keys)
+        Log.w("DelugePrefs", "restored ${keys.size} lock record(s) after a damaged settings file")
+    }
+
+    /**
      * Puts every locked main-profile app back out of sight and out of reach. Called when the
      * launcher comes back to the foreground, when the screen goes off, and when a locked
      * package is unhidden behind our back. Suspension is applied even where hiding is not
@@ -733,6 +794,7 @@ class AppRepository(
         if (only == null) {
             revealingPackage = null
             lockGuard.clearAllow()
+            recoverLocksAfterDamage()
             // Access may have been granted since this process last looked. Only the missing
             // answers are dropped, so a full device does not probe root on every resume.
             if (hideCapability != true || suspendCapability != true) {
@@ -767,11 +829,13 @@ class AppRepository(
         // behind would tell the repair receiver to ignore the new lock's own hide.
         revealingPackage = null
         lockGuard.clearAllow()
+        recoverLocksAfterDamage()
         lockGuard.sync(prefs.lockedAppsNow())
     }
 
     /** Called on a cold start so a list from a previous process is armed before the first lock tap. */
     suspend fun syncLockGuard() = withContext(Dispatchers.IO) {
+        recoverLocksAfterDamage()
         lockGuard.sync(prefs.lockedAppsNow())
     }
 
@@ -998,6 +1062,7 @@ class AppRepository(
      * that app is lifted, exactly like pressing the app itself.
      */
     fun startAppShortcut(app: AppInfo, shortcut: ShortcutInfo, origin: Rect? = null): Boolean {
+        if (limitBlocks(app)) return true
         // A shortcut points into its publisher's app, and a pinned shortcut row carries that
         // app's state too, so the row kind does not matter here.
         if (app.frozen != null) {
@@ -1005,7 +1070,7 @@ class AppRepository(
                 val lifted = freezeManager.unfreeze(app)
                 withContext(Dispatchers.Main) {
                     when (lifted) {
-                        FreezeOutcome.DONE -> startAppShortcutNow(shortcut, origin)
+                        FreezeOutcome.DONE -> startAppShortcutNow(app, shortcut, origin)
                         FreezeOutcome.NO_ACCESS -> Toast.makeText(
                             context,
                             context.getString(R.string.freeze_needs_access),
@@ -1021,13 +1086,19 @@ class AppRepository(
             }
             return true
         }
-        return startAppShortcutNow(shortcut, origin)
+        return startAppShortcutNow(app, shortcut, origin)
     }
 
-    private fun startAppShortcutNow(shortcut: ShortcutInfo, origin: Rect?): Boolean = runCatching {
-        launcherApps.startShortcut(shortcut, origin, null)
-        true
-    }.getOrDefault(false)
+    private fun startAppShortcutNow(app: AppInfo, shortcut: ShortcutInfo, origin: Rect?): Boolean {
+        val started = runCatching {
+            launcherApps.startShortcut(shortcut, origin, null)
+            true
+        }.getOrDefault(false)
+        // A shortcut is a launch like any other: count it, or the daily limit can be walked
+        // around by opening the app twenty times from its long-press menu.
+        if (started) scope.launch { prefs.incrementLaunchCount(app.key) }
+        return started
+    }
 
     /** The icon for a shortcut offered in a menu. */
     fun shortcutIcon(shortcut: ShortcutInfo, densityDpi: Int): Drawable? =
@@ -1276,6 +1347,7 @@ class AppRepository(
      * Returns false if the app could not be started, so callers can undo whatever they hid.
      */
     fun launch(app: AppInfo, origin: Rect? = null): Boolean {
+        if ((app.kind == EntryKind.APP || app.kind == EntryKind.SHORTCUT) && limitBlocks(app)) return true
         // A shortcut points into its publisher's app, so it is just as unusable while that app
         // is frozen as the app's own row is.
         val enterable = app.kind == EntryKind.APP || app.kind == EntryKind.SHORTCUT
@@ -1304,6 +1376,60 @@ class AppRepository(
             return true
         }
         return launchNow(app, origin)
+    }
+
+    /**
+     * Whether today's open limit has run out for this app, freezing and recording it when it
+     * has just done so.
+     *
+     * The first N opens of the day are allowed and the next tap is refused. The app is frozen
+     * through the freeze list only when it is already on it; a limit is a promise about taps
+     * on this launcher, and silently adding an app to the freeze list would be a second
+     * promise the user never made.
+     */
+    private fun limitBlocks(app: AppInfo): Boolean {
+        val state = usage.value
+        val key = app.freezeKey
+        val today = localDay()
+        if (state.day == today && key in state.frozen) {
+            Toast.makeText(
+                context,
+                context.getString(R.string.freeze_limit_reached, app.label),
+                Toast.LENGTH_SHORT,
+            ).show()
+            return true
+        }
+        val limit = state.limits[key] ?: return false
+        val opens = if (state.day == today) state.opens[key] ?: 0 else 0
+        if (!openLimitReached(limit, opens)) return false
+        Toast.makeText(
+            context,
+            context.getString(R.string.freeze_limit_reached, app.label),
+            Toast.LENGTH_SHORT,
+        ).show()
+        scope.launch {
+            val current = prefs.limitFrozenNow()
+            val keys = if (current.day == today) current.keys + key else setOf(key)
+            prefs.setLimitFrozen(today, keys)
+            freezeManager.freezeKey(key)
+        }
+        return true
+    }
+
+    /**
+     * Lifts the limit freezes of an earlier day. A new day is the only thing that ends one,
+     * and this runs on every start because the launcher may not have been alive at midnight.
+     */
+    suspend fun reconcileLimitFreezes() = withContext(Dispatchers.IO) {
+        val state = prefs.limitFrozenNow()
+        val due = state.dueOn(localDay())
+        if (due.isEmpty()) return@withContext
+        val lifted = due.filter { runCatching { freezeManager.unfreezeKey(it) }.getOrNull() == FreezeOutcome.DONE }
+        // A failed lift must keep its record: forgetting it here leaves the app frozen with
+        // no screen that knows why. A rule that still wants it asleep will freeze it again on
+        // the next watcher pass.
+        if (lifted.size == due.size) prefs.clearLimitFrozen()
+        else prefs.setLimitFrozen(state.day, state.keys - lifted.toSet())
     }
 
     private fun launchNow(app: AppInfo, origin: Rect?): Boolean {
@@ -1409,6 +1535,10 @@ class AppRepository(
      */
     fun unsuspend(app: AppInfo) {
         if (app.kind != EntryKind.APP) return
+        // PackageManager's hidden setPackagesSuspended acts on the caller's profile. Calling it
+        // for a work app un-suspends the main profile's package of the same name, which is why
+        // this only runs for the main profile; a work lock is the password gate alone.
+        if (app.userSerial != 0L) return
         runCatching {
             val pm = context.packageManager
             // Found by name rather than referenced: the method is on PackageManager but is not

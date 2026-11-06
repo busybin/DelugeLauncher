@@ -4,6 +4,7 @@ package dev.delugelauncher.ui.settings
 import android.content.ComponentName
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import dev.delugelauncher.data.AppInfo
@@ -58,6 +59,11 @@ class FreezeAppsScreenTest {
         methods: Map<String, FreezeMethod> = plan,
         applied: Set<String> = setOf(frozen.packageName),
         systemAppsEnabled: Boolean = false,
+        status: FreezeStatus = FreezeStatus(
+            checked = true,
+            access = FreezeAccess.ROOT,
+            rootGranted = true,
+        ),
         sourceFilter: FreezeSourceFilter = FreezeSourceFilter.USER,
         stateFilter: FreezeStateFilter = FreezeStateFilter.ALL,
         sort: FreezeSort = FreezeSort.NAME_ASC,
@@ -70,7 +76,7 @@ class FreezeAppsScreenTest {
                 freezeApplied = applied,
                 nameOverrides = emptyMap(),
                 iconSizeDp = 48,
-                status = FreezeStatus(access = FreezeAccess.ROOT, rootGranted = true),
+                status = status,
                 systemAppsEnabled = systemAppsEnabled,
                 sourceFilter = sourceFilter,
                 stateFilter = stateFilter,
@@ -109,6 +115,30 @@ class FreezeAppsScreenTest {
                 onBack = {},
             )
         }
+    }
+
+    @Test
+    fun `a dhizuku owner lands on suspend because it cannot disable`() {
+        // Tab zero is Disable, which needs a shell; a policy channel has to step off it or
+        // the screen opens on a method it can never run.
+        showScreen(
+            status = FreezeStatus(
+                checked = true,
+                access = FreezeAccess.DHIZUKU,
+                dhizukuInstalled = true,
+                dhizukuPermission = true,
+                dhizukuDelegated = true,
+            ),
+        )
+        compose.onNodeWithText("Suspend").assertIsSelected()
+    }
+
+    @Test
+    fun `there is no uninstall tab`() {
+        showScreen()
+        // Uninstalling for one profile deleted the app's data on restore, which made it a
+        // freeze method nobody could trust; the tab is gone, not hidden.
+        compose.onNodeWithText("Uninstall").assertDoesNotExist()
     }
 
     @Test
@@ -162,7 +192,7 @@ class FreezeAppsScreenTest {
                 freezeApplied = emptySet(),
                 nameOverrides = emptyMap(),
                 iconSizeDp = 48,
-                status = FreezeStatus(access = FreezeAccess.ROOT, rootGranted = true),
+                status = FreezeStatus(checked = true, access = FreezeAccess.ROOT, rootGranted = true),
                 systemAppsEnabled = false,
                 sourceFilter = FreezeSourceFilter.USER,
                 stateFilter = FreezeStateFilter.ALL,

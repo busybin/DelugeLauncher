@@ -2,7 +2,10 @@
 package dev.delugelauncher.data
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.MutablePreferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -10,7 +13,7 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.preferences.preferencesDataStoreFile
 import dev.delugelauncher.ui.theme.DEFAULT_SHADOW_STRENGTH
 import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE
 import kotlinx.coroutines.flow.Flow
@@ -189,7 +192,42 @@ enum class FreezeSort {
 /** Whether this order needs each package's install and update times, which are read in one pass. */
 fun FreezeSort.needsTimes(): Boolean = this == FreezeSort.INSTALLED || this == FreezeSort.UPDATED
 
-private val Context.dataStore by preferencesDataStore(name = "deluge_prefs")
+private const val PREFS_NAME = "deluge_prefs"
+
+/** How many last-launch timestamps are kept; the oldest fall off when the map is full. */
+private const val MAX_LAST_LAUNCH_KEYS = 500
+
+/** The local calendar day the daily-open counts and limit freezes belong to. */
+internal fun localDay(nowMillis: Long = System.currentTimeMillis()): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
+        .format(java.util.Date(nowMillis))
+
+@Volatile
+private var store: DataStore<Preferences>? = null
+private val storeLock = Any()
+
+/**
+ * The one store for the whole process: two open on the same file is an error.
+ *
+ * Built by hand rather than through the property delegate because recovering from a damaged
+ * file needs to know where the file is, and the delegate's corruption handler is never told.
+ * Without one, a file that does not parse throws on every read, which for a home app is a
+ * crash at every start and a phone stuck restarting it.
+ */
+private val Context.dataStore: DataStore<Preferences>
+    get() = store ?: synchronized(storeLock) {
+        store ?: applicationContext.let { app ->
+            val file = app.preferencesDataStoreFile(PREFS_NAME)
+            PreferenceDataStoreFactory.create(
+                corruptionHandler = ReplaceFileCorruptionHandler {
+                    val salvaged = salvageFile(file)
+                    if (salvaged.lost) PrefsSalvage.markDamaged()
+                    salvaged.preferences
+                },
+                produceFile = { file },
+            )
+        }.also { store = it }
+    }
 
 /** Bumped only if the shape of an exported file changes, so an old one can be refused. */
 private const val EXPORT_FORMAT = 1
@@ -219,6 +257,25 @@ private val NEVER_EXPORT = setOf(
     // list itself has its own export that carries what a new phone needs.
     "freeze_labels",
     "freeze_components",
+    // A running focus session is about this phone's screen; importing it elsewhere would
+    // lock a different phone behind an app it may not even have.
+    "focus_json",
+    // Device facts from the rules: today's counts, when each app was last opened, which
+    // limit freezes are in force, the last rule run, and an active handover. Restoring them
+    // on another phone would invent a day that never happened there and could leave the
+    // handover tile claiming a freeze that is not applied.
+    "daily_opens_day",
+    "daily_opens_json",
+    "last_launch_json",
+    "limit_frozen_day",
+    "limit_frozen_json",
+    "freeze_run_log_json",
+    "handover_json",
+    "handover_locked",
+    // The automation switch and its secret are about this installation. A backup that carries
+    // the token would hand the receiving phone's freeze list to whoever read the old file.
+    "external_control_enabled",
+    "external_control_token",
 )
 
 /** [json] to write out, and whether anything belonging to the private space was left out of it. */
@@ -228,6 +285,14 @@ data class ExportResult(val json: String, val omittedPrivateSpace: Boolean)
 data class DailyOpens(val day: String, val counts: Map<String, Int>)
 
 class Prefs(private val context: Context) {
+
+    /**
+     * Whether this process read a settings file that had to be salvaged.
+     *
+     * True only after the first read. The lock recovery asks once, before the guard's list is
+     * rewritten from a set the salvage may have emptied.
+     */
+    val recoveredFromDamage: Boolean get() = PrefsSalvage.wasDamaged()
 
     // The settings whose values are app keys take their names from PrivateSpaceExport, which is
     // what has to recognise every one of them by name to keep a locked space out of a backup. A
@@ -330,9 +395,19 @@ class Prefs(private val context: Context) {
         val NOTIFICATION_BADGES = booleanPreferencesKey("notification_badges")
         val NOTIFICATION_PREVIEW = booleanPreferencesKey("notification_preview")
         val NOTIFICATION_TEXT_SP = intPreferencesKey("notification_text_sp")
+        val NOTIFICATION_COLOR = intPreferencesKey("notification_color")
         val NOTIFICATION_PANEL = booleanPreferencesKey("notification_panel")
         val DAILY_OPENS_DAY = stringPreferencesKey("daily_opens_day")
         val DAILY_OPENS = stringPreferencesKey("daily_opens_json")
+        val SLEEP_RULES = stringPreferencesKey("sleep_rules_json")
+        val OPEN_LIMITS = stringPreferencesKey("open_limits_json")
+        val LAST_LAUNCH = stringPreferencesKey("last_launch_json")
+        val LIMIT_FROZEN_DAY = stringPreferencesKey("limit_frozen_day")
+        val LIMIT_FROZEN = stringPreferencesKey("limit_frozen_json")
+        val FREEZE_RUN_LOG = stringPreferencesKey("freeze_run_log_json")
+        val HANDOVER = stringPreferencesKey("handover_json")
+        val HANDOVER_LOCKED = stringSetPreferencesKey("handover_locked")
+        val FOCUS = stringPreferencesKey("focus_json")
         val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
         val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
         val AUTO_DARK = booleanPreferencesKey("auto_dark")
@@ -380,6 +455,11 @@ class Prefs(private val context: Context) {
         val UPDATE_CONSENT = intPreferencesKey("update_consent")
         val LAST_UPDATE_PROMPT = longPreferencesKey("last_update_prompt")
         val FREEZE_ENABLED = booleanPreferencesKey("freeze_enabled")
+        // Off by default. The external doors (broadcast, deluge:// link) are exported, so
+        // without this switch and the token below any installed app or web page could lift
+        // the whole list. Kept apart from the freeze switch: automation is opt-in.
+        val EXTERNAL_CONTROL_ENABLED = booleanPreferencesKey("external_control_enabled")
+        val EXTERNAL_CONTROL_TOKEN = stringPreferencesKey("external_control_token")
         val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
         val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
         val FREEZE_LABELS = stringPreferencesKey("freeze_labels")
@@ -572,14 +652,23 @@ class Prefs(private val context: Context) {
             val kept = store.asMap().entries
                 .filter { (key, _) -> key.name in NEVER_EXPORT }
                 .map { (key, value) -> Pair(key as Preferences.Key<Any>, value) }
+            // A lock record points at an app that is hidden or suspended right now. Replacing
+            // the set with an old backup's (possibly empty) one would strand those apps with
+            // no row and no way back, so import adds locks and never removes one.
+            val locksBefore = store[Keys.LOCKED_APPS] ?: emptySet()
             store.clear()
             kept.forEach { (key, value) ->
                 @Suppress("UNCHECKED_CAST")
                 store[key as Preferences.Key<Any>] = value
             }
             parsed.forEach { (key, value) ->
+                val merged = if (key.name == PREF_LOCKED_APPS && value is Set<*>) {
+                    (locksBefore + value.filterIsInstance<String>()).toSet()
+                } else {
+                    value
+                }
                 @Suppress("UNCHECKED_CAST")
-                store[key as Preferences.Key<Any>] = value
+                store[key as Preferences.Key<Any>] = merged
             }
         }
         // A cleared store reads as a fresh install; stamp it as an established one so the
@@ -633,6 +722,51 @@ class Prefs(private val context: Context) {
         data.map { it[Keys.FREEZE_ENABLED] ?: true }.distinctUntilChanged()
 
     suspend fun freezeEnabledNow(): Boolean = freezeEnabled.first()
+
+    /**
+     * Whether the external doors accept commands at all. Off unless the user turned it on in
+     * settings, which is what keeps a `deluge://` link from being a one-tap freeze button on
+     * any web page.
+     */
+    val externalControlEnabled: Flow<Boolean> =
+        data.map { it[Keys.EXTERNAL_CONTROL_ENABLED] ?: false }.distinctUntilChanged()
+
+    suspend fun externalControlEnabledNow(): Boolean = externalControlEnabled.first()
+
+    /** The shared secret the external callers must send; null until one is generated. */
+    val externalControlToken: Flow<String?> =
+        data.map { it[Keys.EXTERNAL_CONTROL_TOKEN] }.distinctUntilChanged()
+
+    suspend fun externalControlTokenNow(): String? =
+        data.first()[Keys.EXTERNAL_CONTROL_TOKEN]?.takeIf { it.isNotBlank() }
+
+    /**
+     * The token, generating one the first time it is asked for.
+     *
+     * 16 random bytes, hex, so it can be typed or pasted into a Tasker action without
+     * escaping. It lives only in this app's private store, so reading it already requires
+     * the launcher's own data directory.
+     */
+    suspend fun ensureExternalControlToken(): String {
+        externalControlTokenNow()?.let { return it }
+        val fresh = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it) }
+        context.dataStore.edit { it[Keys.EXTERNAL_CONTROL_TOKEN] = fresh }
+        return fresh
+    }
+
+    suspend fun setExternalControlEnabled(enabled: Boolean) {
+        if (enabled) ensureExternalControlToken()
+        context.dataStore.edit { it[Keys.EXTERNAL_CONTROL_ENABLED] = enabled }
+    }
+
+    /** A new secret, so a token that leaked into a log or a chat can be retired. */
+    suspend fun regenerateExternalControlToken(): String {
+        val fresh = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+            .joinToString("") { "%02x".format(it) }
+        context.dataStore.edit { it[Keys.EXTERNAL_CONTROL_TOKEN] = fresh }
+        return fresh
+    }
 
     val freezeMethods: Flow<Map<String, FreezeMethod>> = data.map { pref ->
         jsonToMap(pref[Keys.FREEZE_METHODS]).mapNotNull { (packageName, name) ->
@@ -755,6 +889,47 @@ class Prefs(private val context: Context) {
             counts = jsonToMap(pref[Keys.DAILY_OPENS])
                 .mapValues { (_, v) -> v.toIntOrNull() ?: 0 }
                 .filterValues { it > 0 },
+        )
+    }.distinctUntilChanged()
+
+    /** Rules that freeze or wake the freeze list by Wi-Fi, time, headphones, charging or battery. */
+    val sleepRules: Flow<List<SleepRule>> =
+        data.map { sleepRulesFromJson(it[Keys.SLEEP_RULES]) }.distinctUntilChanged()
+
+    /** Per-app daily opens, zero or absent meaning no limit. */
+    val openLimits: Flow<Map<String, Int>> = data.map { pref ->
+        jsonToMap(pref[Keys.OPEN_LIMITS])
+            .mapValues { (_, v) -> (v.toIntOrNull() ?: 0).coerceIn(0, MAX_DAILY_OPEN_LIMIT) }
+            .filterValues { it > 0 }
+    }.distinctUntilChanged()
+
+    /** When each app was last opened, for the unused filter. */
+    val lastLaunch: Flow<Map<String, Long>> = data.map { pref ->
+        jsonToMap(pref[Keys.LAST_LAUNCH])
+            .mapValues { (_, v) -> v.toLongOrNull() ?: 0L }
+            .filterValues { it > 0 }
+    }.distinctUntilChanged()
+
+    /** What a running handover changed, and the apps it locks while it runs. */
+    val handover: Flow<HandoverState> =
+        data.map { HandoverState.fromJson(it[Keys.HANDOVER]) }.distinctUntilChanged()
+
+    val handoverLocked: Flow<Set<String>> =
+        data.map { it[Keys.HANDOVER_LOCKED] ?: emptySet() }.distinctUntilChanged()
+
+    /** The app this phone is temporarily narrowed to, or an inactive session. */
+    val focus: Flow<FocusSession> =
+        data.map { focusSessionFromJson(it[Keys.FOCUS]) }.distinctUntilChanged()
+
+    /** What the last sleep-rule run changed, for the freeze screen's undo line. */
+    val freezeRun: Flow<FreezeRunLog?> =
+        data.map { FreezeRunLog.fromJson(it[Keys.FREEZE_RUN_LOG]) }.distinctUntilChanged()
+
+    /** The apps a daily limit froze, and the day it happened. */
+    val limitFrozen: Flow<LimitFrozen> = data.map { pref ->
+        LimitFrozen(
+            day = pref[Keys.LIMIT_FROZEN_DAY].orEmpty(),
+            keys = jsonToKeys(pref[Keys.LIMIT_FROZEN]),
         )
     }.distinctUntilChanged()
 
@@ -1199,6 +1374,10 @@ class Prefs(private val context: Context) {
      */
     val notificationPreview: Flow<Boolean> =
         data.map { it[Keys.NOTIFICATION_PREVIEW] ?: false }.distinctUntilChanged()
+
+    /** ARGB for the notification previews; zero follows the theme. */
+    val notificationColor: Flow<Int> =
+        data.map { it[Keys.NOTIFICATION_COLOR] ?: 0 }.distinctUntilChanged()
 
     /** Point size for the notification lines under home screen apps. */
     val notificationTextSp: Flow<Int> =
@@ -2267,8 +2446,7 @@ class Prefs(private val context: Context) {
             map[componentKey] = ((map[componentKey]?.toIntOrNull() ?: 0) + 1).toString()
             pref[Keys.LAUNCH_COUNTS] = mapToJson(map)
             // The same write, so a daily limit never sees a launch the total count missed.
-            val today = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT)
-                .format(java.util.Date())
+            val today = localDay()
             val daily = if (pref[Keys.DAILY_OPENS_DAY] == today) {
                 jsonToMap(pref[Keys.DAILY_OPENS]).toMutableMap()
             } else {
@@ -2277,6 +2455,95 @@ class Prefs(private val context: Context) {
             }
             daily[componentKey] = ((daily[componentKey]?.toIntOrNull() ?: 0) + 1).toString()
             pref[Keys.DAILY_OPENS] = mapToJson(daily)
+            // When it was last opened, for the unused filter. The same write again: a
+            // timestamp that lags its count would report an app as unused right after a tap.
+            val launches = jsonToMap(pref[Keys.LAST_LAUNCH]).toMutableMap()
+            launches[componentKey] = System.currentTimeMillis().toString()
+            if (launches.size > MAX_LAST_LAUNCH_KEYS) {
+                val keep = launches.entries
+                    .sortedByDescending { it.value.toLongOrNull() ?: 0L }
+                    .take(MAX_LAST_LAUNCH_KEYS)
+                launches.clear()
+                keep.forEach { launches[it.key] = it.value }
+            }
+            pref[Keys.LAST_LAUNCH] = mapToJson(launches)
+        }
+    }
+
+    suspend fun sleepRulesNow(): List<SleepRule> = sleepRules.first()
+
+    suspend fun openLimitsNow(): Map<String, Int> = openLimits.first()
+
+    suspend fun dailyOpensNow(): DailyOpens = dailyOpens.first()
+
+    suspend fun limitFrozenNow(): LimitFrozen = limitFrozen.first()
+
+    suspend fun freezeRunNow(): FreezeRunLog? = freezeRun.first()
+
+    suspend fun setFreezeRun(log: FreezeRunLog) {
+        context.dataStore.edit { it[Keys.FREEZE_RUN_LOG] = FreezeRunLog.toJson(log) }
+    }
+
+    /** The log describes one run; once undone it would only invite a second undo. */
+    suspend fun clearFreezeRun() {
+        context.dataStore.edit { it.remove(Keys.FREEZE_RUN_LOG) }
+    }
+
+    suspend fun setSleepRules(rules: List<SleepRule>) {
+        context.dataStore.edit { it[Keys.SLEEP_RULES] = sleepRulesToJson(rules) }
+    }
+
+    /** Zero removes the limit instead of storing "never open". */
+    suspend fun setOpenLimit(componentKey: String, limit: Int) {
+        val clean = sanitizeOpenLimit(limit)
+        context.dataStore.edit { pref ->
+            val limits = jsonToMap(pref[Keys.OPEN_LIMITS]).toMutableMap()
+            if (clean == 0) limits.remove(componentKey) else limits[componentKey] = clean.toString()
+            if (limits.isEmpty()) pref.remove(Keys.OPEN_LIMITS) else pref[Keys.OPEN_LIMITS] = mapToJson(limits)
+        }
+    }
+
+    suspend fun setLimitFrozen(day: String, keys: Set<String>) {
+        context.dataStore.edit { pref ->
+            if (keys.isEmpty()) {
+                pref.remove(Keys.LIMIT_FROZEN)
+                pref.remove(Keys.LIMIT_FROZEN_DAY)
+            } else {
+                pref[Keys.LIMIT_FROZEN_DAY] = day
+                pref[Keys.LIMIT_FROZEN] = keysToJson(keys)
+            }
+        }
+    }
+
+    suspend fun clearLimitFrozen() = setLimitFrozen(localDay(), emptySet())
+
+    suspend fun handoverNow(): HandoverState = handover.first()
+
+    suspend fun setHandover(state: HandoverState) {
+        context.dataStore.edit { pref ->
+            if (!state.active && state.frozenBefore.isEmpty() && state.lockedBefore.isEmpty()) {
+                pref.remove(Keys.HANDOVER)
+            } else {
+                pref[Keys.HANDOVER] = HandoverState.toJson(state)
+            }
+        }
+    }
+
+    suspend fun setHandoverLocked(keys: Set<String>) {
+        context.dataStore.edit { pref ->
+            if (keys.isEmpty()) pref.remove(Keys.HANDOVER_LOCKED) else pref[Keys.HANDOVER_LOCKED] = keys
+        }
+    }
+
+    suspend fun focusNow(): FocusSession = focus.first()
+
+    suspend fun setFocus(session: FocusSession) {
+        context.dataStore.edit { pref ->
+            if (!session.active || session.packageName.isBlank()) {
+                pref.remove(Keys.FOCUS)
+            } else {
+                pref[Keys.FOCUS] = focusSessionToJson(session)
+            }
         }
     }
 
@@ -2325,6 +2592,12 @@ class Prefs(private val context: Context) {
 
     suspend fun setNotificationBadges(v: Boolean) {
         context.dataStore.edit { it[Keys.NOTIFICATION_BADGES] = v }
+    }
+
+    suspend fun setNotificationColor(v: Int) {
+        context.dataStore.edit {
+            if (v == 0) it.remove(Keys.NOTIFICATION_COLOR) else it[Keys.NOTIFICATION_COLOR] = v
+        }
     }
 
     suspend fun setNotificationTextSp(v: Int) {
@@ -2694,6 +2967,19 @@ class Prefs(private val context: Context) {
             }
         }
     }
+
+    private fun jsonToKeys(json: String?): Set<String> {
+        if (json.isNullOrBlank()) return emptySet()
+        return runCatching {
+            val array = JSONArray(json)
+            (0 until array.length())
+                .mapNotNull { array.optString(it).takeIf { key -> key.isNotBlank() } }
+                .toSet()
+        }.getOrDefault(emptySet())
+    }
+
+    private fun keysToJson(keys: Set<String>): String =
+        JSONArray().apply { keys.sorted().forEach { put(it) } }.toString()
 
     private fun jsonToMap(json: String?): Map<String, String> {
         if (json.isNullOrBlank()) return emptyMap()

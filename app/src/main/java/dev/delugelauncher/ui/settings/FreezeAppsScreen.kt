@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import androidx.core.text.BidiFormatter
+
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -8,10 +10,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -19,9 +26,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
@@ -39,6 +48,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
@@ -54,14 +65,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
@@ -153,10 +167,20 @@ fun FreezeAppsScreen(
         ActivityResultContracts.OpenDocument(),
     ) { uri -> if (uri != null) onImportPlan(uri) }
     var tabIndex by rememberSaveable { mutableIntStateOf(0) }
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val methods = FreezeMethod.entries
+    val tabHints = methods.map { methodNeedsAccess(status, it) }
     val method = methods[tabIndex.coerceIn(methods.indices)]
     val access = status.access
-    val canOperate = access != FreezeAccess.NONE && (method != FreezeMethod.HIDE || status.rootGranted)
+    val canOperate = status.supports(method)
+    // A policy channel cannot stop or disable, so landing on that tab would read as "off".
+    LaunchedEffect(access) {
+        val policy = access == FreezeAccess.DEVICE_OWNER || access == FreezeAccess.DHIZUKU
+        if (policy && !status.supports(method)) {
+            tabIndex = FreezeMethod.SUSPEND.ordinal
+        }
+    }
     val pinyin = remember { Pinyin.ordering() }
     // Turning system apps off while their filter is selected would leave an empty screen, so
     // the filter falls back to user apps until they are turned on again.
@@ -227,11 +251,15 @@ fun FreezeAppsScreen(
     val invertLeaving = assignable.filter { freezeMethods[it.freezeKey] == method }
 
     var menu by remember { mutableStateOf(false) }
-    var confirmingSelectAll by remember { mutableStateOf(false) }
-    var confirmingInvert by remember { mutableStateOf(false) }
-    var autoDialog by remember { mutableStateOf(false) }
-    var enablingSystemApps by remember { mutableStateOf(false) }
-    var disablingSystemApps by remember { mutableStateOf(false) }
+    // Saveable so a rotation does not silently answer "no" to a confirmation the user is
+    // still reading, and does not throw away the auto-freeze panel they were editing.
+    var confirmingSelectAll by rememberSaveable { mutableStateOf(false) }
+    var confirmingInvert by rememberSaveable { mutableStateOf(false) }
+    var confirmingFreezeAll by rememberSaveable { mutableStateOf(false) }
+    var confirmingUnfreezeAll by rememberSaveable { mutableStateOf(false) }
+    var autoDialog by rememberSaveable { mutableStateOf(false) }
+    var enablingSystemApps by rememberSaveable { mutableStateOf(false) }
+    var disablingSystemApps by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { onRefreshAccess() }
 
@@ -273,13 +301,13 @@ fun FreezeAppsScreen(
                                 text = { Text(stringResource(R.string.freeze_freeze_all)) },
                                 leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
                                 enabled = freezeMethods.isNotEmpty() && access != FreezeAccess.NONE,
-                                onClick = { menu = false; onFreezeAll() },
+                                onClick = { menu = false; confirmingFreezeAll = true },
                             )
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.freeze_unfreeze_all)) },
                                 leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
                                 enabled = freezeMethods.isNotEmpty() && access != FreezeAccess.NONE,
-                                onClick = { menu = false; onUnfreezeAll() },
+                                onClick = { menu = false; confirmingUnfreezeAll = true },
                             )
                             HorizontalDivider()
                             DropdownMenuItem(
@@ -305,6 +333,7 @@ fun FreezeAppsScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = surface),
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
     ) { padding ->
         // The header travels with the rows. Four method tabs, a balance line, the system-app
         // switch, the filter row and two buttons took more than half the screen from a list
@@ -335,9 +364,18 @@ fun FreezeAppsScreen(
                     TabRow(selectedTabIndex = tabIndex) {
                         methods.forEachIndexed { index, m ->
                             val count = apps.count { freezeMethods[it.freezeKey] == m }
+                            val supported = status.supports(m)
                             Tab(
                                 selected = index == tabIndex,
-                                onClick = { tabIndex = index },
+                                onClick = {
+                                    if (supported) {
+                                        tabIndex = index
+                                    } else {
+                                        scope.launch {
+                                            snackbar.showSnackbar(tabHints[index])
+                                        }
+                                    }
+                                },
                                 text = {
                                     Text(
                                         text = if (count > 0) {
@@ -345,8 +383,17 @@ fun FreezeAppsScreen(
                                         } else {
                                             methodName(m)
                                         },
-                                        maxLines = 1,
+                                        // Two lines: German and Russian method names are
+                                        // longer than a quarter-width tab, and the name is
+                                        // the only thing that identifies the tab.
+                                        maxLines = 2,
                                         overflow = TextOverflow.Ellipsis,
+                                        color = when {
+                                            index != tabIndex && !supported ->
+                                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            index == tabIndex -> MaterialTheme.colorScheme.primary
+                                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
                                     )
                                 },
                             )
@@ -355,8 +402,15 @@ fun FreezeAppsScreen(
                 }
             }
             item(key = "header-balance") { MethodBalance(method) }
-            if (method == FreezeMethod.HIDE && !status.rootGranted) {
+            if (method == FreezeMethod.HIDE && !status.supports(method)) {
                 item(key = "header-hide-note") { InfoLine(stringResource(R.string.freeze_hide_needs_root)) }
+            }
+            if (access != FreezeAccess.NONE && !status.supports(method) &&
+                method != FreezeMethod.HIDE
+            ) {
+                item(key = "header-method-note") {
+                    InfoLine(stringResource(R.string.freeze_method_needs_shell))
+                }
             }
             if (method == FreezeMethod.HIDE) {
                 item(key = "header-private-space") { PrivateSpaceHint() }
@@ -553,6 +607,48 @@ fun FreezeAppsScreen(
         )
     }
 
+    if (confirmingFreezeAll) {
+        AlertDialog(
+            onDismissRequest = { confirmingFreezeAll = false },
+            title = { Text(stringResource(R.string.freeze_freeze_all)) },
+            text = {
+                Text(stringResource(R.string.freeze_all_confirm_body, freezeMethods.size))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingFreezeAll = false
+                    onFreezeAll()
+                }) { Text(stringResource(R.string.freeze_freeze_all)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingFreezeAll = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
+    if (confirmingUnfreezeAll) {
+        AlertDialog(
+            onDismissRequest = { confirmingUnfreezeAll = false },
+            title = { Text(stringResource(R.string.freeze_unfreeze_all)) },
+            text = {
+                Text(stringResource(R.string.unfreeze_all_confirm_body, freezeMethods.size))
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmingUnfreezeAll = false
+                    onUnfreezeAll()
+                }) { Text(stringResource(R.string.freeze_unfreeze_all)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmingUnfreezeAll = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+        )
+    }
+
     if (autoDialog) {
         AlertDialog(
             onDismissRequest = { autoDialog = false },
@@ -694,6 +790,7 @@ private fun delayLabel(seconds: Int): String = when {
     else -> stringResource(R.string.freeze_auto_delay_seconds, seconds)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AccessBanner(
     status: FreezeStatus,
@@ -703,30 +800,40 @@ private fun AccessBanner(
     val surfaceVariant = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     Surface(color = surfaceVariant, modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(rootStatusText(status), style = MaterialTheme.typography.bodyMedium)
-            Text(shizukuStatusText(status), style = MaterialTheme.typography.bodyMedium)
-            // Shizuku is the recommended route: no root needed, and it is the faster of the
-            // two. Root still answers every method, so this is a nudge rather than a blocker.
-            if (!status.shizukuAuthorized) {
-                Text(
-                    stringResource(R.string.freeze_recommend_shizuku),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            // Every channel the phone offers, not just the one in use: the tabs below are
+            // greyed by channel, so what is available has to be readable before them.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ChannelChip(R.string.access_root, status.rootGranted, rootChipValue(status))
+                ChannelChip(
+                    R.string.access_shizuku,
+                    status.shizukuAuthorized,
+                    shizukuChipValue(status),
                 )
-            }
-            if (status.access != FreezeAccess.NONE && !status.rootGranted) {
-                Text(
-                    stringResource(R.string.freeze_hide_needs_root),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                ChannelChip(
+                    R.string.access_owner,
+                    status.deviceOwner,
+                    ownerChipValue(status),
+                )
+                ChannelChip(
+                    R.string.access_dhizuku,
+                    status.dhizukuDelegated,
+                    dhizukuChipValue(status),
                 )
             }
             if (status.access == FreezeAccess.NONE) {
                 Text(
                     stringResource(R.string.freeze_needs_access),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
+                Text(
+                    stringResource(R.string.freeze_recommend_shizuku),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                 )
@@ -748,39 +855,124 @@ private fun AccessBanner(
                         }
                     }
                 }
+            } else {
+                Text(
+                    stringResource(
+                        R.string.freeze_channel_active,
+                        channelName(status.access),
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                )
+                if (!status.supports(FreezeMethod.HIDE)) {
+                    Text(
+                        stringResource(R.string.freeze_hide_needs_root),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun rootStatusText(status: FreezeStatus): String {
-    if (status.rootProvider == RootProvider.NONE) {
-        return stringResource(R.string.freeze_root_none)
+private fun ChannelChip(@StringRes label: Int, active: Boolean, value: String) {
+    val positive = if (isSystemInDarkTheme()) Color(0xFF66BB6A) else Color(0xFF2E7D32)
+    Surface(
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+        shape = CircleShape,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier
+                    .size(7.dp)
+                    .background(
+                        if (active) positive else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                        CircleShape,
+                    ),
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                stringResource(label),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (active) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+            )
+            Text(
+                stringResource(R.string.freeze_value_suffix, value),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
-    val provider = when (status.rootProvider) {
-        RootProvider.MAGISK -> "Magisk"
-        RootProvider.KERNELSU -> "KernelSU"
-        RootProvider.APATCH -> "APatch"
-        RootProvider.SUPERSU -> "SuperSU"
-        else -> stringResource(R.string.freeze_root_unknown_provider)
-    }
-    val version = status.rootVersion?.takeIf { it.isNotBlank() }
-    val label = listOfNotNull(provider, version).joinToString(" ")
-    return stringResource(R.string.freeze_root_status, label)
 }
 
 @Composable
-private fun shizukuStatusText(status: FreezeStatus): String {
-    val detail = when {
-        !status.shizukuInstalled -> stringResource(R.string.freeze_shizuku_not_installed)
-        !status.shizukuRunning -> stringResource(R.string.freeze_shizuku_not_running)
-        !status.shizukuAuthorized -> stringResource(R.string.freeze_shizuku_denied)
-        status.shizukuVersion > 0 ->
-            stringResource(R.string.freeze_shizuku_ready_version, status.shizukuVersion)
-        else -> stringResource(R.string.freeze_shizuku_ready)
-    }
-    return stringResource(R.string.freeze_shizuku_status, detail)
+private fun channelName(access: FreezeAccess): String = when (access) {
+    FreezeAccess.ROOT -> stringResource(R.string.access_root)
+    FreezeAccess.SHIZUKU -> stringResource(R.string.access_shizuku)
+    FreezeAccess.DEVICE_OWNER -> stringResource(R.string.access_owner)
+    FreezeAccess.DHIZUKU -> stringResource(R.string.access_dhizuku)
+    FreezeAccess.NONE -> ""
+}
+
+@Composable
+private fun rootChipValue(status: FreezeStatus): String = when {
+    !status.checked -> stringResource(R.string.access_unknown)
+    !status.rootGranted -> stringResource(R.string.access_summary_not_granted)
+    else -> listOfNotNull(
+        when (status.rootProvider) {
+            RootProvider.MAGISK -> "Magisk"
+            RootProvider.KERNELSU -> "KernelSU"
+            RootProvider.APATCH -> "APatch"
+            RootProvider.SUPERSU -> "SuperSU"
+            RootProvider.OTHER -> "su"
+            RootProvider.NONE -> "su"
+        },
+        status.rootVersion?.takeIf { it.isNotBlank() },
+    ).joinToString(" ")
+}
+
+@Composable
+private fun shizukuChipValue(status: FreezeStatus): String = when {
+    !status.checked -> stringResource(R.string.access_unknown)
+    !status.shizukuInstalled -> stringResource(R.string.freeze_shizuku_not_installed)
+    !status.shizukuRunning -> stringResource(R.string.freeze_shizuku_not_running)
+    !status.shizukuAuthorized -> stringResource(R.string.freeze_shizuku_denied)
+    status.shizukuManagerVersion != null ->
+        BidiFormatter.getInstance().unicodeWrap("v${status.shizukuManagerVersion}")
+    status.shizukuVersion > 0 -> BidiFormatter.getInstance().unicodeWrap("v${status.shizukuVersion}")
+    else -> stringResource(R.string.access_yes)
+}
+
+@Composable
+private fun dhizukuChipValue(status: FreezeStatus): String = when {
+    !status.checked -> stringResource(R.string.access_unknown)
+    !status.dhizukuInstalled -> stringResource(R.string.freeze_dhizuku_not_installed)
+    !status.dhizukuPermission -> stringResource(R.string.freeze_dhizuku_no_permission)
+    !status.dhizukuDelegated -> stringResource(R.string.freeze_dhizuku_no_scope)
+    else -> stringResource(R.string.access_yes)
+}
+
+@Composable
+private fun ownerChipValue(status: FreezeStatus): String = when {
+    !status.checked -> stringResource(R.string.access_unknown)
+    status.deviceOwner -> stringResource(R.string.access_yes)
+    else -> stringResource(R.string.access_summary_not_set)
+}
+
+/** What the tab would need, said out loud when it is tapped with the wrong channel. */
+@Composable
+private fun methodNeedsAccess(status: FreezeStatus, method: FreezeMethod): String = when {
+    status.access == FreezeAccess.NONE -> stringResource(R.string.freeze_needs_access)
+    method == FreezeMethod.HIDE -> stringResource(R.string.freeze_hide_needs_root)
+    else -> stringResource(R.string.freeze_method_needs_shell)
 }
 
 /** The one-line trade-off of the tab in front, so choosing a method is not a guess. */
@@ -831,6 +1023,7 @@ private fun FilterControls(
     sort: FreezeSort,
     onSort: (FreezeSort) -> Unit,
     systemAppsEnabled: Boolean,
+    showSource: Boolean = true,
 ) {
     var sortMenu by remember { mutableStateOf(false) }
     Column(
@@ -862,17 +1055,19 @@ private fun FilterControls(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.horizontalScroll(rememberScrollState()),
         ) {
-            FilledChip(
-                label = stringResource(R.string.freeze_filter_user),
-                selected = sourceFilter == FreezeSourceFilter.USER,
-                onClick = { onSource(FreezeSourceFilter.USER) },
-            )
-            if (systemAppsEnabled) {
+            if (showSource) {
                 FilledChip(
-                    label = stringResource(R.string.freeze_filter_system),
-                    selected = sourceFilter == FreezeSourceFilter.SYSTEM,
-                    onClick = { onSource(FreezeSourceFilter.SYSTEM) },
+                    label = stringResource(R.string.freeze_filter_user),
+                    selected = sourceFilter == FreezeSourceFilter.USER,
+                    onClick = { onSource(FreezeSourceFilter.USER) },
                 )
+                if (systemAppsEnabled) {
+                    FilledChip(
+                        label = stringResource(R.string.freeze_filter_system),
+                        selected = sourceFilter == FreezeSourceFilter.SYSTEM,
+                        onClick = { onSource(FreezeSourceFilter.SYSTEM) },
+                    )
+                }
             }
             FilledChip(
                 label = stringResource(R.string.freeze_filter_all),

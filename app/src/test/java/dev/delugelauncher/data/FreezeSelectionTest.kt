@@ -96,7 +96,11 @@ class FreezeSelectionTest {
         // Without this the lift counted as done before its command ran, and a hidden app
         // stayed hidden with no record left to bring it back.
         assertEquals(
-            listOf(FreezeMethod.STOP, FreezeMethod.SUSPEND, FreezeMethod.DISABLE),
+            listOf(
+                FreezeMethod.STOP,
+                FreezeMethod.SUSPEND,
+                FreezeMethod.DISABLE,
+            ),
             FreezeMethod.entries.filter { FreezeSelection.verifiable(it) },
         )
         assertTrue(FreezeSelection.verifiable(null))

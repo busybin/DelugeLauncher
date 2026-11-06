@@ -362,6 +362,9 @@ fun HomeRoute(
     val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
     // Everything freeze-shaped is hidden while the feature is off.
     val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
+    // The method picker asks the channel what it can run, so it never offers a verb that
+    // will silently fail on this phone.
+    val freezeStatus by app.freezeManager.status.collectAsState()
     // The slide-up's own target; the tap keeps the button key and never shares it.
     val cornerSwipeKey by app.prefs.cornerSwipeKey.collectAsState(initial = null)
     // The freeze list, so a row menu can put an app back under the method it remembers.
@@ -372,7 +375,7 @@ fun HomeRoute(
     val installedFreezeKeys = remember(appsByKey) {
         appsByKey.values.mapTo(mutableSetOf()) { it.freezeKey }
     }
-    val freezeActions = remember(freezeMethods, installedFreezeKeys) {
+    val freezeActions = remember(freezeMethods, installedFreezeKeys, freezeStatus) {
         fun fail(res: Int, label: String) {
             Toast.makeText(context, context.getString(res, label), Toast.LENGTH_SHORT).show()
         }
@@ -438,6 +441,7 @@ fun HomeRoute(
                 .values
                 .groupingBy { it }
                 .eachCount(),
+            supports = { method, serial -> freezeStatus.offered(method, serial) },
         )
     }
     // Portrait and landscape each keep their own position and never share: turning the
@@ -455,6 +459,7 @@ fun HomeRoute(
     val nowPlaying by NowPlayingBus.state.collectAsState()
     val previewWanted by app.prefs.notificationPreview.collectAsState(initial = false)
     val notificationTextSp by app.prefs.notificationTextSp.collectAsState(initial = 12)
+    val notificationColor by app.prefs.notificationColor.collectAsState(initial = 0)
     val previews by NotificationPreviewBus.previews.collectAsState()
     // The grant lives in system Settings, so a BACK from there resumes without a HOME
     // intent: re-check on every resume, not just when the tick moves.
@@ -1419,6 +1424,12 @@ fun HomeRoute(
             val result = app.freezeManager.freezeAll()
             if (result.noAccess) {
                 FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+            } else if (result.failed > 0) {
+                FreezeToast.result(
+                    context,
+                    context.getString(R.string.freeze_many_partial, result.done, result.failed),
+                    long = true,
+                )
             } else {
                 FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
             }
@@ -1431,6 +1442,12 @@ fun HomeRoute(
             val result = app.freezeManager.unfreezeAll()
             if (result.noAccess) {
                 FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+            } else if (result.failed > 0) {
+                FreezeToast.result(
+                    context,
+                    context.getString(R.string.unfreeze_many_partial, result.done, result.failed),
+                    long = true,
+                )
             } else {
                 FreezeToast.result(context, context.getString(R.string.freeze_all_done))
             }
@@ -1771,6 +1788,7 @@ fun HomeRoute(
                 // behind its content intent. Nothing is drawn until the list is known.
                 notificationPreviews = if (previewWanted && lockLoaded) previews else emptyMap(),
                 notificationTextSp = notificationTextSp,
+                notificationColor = notificationColor,
                 iconSizeDp = settings.iconSizeDp,
                 labelSizeSp = settings.labelSizeSp,
                 itemSpacingDp = settings.itemSpacingDp,
@@ -1841,6 +1859,74 @@ fun HomeRoute(
                 onResetFolderIcon = { folder -> scope.launch { app.prefs.setFolderIcon(folder.id, null) } },
                 onManageFolder = { folder ->
                     onNavigate("folder/" + android.net.Uri.encode(folder.id))
+                },
+                onFreezeFolder = if (freezeEnabled) {
+                    { members ->
+                        scope.launch {
+                            val result = app.freezeManager.freezeMany(members)
+                            val text = when {
+                                result.noAccess ->
+                                    context.getString(R.string.freeze_needs_access)
+                                result.done == 0 && result.failed == 0 -> null
+                                else -> buildString {
+                                    append(
+                                        context.getString(
+                                            R.string.freeze_folder_done,
+                                            result.done,
+                                        )
+                                    )
+                                    if (result.failed > 0) {
+                                        append(" ")
+                                        append(
+                                            context.getString(
+                                                R.string.freeze_folder_failed,
+                                                result.failed,
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                            if (text != null) {
+                                Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    null
+                },
+                onUnfreezeFolder = if (freezeEnabled) {
+                    { members ->
+                        scope.launch {
+                            val result = app.freezeManager.unfreezeMany(members)
+                            val text = when {
+                                result.noAccess ->
+                                    context.getString(R.string.freeze_needs_access)
+                                result.done == 0 && result.failed == 0 -> null
+                                else -> buildString {
+                                    append(
+                                        context.getString(
+                                            R.string.freeze_folder_released,
+                                            result.done,
+                                        )
+                                    )
+                                    if (result.failed > 0) {
+                                        append(" ")
+                                        append(
+                                            context.getString(
+                                                R.string.freeze_folder_failed,
+                                                result.failed,
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                            if (text != null) {
+                                Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                } else {
+                    null
                 },
                 onRemoveFromFolder = { folder, appInfo ->
                     scope.launch { app.prefs.removeAppFromFolder(folder.id, appInfo.key) }

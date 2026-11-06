@@ -74,6 +74,9 @@ class DelugeApp : Application() {
         prefs = Prefs(this)
         freezeManager = FreezeManager(this, prefs)
         appRepository = AppRepository(this, prefs, appScope, freezeManager)
+        // The status the settings and access screens draw is a probe, not a default. Do it
+        // once, off the main thread, before the first frame can show "no access".
+        appScope.launch { runCatching { freezeManager.checkAccessOnStart() } }
         // A reinstall starts with empty app data while the apps Deluge froze or locked stay
         // held by the system. The list is kept outside the package for exactly that case;
         // read it back off the main thread without asking for root here, and leave the prompt
@@ -105,6 +108,22 @@ class DelugeApp : Application() {
         // A list saved by an older build has no guard yet. This writes it before the first
         // lock tap, and does nothing where root is unavailable.
         appScope.launch { runCatching { appRepository.syncLockGuard() } }
+        // A limit freeze ends with the calendar day, which may have passed while this was shut.
+        appScope.launch {
+            runCatching { appRepository.reconcileLimitFreezes() }
+            // The lift is handed straight to the rules: an app a rule keeps asleep must be
+            // frozen again now, not at the next network, battery or clock event.
+            if (prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.applyRulesNow(this@DelugeApp, "limit")
+            }
+        }
+        // Sleep rules need the same watcher as the screen-off freeze; it is the service that
+        // hears the network and the clock, so a rule with the freeze trigger off still works.
+        appScope.launch {
+            if (prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.sync(this@DelugeApp, true)
+            }
+        }
         iconPackRepository = IconPackRepository(this)
         widgetHost = DelugeAppWidgetHost(this, HOST_ID)
         // Nothing else keeps the clock widget's battery line current; see the object.
@@ -165,13 +184,20 @@ class DelugeApp : Application() {
             kotlinx.coroutines.flow.combine(
                 prefs.freezeEnabled,
                 prefs.freezeAutoEnabled,
-            ) { feature, auto -> feature && auto }.collect { enabled ->
-                FreezeAutoService.sync(this@DelugeApp, enabled)
-            }
+                prefs.sleepRules,
+            ) { feature, auto, rules -> feature && (auto || rules.any { it.enabled }) }
+                .collect { enabled ->
+                    FreezeAutoService.sync(this@DelugeApp, enabled)
+                }
         }
         // The long-press shortcuts are part of the feature, so they appear and disappear with it.
         appScope.launch {
-            prefs.freezeEnabled.collect { enabled ->
+            // The token is part of the shortcut intent; re-publishing on a rotation keeps the
+            // old shortcut from silently stopping working.
+            kotlinx.coroutines.flow.combine(
+                prefs.freezeEnabled,
+                prefs.externalControlToken,
+            ) { enabled, _ -> enabled }.collect { enabled ->
                 FreezeShortcuts.sync(this@DelugeApp, enabled)
             }
         }

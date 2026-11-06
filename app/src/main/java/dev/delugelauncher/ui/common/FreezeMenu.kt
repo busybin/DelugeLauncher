@@ -47,6 +47,8 @@ class FreezeActions(
     val remove: (AppInfo) -> Unit,
     /** How many apps are already listed under each method, for the picker. */
     val methodCounts: Map<FreezeMethod, Int> = emptyMap(),
+    /** Which methods this channel can run for that profile; the picker offers only these. */
+    val supports: (FreezeMethod, Long) -> Boolean = { _, _ -> true },
 )
 
 /**
@@ -125,16 +127,20 @@ fun FreezeMethodDialog(
     label: String,
     /** Listed apps per method, so the choice says how busy each one already is. */
     counts: Map<FreezeMethod, Int> = emptyMap(),
+    /** Methods the channel can run for this row's profile. */
+    supports: (FreezeMethod, Long) -> Boolean = { _, _ -> true },
     onDismiss: () -> Unit,
     onPick: (FreezeMethod) -> Unit,
 ) {
     if (app == null) return
+    val offered = FreezeMethod.entries.filter { supports(it, app.userSerial) }
+    if (offered.isEmpty()) return
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.freeze_pick_title, label)) },
         text = {
             Column {
-                FreezeMethod.entries.forEach { method ->
+                offered.forEach { method ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()

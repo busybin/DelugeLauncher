@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.joinMiddleDot
+
 import android.app.TimePickerDialog
 import android.text.format.DateFormat
 import androidx.compose.foundation.clickable
@@ -202,7 +204,7 @@ private fun summary(rule: FavoriteRule): String {
         if (rule.action == FavoriteRuleAction.SHOW) R.string.rules_action_show
         else R.string.rules_action_hide
     )
-    return action + " · " + parts.joinToString(" · ")
+    return joinMiddleDot(listOf(action) + parts)
 }
 
 private fun clock(minute: Int): String =

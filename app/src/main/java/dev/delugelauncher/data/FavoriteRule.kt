@@ -41,11 +41,10 @@ data class FavoriteRule(
     /** The conditions this rule actually carries, in the order the screen lists them. */
     val conditions: Int
         get() = listOf(
-            // A Wi-Fi condition with no network named would hide its favorites everywhere,
-            // which is never what someone meant. It counts as no condition until one is named.
-            (wifi != FavoriteRuleWifi.ANY && wifiNames.isNotEmpty()),
+            // An empty name list means "any network": it is still a Wi-Fi condition.
+            wifi != FavoriteRuleWifi.ANY,
             headset != FavoriteRuleHeadset.ANY,
-            startMinute >= 0 && endMinute >= 0,
+            startMinute >= 0 && endMinute >= 0 && startMinute != endMinute,
             dailyLimit > 0,
         ).count { it }
 }
@@ -59,6 +58,10 @@ data class RuleContext(
     val minuteOfDay: Int = 0,
     /** How many times each favorite token has been opened today. */
     val opens: Map<String, Int> = emptyMap(),
+    /** Whether the phone is charging right now. Only sleep rules ask. */
+    val charging: Boolean = false,
+    /** Battery level, 0–100. Only sleep rules ask. */
+    val batteryPercent: Int = 100,
 )
 
 /**
@@ -91,39 +94,8 @@ fun List<FavoriteRule>.hiddenTokens(context: RuleContext): Set<String> {
     return hidden
 }
 
-private fun FavoriteRule.matches(context: RuleContext): Boolean {
-    when (wifi) {
-        FavoriteRuleWifi.ANY -> Unit
-        // No name yet is not a condition: hiding everywhere would look like the rule ate the
-        // favorites, and there would be nothing on screen to explain it.
-        FavoriteRuleWifi.ON ->
-            if (wifiNames.isNotEmpty() &&
-                (context.wifiSsid == null || context.wifiSsid !in wifiNames)
-            ) {
-                return false
-            }
-        FavoriteRuleWifi.OFF ->
-            if (wifiNames.isNotEmpty() && context.wifiSsid != null && context.wifiSsid in wifiNames) {
-                return false
-            }
-    }
-    when (headset) {
-        FavoriteRuleHeadset.ANY -> Unit
-        FavoriteRuleHeadset.CONNECTED -> if (!context.headset) return false
-        FavoriteRuleHeadset.DISCONNECTED -> if (context.headset) return false
-    }
-    if (startMinute in 0..1439 && endMinute in 0..1439 && startMinute != endMinute) {
-        val now = context.minuteOfDay
-        val inside = if (startMinute < endMinute) {
-            now >= startMinute && now < endMinute
-        } else {
-            // A window over midnight, which is the usual shape for "at night".
-            now >= startMinute || now < endMinute
-        }
-        if (!inside) return false
-    }
-    return true
-}
+private fun FavoriteRule.matches(context: RuleContext): Boolean =
+    RuleConditions.match(wifi, wifiNames, headset, startMinute, endMinute, context)
 
 internal fun favoriteRulesToJson(rules: List<FavoriteRule>): String {
     val array = JSONArray()

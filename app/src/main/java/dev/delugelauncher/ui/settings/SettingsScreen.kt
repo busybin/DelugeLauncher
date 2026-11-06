@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
@@ -121,6 +122,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -264,6 +266,8 @@ class SettingsScreenModel(
     val notificationPreview: Boolean,
     val notificationTextSp: Int,
     val onSetNotificationTextSp: (Int) -> Unit,
+    val notificationColor: Int,
+    val onSetNotificationColor: (Int) -> Unit,
     val onSetNotificationPreview: (Boolean) -> Unit,
     val notificationPanel: Boolean,
     val onSetNotificationPanel: (Boolean) -> Unit,
@@ -362,9 +366,19 @@ class SettingsScreenModel(
     val frozenCount: Int,
     /** Whether app freezing is offered at all. Off also means its rows and actions are gone. */
     val freezeEnabled: Boolean,
+    /** Whether root or Shizuku is available; without one the freeze rows are greyed out. */
+    val freezeHasAccess: Boolean,
+    /** Whether the access probe has answered yet; until then the rows say "checking". */
+    val freezeAccessChecked: Boolean,
     val onOpenFreezeApps: () -> Unit,
     /** Turning this off unfreezes and empties the list; the manager refuses a half-finished job. */
     val onSetFreezeEnabled: (Boolean) -> Unit,
+    /** Whether scripts and links may drive the freeze list. Off unless switched on here. */
+    val externalControlEnabled: Boolean,
+    val onSetExternalControl: (Boolean) -> Unit,
+    /** The secret those callers must send; null before the first switch-on. */
+    val externalControlToken: String?,
+    val onRegenerateExternalToken: () -> Unit,
     /** Whether this launcher is the one the system opens on HOME. */
     val isDefaultLauncher: Boolean,
     val onOpenHomeSettings: () -> Unit,
@@ -376,6 +390,8 @@ class SettingsScreenModel(
     /** How many favorite rules are on, for the row's subtitle. */
     val favoriteRuleCount: Int,
     val onOpenFavoriteRules: () -> Unit,
+    val onOpenSleepRules: () -> Unit,
+    val onOpenAccess: () -> Unit,
     /** Opens the launcher's own language picker. */
     val onOpenLanguage: () -> Unit,
     /** Opens the release notes. */
@@ -504,6 +520,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
     // Turning the freeze feature off is a one-way cleanup: every frozen app is lifted and the
     // list is emptied, so it gets a confirmation rather than a switch that just flips.
     var disablingFreeze by remember { mutableStateOf(false) }
+    var tokenDialog by remember { mutableStateOf(false) }
     var appLockDialog by remember { mutableStateOf(false) }
     var statusBarDialog by remember { mutableStateOf(false) }
     var dimDialog by remember { mutableStateOf(false) }
@@ -1312,12 +1329,28 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 detail = stringResource(R.string.settings_app_lock_screen_off_detail),
                 checked = appLockScreenOff,
                 onCheckedChange = onSetAppLockScreenOff,
+                leading = Icons.Filled.Lock,
             )
         },
         // Beside hiding, which is the launcher's own idea of hidden; this one is the system's.
         // The master switch stays visible when off, since it is the only way back on.
         SettingsEntry(
-            SettingsSection.PROTECTION, stringResource(R.string.settings_freeze_enable),
+            SettingsSection.FREEZE, stringResource(R.string.settings_access),
+            "root shizuku permission access setup wireless debugging",
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_access),
+                detail = when {
+                    !freezeAccessChecked -> stringResource(R.string.settings_access_checking)
+                    freezeHasAccess -> stringResource(R.string.settings_access_detail_ready)
+                    else -> stringResource(R.string.settings_access_detail)
+                },
+                onClick = onOpenAccess,
+                leading = Icons.Filled.Build,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.FREEZE, stringResource(R.string.settings_freeze_enable),
             "freeze frozen disable hide suspend stop root shizuku enable feature",
         ) {
             SwitchRowWithDetail(
@@ -1327,18 +1360,65 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onCheckedChange = { enabled ->
                     if (enabled) onSetFreezeEnabled(true) else disablingFreeze = true
                 },
+                leading = DelugeIcons.Freeze,
             )
         },
         SettingsEntry(
-            SettingsSection.PROTECTION, stringResource(R.string.settings_freeze_apps),
+            SettingsSection.FREEZE, stringResource(R.string.settings_freeze_apps),
             "freeze frozen disable hide suspend stop root shizuku", visible = freezeEnabled,
         ) {
             BackupRow(
                 label = stringResource(R.string.settings_freeze_apps),
-                detail = if (frozenCount == 0) stringResource(R.string.settings_freeze_none)
-                    else stringResource(R.string.settings_freeze_count, frozenCount),
+                detail = when {
+                    !freezeAccessChecked -> stringResource(R.string.settings_access_checking)
+                    !freezeHasAccess -> stringResource(R.string.settings_freeze_needs_access)
+                    frozenCount == 0 -> stringResource(R.string.settings_freeze_none)
+                    else -> stringResource(R.string.settings_freeze_count, frozenCount)
+                },
                 onClick = onOpenFreezeApps,
                 leading = Icons.Filled.Lock,
+                enabled = freezeAccessChecked && freezeHasAccess,
+            )
+        },
+        // The automation doors are exported; this switch is what makes them closed by default.
+        SettingsEntry(
+            SettingsSection.FREEZE, stringResource(R.string.settings_external_control),
+            "tasker automation broadcast deluge link script token", visible = freezeEnabled,
+        ) {
+            Column {
+                SwitchRowWithDetail(
+                    label = stringResource(R.string.settings_external_control),
+                    detail = stringResource(R.string.settings_external_control_detail),
+                    checked = externalControlEnabled,
+                    onCheckedChange = onSetExternalControl,
+                    leading = DelugeIcons.Freeze,
+                )
+                if (externalControlEnabled) {
+                    BackupRow(
+                        label = stringResource(R.string.settings_external_token),
+                        detail = externalControlToken
+                            ?: stringResource(R.string.settings_external_token_none),
+                        onClick = { tokenDialog = true },
+                        leading = Icons.Filled.Build,
+                    )
+                }
+            }
+        },
+        SettingsEntry(
+            SettingsSection.FREEZE, stringResource(R.string.settings_sleep_rules),
+            "sleep freeze wifi time headphone charging battery rule", visible = freezeEnabled,
+        ) {
+            BackupRow(
+                label = stringResource(R.string.settings_sleep_rules),
+                detail = when {
+                    !freezeAccessChecked -> stringResource(R.string.settings_access_checking)
+                    !freezeHasAccess -> stringResource(R.string.settings_freeze_needs_access)
+                    else -> stringResource(R.string.settings_sleep_rules_detail)
+                },
+                onClick = onOpenSleepRules,
+                leading = Icons.Filled.List,
+                // Openable without a channel: the screen can still save rules, and says on
+                // its own banner that they will not run until access is granted.
             )
         },
         // These live as entries rather than as hand-drawn items in the list below, so the
@@ -1650,6 +1730,43 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 )
             }
         }
+    }
+
+    if (tokenDialog) {
+        AlertDialog(
+            onDismissRequest = { tokenDialog = false },
+            title = { Text(stringResource(R.string.settings_external_token_title)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.settings_external_token_body,
+                        externalControlToken.orEmpty(),
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    clipboard.setPrimaryClip(
+                        ClipData.newPlainText("Deluge token", externalControlToken.orEmpty())
+                    )
+                    Toast.makeText(
+                        context,
+                        R.string.settings_external_token_copied,
+                        Toast.LENGTH_SHORT,
+                    ).show()
+                }) {
+                    Text(stringResource(R.string.action_copy))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    tokenDialog = false
+                    onRegenerateExternalToken()
+                }) {
+                    Text(stringResource(R.string.settings_external_token_new))
+                }
+            },
+        )
     }
 
     if (appLockDialog) {
@@ -2009,14 +2126,20 @@ private fun RowDivider() {
 }
 
 @Composable
-private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+private fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    leading: ImageVector? = null,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) RowLeadingIcon(leading)
         Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         // The row is the target, so the switch itself is not one. With both taking a tap, a
         // press on the switch toggled it and then the row toggled it back, which read as a
@@ -2035,14 +2158,16 @@ private fun SwitchRowWithDetail(
     detail: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    leading: ImageVector? = null,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) RowLeadingIcon(leading)
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
             Text(
@@ -2522,6 +2647,7 @@ private enum class SettingsSection(
     NOTIFICATIONS(R.string.settings_section_notifications, Icons.Filled.Notifications, SettingsCard.SYSTEM),
     APPS(R.string.settings_section_apps, DelugeIcons.Checklist, SettingsCard.APPS),
     PROTECTION(R.string.settings_group_protection, Icons.Filled.Lock, SettingsCard.APPS),
+    FREEZE(R.string.settings_group_freezing, DelugeIcons.Freeze, SettingsCard.APPS),
     BACKUP(R.string.settings_section_backup, Icons.Filled.Refresh, SettingsCard.SYSTEM),
     ABOUT(R.string.settings_section_about, Icons.Filled.Info, SettingsCard.SYSTEM),
 }
@@ -2553,11 +2679,18 @@ private class SettingsEntry(
 }
 
 @Composable
-private fun BackupRow(label: String, detail: String, onClick: () -> Unit, leading: ImageVector? = null) {
+private fun BackupRow(
+    label: String,
+    detail: String,
+    onClick: () -> Unit,
+    leading: ImageVector? = null,
+    enabled: Boolean = true,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .alpha(if (enabled) 1f else 0.45f)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -3206,4 +3339,46 @@ internal fun FilledChip(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
         )
     }
+
+
+}
+
+@Composable
+private fun NotificationColorDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+    val colors = listOf(
+        0 to stringResource(R.string.settings_notification_color_default),
+        0xFF3B82F6.toInt() to stringResource(R.string.settings_notification_color_blue),
+        0xFF22C55E.toInt() to stringResource(R.string.settings_notification_color_green),
+        0xFFF97316.toInt() to stringResource(R.string.settings_notification_color_orange),
+        0xFF8B5CF6.toInt() to stringResource(R.string.settings_notification_color_purple),
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.settings_notification_color)) },
+        text = {
+            Column {
+                colors.forEach { (value, label) ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onPick(value) }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(label, Modifier.weight(1f))
+                        if (current == value) {
+                            Icon(
+                                Icons.Filled.Check,
+                                contentDescription = stringResource(R.string.action_selected),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }

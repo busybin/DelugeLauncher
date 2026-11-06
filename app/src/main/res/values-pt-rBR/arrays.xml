@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v29">
+        <item>Congelar ganhou tela própria: Parar, Suspender, Desativar e Ocultar têm aba, e uma tabela diz qual canal faz o quê.</item>
+        <item>Congele sem root ou Shizuku: torne o Deluge proprietário do dispositivo, ou deixe o Dhizuku emprestar os direitos dele, e Suspender ou Ocultar funciona só com o telefone.</item>
+        <item>Segure uma pasta para congelar ou descongelar de uma vez todos os apps dentro dela.</item>
+        <item>Controle por script: broadcasts e links deluge:// congelam ou descongelam um app ou a lista inteira, então Tasker e atalhos também funcionam.</item>
+        <item>Regras de sono: congele ou acorde a lista por Wi-Fi, fones, faixa de horário, carregamento ou bateria.</item>
+        <item>Limites diários: escolha quantas vezes um app pode abrir por dia; ao atingir, ele fica congelado até amanhã.</item>
+        <item>Sem abrir há 90 dias: uma lista de um toque com apps esquecidos; adicione-os à lista de congelamento por ali.</item>
+        <item>Modo foco: segure um app para entregar o telefone mostrando só ele; ao desbloquear, o resto volta.</item>
+        <item>Modo entrega e dois novos ladrilhos: entregue o telefone com tudo congelado e tranque o espaço privado pela cortina.</item>
+        <item>Backups criptografados: exporte com senha; senha errada na importação não mexe na configuração atual.</item>
+        <item>A cor das notificações agora é escolhida, e apps pausados em perfil de trabalho ficam cinza como os suspensos.</item>
+        <item>Correções menores: as configurações sobrevivem a um arquivo de preferências danificado, e os bloqueios de apps são refeitos depois.</item>
+</string-array>
     <string-array name="changelog_v28">
         <item>As pastas podem ter o cartão Em reprodução: toque e segure uma pasta e escolha «Adicionar Em reprodução». O cartão abre junto com a pasta, mesmo sem nada tocando.</item>
         <item>Os deslizes de atalho agora chegam à parte inferior da tela inicial, mesmo quando os favoritos a preenchem.</item>

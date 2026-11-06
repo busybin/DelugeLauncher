@@ -35,8 +35,8 @@ android {
         targetSdk = baselineInt("baseline.targetSdk")
         // Plain integers, no "V" prefix, only ever raised, and always kept equal: the system
         // compares versionCode, and a lower number is rejected as a downgrade.
-        versionCode = 28
-        versionName = "28"
+        versionCode = 29
+        versionName = "29"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -130,6 +130,8 @@ dependencies {
     implementation(libs.shizuku.provider)
     // One binder call per app online through Shizuku beats forking `pm` per command.
     implementation(libs.hiddenapi.bypass)
+    // A Dhizuku-managed phone shares suspend and hide through delegated package access.
+    implementation(libs.dhizuku.api)
 
     testImplementation(libs.junit)
     // Real JSON on the unit-test classpath; the android.jar stubs only throw.

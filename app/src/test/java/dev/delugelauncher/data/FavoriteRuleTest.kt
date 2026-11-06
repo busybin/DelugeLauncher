@@ -100,9 +100,11 @@ class FavoriteRuleTest {
     }
 
     @Test
-    fun `a Wi-Fi condition with no network named holds everywhere`() {
+    fun `a Wi-Fi condition with no network named is still a condition`() {
+        // No name means "any network", which is a condition the editor can save; it must not
+        // read as an empty rule that the Save button refuses.
         val unnamed = rule(wifi = FavoriteRuleWifi.ON)
-        assertEquals(0, unnamed.conditions)
+        assertEquals(1, unnamed.conditions)
         assertFalse("a/A" in listOf(unnamed).hiddenTokens(quiet))
     }
 
