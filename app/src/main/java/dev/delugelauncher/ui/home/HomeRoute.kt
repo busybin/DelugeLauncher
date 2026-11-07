@@ -36,6 +36,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -83,6 +84,7 @@ import dev.delugelauncher.data.protectStepFor
 import dev.delugelauncher.data.protectionKind
 import dev.delugelauncher.data.restoreConcealed
 import dev.delugelauncher.data.userId
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.RippleParams
@@ -540,24 +542,6 @@ fun HomeRoute(
         (cornerSwipeAction != CornerAction.DO_NOTHING &&
             (cornerSwipeAction.targetKind() == null || cornerSwipeBound))
     val stripMarginPx = with(LocalDensity.current) { 12.dp.toPx() }
-    val stripCoveredPx = remember(
-        band, cornerBounds, settings.alignment, cornerButtonOnScreen, viewportWidthPx,
-        viewportHeightPx,
-    ) {
-        val bounds = cornerBounds
-        ScrubberGeometry.coveredSpan(
-            band = band,
-            buttonTopPx = bounds?.top ?: 0f,
-            buttonBottomPx = bounds?.bottom ?: 0f,
-            buttonCenterX = bounds?.center?.x ?: 0f,
-            buttonOnScreen = cornerButtonOnScreen && bounds != null,
-            viewportWidthPx = viewportWidthPx,
-            viewportHeightPx = viewportHeightPx,
-            stripOnLeft = settings.alignment == HomeAlignment.RIGHT,
-            marginPx = stripMarginPx,
-        )
-    }
-
     // Portrait and landscape resolve apart, and only the stored value is passed down: the
     // default spot is computed in HomeScreen from the measured frame (CornerGeometry), so
     // there is one place that decides it rather than two that can disagree.
@@ -1389,7 +1373,7 @@ fun HomeRoute(
         return actuallyLaunch(entry)
     }
 
-    LaunchedEffect(settings.edgeSide) { scrub.syncRestingSide(settings.edgeSide) }
+    LaunchedEffect(settings.azStripSide) { scrub.syncRestingSide(settings.azStripSide) }
 
     // BACK on the home screen must do nothing whatsoever.
     //
@@ -1447,6 +1431,11 @@ fun HomeRoute(
                     context,
                     context.getString(R.string.unfreeze_many_partial, result.done, result.failed),
                     long = true,
+                )
+            } else if (result.kept > 0) {
+                FreezeToast.result(
+                    context,
+                    context.getString(R.string.freeze_unfrozen_pinned, result.done, result.kept),
                 )
             } else {
                 FreezeToast.result(context, context.getString(R.string.freeze_all_done))
@@ -1574,15 +1563,16 @@ fun HomeRoute(
 
     // How much of each side the edge zone actually takes. Controls inside an open folder are
     // kept clear of it, or the zone opens the app list instead of the control they aimed at.
-    val zoneWidthStartDp = if (settings.edgeSide != EdgeSide.RIGHT) {
-        edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetLeftDp.dp)
-    } else {
-        0.dp
+    // Written as an exhaustive when rather than "anything but RIGHT": with an Off side there
+    // is now a third state that takes nothing on either side, and a negated comparison would
+    // have handed it a full-width zone to keep clear of.
+    val zoneWidthStartDp = when (settings.edgeSide) {
+        EdgeSide.LEFT, EdgeSide.BOTH -> edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetLeftDp.dp)
+        EdgeSide.RIGHT, EdgeSide.NONE -> 0.dp
     }
-    val zoneWidthEndDp = if (settings.edgeSide != EdgeSide.LEFT) {
-        edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetRightDp.dp)
-    } else {
-        0.dp
+    val zoneWidthEndDp = when (settings.edgeSide) {
+        EdgeSide.RIGHT, EdgeSide.BOTH -> edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetRightDp.dp)
+        EdgeSide.LEFT, EdgeSide.NONE -> 0.dp
     }
 
     LaunchedEffect(settings.edgeSide, settings.edgeZoneWidthDp, insetLeftDp, insetRightDp, view, band) {
@@ -1618,10 +1608,10 @@ fun HomeRoute(
                 // touch area moved, and the system was still being told to keep its back
                 // gesture out of the pixels the setting had just handed back to it.
                 val rects = buildList {
-                    if (settings.edgeSide != EdgeSide.RIGHT) {
+                    if (settings.edgeSide == EdgeSide.LEFT || settings.edgeSide == EdgeSide.BOTH) {
                         add(Rect(insetLeftPx, exTop, insetLeftPx + leftWidthPx, exBottom))
                     }
-                    if (settings.edgeSide != EdgeSide.LEFT) {
+                    if (settings.edgeSide == EdgeSide.RIGHT || settings.edgeSide == EdgeSide.BOTH) {
                         add(Rect(w - rightWidthPx - insetRightPx, exTop, w - insetRightPx, exBottom))
                     }
                 }
@@ -1864,27 +1854,42 @@ fun HomeRoute(
                     { members ->
                         scope.launch {
                             val result = app.freezeManager.freezeMany(members)
-                            val text = when {
-                                result.noAccess ->
-                                    context.getString(R.string.freeze_needs_access)
-                                result.done == 0 && result.failed == 0 -> null
-                                else -> buildString {
-                                    append(
+                            // Built as parts rather than one string with clauses appended: a
+                            // folder can now report a count of zero frozen, and "0 apps
+                            // frozen 3 apps left alone" is a sentence nobody wants to read.
+                            // Whatever actually happened is what gets said.
+                            val parts = buildList {
+                                if (result.done > 0) {
+                                    add(
                                         context.getString(
                                             R.string.freeze_folder_done,
                                             result.done,
                                         )
                                     )
-                                    if (result.failed > 0) {
-                                        append(" ")
-                                        append(
-                                            context.getString(
-                                                R.string.freeze_folder_failed,
-                                                result.failed,
-                                            )
-                                        )
-                                    }
                                 }
+                                if (result.failed > 0) {
+                                    add(
+                                        context.getString(
+                                            R.string.freeze_folder_failed,
+                                            result.failed,
+                                        )
+                                    )
+                                }
+                                // Apps the list does not carry are left alone on purpose; not
+                                // saying so reads as a folder that silently froze nothing.
+                                if (result.skipped > 0) {
+                                    add(
+                                        context.getString(
+                                            R.string.freeze_folder_skipped,
+                                            result.skipped,
+                                        )
+                                    )
+                                }
+                            }
+                            val text = if (result.noAccess) {
+                                context.getString(R.string.freeze_needs_access)
+                            } else {
+                                parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
                             }
                             if (text != null) {
                                 Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
@@ -2197,6 +2202,7 @@ fun HomeRoute(
                 onDismiss = { closeAppList() },
                 contentColor = settings.contentColor,
                 showAlphabet = settings.showAlphabet,
+                azStripSide = settings.azStripSide,
                 scrubStyle = settings.scrubStyle,
                 scrubBubbleShape = settings.scrubBubbleShape,
                 rippleParams = settings.rippleParams,
@@ -2285,20 +2291,17 @@ fun HomeRoute(
             else -> stripAlwaysVisible
         }
         if (showIdleStripNow) {
-            EdgeScrubber(
+            IdleStrips(
+                stripSide = settings.azStripSide,
                 letters = listModel.letters,
-                scrubY = { null },
-                pullPx = { 0f },
                 band = band,
-                // Beside the empty end of the row, matching the app list: favorites aligned
-                // right leave their left side free, so that is where the strip goes.
-                coveredPx = stripCoveredPx,
-                side = if (settings.alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT,
                 style = settings.scrubStyle,
                 ripple = settings.rippleParams,
-                modifier = Modifier.align(
-                    if (settings.alignment == HomeAlignment.RIGHT) Alignment.CenterStart else Alignment.CenterEnd
-                ),
+                cornerBounds = cornerBounds,
+                cornerButtonOnScreen = cornerButtonOnScreen,
+                viewportWidthPx = viewportWidthPx,
+                viewportHeightPx = viewportHeightPx,
+                stripMarginPx = stripMarginPx,
             )
         }
 
@@ -2398,6 +2401,9 @@ fun HomeRoute(
                     EdgeSide.LEFT -> listOf(EdgeSide.LEFT)
                     EdgeSide.RIGHT -> listOf(EdgeSide.RIGHT)
                     EdgeSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
+                    // Off: no zone on either side. The home A-Z strip below is unaffected
+                    // and keeps showing — the setting is about the touch area, not the art.
+                    EdgeSide.NONE -> emptyList()
                 }
             }
             sides.forEach { side ->
@@ -2447,6 +2453,65 @@ fun HomeRoute(
 
 private fun iconPickerRoute(key: String) = "iconpicker/" + Uri.encode(key)
 
+/**
+ * The always-on strip on the home screen: one letter column, or two when the owner asked for
+ * both sides. Kept out of HomeRoute's own body — that function is already close to the JVM's
+ * 64 KB method limit, and the strip's argument list is not worth the room.
+ */
+@Composable
+private fun BoxScope.IdleStrips(
+    stripSide: AzStripSide,
+    letters: List<String>,
+    band: ScrubBand,
+    style: ScrubStyle,
+    ripple: RippleParams,
+    cornerBounds: androidx.compose.ui.geometry.Rect?,
+    cornerButtonOnScreen: Boolean,
+    viewportWidthPx: Int,
+    viewportHeightPx: Int,
+    stripMarginPx: Float,
+) {
+    // One span per side: a corner button only has to be kept clear of the strip that shares
+    // its half of the screen, so both answers are worked out once here.
+    fun covered(onLeft: Boolean) = ScrubberGeometry.coveredSpan(
+        band = band,
+        buttonTopPx = cornerBounds?.top ?: 0f,
+        buttonBottomPx = cornerBounds?.bottom ?: 0f,
+        buttonCenterX = cornerBounds?.center?.x ?: 0f,
+        buttonOnScreen = cornerButtonOnScreen && cornerBounds != null,
+        viewportWidthPx = viewportWidthPx,
+        viewportHeightPx = viewportHeightPx,
+        stripOnLeft = onLeft,
+        marginPx = stripMarginPx,
+    )
+    val coveredLeftPx = remember(band, cornerBounds, cornerButtonOnScreen, viewportWidthPx, viewportHeightPx) {
+        covered(true)
+    }
+    val coveredRightPx = remember(band, cornerBounds, cornerButtonOnScreen, viewportWidthPx, viewportHeightPx) {
+        covered(false)
+    }
+    val sides = when (stripSide) {
+        AzStripSide.LEFT -> listOf(EdgeSide.LEFT)
+        AzStripSide.RIGHT -> listOf(EdgeSide.RIGHT)
+        AzStripSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
+    }
+    sides.forEach { side ->
+        EdgeScrubber(
+            letters = letters,
+            scrubY = { null },
+            pullPx = { 0f },
+            band = band,
+            coveredPx = if (side == EdgeSide.LEFT) coveredLeftPx else coveredRightPx,
+            side = side,
+            style = style,
+            ripple = ripple,
+            modifier = Modifier.align(
+                if (side == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
+            ),
+        )
+    }
+}
+
 /** Display and behavior settings the home destination reads, grouped so they travel as one. */
 @Immutable
 data class HomeSettings(
@@ -2462,6 +2527,7 @@ data class HomeSettings(
     val rippleParams: RippleParams,
     val widgetsStacked: Boolean,
     val azStripVisibility: AzStripVisibility,
+    val azStripSide: AzStripSide,
     val shortcutSwipe: ShortcutSwipe,
     val showAlphabet: Boolean,
     val alignment: HomeAlignment,

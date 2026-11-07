@@ -63,6 +63,7 @@ import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.FocusSession
 import dev.delugelauncher.data.PrivateSpace
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.RippleParams
@@ -525,12 +526,12 @@ fun DelugeNavHost(
     }
 
     val hiddenApps by app.prefs.hiddenApps.collectAsState(initial = emptySet())
-    val settingsAdvanced by app.prefs.settingsAdvanced.collectAsState(initial = false)
     val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
     val externalControlEnabled by app.prefs.externalControlEnabled.collectAsState(initial = false)
     val externalControlToken by app.prefs.externalControlToken.collectAsState(initial = null)
     val freezeMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
     val freezeApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
+    val freezePinned by app.prefs.freezePinned.collectAsState(initial = emptySet())
     val freezeAutoEnabled by app.prefs.freezeAutoEnabled.collectAsState(initial = false)
     val freezeAutoDelay by app.prefs.freezeAutoDelaySeconds.collectAsState(initial = 60)
     val freezeUnfreezeOnUnlock by app.prefs.freezeUnfreezeOnUnlock.collectAsState(initial = true)
@@ -580,6 +581,7 @@ fun DelugeNavHost(
     val scrubBubbleShape by app.prefs.scrubBubbleShape.collectAsState(initial = ScrubBubbleShape.ROUNDED)
     val rippleParams by app.prefs.rippleParams.collectAsState(initial = RippleParams())
     val azStripVisibility by app.prefs.azStripVisibility.collectAsState(initial = AzStripVisibility.NEVER)
+    val azStripSide by app.prefs.azStripSide.collectAsState(initial = AzStripSide.RIGHT)
     val showAlphabet by app.prefs.showAlphabet.collectAsState(initial = true)
     val alignRight by app.prefs.alignRight.collectAsState(initial = false)
     val dimWallpaperAlpha by app.prefs.dimWallpaperAlpha.collectAsState(initial = 0.35f)
@@ -1139,6 +1141,7 @@ fun DelugeNavHost(
         rippleParams = rippleParams,
         widgetsStacked = widgetsStacked,
         azStripVisibility = azStripVisibility,
+        azStripSide = azStripSide,
         shortcutSwipe = shortcutSwipe,
         showAlphabet = showAlphabet,
         alignment = alignment,
@@ -1701,6 +1704,7 @@ fun DelugeNavHost(
                     onSetDoubleTapToLock = { scope.launch { app.prefs.setDoubleTapToLock(it) } },
                     onSetEdgeSide = { scope.launch { app.prefs.setEdgeSide(it) } },
                     onSetEdgeZoneWidth = { scope.launch { app.prefs.setEdgeZoneWidthDp(it) } },
+                    onSetAzStripSide = { scope.launch { app.prefs.setAzStripSide(it) } },
                     onSetAzStripVisibility = { scope.launch { app.prefs.setAzStripVisibility(it) } },
                     onSetShowAlphabet = { scope.launch { app.prefs.setShowAlphabet(it) } },
                     onSetSortByUsage = { scope.launch { app.prefs.setSortByUsage(it) } },
@@ -1791,10 +1795,6 @@ fun DelugeNavHost(
             }
             SettingsScreen(SettingsScreenModel(
                 hiddenCount = hiddenShownCount,
-                settingsAdvanced = settingsAdvanced,
-                onSetSettingsAdvanced = { enabled ->
-                    scope.launch { app.prefs.setSettingsAdvanced(enabled) }
-                },
                 frozenCount = frozenShownCount,
                 freezeEnabled = freezeEnabled,
                 freezeHasAccess = freezeStatus.access != dev.delugelauncher.data.FreezeAccess.NONE,
@@ -1936,6 +1936,7 @@ fun DelugeNavHost(
                 widgetsStacked = widgetsStacked,
                 edgeZoneWidthDp = edgeZoneWidthDp,
                 azStripVisibility = azStripVisibility,
+                azStripSide = azStripSide,
                 showAlphabet = showAlphabet,
                 sortByUsage = sortByUsage,
                 appListSearch = appListSearchEnabled,
@@ -1981,6 +1982,7 @@ fun DelugeNavHost(
                 onSetWidgetsStacked = { scope.launch { app.prefs.setWidgetsStacked(it) } },
                 onSetEdgeZoneWidth = actionsB.onSetEdgeZoneWidth,
                 onSetAzStripVisibility = actionsB.onSetAzStripVisibility,
+                onSetAzStripSide = actionsB.onSetAzStripSide,
                 onSetShowAlphabet = actionsB.onSetShowAlphabet,
                 onSetSortByUsage = actionsB.onSetSortByUsage,
                 autoFrequentTag = autoFrequentTag,
@@ -2205,6 +2207,7 @@ fun DelugeNavHost(
                 allApps = allApps,
                 freezeMethods = freezeMethods,
                 freezeApplied = freezeApplied,
+                freezePinned = freezePinned,
                 lockedApps = lockedApps,
                 nameOverrides = nameOverrides,
                 iconSizeDp = iconSizeDp,
@@ -2267,6 +2270,9 @@ fun DelugeNavHost(
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
                         }
                     }
+                },
+                onSetPinned = { appInfo, pinned ->
+                    scope.launch { app.prefs.setFreezePinned(appInfo.freezeKey, pinned) }
                 },
                 onSetApplied = { appInfo, freeze ->
                     scope.launch {
@@ -2335,6 +2341,11 @@ fun DelugeNavHost(
                     scope.launch {
                         FreezeToast.progress(context, R.string.unfreeze_working)
                         val result = app.freezeManager.unfreezeAll()
+                        // Apps kept frozen on purpose are not a failure or a leftover: saying
+                        // "all unfrozen" while some stay asleep is the one thing this toast
+                        // must not do. The count comes from the run, so a pin on an app that
+                        // was not frozen no longer inflates it.
+                        val kept = result.kept
                         withContext(Dispatchers.Main) {
                             FreezeToast.result(
                                 context,
@@ -2345,6 +2356,12 @@ fun DelugeNavHost(
                                         R.string.unfreeze_many_partial,
                                         result.done,
                                         result.failed,
+                                    )
+                                } else if (kept > 0) {
+                                    context.getString(
+                                        R.string.freeze_unfrozen_pinned,
+                                        result.done,
+                                        kept,
                                     )
                                 } else {
                                     context.getString(R.string.freeze_all_done)

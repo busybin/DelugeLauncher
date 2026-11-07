@@ -99,6 +99,14 @@ class DelugeApp : Application() {
                 runCatching { freezeManager.writeBackup() }
             }
         }
+        // Pinning is a change to the freeze record too, but it goes through the list setter
+        // rather than the manager, so `changes` never sees it. Without this, the copy outside
+        // the app data keeps the old pins until something else happens to be frozen.
+        appScope.launch {
+            prefs.freezePinned.drop(1).collect {
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
         // Locks hide and suspend apps too; their record needs the same out-of-data copy.
         appScope.launch {
             prefs.lockedApps.drop(1).collect {

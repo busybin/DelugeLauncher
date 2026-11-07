@@ -104,6 +104,7 @@ import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppFont
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.CornerAction
@@ -215,6 +216,7 @@ class SettingsActionsB(
     val onSetDoubleTapToLock: (Boolean) -> Unit,
     val onSetEdgeSide: (EdgeSide) -> Unit,
     val onSetEdgeZoneWidth: (Int) -> Unit,
+    val onSetAzStripSide: (AzStripSide) -> Unit,
     val onSetAzStripVisibility: (AzStripVisibility) -> Unit,
     val onSetShowAlphabet: (Boolean) -> Unit,
     val onSetSortByUsage: (Boolean) -> Unit,

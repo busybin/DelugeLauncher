@@ -37,8 +37,12 @@ class HandoverManager(
             frozenNow = prefs.freezeAppliedNow(),
             lockedNow = prefs.lockedAppsNow(),
         )
+        // Apps the owner keeps frozen on purpose stay frozen across a handover too: the guest
+        // never saw them, and putting the phone back must not thaw what was deliberately out.
+        val pinned = prefs.freezePinnedNow()
         var lifted = 0
         for (key in exit.thaw) {
+            if (key in pinned) continue
             if (freeze.unfreezeKey(key) == FreezeOutcome.DONE) lifted++
         }
         prefs.setHandover(HandoverState())

@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.EdgeSide
 
 /**
@@ -87,9 +88,13 @@ class ScrubState {
      * Parks the strip on the edge the settings name, so it renders on the right side before
      * the first scrub of a session ever happens. Ignored mid-gesture: the side in play then
      * is whichever edge the finger is actually on.
+     *
+     * "Off" rests on the right like anything that is not the left edge. The strip keeps being
+     * drawn with the setting off — it is the touch area that goes, not the letters — so it
+     * still has to have a side to be drawn on.
      */
-    fun syncRestingSide(edgeSide: EdgeSide) {
-        if (!active) side = if (edgeSide == EdgeSide.LEFT) EdgeSide.LEFT else EdgeSide.RIGHT
+    fun syncRestingSide(stripSide: AzStripSide) {
+        if (!active) side = if (stripSide == AzStripSide.LEFT) EdgeSide.LEFT else EdgeSide.RIGHT
     }
 
     fun begin(side: EdgeSide) {

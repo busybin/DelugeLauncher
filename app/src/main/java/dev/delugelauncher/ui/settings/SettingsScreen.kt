@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
@@ -47,7 +47,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -131,6 +131,7 @@ import kotlin.math.roundToInt
 import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.data.AppFont
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.EdgeSide
@@ -167,7 +168,6 @@ import dev.delugelauncher.ui.theme.SHADOW_STRENGTH_RANGE
 // class, so no componentN/copy is generated.
 class SettingsScreenModel(
     val hiddenCount: Int,
-    val settingsAdvanced: Boolean,
     val iconPacks: List<IconPackRepository.IconPackInfo>,
     val iconPackPackage: String?,
     val previewApp: AppInfo?,
@@ -202,6 +202,7 @@ class SettingsScreenModel(
     val rippleParams: RippleParams,
     val widgetsStacked: Boolean,
     val azStripVisibility: AzStripVisibility,
+    val azStripSide: AzStripSide,
     val showAlphabet: Boolean,
     val sortByUsage: Boolean,
     val autoFrequentTag: Boolean,
@@ -284,7 +285,6 @@ class SettingsScreenModel(
     val onSetPinchToResize: (Boolean) -> Unit,
     val reduceMotion: Boolean,
     val onSetReduceMotion: (Boolean) -> Unit,
-    val onSetSettingsAdvanced: (Boolean) -> Unit,
     val sectionTopPercent: Int,
     val onSetSectionTopPercent: (Int) -> Unit,
     val closeFolderOnLaunch: Boolean,
@@ -330,6 +330,7 @@ class SettingsScreenModel(
     val onSetWidgetsStacked: (Boolean) -> Unit,
     val onSetEdgeZoneWidth: (Int) -> Unit,
     val onSetAzStripVisibility: (AzStripVisibility) -> Unit,
+    val onSetAzStripSide: (AzStripSide) -> Unit,
     val onSetShowAlphabet: (Boolean) -> Unit,
     val onSetSortByUsage: (Boolean) -> Unit,
     val onSetSwipeUpOpensList: (Boolean) -> Unit,
@@ -581,7 +582,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetLabelSize(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_favorite_spacing), "gap spacing", advanced = true) {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_favorite_spacing), "gap spacing") {
             SliderRow(
                 label = stringResource(R.string.settings_favorite_spacing),
                 value = itemSpacingDp.toFloat(), range = 0f..40f,
@@ -592,25 +593,25 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_font), "typeface") {
             FontRow(font, fontFile, onSetFont, onPickFontFile)
         },
-        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_text_color), "colour", advanced = true) {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_text_color), "colour") {
             TextColorRow(textColorMode, textColorCustom, onSetTextColorMode, onSetTextColorCustom)
         },
         SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.icon_shape), "shape") {
             IconShapeRow(iconShape, onSetIconShape)
         },
-        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_alignment_favorites), "align left right center") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_alignment_favorites), "align left right center") {
             AlignmentRow(stringResource(R.string.settings_alignment_favorites), alignment, onSetAlignment)
         },
-        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_alignment_applist), "align left right center", advanced = true) {
+        SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_alignment_applist), "align left right center") {
             AlignmentRow(stringResource(R.string.settings_alignment_applist), appListAlignment, onSetAppListAlignment)
         },
-        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_icon_side), "left right", advanced = true) {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icon_side), "left right") {
             IconSideRow(iconSide, onSetIconSide)
         },
-        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_show_names), "labels") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_show_names), "labels") {
             SwitchRow(stringResource(R.string.settings_show_names), showFavoriteLabels, onSetShowFavoriteLabels)
         },
-        SettingsEntry(SettingsSection.LAYOUT, stringResource(R.string.settings_two_columns), "two columns portrait landscape") {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_two_columns), "two columns portrait landscape") {
             BackupRow(
                 label = stringResource(R.string.settings_two_columns),
                 detail = stringResource(R.string.settings_two_columns_detail),
@@ -620,8 +621,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(
             SettingsSection.EFFECTS, stringResource(R.string.settings_dim_color), "colour wallpaper",
             // Only worth offering once something is actually dimmed.
-            visible = dimHomeAlpha > 0f || dimWallpaperAlpha > 0f,
-         advanced = true) { DimColorRow(dimColor, onSetDimColor) },
+            visible = dimHomeAlpha > 0f || dimWallpaperAlpha > 0f) { DimColorRow(dimColor, onSetDimColor) },
         SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_wallpaper), "dim wallpaper") {
             BackupRow(
                 label = stringResource(R.string.settings_dim_wallpaper),
@@ -629,7 +629,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onClick = { dimDialog = true },
             )
         },
-        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_wallpaper_blur), "blur background frosted", advanced = true) {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_wallpaper_blur), "blur background frosted") {
             SliderRow(
                 label = stringResource(R.string.settings_wallpaper_blur),
                 value = wallpaperBlurDp.toFloat(),
@@ -648,8 +648,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.THEME, stringResource(R.string.settings_night_start),
-            "dark night theme schedule start evening", visible = autoDark,
-         advanced = true) {
+            "dark night theme schedule start evening", visible = autoDark) {
             SliderRow(
                 label = stringResource(R.string.settings_night_start),
                 value = nightStartHour.toFloat(),
@@ -661,8 +660,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.THEME, stringResource(R.string.settings_night_end),
-            "dark night theme schedule end morning", visible = autoDark,
-         advanced = true) {
+            "dark night theme schedule end morning", visible = autoDark) {
             SliderRow(
                 label = stringResource(R.string.settings_night_end),
                 value = nightEndHour.toFloat(),
@@ -684,14 +682,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_favorites_source), "frequent most used manual") {
             FavoritesSourceRow(favoritesSource, frequentCount, onSetFavoritesSource, onSetFrequentCount)
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_close_folder), "folder", advanced = true) {
+        SettingsEntry(SettingsSection.FOLDERS, stringResource(R.string.settings_close_folder), "folder") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_close_folder),
                 detail = stringResource(R.string.settings_close_folder_detail),
                 checked = closeFolderOnLaunch, onCheckedChange = onSetCloseFolderOnLaunch,
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_widgets_stacked), "widgets stack all at once") {
+        SettingsEntry(SettingsSection.FOLDERS, stringResource(R.string.settings_widgets_stacked), "widgets stack all at once") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_widgets_stacked),
                 detail = stringResource(R.string.settings_widgets_stacked_detail),
@@ -705,7 +703,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onClick = { statusBarDialog = true },
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_allow_rotation), "landscape rotate", advanced = true) {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_allow_rotation), "landscape rotate") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_allow_rotation),
                 detail = stringResource(R.string.settings_allow_rotation_detail),
@@ -733,21 +731,19 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.SEARCH, stringResource(R.string.settings_search_bar_bottom), "search position",
-            visible = appListSearch,
-         advanced = true) {
+            visible = appListSearch) {
             SwitchRow(stringResource(R.string.settings_search_bar_bottom), appListSearchBottom, onSetAppListSearchBottom)
         },
         SettingsEntry(
             SettingsSection.SEARCH, stringResource(R.string.settings_search_hidden), "search hidden",
-            visible = appListSearch,
-         advanced = true) {
+            visible = appListSearch) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_search_hidden),
                 detail = stringResource(R.string.settings_search_hidden_detail),
                 checked = appListSearchHidden, onCheckedChange = onSetAppListSearchHidden,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_list_headers), "letters headings") {
+        SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_list_headers), "letters headings") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_list_headers),
                 detail = stringResource(R.string.settings_list_headers_detail),
@@ -755,7 +751,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.APP_LIST_LAYOUT,
+            SettingsSection.LIST_LAYOUT,
             stringResource(R.string.settings_applist_folders),
             "folders in list alphabet",
         ) {
@@ -765,44 +761,43 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = appListFolders, onCheckedChange = onSetAppListFolders,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_settings_row), "settings shortcut row") {
+        SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_settings_row), "settings shortcut row") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_settings_row),
                 detail = stringResource(R.string.settings_settings_row_detail),
                 checked = showSettingsRow, onCheckedChange = onSetShowSettingsRow,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_sort_by_usage), "frequent order") {
+        SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_sort_by_usage), "frequent order") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_sort_by_usage),
                 detail = stringResource(R.string.settings_sort_by_usage_detail),
                 checked = sortByUsage, onCheckedChange = onSetSortByUsage,
             )
         },
-        SettingsEntry(SettingsSection.APP_LIST_LAYOUT, stringResource(R.string.settings_auto_frequent), "frequent tag auto", advanced = true) {
+        SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_auto_frequent), "frequent tag auto") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_auto_frequent),
                 detail = stringResource(R.string.settings_auto_frequent_detail),
                 checked = autoFrequentTag, onCheckedChange = onSetAutoFrequentTag,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_az_strip), "alphabet strip a-z") {
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_az_strip), "alphabet letters a-z strip edge side show hide") {
             BackupRow(
                 label = stringResource(R.string.settings_az_strip),
                 detail = stringResource(R.string.settings_az_strip_detail),
                 onClick = { azDialog = true },
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_scrub_style), "a-z strip animation ripple wave bell") {
+        SettingsEntry(SettingsSection.STRIP_MOTION, stringResource(R.string.settings_scrub_style), "a-z strip animation ripple wave bell") {
             ScrubStyleRow(scrubStyle, onSetScrubStyle)
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_scrub_bubble), "a-z bubble shape letter") {
+        SettingsEntry(SettingsSection.STRIP_MOTION, stringResource(R.string.settings_scrub_bubble), "a-z bubble shape letter") {
             ScrubBubbleShapeRow(scrubBubbleShape, onSetScrubBubbleShape)
         },
         SettingsEntry(
-            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_speed), "a-z ripple wave",
-            visible = scrubStyle == ScrubStyle.RIPPLE,
-         advanced = true) {
+            SettingsSection.STRIP_MOTION, stringResource(R.string.settings_ripple_speed), "a-z ripple wave",
+            visible = scrubStyle == ScrubStyle.RIPPLE) {
             val context = LocalContext.current
             SliderRow(
                 label = stringResource(R.string.settings_ripple_speed),
@@ -813,9 +808,8 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_damping), "a-z ripple wave damping",
-            visible = scrubStyle == ScrubStyle.RIPPLE,
-         advanced = true) {
+            SettingsSection.STRIP_MOTION, stringResource(R.string.settings_ripple_damping), "a-z ripple wave damping",
+            visible = scrubStyle == ScrubStyle.RIPPLE) {
             SliderRow(
                 label = stringResource(R.string.settings_ripple_damping),
                 value = rippleParams.damping,
@@ -825,9 +819,8 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.AZ_STRIP, stringResource(R.string.settings_ripple_stiffness), "a-z ripple wave stiffness",
-            visible = scrubStyle == ScrubStyle.RIPPLE,
-         advanced = true) {
+            SettingsSection.STRIP_MOTION, stringResource(R.string.settings_ripple_stiffness), "a-z ripple wave stiffness",
+            visible = scrubStyle == ScrubStyle.RIPPLE) {
             SliderRow(
                 label = stringResource(R.string.settings_ripple_stiffness),
                 value = rippleParams.stiffness,
@@ -837,10 +830,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 step = 10f,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_side), "a-z strip left right", advanced = true) {
-            EdgeSideRow(edgeSide) { edgePreviewTick++; onSetEdgeSide(it) }
-        },
-        SettingsEntry(SettingsSection.SEARCH, stringResource(R.string.settings_web_search), "search web browser", advanced = true) {
+        SettingsEntry(SettingsSection.SEARCH, stringResource(R.string.settings_web_search), "search web browser") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_web_search),
                 detail = stringResource(R.string.settings_web_search_detail),
@@ -849,15 +839,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.SEARCH, stringResource(R.string.settings_swipe_up_search), "swipe up search keyboard",
-            visible = swipeUpOpensList,
-         advanced = true) {
+            visible = swipeUpOpensList) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_swipe_up_search),
                 detail = stringResource(R.string.settings_swipe_up_search_detail),
                 checked = swipeUpOpensSearch, onCheckedChange = onSetSwipeUpOpensSearch,
             )
         },
-        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_stay_private_unlock), "private space unlock stay list", advanced = true) {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_stay_private_unlock), "private space unlock stay list") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_stay_private_unlock),
                 detail = stringResource(R.string.settings_stay_private_unlock_detail),
@@ -880,8 +869,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.SECTIONS, stringResource(R.string.settings_recent_section_count),
-            "recently installed new apps", visible = recentSection,
-         advanced = true) {
+            "recently installed new apps", visible = recentSection) {
             SliderRow(
                 label = stringResource(R.string.settings_recent_section_count),
                 value = recentSectionCount.toFloat(),
@@ -890,21 +878,21 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetRecentSectionCount(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_mark_work_apps), "work profile duplicate apps", advanced = true) {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_mark_work_apps), "work profile duplicate apps") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_mark_work_apps),
                 detail = stringResource(R.string.settings_mark_work_apps_detail),
                 checked = markWorkApps, onCheckedChange = onSetMarkWorkApps,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_dim_others), "dim fade a-z scrub", advanced = true) {
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_dim_others), "dim fade a-z scrub") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_dim_others),
                 detail = stringResource(R.string.settings_dim_others_detail),
                 checked = dimOthersScrubbing, onCheckedChange = onSetDimOthersScrubbing,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_hold_scroll), "a-z hold scroll", advanced = true) {
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_hold_scroll), "a-z hold scroll") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_hold_scroll),
                 detail = stringResource(R.string.settings_hold_scroll_detail),
@@ -912,9 +900,8 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.AZ_STRIP, stringResource(R.string.settings_hold_scroll_speed), "a-z hold scroll",
-            visible = holdScroll,
-         advanced = true) {
+            SettingsSection.STRIP, stringResource(R.string.settings_hold_scroll_speed), "a-z hold scroll",
+            visible = holdScroll) {
             SliderRow(
                 label = stringResource(R.string.settings_hold_scroll_speed),
                 value = holdScrollSpeed.toFloat(),
@@ -923,14 +910,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetHoldScrollSpeed(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_band_only), "a-z strip height touch", advanced = true) {
+        SettingsEntry(SettingsSection.EDGE_GESTURE, stringResource(R.string.settings_edge_band_only), "edge swipe height band alphabet strip accidental") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_edge_band_only),
                 detail = stringResource(R.string.settings_edge_band_only_detail),
                 checked = edgeZoneBandOnly, onCheckedChange = onSetEdgeZoneBandOnly,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_inset_auto), "back gesture edge conflict automatic", advanced = true) {
+        SettingsEntry(SettingsSection.EDGE_GESTURE, stringResource(R.string.settings_edge_inset_auto), "edge back gesture inset margin") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_edge_inset_auto),
                 detail = stringResource(R.string.settings_edge_inset_auto_detail),
@@ -938,9 +925,8 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_inset), "back gesture edge conflict",
-            visible = !edgeZoneInsetAuto,
-         advanced = true) {
+            SettingsSection.EDGE_GESTURE, stringResource(R.string.settings_edge_inset), "back gesture edge conflict",
+            visible = !edgeZoneInsetAuto) {
             SliderRow(
                 label = stringResource(R.string.settings_edge_inset),
                 value = edgeZoneInsetDp.toFloat(),
@@ -949,7 +935,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { onSetEdgeZoneInsetDp(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_edge_zone_width), "a-z strip width", advanced = true) {
+        SettingsEntry(SettingsSection.EDGE_GESTURE, stringResource(R.string.settings_edge_zone_width), "edge swipe width reach open app list accidental") {
             SliderRow(
                 label = stringResource(R.string.settings_edge_zone_width),
                 value = edgeZoneWidthDp.toFloat(), range = 32f..96f,
@@ -957,14 +943,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { edgePreviewTick++; onSetEdgeZoneWidth(it.roundToInt()) },
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_last_letter), "letter lands end z", advanced = true) {
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_last_letter), "letter lands end z") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_last_letter),
                 detail = stringResource(R.string.settings_last_letter_detail),
                 checked = lastLetterToLine, onCheckedChange = onSetLastLetterToLine,
             )
         },
-        SettingsEntry(SettingsSection.AZ_STRIP, stringResource(R.string.settings_section_top), "letter lands scroll position", advanced = true) {
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_section_top), "letter lands scroll position") {
             SliderRow(
                 label = stringResource(R.string.settings_section_top),
                 value = sectionTopPercent.toFloat(),
@@ -973,7 +959,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onValueChange = { sectionPreviewTick++; onSetSectionTopPercent(it.toInt()) },
             )
         },
-        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_hide_status_bar_applist), "status bar", advanced = true) {
+        SettingsEntry(SettingsSection.SECTIONS, stringResource(R.string.settings_hide_status_bar_applist), "status bar") {
             SwitchRow(
                 stringResource(R.string.settings_hide_status_bar_applist),
                 hideStatusBarAppList, onSetHideStatusBarAppList,
@@ -981,14 +967,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
 
         // ---- Gestures ----
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_pinch_resize), "pinch zoom icons size", advanced = true) {
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_pinch_resize), "pinch zoom icons size") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_pinch_resize),
                 detail = stringResource(R.string.settings_pinch_resize_detail),
                 checked = pinchToResize, onCheckedChange = onSetPinchToResize,
             )
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_haptics), "vibrate") {
+        SettingsEntry(SettingsSection.LOCK_STUFF, stringResource(R.string.settings_haptics), "vibrate") {
             Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                 Text(stringResource(R.string.settings_haptics), style = MaterialTheme.typography.bodyMedium)
                 Text(
@@ -1008,7 +994,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 }
             }
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_swipe_up_list), "swipe up") {
+        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_swipe_up_list), "swipe gesture open app list") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_swipe_up_list),
                 detail = stringResource(R.string.settings_swipe_up_list_detail),
@@ -1048,7 +1034,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 freezeEnabled = freezeEnabled,
             )
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_tap), "button shortcut corner tap") {
+        SettingsEntry(SettingsSection.CORNER, stringResource(R.string.settings_corner_tap), "button shortcut corner tap") {
             CornerActionRow(
                 summary = stringResource(R.string.settings_corner_tap),
                 selected = cornerTapAction,
@@ -1061,7 +1047,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 freezeEnabled = freezeEnabled,
             )
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_corner_swipe), "button shortcut corner slide up") {
+        SettingsEntry(SettingsSection.CORNER, stringResource(R.string.settings_corner_swipe), "button shortcut corner slide up") {
             CornerActionRow(
                 summary = stringResource(R.string.settings_corner_swipe),
                 selected = cornerSwipeAction,
@@ -1074,7 +1060,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 freezeEnabled = freezeEnabled,
             )
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_double_tap_lock), "lock screen") {
+        SettingsEntry(SettingsSection.LOCK_STUFF, stringResource(R.string.settings_double_tap_lock), "lock screen") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_double_tap_lock),
                 detail = stringResource(R.string.settings_double_tap_lock_detail),
@@ -1082,7 +1068,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.GESTURES, stringResource(R.string.settings_lock_setup), "lock permission",
+            SettingsSection.LOCK_STUFF, stringResource(R.string.settings_lock_setup), "lock permission",
             // Switching it on does nothing at all without a way to lock, so the way to
             // grant one belongs right here rather than buried in a toast later.
             visible = doubleTapToLock && !lockGestureReady,
@@ -1097,7 +1083,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 AccessibilityActions(onOpenAccessibilitySettings, onOpenAppInfo)
             }
         },
-        SettingsEntry(SettingsSection.GESTURES, stringResource(R.string.settings_shade_gesture), "notification shade pull", advanced = true) {
+        SettingsEntry(SettingsSection.LOCK_STUFF, stringResource(R.string.settings_shade_gesture), "notification shade pull") {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1140,8 +1126,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             SettingsSection.NOTIFICATIONS,
             stringResource(R.string.settings_notification_text_size),
             "notification text preview message",
-            visible = notificationPreview,
-         advanced = true) {
+            visible = notificationPreview) {
             SliderRow(
                 label = stringResource(R.string.settings_notification_text_size),
                 value = notificationTextSp.toFloat(),
@@ -1152,7 +1137,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.NOTIFICATIONS,
+            SettingsSection.PANEL,
             stringResource(R.string.settings_notification_panel),
             "panel shade notifications replies",
         ) {
@@ -1163,7 +1148,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.NOTIFICATIONS,
+            SettingsSection.PANEL,
             stringResource(R.string.settings_notification_panel_open),
             "open panel",
             visible = notificationPanel,
@@ -1174,10 +1159,10 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onClick = onOpenNotificationPanel,
             )
         },
-        SettingsEntry(SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_now_playing_show), "media music") {
+        SettingsEntry(SettingsSection.PANEL, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
-        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim", advanced = true) {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_dim_paused_apps),
                 detail = stringResource(R.string.settings_dim_paused_apps_detail),
@@ -1185,7 +1170,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.NOTIFICATIONS, stringResource(R.string.settings_notification_access_detail), "permission access",
+            SettingsSection.PANEL, stringResource(R.string.settings_notification_access_detail), "permission access",
             visible = nowPlayingEnabled || notificationBadges || notificationPreview || notificationPanel,
         ) {
             Row(
@@ -1254,14 +1239,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 leading = DelugeIcons.Tune,
             )
         },
-        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty", advanced = true) {
+        SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_compact_tap), "tap area accidental launch empty") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_compact_tap),
                 detail = stringResource(R.string.settings_compact_tap_detail),
                 checked = compactTapArea, onCheckedChange = onSetCompactTapArea,
             )
         },
-        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_text_shadow), "contrast readability wallpaper", advanced = true) {
+        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_text_shadow), "contrast readability wallpaper") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_text_shadow),
                 detail = stringResource(R.string.settings_text_shadow_detail),
@@ -1270,8 +1255,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.EFFECTS, stringResource(R.string.settings_text_shadow_strength),
-            "contrast readability wallpaper", visible = textShadow,
-         advanced = true) {
+            "contrast readability wallpaper", visible = textShadow) {
             SliderRow(
                 label = stringResource(R.string.settings_text_shadow_strength),
                 value = textShadowStrength.toFloat(),
@@ -1283,8 +1267,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(
             SettingsSection.APPS, stringResource(R.string.settings_frequent_excluded),
             "most used favorites exclude block",
-            visible = frequentExcludedVisible,
-         advanced = true) {
+            visible = frequentExcludedVisible) {
             BackupRow(
                 label = stringResource(R.string.settings_frequent_excluded),
                 detail = if (frequentExcludedCount == 0) {
@@ -1416,7 +1399,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     else -> stringResource(R.string.settings_sleep_rules_detail)
                 },
                 onClick = onOpenSleepRules,
-                leading = Icons.Filled.List,
+                leading = Icons.AutoMirrored.Filled.List,
                 // Openable without a channel: the screen can still save rules, and says on
                 // its own banner that they will not run until access is granted.
             )
@@ -1485,14 +1468,14 @@ fun SettingsScreen(model: SettingsScreenModel) {
             )
         },
         SettingsEntry(
-            SettingsSection.ABOUT, stringResource(R.string.settings_update_check),
+            SettingsSection.UPDATES, stringResource(R.string.settings_update_check),
             "update upgrade version newer release download latest",
         ) {
             UpdateRow(state = updateState, onCheck = onCheckForUpdates)
         },
         // Right after the check: auto-check is opt-in and off by default.
         SettingsEntry(
-            SettingsSection.ABOUT, stringResource(R.string.settings_update_auto_check),
+            SettingsSection.UPDATES, stringResource(R.string.settings_update_auto_check),
             "update upgrade version newer release automatic check auto",
         ) {
             SwitchRowWithDetail(
@@ -1505,7 +1488,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         // Only while there is something to get: a second row that means "go and fetch it"
         // rather than leaving the check row to mean two different things depending on state.
         SettingsEntry(
-            SettingsSection.ABOUT,
+            SettingsSection.UPDATES,
             stringResource(R.string.settings_update_get, updateState.versionLabel()),
             "update upgrade download release github",
             visible = updateState is UpdateRowState.Available,
@@ -1523,8 +1506,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(
             SettingsSection.ABOUT, stringResource(R.string.settings_crash_copy),
             "crash log report bug trace",
-            visible = crashText != null && !crashCleared,
-         advanced = true) {
+            visible = crashText != null && !crashCleared) {
             BackupRow(
                 label = stringResource(R.string.settings_crash_copy),
                 detail = stringResource(R.string.settings_crash_detail),
@@ -1541,15 +1523,12 @@ fun SettingsScreen(model: SettingsScreenModel) {
     ).filter { it.visible }
 
     // What the list below actually draws: the matches while something is typed, the open
-    // card otherwise, and nothing at all on the top menu. Advanced rows stay out of the way
-    // unless the switch is on, but a search still reaches them: hiding a row from the list is
-    // not the same as pretending it does not exist.
-    val entriesToShow = remember(entries, query, openCard, settingsAdvanced) {
+    // card otherwise, and nothing at all on the top menu. Every row shows: there is no
+    // advanced switch to hide behind, and the search still reaches all of them.
+    val entriesToShow = remember(entries, query, openCard) {
         val matching = when {
             query.isNotBlank() -> entries.filter { it.matches(query) }
-            openCard != null -> entries.filter {
-                it.section.card == openCard && (settingsAdvanced || !it.advanced)
-            }
+            openCard != null -> entries.filter { it.section.card == openCard }
             else -> emptyList()
         }
         matching.groupBy { it.section }.toList()
@@ -1646,28 +1625,6 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 }
             }
 
-            if (openCard != null && query.isBlank() &&
-                entries.any { it.section.card == openCard && it.advanced }
-            ) {
-                item {
-                    Surface(
-                        shape = RoundedCornerShape(20.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainer,
-                        border = BorderStroke(
-                            1.dp,
-                            MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
-                        ),
-                    ) {
-                        SwitchRowWithDetail(
-                            label = stringResource(R.string.settings_advanced),
-                            detail = stringResource(R.string.settings_advanced_detail),
-                            checked = settingsAdvanced,
-                            onCheckedChange = onSetSettingsAdvanced,
-                        )
-                    }
-                }
-            }
-
             entriesToShow.forEach { (section, rows) ->
                 item {
                     Section(section, rows.size) {
@@ -1711,7 +1668,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         }
         if (edgePreviewAlpha > 0f) {
             val stripe = MaterialTheme.colorScheme.primary.copy(alpha = 0.35f * edgePreviewAlpha)
-            if (edgeSide != EdgeSide.RIGHT) {
+            if (edgeSide == EdgeSide.LEFT || edgeSide == EdgeSide.BOTH) {
                 Box(
                     Modifier
                         .align(Alignment.CenterStart)
@@ -1720,7 +1677,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                         .background(stripe),
                 )
             }
-            if (edgeSide != EdgeSide.LEFT) {
+            if (edgeSide == EdgeSide.RIGHT || edgeSide == EdgeSide.BOTH) {
                 Box(
                     Modifier
                         .align(Alignment.CenterEnd)
@@ -1957,6 +1914,29 @@ fun SettingsScreen(model: SettingsScreenModel) {
                     HorizontalDivider(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
                     )
+                    Text(
+                        stringResource(R.string.settings_az_strip_detail),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AzStripSide.entries.forEach { option ->
+                            FilledChip(stringResource(option.labelRes()), azStripSide == option) {
+                                onSetAzStripSide(option)
+                            }
+                        }
+                    }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    EdgeSideRow(edgeSide) { edgePreviewTick++; onSetEdgeSide(it) }
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
                     SwitchRow(
                         stringResource(R.string.settings_show_alphabet),
                         showAlphabet,
@@ -2057,9 +2037,9 @@ private fun sectionColors(card: SettingsCard): Pair<Color, Color> {
     return when (card) {
         SettingsCard.APPEARANCE, SettingsCard.APPS ->
             colors.primaryContainer to colors.onPrimaryContainer
-        SettingsCard.HOME, SettingsCard.GESTURES ->
+        SettingsCard.HOME, SettingsCard.GESTURES, SettingsCard.NOTIFICATIONS ->
             colors.primaryContainer.copy(alpha = 0.72f) to colors.onPrimaryContainer
-        SettingsCard.APP_LIST, SettingsCard.SYSTEM ->
+        SettingsCard.APP_LIST, SettingsCard.STRIP, SettingsCard.SYSTEM ->
             colors.surfaceContainerHighest to colors.onSurfaceVariant
     }
 }
@@ -2618,8 +2598,10 @@ private fun TextColorRow(
 private enum class SettingsCard(@StringRes val labelRes: Int, val icon: ImageVector) {
     APPEARANCE(R.string.settings_section_appearance, Icons.Filled.Star),
     HOME(R.string.settings_section_home, Icons.Filled.Home),
-    APP_LIST(R.string.settings_section_app_list, Icons.Filled.List),
+    APP_LIST(R.string.settings_section_app_list, Icons.AutoMirrored.Filled.List),
+    STRIP(R.string.settings_section_az_strip, Icons.AutoMirrored.Filled.List),
     GESTURES(R.string.settings_section_gestures, Icons.Filled.Build),
+    NOTIFICATIONS(R.string.settings_section_notifications, Icons.Filled.Notifications),
     APPS(R.string.settings_section_apps_privacy, DelugeIcons.Checklist),
     SYSTEM(R.string.settings_section_system, Icons.Filled.Settings),
 }
@@ -2636,19 +2618,28 @@ private enum class SettingsSection(
 ) {
     THEME(R.string.settings_group_theme, Icons.Filled.Star, SettingsCard.APPEARANCE),
     ICONS_TEXT(R.string.settings_group_icons_text, Icons.Filled.Star, SettingsCard.APPEARANCE),
-    LAYOUT(R.string.settings_group_layout, Icons.Filled.Build, SettingsCard.APPEARANCE),
     EFFECTS(R.string.settings_group_effects, Icons.Filled.Star, SettingsCard.APPEARANCE),
-    HOME(R.string.settings_section_home, Icons.Filled.Home, SettingsCard.HOME),
+    // Home screen: what the launcher shows, not how it looks.
+    HOME(R.string.settings_group_home_layout, Icons.Filled.Home, SettingsCard.HOME),
+    FOLDERS(R.string.settings_group_folders, DelugeIcons.Folder, SettingsCard.HOME),
+    // App list: the index — how it is drawn, sorted and split. Search lives with it.
+    LIST_LAYOUT(R.string.settings_group_list_layout, Icons.AutoMirrored.Filled.List, SettingsCard.APP_LIST),
     SEARCH(R.string.settings_group_search, Icons.Filled.Search, SettingsCard.APP_LIST),
-    APP_LIST_LAYOUT(R.string.settings_group_sorting, Icons.Filled.List, SettingsCard.APP_LIST),
-    AZ_STRIP(R.string.settings_group_az_strip, Icons.Filled.List, SettingsCard.APP_LIST),
     SECTIONS(R.string.settings_group_sections, DelugeIcons.Checklist, SettingsCard.APP_LIST),
-    GESTURES(R.string.settings_section_gestures, Icons.Filled.Build, SettingsCard.GESTURES),
-    NOTIFICATIONS(R.string.settings_section_notifications, Icons.Filled.Notifications, SettingsCard.SYSTEM),
+    // A-Z strip is its own destination: people look for "the letters on the side".
+    STRIP(R.string.settings_group_strip, Icons.AutoMirrored.Filled.List, SettingsCard.STRIP),
+    STRIP_MOTION(R.string.settings_group_strip_motion, Icons.Filled.Star, SettingsCard.STRIP),
+    // Gestures: what opens things first, feedback last.
+    EDGE_GESTURE(R.string.settings_group_edge_gesture, Icons.Filled.Build, SettingsCard.GESTURES),    GESTURES(R.string.settings_group_swipe, Icons.AutoMirrored.Filled.KeyboardArrowRight, SettingsCard.GESTURES),
+    CORNER(R.string.settings_group_corner, Icons.Filled.Star, SettingsCard.GESTURES),
+    LOCK_STUFF(R.string.settings_group_lock, Icons.Filled.Lock, SettingsCard.GESTURES),
+    NOTIFICATIONS(R.string.settings_group_badges, Icons.Filled.Notifications, SettingsCard.NOTIFICATIONS),
+    PANEL(R.string.settings_group_panel, Icons.Filled.Notifications, SettingsCard.NOTIFICATIONS),
     APPS(R.string.settings_section_apps, DelugeIcons.Checklist, SettingsCard.APPS),
     PROTECTION(R.string.settings_group_protection, Icons.Filled.Lock, SettingsCard.APPS),
     FREEZE(R.string.settings_group_freezing, DelugeIcons.Freeze, SettingsCard.APPS),
     BACKUP(R.string.settings_section_backup, Icons.Filled.Refresh, SettingsCard.SYSTEM),
+    UPDATES(R.string.settings_group_updates, Icons.Filled.Refresh, SettingsCard.SYSTEM),
     ABOUT(R.string.settings_section_about, Icons.Filled.Info, SettingsCard.SYSTEM),
 }
 
@@ -2656,14 +2647,12 @@ private enum class SettingsSection(
  * One row of settings, as data rather than as a call in a section body.
  *
  * [keywords] is what else the row answers to, for the search box: the words someone would
- * reach for who does not already know what this screen calls the thing. [advanced] rows are
- * the tuning knobs: still searchable, but not in the way when the switch is off.
+ * reach for who does not already know what this screen calls the thing.
  */
 private class SettingsEntry(
     val section: SettingsSection,
     val title: String,
     val keywords: String = "",
-    val advanced: Boolean = false,
     val visible: Boolean = true,
     val content: @Composable () -> Unit,
 ) {
@@ -3305,9 +3294,11 @@ private fun ScrubBubbleShapeRow(selected: ScrubBubbleShape, onSelect: (ScrubBubb
 private fun EdgeSideRow(selected: EdgeSide, onSelect: (EdgeSide) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_edge_side), style = MaterialTheme.typography.bodyMedium)
-        Row(
+        // Wraps: four labels no longer fit one line in Arabic or Russian.
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             EdgeSide.entries.forEach { side ->
                 FilledChip(stringResource(side.labelRes()), selected == side) { onSelect(side) }

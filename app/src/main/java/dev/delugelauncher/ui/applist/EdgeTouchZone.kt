@@ -109,6 +109,11 @@ fun EdgeTouchZone(
     exclusion: Rect? = null,
     modifier: Modifier = Modifier,
 ) {
+    // "Off" means no strip at all: no box, no pointer handler, nothing to take a touch.
+    // Callers already stop building one per side, so this is a second line of defence for a
+    // value that arrives here some other way — a stray NONE would otherwise draw a strip on
+    // the right and open the list from it.
+    if (side == EdgeSide.NONE) return
     val view = LocalView.current
     val density = LocalDensity.current.density
     val scope = rememberCoroutineScope()

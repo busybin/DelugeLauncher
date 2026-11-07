@@ -133,6 +133,17 @@ data class FreezeBatchResult(
     val done: Int = 0,
     val failed: Int = 0,
     val noAccess: Boolean = false,
+    /**
+     * How many of the requested apps were left alone because they are not on the freeze list.
+     * Only a [FreezeManager.freezeMany] run with `listedOnly` fills this in: a folder menu must
+     * not silently put apps nobody listed onto the list and freeze them.
+     */
+    val skipped: Int = 0,
+    /**
+     * How many apps a bulk lift deliberately left frozen because they are pinned. Counted
+     * against the record, not the pin list: a pin on an app that was not frozen is not "kept".
+     */
+    val kept: Int = 0,
 )
 
 /** The shell commands behind a freeze, kept pure so they can be tested without a device. */
@@ -231,20 +242,54 @@ object FreezeSelection {
      * on an app the platform reports as free is stale — a reinstall leaves exactly that —
      * and asking for access to lift nothing would block the list on a device without root.
      * A STOP app has nothing to undo and is left out unless it is genuinely held.
+     *
+     * [pinned] keys are never lifted: a pin means "keep me frozen through Unfreeze all", and
+     * a single [FreezeManager.unfreeze] does not come through here.
      */
     fun toLift(
         candidates: Collection<String>,
         applied: Set<String>,
         plan: Map<String, FreezeMethod>,
         locked: Set<String> = emptySet(),
+        pinned: Set<String> = emptySet(),
         isFrozen: (String) -> Boolean,
     ): List<String> = candidates.filter { packageName ->
-        if (packageName in locked) return@filter false
+        if (packageName in locked || packageName in pinned) return@filter false
         val method = plan[packageName]
         val frozen = isFrozen(packageName)
         if (method == FreezeMethod.STOP && !frozen) false
         else frozen || (packageName in applied && method == FreezeMethod.HIDE)
     }
+
+    /**
+     * The members of a group action that are already on the freeze list.
+     *
+     * Freezing a folder used to list every member under SUSPEND on its way through, so tapping
+     * "freeze" on a folder quietly grew the list by apps nobody had chosen. [listedOnly] keeps
+     * the run to what the list already describes; the rest are counted, not touched.
+     */
+    fun listedOnlyTargets(
+        members: List<String>,
+        plan: Map<String, FreezeMethod>,
+    ): List<String> = members.filter { it in plan }
+
+    /**
+     * What a listed-only group run will touch, and how many it leaves alone.
+     *
+     * Kept here rather than in the suspend run so the counting rule — a duplicate member is one
+     * app, a skipped one is not a failure — can be read and tested without a device.
+     */
+    fun listedOnlyBatch(
+        members: List<String>,
+        plan: Map<String, FreezeMethod>,
+    ): ListedBatch {
+        val unique = members.distinct()
+        val targets = listedOnlyTargets(unique, plan)
+        return ListedBatch(targets = targets, skipped = unique.size - targets.size)
+    }
+
+    /** [targets] to freeze and how many members the run deliberately left alone. */
+    data class ListedBatch(val targets: List<String>, val skipped: Int)
 
     /**
      * Whether a lift under [method] can be confirmed by reading the device afterwards.
@@ -979,7 +1024,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      */
     suspend fun removeDeviceOwner(): Boolean {
         if (!policy.active) return false
-        runCatching { unfreezeAll() }
+        // Pins do not apply here: the policy channel is about to go away, and an app left
+        // suspended by it would need root or Shizuku to come back.
+        runCatching { unfreezeAll(ignorePins = true) }
         val removed = withContext(Dispatchers.IO) { policy.removeDeviceOwner() }
         if (removed) refreshAccess()
         return removed
@@ -1054,6 +1101,11 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         val applied = (backup.applied + prefs.freezeAppliedNow())
             .filterTo(mutableSetOf()) { it in methods }
         prefs.setFreezeApplied(applied, applied = true)
+        // Merged the same way, and only for keys that end up listed: a pin on an app the
+        // merged list does not carry would name nothing.
+        prefs.setFreezePinnedKeys(
+            (backup.pinned + prefs.freezePinnedNow()).filterTo(mutableSetOf()) { it in methods }
+        )
         prefs.setFreezeEnabled(backup.enabled)
         prefs.setFreezeSystemApps(backup.systemApps)
         prefs.setFreezeProtect(backup.protect)
@@ -1076,6 +1128,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             applied = prefs.freezeAppliedNow(),
             rows = prefs.freezeRowsNow(),
             locked = prefs.lockedAppsNow(),
+            pinned = prefs.freezePinnedNow(),
         )
         val encoded = android.util.Base64.encodeToString(
             FreezeBackup.encode(snapshot).toByteArray(Charsets.UTF_8),
@@ -1528,30 +1581,50 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     /**
      * Freezes a group — today a folder — without asking for a method again.
      *
-     * Each app keeps the method it already has; one that was never listed joins under
-     * Suspend, the gentlest method every channel can do. Progress stops at the first
-     * missing channel instead of raising the same prompt once per app.
+     * Each app keeps the method the list already gives it. An app nobody listed is left alone
+     * and counted in [FreezeBatchResult.skipped]: a folder is a way to reach apps, not a second
+     * way to decide the freeze list. Progress stops at the first missing channel instead of
+     * raising the same prompt per app.
      */
     suspend fun freezeMany(apps: List<AppInfo>): FreezeBatchResult {
+        val plan = prefs.freezeMethodsNow()
+        val keys = apps.distinctBy { it.freezeKey }
+        // The skip count is fixed before the run: an app the run never reached is not the same
+        // as one it was told to leave alone, and only the latter is a skip.
+        val batch = FreezeSelection.listedOnlyBatch(keys.map { it.freezeKey }, plan)
+        val allowed = batch.targets.toSet()
+        val targets = keys.filter { it.freezeKey in allowed }
+        val skipped = batch.skipped
         var done = 0
         var failed = 0
-        for (app in apps) {
-            val method = prefs.freezeMethodsNow()[app.freezeKey] ?: FreezeMethod.SUSPEND
+        for (app in targets) {
+            val method = plan[app.freezeKey] ?: FreezeMethod.SUSPEND
             when (freezeNow(app, method)) {
                 FreezeOutcome.DONE -> done++
-                FreezeOutcome.NO_ACCESS -> return FreezeBatchResult(done, failed, noAccess = true)
+                FreezeOutcome.NO_ACCESS ->
+                    return FreezeBatchResult(done, failed, noAccess = true, skipped = skipped)
                 else -> failed++
             }
         }
-        return FreezeBatchResult(done = done, failed = failed)
+        return FreezeBatchResult(done = done, failed = failed, skipped = skipped)
     }
 
-    /** Releases a group, leaving every app on the list for the next trigger. */
+    /**
+     * Releases a group, leaving every app on the list for the next trigger.
+     *
+     * Only members the record says are frozen are touched and counted. A folder can hold a
+     * shortcut or an app nobody froze; reporting those as released (or as failures) was a
+     * lie about what the run did.
+     */
     suspend fun unfreezeMany(apps: List<AppInfo>): FreezeBatchResult {
+        val applied = prefs.freezeAppliedNow()
+        val locked = lockedMainKeys()
+        val keys = apps.map { it.freezeKey }.distinct()
+            .filter { it !in locked && it in applied }
         var done = 0
         var failed = 0
-        for (app in apps) {
-            when (unfreeze(app)) {
+        for (key in keys) {
+            when (unfreezeKey(key)) {
                 FreezeOutcome.DONE -> done++
                 FreezeOutcome.NO_ACCESS -> return FreezeBatchResult(done, failed, noAccess = true)
                 else -> failed++
@@ -1758,8 +1831,15 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * Unfreezes the whole list, not only what the applied record remembers; the list is left
      * alone. The wider net matters: a record lost to a crash or an older build would
      * otherwise leave an app suspended with no screen willing to lift it.
+     *
+     * Pinned keys are skipped and keep their applied record: a pin means "stay frozen through
+     * Unfreeze all", which is the whole reason it exists. [unfreeze] ignores the pin.
+     *
+     * [ignorePins] is for the one caller that is tearing the channel down rather than lifting a
+     * list: giving up device ownership while a pinned app is suspended would leave that state
+     * with no channel left to undo it.
      */
-    suspend fun unfreezeAll(): FreezeBatchResult = withContext(NonCancellable) {
+    suspend fun unfreezeAll(ignorePins: Boolean = false): FreezeBatchResult = withContext(NonCancellable) {
         gate.withLock {
             // The first Unfreeze all after a reinstall must see the list the old install
             // froze, or it would have nothing to lift.
@@ -1768,8 +1848,16 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             val plan = prefs.freezeMethodsNow()
             if (appliedNow.isEmpty() && plan.isEmpty()) return@withLock FreezeBatchResult()
             val locked = lockedMainKeys()
+            val pinned = if (ignorePins) emptySet() else prefs.freezePinnedNow()
             val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
-            val candidates = (appliedNow + plan.keys).distinct().filterNot { it in locked }
+            // Pins that were actually holding something back, for an honest toast: a pin on an
+            // app that is not frozen (or no longer installed) is not an app "kept frozen".
+            val kept = pinned.count { key ->
+                val target = targetOf(key) ?: return@count false
+                snapshot.state(target)?.installed == true && looksFrozen(snapshot, target, plan[key])
+            }
+            val candidates = (appliedNow + plan.keys).distinct()
+                .filterNot { it in locked || it in pinned }
             val targets = withContext(Dispatchers.IO) {
                 // The record is the answer only for HIDE, whose state cannot be read back; a
                 // record left on an enabled app by a reinstall must not demand access.
@@ -1781,27 +1869,33 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     if (snapshot.state(target)?.installed == false) return@mapNotNull null
                     key to looksFrozen(snapshot, target, plan[key])
                 }.toMap()
-                FreezeSelection.toLift(held.keys, appliedNow, plan, locked) { held[it] == true }
+                FreezeSelection.toLift(held.keys, appliedNow, plan, locked, pinned) {
+                    held[it] == true
+                }
             }
+            // Pinned survives this run, whatever the record says: the app is still frozen.
+            val keep = locked + pinned
             if (targets.isEmpty()) {
-                if (appliedNow.any { it !in locked }) {
-                    prefs.setFreezeApplied(appliedNow - locked, applied = false)
+                if (appliedNow.any { it !in keep }) {
+                    prefs.setFreezeApplied(appliedNow - keep, applied = false)
                     _changes.value += 1
                     persistBackupLocked()
                 }
-                return@withLock FreezeBatchResult()
+                return@withLock FreezeBatchResult(kept = kept)
             }
-            if (ensureAccess() == FreezeAccess.NONE) return@withLock FreezeBatchResult(noAccess = true)
+            if (ensureAccess() == FreezeAccess.NONE) {
+                return@withLock FreezeBatchResult(noAccess = true, kept = kept)
+            }
             val done = withContext(Dispatchers.IO) {
                 liftedIn(targets.map { it to plan[it] })
             }
             val failed = targets.filter { it !in done }
-            // Locked apps keep their freeze record: the lock still holds them, and this run
-            // deliberately did not lift them.
-            prefs.setFreezeApplied(appliedNow - failed.toSet() - locked, applied = false)
+            // Locked and pinned apps keep their freeze record: this run deliberately did not
+            // lift them, and the record is what a later Unfreeze all works from.
+            prefs.setFreezeApplied(appliedNow - failed.toSet() - keep, applied = false)
             _changes.value += 1
             persistBackupLocked()
-            FreezeBatchResult(done = done.size, failed = failed.size)
+            FreezeBatchResult(done = done.size, failed = failed.size, kept = kept)
         }
     }
 
@@ -1859,14 +1953,20 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     suspend fun exportPlan(): String = FreezePlanFile.encode(
         prefs.freezeMethodsNow(),
         prefs.freezeRowsNow(),
+        prefs.freezePinnedNow(),
     )
 
     /**
      * Adds the apps from an exported list that are installed and not already listed.
      * Returns how many joined, or -1 when the file is not one of ours.
+     *
+     * Pins travel with the file, so the apps the user keeps asleep through a bulk lift stay
+     * that way on the new phone. A pin is only restored for an app that is actually listed
+     * afterwards, and the list's own pins win over the file's.
      */
     suspend fun importPlan(text: String): Int {
-        val entries = FreezePlanFile.decode(text) ?: return -1
+        val file = FreezePlanFile.decodePlan(text) ?: return -1
+        val entries = file.entries
         if (entries.isEmpty()) return 0
         val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
         val current = prefs.freezeMethodsNow()
@@ -1882,6 +1982,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 (systemEnabled || snapshot.state(target)?.system != true) &&
                 snapshot.state(target)?.installed == true
         }
+        val incomingPins = usable.keys.filter { it in file.pinned }
         if (usable.isEmpty()) return 0
         val rows = withContext(Dispatchers.IO) {
             usable.mapValues { (key, entry) ->
@@ -1894,6 +1995,13 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         }
         prefs.setFreezeRows(rows)
         prefs.setFreezeMethods(usable.mapValues { it.value.method })
+        // Pins last: the record is what makes a pin meaningful, so a failure before this
+        // point leaves no pin pointing at an app the list never received.
+        // Only for apps this import actually adds, the same rule the methods follow: a key
+        // already on this phone's list keeps the pin the user gave it here.
+        if (incomingPins.isNotEmpty()) {
+            prefs.addFreezePinnedKeys(incomingPins.toSet())
+        }
         _changes.value += 1
         return usable.size
     }
@@ -2271,7 +2379,23 @@ object FreezePlanFile {
 
     data class Entry(val method: FreezeMethod, val label: String?)
 
-    fun encode(plan: Map<String, FreezeMethod>, rows: Map<String, FreezeRow>): String {
+    /**
+     * The whole file: the list plus which keys are pinned. Version 1 had no pins, so a file
+     * from an older build decodes to an empty pinned set rather than being refused.
+     */
+    data class Plan(
+        val entries: Map<String, Entry>,
+        val pinned: Set<String> = emptySet(),
+    ) {
+        /** Kept so a caller that only wants the list reads the same as before. */
+        val keys: Set<String> get() = entries.keys
+    }
+
+    fun encode(
+        plan: Map<String, FreezeMethod>,
+        rows: Map<String, FreezeRow>,
+        pinned: Set<String> = emptySet(),
+    ): String {
         val apps = org.json.JSONArray()
         plan.forEach { (key, method) ->
             apps.put(
@@ -2282,17 +2406,28 @@ object FreezePlanFile {
                 }
             )
         }
-        return org.json.JSONObject().put("version", 1).put("apps", apps).toString()
+        val pinnedArray = org.json.JSONArray()
+        // A pin only means something for a key the file actually carries.
+        pinned.filter { it in plan }.sorted().forEach { pinnedArray.put(it) }
+        return org.json.JSONObject()
+            .put("version", VERSION)
+            .put("apps", apps)
+            .put("pinned", pinnedArray)
+            .toString()
     }
 
-    /** Null for anything that is not a file this build wrote. */
-    fun decode(text: String): Map<String, Entry>? = runCatching {
+    /** Null for anything that is not a file this build wrote or an older one it still reads. */
+    fun decode(text: String): Map<String, Entry>? = decodePlan(text)?.entries
+
+    /** The whole file, pins included; version 1 files decode with an empty pinned set. */
+    fun decodePlan(text: String): Plan? = runCatching {
         if (text.length > MAX_FILE_CHARS) return null
         val root = org.json.JSONObject(text)
-        if (root.optInt("version") != 1) return null
+        val version = root.optInt("version")
+        if (version !in MIN_VERSION..VERSION) return null
         val apps = root.optJSONArray("apps") ?: return null
         if (apps.length() > MAX_ENTRIES) return null
-        buildMap {
+        val entries = buildMap {
             for (index in 0 until apps.length()) {
                 val item = apps.optJSONObject(index) ?: continue
                 val key = item.optString("key")
@@ -2310,8 +2445,21 @@ object FreezePlanFile {
                 put(key, Entry(method, label))
             }
         }
+        // Absent in version 1, which is exactly what "no pins" looked like there.
+        val pinnedArray = root.optJSONArray("pinned") ?: org.json.JSONArray()
+        val pinned = buildSet {
+            for (index in 0 until minOf(pinnedArray.length(), MAX_ENTRIES)) {
+                val key = pinnedArray.optString(index)
+                // A pin for anything the file does not list would be a ghost exemption.
+                if (key in entries) add(key)
+            }
+        }
+        Plan(entries, pinned)
     }.getOrNull()
 
+    /** The newest format this build writes; [MIN_VERSION] is the oldest it still reads. */
+    private const val VERSION = 2
+    private const val MIN_VERSION = 1
     private const val MAX_FILE_CHARS = 1_000_000
     private const val MAX_ENTRIES = 5_000
     private const val MAX_LABEL = 120
@@ -2338,6 +2486,8 @@ object FreezeBackup {
         val rows: Map<String, FreezeRow> = emptyMap(),
         /** Lock keys, so a reinstall can still lift hide/suspend the lock applied. */
         val locked: Set<String> = emptySet(),
+        /** Keys a bulk lift must leave frozen, so the pin survives a reinstall too. */
+        val pinned: Set<String> = emptySet(),
     )
 
     fun encode(snapshot: Snapshot): String {
@@ -2363,6 +2513,9 @@ object FreezeBackup {
         snapshot.applied.filter(::validKey).forEach { applied.put(it) }
         val locked = org.json.JSONArray()
         snapshot.locked.filter(::validLockKey).forEach { locked.put(it) }
+        val pinned = org.json.JSONArray()
+        // Only a key the backup also lists: a pin with no list entry is unreadable anyway.
+        snapshot.pinned.filter { validKey(it) && it in snapshot.methods }.forEach { pinned.put(it) }
         return org.json.JSONObject()
             .put("version", VERSION)
             .put("firstInstall", snapshot.firstInstallTime)
@@ -2373,6 +2526,7 @@ object FreezeBackup {
             .put("applied", applied)
             .put("rows", rows)
             .put("locked", locked)
+            .put("pinned", pinned)
             .toString()
     }
 
@@ -2425,6 +2579,13 @@ object FreezeBackup {
                 if (validLockKey(key)) add(key)
             }
         }
+        val pinnedArray = root.optJSONArray("pinned") ?: org.json.JSONArray()
+        val decodedPinned = buildSet {
+            for (index in 0 until minOf(pinnedArray.length(), MAX_ENTRIES)) {
+                val key = pinnedArray.optString(index)
+                if (key in decodedMethods) add(key)
+            }
+        }
         Snapshot(
             firstInstallTime = root.optLong("firstInstall", 0L),
             enabled = root.optBoolean("enabled", true),
@@ -2434,6 +2595,7 @@ object FreezeBackup {
             applied = decodedApplied,
             rows = decodedRows,
             locked = decodedLocked,
+            pinned = decodedPinned,
         )
     }.getOrNull()
 

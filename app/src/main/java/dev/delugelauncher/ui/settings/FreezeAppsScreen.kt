@@ -13,6 +13,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -114,6 +116,8 @@ fun FreezeAppsScreen(
     freezeMethods: Map<String, FreezeMethod>,
     /** Packages on the list that are actually frozen right now. */
     freezeApplied: Set<String>,
+    /** Listed keys a bulk lift must leave frozen; the screen only reports them. */
+    freezePinned: Set<String> = emptySet(),
     /** Locked keys are owned by the lock screen; the freeze switch must not pretend otherwise. */
     lockedApps: Set<String> = emptySet(),
     nameOverrides: Map<String, String>,
@@ -138,6 +142,11 @@ fun FreezeAppsScreen(
     /** The apps joining and leaving the current method's list, in one inverted selection. */
     onInvertSelection: (List<AppInfo>, List<AppInfo>, FreezeMethod) -> Unit,
     onSetApplied: (AppInfo, Boolean) -> Unit,
+    /**
+     * Pins or unpins one key: whether Unfreeze all may lift it. Null leaves the menu item out
+     * rather than offering a toggle that would do nothing.
+     */
+    onSetPinned: ((AppInfo, Boolean) -> Unit)? = null,
     onRemoveFromPlan: (AppInfo) -> Unit,
     onFreezeAll: () -> Unit,
     onUnfreezeAll: () -> Unit,
@@ -477,12 +486,14 @@ fun FreezeAppsScreen(
                     item { ListSectionLabel(stringResource(R.string.freeze_list_section, listed.size)) }
                     items(listed, key = { "listed:" + it.key }) { app ->
                         val isLocked = app.lockedBy(lockedApps)
+                        val pinned = app.freezeKey in freezePinned
                         FreezeRow(
                             app = app,
                             label = name(app),
                             iconSizeDp = iconSizeDp,
                             checked = true,
                             enabled = canOperate && !isLocked,
+                            pinned = pinned && app.freezeKey in freezeApplied,
                             subtitle = if (isLocked) {
                                 stringResource(R.string.freeze_locked_app)
                             } else {
@@ -498,7 +509,10 @@ fun FreezeAppsScreen(
                             onRemove = if (isLocked) null else {
                                 { onRemoveFromPlan(app) }
                             },
-                            onPin = {
+                            onSetPinned = onSetPinned?.takeIf { !isLocked }?.let { set ->
+                                { keep: Boolean -> set(app, keep) }
+                            },
+                            onShortcut = {
                                 if (!FreezePinned.request(context, app, name(app))) {
                                     android.widget.Toast.makeText(
                                         context,
@@ -553,13 +567,17 @@ fun FreezeAppsScreen(
             onDismissRequest = { confirmingSelectAll = false },
             title = { Text(stringResource(R.string.freeze_select_all_title)) },
             text = {
-                Text(
-                    stringResource(
-                        R.string.freeze_select_all_body,
-                        candidates.size,
-                        methodName(method),
+                // A translated paragraph with two numbers in it: at a large font on a short
+                // screen it ran past the buttons with no way to read the rest.
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        stringResource(
+                            R.string.freeze_select_all_body,
+                            candidates.size,
+                            methodName(method),
+                        )
                     )
-                )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -582,14 +600,16 @@ fun FreezeAppsScreen(
             onDismissRequest = { confirmingInvert = false },
             title = { Text(stringResource(R.string.freeze_invert_title)) },
             text = {
-                Text(
-                    stringResource(
-                        R.string.freeze_invert_body,
-                        invertJoining.size,
-                        invertLeaving.size,
-                        methodName(method),
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(
+                        stringResource(
+                            R.string.freeze_invert_body,
+                            invertJoining.size,
+                            invertLeaving.size,
+                            methodName(method),
+                        )
                     )
-                )
+                }
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -633,7 +653,12 @@ fun FreezeAppsScreen(
             onDismissRequest = { confirmingUnfreezeAll = false },
             title = { Text(stringResource(R.string.freeze_unfreeze_all)) },
             text = {
-                Text(stringResource(R.string.unfreeze_all_confirm_body, freezeMethods.size))
+                Text(
+                    stringResource(
+                        R.string.unfreeze_all_confirm_body,
+                        (freezeMethods.keys - freezePinned).size,
+                    )
+                )
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -654,7 +679,9 @@ fun FreezeAppsScreen(
             onDismissRequest = { autoDialog = false },
             title = { Text(stringResource(R.string.freeze_auto)) },
             text = {
-                Column {
+                // The panel is a switch, six delay options and five more switches: on a short
+                // screen it ran off the bottom with no way to reach the rest. It scrolls now.
+                Column(Modifier.verticalScroll(rememberScrollState())) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -744,7 +771,11 @@ fun FreezeAppsScreen(
         AlertDialog(
             onDismissRequest = { enablingSystemApps = false },
             title = { Text(stringResource(R.string.freeze_system_enable_title)) },
-            text = { Text(stringResource(R.string.freeze_system_enable_body)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(stringResource(R.string.freeze_system_enable_body))
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     enablingSystemApps = false
@@ -765,7 +796,11 @@ fun FreezeAppsScreen(
         AlertDialog(
             onDismissRequest = { disablingSystemApps = false },
             title = { Text(stringResource(R.string.freeze_system_disable_title)) },
-            text = { Text(stringResource(R.string.freeze_system_disable_body)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    Text(stringResource(R.string.freeze_system_disable_body))
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     disablingSystemApps = false
@@ -1245,14 +1280,18 @@ private fun FreezeRow(
     iconSizeDp: Int,
     checked: Boolean,
     enabled: Boolean,
+    /** A pinned row stays frozen through Unfreeze all, and says so with a lock. */
+    pinned: Boolean = false,
     subtitle: String?,
     /** The switch: on the list, or not. Checking adds, unchecking takes it off the list. */
     onToggle: () -> Unit,
     /** Non-null on a listed app: the long-press menu freezes or unfreezes it on the spot. */
     onSetApplied: ((Boolean) -> Unit)?,
     onRemove: (() -> Unit)?,
+    /** Non-null on a listed app: the menu offers to keep it frozen through a bulk lift. */
+    onSetPinned: ((Boolean) -> Unit)? = null,
     /** Non-null on a listed app: the menu can pin a shortcut that toggles it from the home screen. */
-    onPin: (() -> Unit)? = null,
+    onShortcut: (() -> Unit)? = null,
 ) {
     var rowMenu by remember { mutableStateOf(false) }
     Box {
@@ -1270,7 +1309,18 @@ private fun FreezeRow(
             AppIcon(app = app, sizeDp = minOf(iconSizeDp, 44))
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.bodyLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(label, style = MaterialTheme.typography.bodyLarge)
+                    if (pinned) {
+                        Spacer(Modifier.width(6.dp))
+                        Icon(
+                            Icons.Filled.Lock,
+                            contentDescription = stringResource(R.string.freeze_menu_keep),
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
+                        )
+                    }
+                }
                 if (subtitle != null) {
                     Text(
                         subtitle,
@@ -1295,11 +1345,31 @@ private fun FreezeRow(
                     leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
                     onClick = { rowMenu = false; onSetApplied(false) },
                 )
-                if (onPin != null) {
+                if (onSetPinned != null) {
+                    DropdownMenuItem(
+                        // One row, two labels: a toggle reads as the state it will switch to.
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (pinned) R.string.freeze_menu_unkeep
+                                    else R.string.freeze_menu_keep
+                                )
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                if (pinned) DelugeIcons.LockOpen else Icons.Filled.Lock,
+                                contentDescription = null,
+                            )
+                        },
+                        onClick = { rowMenu = false; onSetPinned(!pinned) },
+                    )
+                }
+                if (onShortcut != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.freeze_menu_pin)) },
                         leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
-                        onClick = { rowMenu = false; onPin() },
+                        onClick = { rowMenu = false; onShortcut() },
                     )
                 }
                 if (onRemove != null) {

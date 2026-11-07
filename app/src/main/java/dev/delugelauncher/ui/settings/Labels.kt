@@ -4,6 +4,7 @@ package dev.delugelauncher.ui.settings
 import androidx.annotation.StringRes
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.EdgeSide
@@ -58,10 +59,18 @@ fun AzStripVisibility.labelRes(): Int = when (this) {
 }
 
 @StringRes
+fun AzStripSide.labelRes(): Int = when (this) {
+    AzStripSide.LEFT -> R.string.edge_left
+    AzStripSide.RIGHT -> R.string.edge_right
+    AzStripSide.BOTH -> R.string.edge_both
+}
+
+@StringRes
 fun EdgeSide.labelRes(): Int = when (this) {
     EdgeSide.LEFT -> R.string.edge_left
     EdgeSide.RIGHT -> R.string.edge_right
     EdgeSide.BOTH -> R.string.edge_both
+    EdgeSide.NONE -> R.string.edge_none
 }
 
 @StringRes

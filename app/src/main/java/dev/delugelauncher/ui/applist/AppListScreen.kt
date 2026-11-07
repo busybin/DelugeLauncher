@@ -145,6 +145,7 @@ import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.ui.common.FolderIcon
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.EdgeSide
 import dev.delugelauncher.data.RippleParams
 import dev.delugelauncher.data.ScrubBubbleShape
@@ -318,6 +319,8 @@ fun AppListScreen(
     onDismiss: () -> Unit,
     contentColor: Color,
     showAlphabet: Boolean,
+    /** Which side(s) the letters are drawn on; the scrub gesture is a separate setting. */
+    azStripSide: AzStripSide = AzStripSide.RIGHT,
     scrubStyle: ScrubStyle = ScrubStyle.BELL,
     scrubBubbleShape: ScrubBubbleShape = ScrubBubbleShape.ROUNDED,
     rippleParams: RippleParams = RippleParams(),
@@ -1686,21 +1689,27 @@ fun AppListScreen(
         // from: the left edge scrubs blind, display and gesture are separate
         // things. It takes no room, so the rows run full-bleed under it.
         if (showAlphabet && !searching) {
-            val stripSide = if (alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT
-            AlphabetSpyStrip(
-                cells = cells,
-                scrub = scrub,
-                listState = listState,
-                scrubY = scrubY,
-                pullPx = pullPx,
-                band = band,
-                stripSide = stripSide,
-                scrubStyle = scrubStyle,
-                rippleParams = rippleParams,
-                modifier = Modifier.align(
-                    if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
-                ),
-            )
+            val stripSides = when (azStripSide) {
+                AzStripSide.LEFT -> listOf(EdgeSide.LEFT)
+                AzStripSide.RIGHT -> listOf(EdgeSide.RIGHT)
+                AzStripSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
+            }
+            stripSides.forEach { stripSide ->
+                AlphabetSpyStrip(
+                    cells = cells,
+                    scrub = scrub,
+                    listState = listState,
+                    scrubY = scrubY,
+                    pullPx = pullPx,
+                    band = band,
+                    stripSide = stripSide,
+                    scrubStyle = scrubStyle,
+                    rippleParams = rippleParams,
+                    modifier = Modifier.align(
+                        if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
+                    ),
+                )
+            }
         }
 
         // While picking apps to tag, a bar says how many and offers the tag picker, and a FAB

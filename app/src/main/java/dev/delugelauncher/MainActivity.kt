@@ -425,6 +425,8 @@ class MainActivity : ComponentActivity() {
                     result.noAccess -> getString(R.string.freeze_needs_access)
                     result.failed > 0 ->
                         getString(R.string.unfreeze_many_partial, result.done, result.failed)
+                    result.kept > 0 ->
+                        getString(R.string.freeze_unfrozen_pinned, result.done, result.kept)
                     else -> getString(R.string.freeze_all_done)
                 }
             }

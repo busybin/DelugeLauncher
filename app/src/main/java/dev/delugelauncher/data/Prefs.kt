@@ -24,7 +24,7 @@ import kotlinx.coroutines.flow.first
 import org.json.JSONArray
 import org.json.JSONObject
 
-enum class EdgeSide { LEFT, RIGHT, BOTH }
+enum class EdgeSide { LEFT, RIGHT, BOTH, NONE }
 
 /** How the A-Z strip moves under a fingertip. */
 enum class ScrubStyle { BELL, RIPPLE }
@@ -170,6 +170,9 @@ fun CornerAction.targetKind(): SlotKind? = when (this) {
 /** When the A-Z strip shows on the home screen itself. */
 enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
 
+/** Which side the A-Z strip is drawn on. The scrub gesture has its own setting. */
+enum class AzStripSide { RIGHT, LEFT, BOTH }
+
 /** How hard the launcher taps back: silent, or three strengths. */
 enum class HapticFeedback { OFF, LIGHT, MEDIUM, STRONG }
 
@@ -253,6 +256,9 @@ private val NEVER_EXPORT = setOf(
     "freeze_methods",
     // Which of them are frozen right now is even more of a device fact.
     "freeze_applied",
+    // A pin names a row on this device's freeze list, and the list itself is not exported
+    // here. The freeze list's own export carries pins; a settings backup must not.
+    "freeze_pinned",
     // What the rows were called and which activity they launched: of this device too, and the
     // list itself has its own export that carries what a new phone needs.
     "freeze_labels",
@@ -343,6 +349,7 @@ class Prefs(private val context: Context) {
         val RIPPLE_STIFFNESS = floatPreferencesKey("ripple_stiffness")
         val ALWAYS_SHOW_AZ = booleanPreferencesKey("always_show_az")
         val AZ_STRIP_VISIBILITY = stringPreferencesKey("az_strip_visibility")
+        val AZ_STRIP_SIDE = stringPreferencesKey("az_strip_side")
         val HAPTIC_FEEDBACK = stringPreferencesKey("haptic_feedback")
         val HOME_TWO_COLUMN_PORTRAIT = booleanPreferencesKey("home_two_column_portrait")
         val HOME_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("home_two_column_landscape")
@@ -381,7 +388,6 @@ class Prefs(private val context: Context) {
         val MARK_WORK_APPS = booleanPreferencesKey("mark_work_apps")
         val TEXT_SHADOW = booleanPreferencesKey("text_shadow")
         val TEXT_SHADOW_STRENGTH = intPreferencesKey("text_shadow_strength")
-        val SETTINGS_ADVANCED = booleanPreferencesKey("settings_advanced")
         val COMPACT_TAP_AREA = booleanPreferencesKey("compact_tap_area")
         val STAY_AFTER_PRIVATE_UNLOCK = booleanPreferencesKey("stay_after_private_unlock")
         val PRIVATE_SPACE_SECTION = booleanPreferencesKey("private_space_section")
@@ -462,6 +468,9 @@ class Prefs(private val context: Context) {
         val EXTERNAL_CONTROL_TOKEN = stringPreferencesKey("external_control_token")
         val FREEZE_METHODS = stringPreferencesKey("freeze_methods")
         val FREEZE_APPLIED = stringSetPreferencesKey("freeze_applied")
+        // Keys that Unfreeze all must leave frozen. Kept apart from the list: being on it says
+        // nothing about whether a bulk lift is allowed to touch the app.
+        val FREEZE_PINNED = stringSetPreferencesKey("freeze_pinned")
         val FREEZE_LABELS = stringPreferencesKey("freeze_labels")
         val FREEZE_COMPONENTS = stringPreferencesKey("freeze_components")
         val FREEZE_PROTECT = booleanPreferencesKey("freeze_protect")
@@ -792,6 +801,16 @@ class Prefs(private val context: Context) {
     suspend fun freezeAppliedNow(): Set<String> = freezeApplied.first()
 
     /**
+     * Keys a bulk lift must leave alone, so an app the user never wants awake stays asleep
+     * through Unfreeze all. A single unfreeze still works: the pin is about the batch, not
+     * about that app.
+     */
+    val freezePinned: Flow<Set<String>> =
+        data.map { it[Keys.FREEZE_PINNED] ?: emptySet() }.distinctUntilChanged()
+
+    suspend fun freezePinnedNow(): Set<String> = freezePinned.first()
+
+    /**
      * What each listed app was called and which activity it launched when it joined the list.
      *
      * A disabled or hidden app cannot be listed by the launcher and, for another profile, its
@@ -1026,10 +1045,6 @@ class Prefs(private val context: Context) {
         }.getOrDefault(ColorSchemeChoice.DELUGE_BLUE)
     }.distinctUntilChanged()
 
-    /** Whether the settings screens expose the tuning rows most owners never touch. */
-    val settingsAdvanced: Flow<Boolean> =
-        data.map { it[Keys.SETTINGS_ADVANCED] ?: false }.distinctUntilChanged()
-
     val hideStatusBar: Flow<Boolean> = data.map { it[Keys.HIDE_STATUS_BAR] ?: false }.distinctUntilChanged()
 
     /**
@@ -1104,6 +1119,15 @@ class Prefs(private val context: Context) {
     val azStripVisibility: Flow<AzStripVisibility> = data.map { pref ->
         pref[Keys.AZ_STRIP_VISIBILITY]?.let { runCatching { AzStripVisibility.valueOf(it) }.getOrNull() }
             ?: if (pref[Keys.ALWAYS_SHOW_AZ] == true) AzStripVisibility.ALWAYS else AzStripVisibility.NEVER
+    }.distinctUntilChanged()
+
+    /**
+     * Where the letters are drawn. Unset follows the old rule — the side the rows are not
+     * aligned against — so an existing home screen does not move its strip on update.
+     */
+    val azStripSide: Flow<AzStripSide> = data.map { pref ->
+        pref[Keys.AZ_STRIP_SIDE]?.let { runCatching { AzStripSide.valueOf(it) }.getOrNull() }
+            ?: if (pref[Keys.ALIGN_RIGHT] == true) AzStripSide.LEFT else AzStripSide.RIGHT
     }.distinctUntilChanged()
 
     /** The A-Z strip inside the app list; the edge gesture still works without it. */
@@ -1747,13 +1771,16 @@ class Prefs(private val context: Context) {
         }
     }
 
-    /** Drops an app from the list entirely, applied state included. */
+    /** Drops an app from the list entirely, applied state and pin included. */
     suspend fun removeFreezeTarget(packageName: String) {
         context.dataStore.edit { pref ->
             val current = jsonToMap(pref[Keys.FREEZE_METHODS]).toMutableMap()
             current.remove(packageName)
             pref[Keys.FREEZE_METHODS] = mapToJson(current)
             pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packageName
+            // A pin on an app that left the list would name nothing and, worse, resurrect
+            // the app's exemption if it were ever listed again.
+            pref[Keys.FREEZE_PINNED] = (pref[Keys.FREEZE_PINNED] ?: emptySet()) - packageName
             pref[Keys.FREEZE_LABELS] = mapToJson(
                 jsonToMap(pref[Keys.FREEZE_LABELS]).toMutableMap().apply { remove(packageName) }
             )
@@ -1771,6 +1798,7 @@ class Prefs(private val context: Context) {
             packages.forEach { current.remove(it) }
             pref[Keys.FREEZE_METHODS] = mapToJson(current)
             pref[Keys.FREEZE_APPLIED] = (pref[Keys.FREEZE_APPLIED] ?: emptySet()) - packages.toSet()
+            pref[Keys.FREEZE_PINNED] = (pref[Keys.FREEZE_PINNED] ?: emptySet()) - packages.toSet()
             listOf(Keys.FREEZE_LABELS, Keys.FREEZE_COMPONENTS).forEach { key ->
                 pref[key] = mapToJson(
                     jsonToMap(pref[key]).toMutableMap().apply { packages.forEach { remove(it) } }
@@ -1785,6 +1813,7 @@ class Prefs(private val context: Context) {
             if (except.isEmpty()) {
                 pref.remove(Keys.FREEZE_METHODS)
                 pref.remove(Keys.FREEZE_APPLIED)
+                pref.remove(Keys.FREEZE_PINNED)
                 pref.remove(Keys.FREEZE_LABELS)
                 pref.remove(Keys.FREEZE_COMPONENTS)
             } else {
@@ -1802,6 +1831,8 @@ class Prefs(private val context: Context) {
                 pref[Keys.FREEZE_METHODS] = mapToJson(methods)
                 pref[Keys.FREEZE_APPLIED] =
                     (pref[Keys.FREEZE_APPLIED] ?: emptySet()).filterNot { it in except }.toSet()
+                pref[Keys.FREEZE_PINNED] =
+                    (pref[Keys.FREEZE_PINNED] ?: emptySet()).filterNot { it in except }.toSet()
                 pref[Keys.FREEZE_LABELS] = mapToJson(labels)
                 pref[Keys.FREEZE_COMPONENTS] = mapToJson(components)
             }
@@ -1831,6 +1862,27 @@ class Prefs(private val context: Context) {
             ).forEach { key ->
                 if (pref[key] in freezeActions) pref[key] = CornerAction.DO_NOTHING.name
             }
+        }
+    }
+
+    /** Pins or unpins one key: whether a bulk lift may touch it. */
+    suspend fun setFreezePinned(key: String, pinned: Boolean) {
+        context.dataStore.edit { pref ->
+            val current = pref[Keys.FREEZE_PINNED] ?: emptySet()
+            pref[Keys.FREEZE_PINNED] = if (pinned) current + key else current - key
+        }
+    }
+
+    /** Replaces the whole pinned set, for a caller that already knows the batch it wants. */
+    suspend fun setFreezePinnedKeys(keys: Set<String>) {
+        context.dataStore.edit { pref -> pref[Keys.FREEZE_PINNED] = keys }
+    }
+
+    /** Adds pins in one transaction, so a concurrent toggle is not lost to a read-then-write. */
+    suspend fun addFreezePinnedKeys(keys: Set<String>) {
+        if (keys.isEmpty()) return
+        context.dataStore.edit { pref ->
+            pref[Keys.FREEZE_PINNED] = (pref[Keys.FREEZE_PINNED] ?: emptySet()) + keys
         }
     }
 
@@ -2213,10 +2265,6 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.HIDE_STATUS_BAR] = v }
     }
 
-    suspend fun setSettingsAdvanced(v: Boolean) {
-        context.dataStore.edit { it[Keys.SETTINGS_ADVANCED] = v }
-    }
-
     suspend fun setDimWallpaperAlpha(v: Float) {
         context.dataStore.edit { it[Keys.DIM_WALLPAPER_ALPHA] = v }
     }
@@ -2266,6 +2314,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setAlignRight(v: Boolean) {
         context.dataStore.edit { it[Keys.ALIGN_RIGHT] = v }
+    }
+
+    suspend fun setAzStripSide(v: AzStripSide) {
+        context.dataStore.edit { it[Keys.AZ_STRIP_SIDE] = v.name }
     }
 
     suspend fun setAzStripVisibility(v: AzStripVisibility) {

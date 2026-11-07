@@ -105,4 +105,85 @@ class FreezeSelectionTest {
         )
         assertTrue(FreezeSelection.verifiable(null))
     }
+
+    @Test
+    fun `a pinned app is never lifted by a bulk lift`() {
+        // Everything is genuinely held, so nothing here is dropped for being stale; the only
+        // reason any of these is left alone is the pin.
+        val targets = FreezeSelection.toLift(
+            plan.keys,
+            plan.keys,
+            plan,
+            pinned = setOf("com.example.disabled", "com.example.stopped"),
+            isFrozen = { true },
+        )
+        assertEquals(listOf("com.example.suspended", "com.example.loose"), targets)
+    }
+
+    @Test
+    fun `a pin on a HIDE record still blocks the lift`() {
+        // HIDE is the one record that would otherwise be lifted on the record alone.
+        val hidePlan = mapOf("com.example.hidden" to FreezeMethod.HIDE)
+        val targets = FreezeSelection.toLift(
+            hidePlan.keys,
+            hidePlan.keys,
+            hidePlan,
+            pinned = hidePlan.keys,
+            isFrozen = { false },
+        )
+        assertEquals(emptyList<String>(), targets)
+    }
+
+    @Test
+    fun `no pin means the bulk lift is unchanged`() {
+        val targets = FreezeSelection.toLift(
+            plan.keys,
+            plan.keys,
+            plan,
+            isFrozen = { true },
+        )
+        assertEquals(plan.keys.toList(), targets)
+    }
+
+    @Test
+    fun `a group action only takes the members already on the list`() {
+        val members = listOf(
+            "com.example.disabled",
+            "com.example.stranger",
+            "com.example.suspended",
+            "com.example.alsoStranger",
+        )
+        assertEquals(
+            listOf("com.example.disabled", "com.example.suspended"),
+            FreezeSelection.listedOnlyTargets(members, plan),
+        )
+    }
+
+    @Test
+    fun `an empty list means a group action touches nothing`() {
+        val members = listOf("com.example.disabled", "com.example.suspended")
+        assertEquals(emptyList<String>(), FreezeSelection.listedOnlyTargets(members, emptyMap()))
+    }
+
+    @Test
+    fun `a listed-only folder run touches the listed members and skips the rest`() {
+        val members = listOf(
+            "com.example.disabled",
+            "com.example.stranger1",
+            "com.example.suspended",
+            "com.example.stranger2",
+            "com.example.stranger3",
+        )
+        val batch = FreezeSelection.listedOnlyBatch(members, plan)
+        assertEquals(listOf("com.example.disabled", "com.example.suspended"), batch.targets)
+        assertEquals(3, batch.skipped)
+    }
+
+    @Test
+    fun `a duplicate member counts once in a folder run`() {
+        val members = listOf("com.example.disabled", "com.example.disabled", "com.example.ghost")
+        val batch = FreezeSelection.listedOnlyBatch(members, plan)
+        assertEquals(listOf("com.example.disabled"), batch.targets)
+        assertEquals(1, batch.skipped)
+    }
 }

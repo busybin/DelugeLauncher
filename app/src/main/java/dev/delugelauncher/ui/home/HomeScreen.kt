@@ -304,7 +304,10 @@ fun HomeScreen(
     /** Set when folders are also in the app list, where one taken off here still lives. */
     onRemoveFolderFromHome: ((Folder) -> Unit)? = null,
     onManageFolder: (Folder) -> Unit,
-    /** Freezes or releases every member of a folder; null when freezing is switched off. */
+    /**
+     * Freezes the listed members of a folder and releases the frozen ones; members outside
+     * the freeze list are left alone. Null when freezing is switched off.
+     */
     onFreezeFolder: ((List<AppInfo>) -> Unit)? = null,
     onUnfreezeFolder: ((List<AppInfo>) -> Unit)? = null,
     onMoveToFolder: (AppInfo) -> Unit,
@@ -1402,6 +1405,7 @@ fun HomeScreen(
                             notificationTextSp = notificationTextSp,
                             notificationColor = notificationColor,
                             lockedApps = lockedApps,
+                            freezeActions = freezeActions,
                         )
 
                         is HomeItem.Favorite -> FavoriteRow(
@@ -2042,12 +2046,20 @@ private fun FolderRow(
     notificationColor: Int = 0,
     /** Keys that ask for the device lock before opening. */
     lockedApps: Set<String>,
+    /**
+     * Freeze-list actions a member's long-press menu offers, the same set the rows outside a
+     * folder get. Null where freezing is not set up, and then the entries simply do not appear.
+     */
+    freezeActions: FreezeActions? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
     // Which member is showing its menu, and where the press that opened it landed.
     var memberMenuFor by remember { mutableStateOf<String?>(null) }
+    // Which member is picking a freeze method. By key rather than a flag: the dialog has to
+    // outlive the menu it came from, and the member it belongs to has to survive that too.
+    var memberFreezeChoosing by remember { mutableStateOf<String?>(null) }
     var memberMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
     val memberTouch = remember { mutableStateOf(Offset.Zero) }
     var memberShortcutFor by remember { mutableStateOf<String?>(null) }
@@ -2256,6 +2268,11 @@ private fun FolderRow(
                                 start = if (alignment == HomeAlignment.RIGHT) sidePaddingDp.dp else (sidePaddingDp + 24).dp,
                                 end = if (alignment == HomeAlignment.RIGHT) (sidePaddingDp + 24).dp else sidePaddingDp.dp,
                             )
+                            // The edge strip sits over the last few dp of every row, and a
+                            // member row is the one place a tap near the name could open the
+                            // app list instead of the app. Kept out the same way the folder's
+                            // own widgets are.
+                            .then(controlsInset)
                             .recordTouchPosition(memberTouch)
                             .swipeForShortcuts(shortcutSwipe, member.kind == EntryKind.APP) {
                                 memberShortcutFor = member.key
@@ -2345,12 +2362,26 @@ private fun FolderRow(
                         onDismissRequest = { memberMenuFor = null },
                     ) {
                         // A folder member is an app like any other row, so it offers what the
-                        // app publishes the same way the rows outside a folder do.
+                        // app publishes the same way the rows outside a folder do — freezing
+                        // included, since putting an app in a folder says nothing about
+                        // whether it should be running.
                         if (member.kind == EntryKind.APP) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_app_info)) },
                                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                                 onClick = { memberMenuFor = null; onMemberAppInfo(member) },
+                            )
+                            // Same entries as outside a folder, and the same bargain: adding
+                            // an app here is adding it to the freeze list, which freezes it.
+                            FreezeMenuItems(
+                                app = member,
+                                actions = freezeActions,
+                                onDismissMenu = { memberMenuFor = null },
+                                locked = member.lockedBy(lockedApps),
+                                onChooseMethod = {
+                                    memberMenuFor = null
+                                    memberFreezeChoosing = member.key
+                                },
                             )
                         }
                         if (member.kind == EntryKind.SHORTCUT) {
@@ -2371,6 +2402,16 @@ private fun FolderRow(
                             onClick = { memberMenuFor = null; onManage() },
                         )
                         HorizontalDivider()
+                        // Taking the app off the freeze list lives one level in, with the rest
+                        // of the row's management, exactly as it does outside a folder.
+                        if (member.kind == EntryKind.APP) {
+                            FreezeRemoveMenuItem(
+                                app = member,
+                                actions = freezeActions,
+                                onDismissMenu = { memberMenuFor = null },
+                                locked = member.lockedBy(lockedApps),
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.home_folder_remove_app)) },
                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
@@ -2396,6 +2437,23 @@ private fun FolderRow(
                 }
             }
         }
+
+        // Held here rather than inside the member row: the menu that opens it is dismissed on
+        // the same press, and a dialog remembered inside a row keyed by member key would be
+        // torn down with the menu's own composition. Resolved by key so a member removed
+        // while the dialog was up simply closes it.
+        val freezeTarget = members.firstOrNull { it.key == memberFreezeChoosing }
+        FreezeMethodDialog(
+            app = freezeTarget,
+            label = freezeTarget?.let(displayName).orEmpty(),
+            counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
+            onDismiss = { memberFreezeChoosing = null },
+            onPick = { method ->
+                memberFreezeChoosing = null
+                if (freezeTarget != null) freezeActions?.add(freezeTarget, method)
+            },
+        )
 
         // The rows have to finish growing into place before there is a bottom to aim
         // at: a half-grown one would scroll the list by half of what it needs. The
