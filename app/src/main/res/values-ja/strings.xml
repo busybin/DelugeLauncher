@@ -377,6 +377,7 @@
     <string name="settings_export_done">設定を保存しました</string>
     <string name="settings_export_done_private_omitted">設定を保存しました。プライベートスペースのアプリは除外されました。</string>
     <string name="settings_import_done">設定を復元しました</string>
+    <string name="settings_import_partial">設定を復元しましたが、%1$d 件を適用できませんでした</string>
     <string name="settings_backup_failed">そのファイルを読み込めませんでした</string>
     <string name="settings_dim_color">暗くする色</string>
     <string name="settings_dim_color_detail">壁紙を暗くする際の色です。暗さは「壁紙を暗くする」で調整します。</string>
@@ -789,6 +790,8 @@
     <string name="settings_two_columns_detail">ホーム画面とアプリ一覧で2列を使います。</string>
     <string name="settings_az_strip">A–Z バー</string>
     <string name="settings_az_strip_detail">文字バーを表示する場所を選びます。</string>
+    <string name="settings_az_strip_when">表示するタイミング</string>
+    <string name="settings_az_strip_side">位置</string>
     <string name="settings_scrub_style">A-Z ストリップのアニメーション</string>
     <string name="scrub_style_bell">ベル</string>
     <string name="scrub_style_ripple">波紋</string>

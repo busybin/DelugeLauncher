@@ -507,6 +507,7 @@
     <string name="settings_export_done">Settings saved</string>
     <string name="settings_export_done_private_omitted">Settings saved. Apps in your private space were left out.</string>
     <string name="settings_import_done">Settings restored</string>
+    <string name="settings_import_partial">Settings restored, but %1$d could not be applied</string>
     <string name="settings_backup_failed">That file could not be read</string>
     <string name="settings_dim_color">Dim color</string>
     <string name="settings_dim_color_detail">What the wallpaper is dimmed with. The strength is set under Dim wallpaper.</string>
@@ -796,6 +797,8 @@
     <string name="settings_two_columns_detail">Use two columns on the home screen and in the app list.</string>
     <string name="settings_az_strip">A–Z strip</string>
     <string name="settings_az_strip_detail">Choose where the letter strip appears.</string>
+    <string name="settings_az_strip_when">When to show</string>
+    <string name="settings_az_strip_side">Side</string>
     <string name="settings_scrub_style">A-Z strip animation</string>
     <string name="scrub_style_bell">Bell</string>
     <string name="scrub_style_ripple">Ripple</string>

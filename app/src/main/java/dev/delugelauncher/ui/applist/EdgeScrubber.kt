@@ -36,6 +36,9 @@ import kotlin.math.roundToInt
 
 /** Letters sit this far in from the screen edge so they aren't crowding it. */
 private const val EDGE_INSET_DP = 28f
+private const val LETTER_CELL_WIDTH_DP = 20f
+/** How far an idle letter reaches in from the screen edge: the inset plus one cell. */
+const val STRIP_LETTER_REACH_DP = EDGE_INSET_DP + LETTER_CELL_WIDTH_DP
 
 /**
  * How far the bulge pushes the column away from the edge at its peak.
@@ -223,7 +226,7 @@ fun EdgeScrubber(
                 modifier = Modifier
                     .align(if (side == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
                     .offset { IntOffset(0, (centerY - spacingPx / 2f).roundToInt()) }
-                    .width(20.dp)
+                    .width(LETTER_CELL_WIDTH_DP.dp)
                     // Fixed cell so an enlarged letter stays centred on its row
                     // instead of pushing its own top edge down.
                     .height((spacingPx / density).dp)

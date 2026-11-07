@@ -149,6 +149,8 @@ import dev.delugelauncher.media.NotificationGateway
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.HomeAlignment
+import dev.delugelauncher.data.AzStripSide
+import dev.delugelauncher.ui.applist.STRIP_LETTER_REACH_DP
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.folderToken
@@ -267,6 +269,8 @@ fun HomeScreen(
     /** How wide the edge zone's live strip is on each side, so folder controls stay clear. */
     edgeZoneStartDp: Dp = 0.dp,
     edgeZoneEndDp: Dp = 0.dp,
+    /** The side an always-on A-Z strip is showing on, or null while it is hidden. */
+    visibleStripSide: AzStripSide? = null,
     onSetSidePadding: (Int) -> Unit,
     onSetWidgetSidePadding: (Int) -> Unit,
     onSetWidgetOffsetX: (Int) -> Unit,
@@ -713,6 +717,16 @@ fun HomeScreen(
     } else {
         Modifier.padding(start = edgeZoneStartDp, end = edgeZoneEndDp)
     }
+    // An always-on strip reaches this far in from its edge. Rows and widgets already inset
+    // themselves, so the smaller of their two paddings is what the shift has to top up.
+    val stripExtraDp = (STRIP_LETTER_REACH_DP -
+        minOf(sidePaddingDp, widgetSidePaddingDp)).coerceAtLeast(0f).dp
+    val stripInsetStartDp = if (
+        visibleStripSide == AzStripSide.LEFT || visibleStripSide == AzStripSide.BOTH
+    ) stripExtraDp else 0.dp
+    val stripInsetEndDp = if (
+        visibleStripSide == AzStripSide.RIGHT || visibleStripSide == AzStripSide.BOTH
+    ) stripExtraDp else 0.dp
     // The button's placement frame and the spot it should be at: the stored value once
     // there is one, otherwise the default. Computed, never stored, so a fresh install and
     // a rotation both land somewhere sane.
@@ -1004,6 +1018,8 @@ fun HomeScreen(
                 )
                 .align(alignment.wideScreenAlignment())
                 .fillMaxWidth()
+                // Keeps the rows, widgets and folder cards out from under an always-on strip.
+                .padding(start = stripInsetStartDp, end = stripInsetEndDp)
                 .then(
                     // Edit mode roughly doubles the stack's height and its handles are
                     // themselves drag targets, so it needs ordinary scrolling.

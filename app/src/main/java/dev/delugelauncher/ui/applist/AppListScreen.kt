@@ -192,6 +192,9 @@ private val IDLE_BOTTOM_PADDING = 32.dp
 /** Smallest comfortable row, so a tap beside a small icon still lands on its app. */
 private val MIN_ROW_HEIGHT = 48.dp
 
+/** Where an app row's content starts (20dp row inset + 8dp inner padding). */
+private const val LIST_ROW_SIDE_INSET_DP = 28f
+
 /** Sets the settings shortcut apart from the last app above it. */
 private val SETTINGS_ROW_GAP = 20.dp
 
@@ -1424,14 +1427,26 @@ fun AppListScreen(
                     scrubLetter != null || !highlightRange.isEmpty() -> sectionTopPx.toDp()
                     else -> restingTopPadding
                 }
-                // Ghost strips: the edge zones scrub invisibly and nothing is
-                // drawn beside the rows, so no side is held clear. The price
-                // is that a tap landing inside a zone opens the list instead
-                // of the row — narrow the zone width in settings if the edge
-                // gets grabby, rather than bringing this padding back.
+                // A drawn strip owns its side: the rows already inset themselves by
+                // LIST_ROW_SIDE_INSET_DP, so only the rest is added. With the alphabet off,
+                // or while searching (the strip is hidden then), the side is left alone —
+                // the edge zone itself is invisible and must not eat a gutter.
+                val stripInset = if (showAlphabet && !searching) {
+                    (STRIP_LETTER_REACH_DP - LIST_ROW_SIDE_INSET_DP).coerceAtLeast(0f).dp
+                } else {
+                    0.dp
+                }
                 PaddingValues(
-                    start = 0.dp,
-                    end = 0.dp,
+                    start = if (azStripSide == AzStripSide.LEFT || azStripSide == AzStripSide.BOTH) {
+                        stripInset
+                    } else {
+                        0.dp
+                    },
+                    end = if (azStripSide == AzStripSide.RIGHT || azStripSide == AzStripSide.BOTH) {
+                        stripInset
+                    } else {
+                        0.dp
+                    },
                     top = top,
                     bottom = when {
                         searching -> SEARCH_EDGE_PADDING

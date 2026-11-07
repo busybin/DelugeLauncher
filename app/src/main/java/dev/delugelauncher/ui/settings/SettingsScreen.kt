@@ -1896,47 +1896,22 @@ fun SettingsScreen(model: SettingsScreenModel) {
             title = { Text(stringResource(R.string.settings_az_strip)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        stringResource(R.string.settings_section_home),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    DialogChoiceRow(
+                        labelRes = R.string.settings_az_strip_when,
+                        optionLabelRes = AzStripVisibility.entries.map { it.labelRes() },
+                        selectedIndex = AzStripVisibility.entries.indexOf(azStripVisibility),
+                        onSelect = { onSetAzStripVisibility(AzStripVisibility.entries[it]) },
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        AzStripVisibility.entries.forEach { option ->
-                            FilledChip(stringResource(option.labelRes()), azStripVisibility == option) {
-                                onSetAzStripVisibility(option)
-                            }
-                        }
-                    }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    RowDivider()
+                    DialogChoiceRow(
+                        labelRes = R.string.settings_az_strip_side,
+                        optionLabelRes = AzStripSide.entries.map { it.labelRes() },
+                        selectedIndex = AzStripSide.entries.indexOf(azStripSide),
+                        onSelect = { onSetAzStripSide(AzStripSide.entries[it]) },
                     )
-                    Text(
-                        stringResource(R.string.settings_az_strip_detail),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        AzStripSide.entries.forEach { option ->
-                            FilledChip(stringResource(option.labelRes()), azStripSide == option) {
-                                onSetAzStripSide(option)
-                            }
-                        }
-                    }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    )
+                    RowDivider()
                     EdgeSideRow(edgeSide) { edgePreviewTick++; onSetEdgeSide(it) }
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    )
+                    RowDivider()
                     SwitchRow(
                         stringResource(R.string.settings_show_alphabet),
                         showAlphabet,
@@ -2630,7 +2605,8 @@ private enum class SettingsSection(
     STRIP(R.string.settings_group_strip, Icons.AutoMirrored.Filled.List, SettingsCard.STRIP),
     STRIP_MOTION(R.string.settings_group_strip_motion, Icons.Filled.Star, SettingsCard.STRIP),
     // Gestures: what opens things first, feedback last.
-    EDGE_GESTURE(R.string.settings_group_edge_gesture, Icons.Filled.Build, SettingsCard.GESTURES),    GESTURES(R.string.settings_group_swipe, Icons.AutoMirrored.Filled.KeyboardArrowRight, SettingsCard.GESTURES),
+    EDGE_GESTURE(R.string.settings_group_edge_gesture, Icons.Filled.Build, SettingsCard.GESTURES),
+    GESTURES(R.string.settings_group_swipe, Icons.AutoMirrored.Filled.KeyboardArrowRight, SettingsCard.GESTURES),
     CORNER(R.string.settings_group_corner, Icons.Filled.Star, SettingsCard.GESTURES),
     LOCK_STUFF(R.string.settings_group_lock, Icons.Filled.Lock, SettingsCard.GESTURES),
     NOTIFICATIONS(R.string.settings_group_badges, Icons.Filled.Notifications, SettingsCard.NOTIFICATIONS),
@@ -3290,21 +3266,37 @@ private fun ScrubBubbleShapeRow(selected: ScrubBubbleShape, onSelect: (ScrubBubb
     }
 }
 
+/** One labelled chip group inside a settings dialog, padded like every other dialog row. */
 @Composable
-private fun EdgeSideRow(selected: EdgeSide, onSelect: (EdgeSide) -> Unit) {
-    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(stringResource(R.string.settings_edge_side), style = MaterialTheme.typography.bodyMedium)
+private fun DialogChoiceRow(
+    @StringRes labelRes: Int,
+    @StringRes optionLabelRes: List<Int>,
+    selectedIndex: Int,
+    onSelect: (Int) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(labelRes), style = MaterialTheme.typography.bodyMedium)
         // Wraps: four labels no longer fit one line in Arabic or Russian.
         FlowRow(
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            EdgeSide.entries.forEach { side ->
-                FilledChip(stringResource(side.labelRes()), selected == side) { onSelect(side) }
+            optionLabelRes.forEachIndexed { index, label ->
+                FilledChip(stringResource(label), selectedIndex == index) { onSelect(index) }
             }
         }
     }
+}
+
+@Composable
+private fun EdgeSideRow(selected: EdgeSide, onSelect: (EdgeSide) -> Unit) {
+    DialogChoiceRow(
+        labelRes = R.string.settings_edge_side,
+        optionLabelRes = EdgeSide.entries.map { it.labelRes() },
+        selectedIndex = EdgeSide.entries.indexOf(selected),
+        onSelect = { onSelect(EdgeSide.entries[it]) },
+    )
 }
 
 /** Shared with the clock widget's own settings, which offers the same kind of choices. */

@@ -42,4 +42,22 @@ class SleepRuleJsonTest {
         assertTrue(sleepRulesFromJson("""[{"id":"has space"}]""").isEmpty())
         assertTrue(sleepRulesFromJson("""[{"id":"ok","start":99999}]""").single().startMinute == -1)
     }
+
+    @Test
+    fun `an action this build cannot read is dropped, not turned into FREEZE`() {
+        val json = """[{"id":"future","action":"FOO"},{"id":"ok"}]"""
+        assertEquals(listOf("ok"), sleepRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a wifi condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","wifi":"MAYBE"},{"id":"ok"}]"""
+        assertEquals(listOf("ok"), sleepRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a headset condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","headset":"SOMETIMES"},{"id":"ok"}]"""
+        assertEquals(listOf("ok"), sleepRulesFromJson(json).map { it.id })
+    }
 }

@@ -377,6 +377,7 @@
     <string name="settings_export_done">Paramètres enregistrés</string>
     <string name="settings_export_done_private_omitted">Paramètres enregistrés. Les applications de votre espace privé ont été omises.</string>
     <string name="settings_import_done">Paramètres restaurés</string>
+    <string name="settings_import_partial">Réglages restaurés, mais %1$d n\'ont pas pu être appliqués</string>
     <string name="settings_backup_failed">Ce fichier n\'a pas pu être lu</string>
     <string name="settings_dim_color">Couleur d\'assombrissement</string>
     <string name="settings_dim_color_detail">La couleur avec laquelle le fond d\'écran est assombri. L\'intensité se règle dans « Assombrir le fond ».</string>
@@ -791,6 +792,8 @@
     <string name="settings_two_columns_detail">Utilisez deux colonnes sur l’accueil et dans la liste.</string>
     <string name="settings_az_strip">Bande A–Z</string>
     <string name="settings_az_strip_detail">Choisissez où la bande de lettres apparaît.</string>
+    <string name="settings_az_strip_when">Quand l\'afficher</string>
+    <string name="settings_az_strip_side">Côté</string>
     <string name="settings_scrub_style">Animation de la bande A-Z</string>
     <string name="scrub_style_bell">Cloche</string>
     <string name="scrub_style_ripple">Ondulation</string>

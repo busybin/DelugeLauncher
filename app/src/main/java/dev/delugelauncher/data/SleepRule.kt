@@ -142,18 +142,26 @@ internal fun sleepRulesFromJson(json: String?): List<SleepRule> {
                 .toSet()
             val start = obj.optInt("start", -1)
             val end = obj.optInt("end", -1)
+            val action = runCatching {
+                SleepAction.valueOf(obj.optString("action", SleepAction.FREEZE.name))
+            }.getOrNull() ?: return@mapNotNull null
+            // Same rule as favorites: an action this build cannot read must not turn into the
+            // default one, which here is "freeze the list".
+            val wifi = runCatching {
+                FavoriteRuleWifi.valueOf(obj.optString("wifi", FavoriteRuleWifi.ANY.name))
+            }.getOrNull() ?: return@mapNotNull null
+            val headset = runCatching {
+                FavoriteRuleHeadset.valueOf(obj.optString("headset", FavoriteRuleHeadset.ANY.name))
+            }.getOrNull() ?: return@mapNotNull null
             SleepRule(
                 id = id,
                 name = obj.optString("name").take(MAX_SLEEP_NAME),
                 enabled = obj.optBoolean("enabled", true),
-                action = runCatching { SleepAction.valueOf(obj.optString("action")) }
-                    .getOrDefault(SleepAction.FREEZE),
+                action = action,
                 tokens = tokens,
-                wifi = runCatching { FavoriteRuleWifi.valueOf(obj.optString("wifi")) }
-                    .getOrDefault(FavoriteRuleWifi.ANY),
+                wifi = wifi,
                 wifiNames = names,
-                headset = runCatching { FavoriteRuleHeadset.valueOf(obj.optString("headset")) }
-                    .getOrDefault(FavoriteRuleHeadset.ANY),
+                headset = headset,
                 startMinute = if (start in 0..1439) start else -1,
                 endMinute = if (end in 0..1439) end else -1,
                 charging = if (obj.has("charging")) obj.optBoolean("charging") else null,

@@ -24,30 +24,38 @@ class FreezeToggleActivity : ComponentActivity() {
         finish()
         if (key == null || app == null) return
         app.runInBackground {
-            // A shortcut can outlive its list entry; nothing to toggle then.
-            if (key !in app.prefs.freezeMethodsNow()) return@runInBackground
-            val label = runCatching {
-                packageManager.getApplicationLabel(
-                    packageManager.getApplicationInfo(FreezeTargetKey.packageName(key), 0)
-                ).toString()
-            }.getOrNull() ?: FreezeTargetKey.packageName(key)
-            val wasFrozen = key in app.prefs.freezeAppliedNow()
-            val outcome = if (wasFrozen) {
-                app.freezeManager.unfreezeKey(key)
-            } else {
-                app.freezeManager.freezeKey(key)
-            }
-            val message = when (outcome) {
-                FreezeOutcome.DONE, FreezeOutcome.DISABLED -> null
-                FreezeOutcome.NO_ACCESS -> getString(R.string.freeze_needs_access)
-                FreezeOutcome.PROTECTED -> getString(R.string.freeze_protected, label)
-                else -> getString(
-                    if (wasFrozen) R.string.freeze_unfreeze_failed else R.string.freeze_failed,
-                    label,
-                )
-            }
-            if (message != null) withContext(Dispatchers.Main) {
-                Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+            // Two shortcuts launched in the same second used to run side by side, both
+            // reading the record before either had written it and both going the same way.
+            if (!busy.compareAndSet(false, true)) return@runInBackground
+            try {
+                // A shortcut can outlive its list entry; nothing to toggle then.
+                if (key !in app.prefs.freezeMethodsNow()) return@runInBackground
+                val label = runCatching {
+                    packageManager.getApplicationLabel(
+                        packageManager.getApplicationInfo(FreezeTargetKey.packageName(key), 0)
+                    ).toString()
+                }.getOrNull() ?: FreezeTargetKey.packageName(key)
+                // Read only once the guard is held, so it sees the other run's record.
+                val wasFrozen = key in app.prefs.freezeAppliedNow()
+                val outcome = if (wasFrozen) {
+                    app.freezeManager.unfreezeKey(key)
+                } else {
+                    app.freezeManager.freezeKey(key)
+                }
+                val message = when (outcome) {
+                    FreezeOutcome.DONE, FreezeOutcome.DISABLED -> null
+                    FreezeOutcome.NO_ACCESS -> getString(R.string.freeze_needs_access)
+                    FreezeOutcome.PROTECTED -> getString(R.string.freeze_protected, label)
+                    else -> getString(
+                        if (wasFrozen) R.string.freeze_unfreeze_failed else R.string.freeze_failed,
+                        label,
+                    )
+                }
+                if (message != null) withContext(Dispatchers.Main) {
+                    Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                busy.set(false)
             }
         }
     }
@@ -55,5 +63,8 @@ class FreezeToggleActivity : ComponentActivity() {
     companion object {
         const val EXTRA_KEY = "dev.delugelauncher.extra.FREEZE_KEY"
         const val ACTION_TOGGLE = "dev.delugelauncher.action.TOGGLE_FREEZE"
+
+        /** One toggle at a time across every instance of this activity. */
+        private val busy = java.util.concurrent.atomic.AtomicBoolean(false)
     }
 }

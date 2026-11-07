@@ -875,7 +875,12 @@ class AppRepository(
     suspend fun installInProfile(packageName: String, userId: Int): Boolean =
         withContext(Dispatchers.IO) {
             if (userId <= 0 || !FreezeCommands.isPackageName(packageName)) return@withContext false
-            shell().run("pm install-existing --user $userId $packageName")
+            // `pm install-existing` answers 0 for a package that was already there, which is
+            // not a change. The caller wants the state, so ask the profile.
+            if (profileHas(packageName, userId) == true) return@withContext true
+            shell().run("pm install-existing --user $userId $packageName") &&
+                // Unreadable answer: fall back to the command's own verdict.
+                profileHas(packageName, userId) != false
         }
 
     /** Removes the main-profile copy through the shell, keeping the private profile's copy. */
@@ -1165,7 +1170,14 @@ class AppRepository(
             if (done) asked++
         }
         if (asked > 0) noteShortcutsChanged()
-        return asked
+        // The answer the caller wants is how many shortcuts are on the launcher's behalf now,
+        // not how many profiles were asked; a request the system ignored still returned clean.
+        val present = runCatching {
+            pinnedShortcuts().map {
+                EntryKeys.ShortcutRef(it.info.`package`, it.info.id, it.serial)
+            }.toSet()
+        }.getOrNull() ?: return asked
+        return wanted.count { it in present }
     }
 
     fun unpin(app: AppInfo) {

@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v30">
+        <item>Los gestos de borde se pueden desactivar: el ajuste de la tira A–Z ofrece Izquierda, Derecha, Ambos y Desactivado, y Desactivado también impide que un toque en el borde abra la lista de aplicaciones.</item>
+        <item>Se pueden fijar entradas de la lista de congelación: una app fijada sigue congelada al descongelar todo, al liberar una carpeta, al salir del modo entrega o en un descongelado automático. Congelar y descongelar una sola app no cambia.</item>
+        <item>Congela o descongela una sola app dentro de una carpeta abierta: mantén pulsado un miembro y usa el mismo menú que en la lista de aplicaciones.</item>
+        <item>Congelar una carpeta ahora solo toca las apps que ya están en la lista; el resto se queda igual y el aviso dice cuántas se omitieron.</item>
+        <item>Pantallas bajas: la ventana de congelación automática, Seleccionar todo, Invertir, el interruptor de apps del sistema y el diálogo del método de congelación llegan hasta abajo.</item>
+        <item>Ajustes muestra todas las opciones a la vez. Ya no hay interruptor de ajustes avanzados; las tarjetas se agrupan por lo que cambian y la tira A–Z tiene la suya.</item>
+        <item>La tira A–Z puede ir a la izquierda, a la derecha o en ambos lados, y la pantalla de inicio y la lista de aplicaciones se apartan para dejarle sitio.</item>
+        <item>Las acciones en bloque dicen lo que pasó: Descongelar todo cuenta solo lo que sigue congelado, liberar una carpeta cuenta solo lo que descongeló y una importación parcial dice cuántas entradas no pudo aplicar.</item>
+        <item>Un estado que no se puede leer ya no cuenta como congelado ni como descongelado, una app desinstalada ya no cuenta como fallo y una tabla de ajustes dañada se rechaza en vez de sobrescribirse.</item>
+    </string-array>
     <string-array name="changelog_v29">
         <item>Congelar tiene su propia pantalla: Detener, Suspender, Desactivar y Ocultar tienen pestaña, y una tabla dice qué canal puede con cada una.</item>
         <item>Congela sin root ni Shizuku: haz que Deluge sea el propietario del dispositivo, o deja que Dhizuku preste sus permisos, y Suspender u Ocultar funciona solo con el teléfono.</item>

@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v30">
+        <item>Edge gestures can be turned off: the A–Z strip setting now offers Left, Right, Both and Off, and Off also stops a tap on the edge from opening the app list.</item>
+        <item>Entries on the freeze list can be pinned: a pinned app stays frozen through Unfreeze all, a folder release, a handover exit or an automatic thaw. Freezing and thawing a single app is unchanged.</item>
+        <item>Freeze or thaw one app inside an open folder: long-press a member and use the same menu as the app list.</item>
+        <item>Freezing a folder now touches only the apps already on the freeze list; the rest are left alone and the toast says how many were skipped.</item>
+        <item>Short screens: the automatic freezing window, Select all, Invert, the system-app switch and the freeze-method dialog scroll to the bottom.</item>
+        <item>Settings shows every option at once. The advanced switch is gone, the cards are grouped by what they change, and the A–Z strip has a card of its own.</item>
+        <item>The A–Z strip can sit on the left, the right or both sides, and the home screen and app list move aside to make room for it.</item>
+        <item>Bulk runs say what really happened: Unfreeze all counts only what stayed frozen, a folder release counts only what it thawed, and a partly applied import says how many entries it could not take.</item>
+        <item>A state that cannot be read is no longer counted as frozen or thawed, an uninstalled app no longer counts as a failure, and a damaged settings table is refused instead of overwritten.</item>
+    </string-array>
     <string-array name="changelog_v29">
         <item>Freezing has a screen of its own: Stop, Suspend, Disable and Hide each get a tab, and a table says which channel can run which.</item>
         <item>Freeze without root or Shizuku: make Deluge the device owner, or let Dhizuku lend its owner rights, and Suspend or Hide works from the phone alone.</item>

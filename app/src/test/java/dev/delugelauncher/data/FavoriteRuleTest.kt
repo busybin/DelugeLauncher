@@ -152,4 +152,22 @@ class FavoriteRuleTest {
         assertEquals(-1, rule.startMinute)
         assertEquals(99, rule.dailyLimit)
     }
+
+    @Test
+    fun `a rule whose action this build cannot read is dropped, not turned into SHOW`() {
+        val json = """[{"id":"future","tokens":["a/A"],"action":"FOO"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a rule whose wifi condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","tokens":["a/A"],"wifi":"MAYBE"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a rule whose headset condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","tokens":["a/A"],"headset":"SOMETIMES"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
+    }
 }

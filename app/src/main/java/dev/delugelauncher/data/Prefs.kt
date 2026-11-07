@@ -171,7 +171,7 @@ fun CornerAction.targetKind(): SlotKind? = when (this) {
 enum class AzStripVisibility { NEVER, LANDSCAPE, ALWAYS }
 
 /** Which side the A-Z strip is drawn on. The scrub gesture has its own setting. */
-enum class AzStripSide { RIGHT, LEFT, BOTH }
+enum class AzStripSide { LEFT, RIGHT, BOTH }
 
 /** How hard the launcher taps back: silent, or three strengths. */
 enum class HapticFeedback { OFF, LIGHT, MEDIUM, STRONG }
@@ -578,79 +578,8 @@ class Prefs(private val context: Context) {
      * Parsed fully before anything is written: a half-read file that had already cleared the
      * store would leave someone with neither their old set-up nor the one they were restoring.
      */
-    suspend fun importJson(text: String): Boolean {
-        // The picker's reader already stops at this size; this is the backstop for any other
-        // caller, including a test or a future one that hands over a string directly.
-        if (text.length > ImportLimits.MAX_BYTES) return false
-        var language: String? = null
-        var languagePresent = false
-        val parsed = runCatching {
-            val root = JSONObject(text)
-            // Unknown future formats are read entry by entry rather than refused whole:
-            // entries we understand restore, the rest are skipped below.
-            if (root.optInt("format") < EXPORT_FORMAT) return false
-            val values = root.getJSONObject("values")
-            buildList {
-                values.keys().forEach { name ->
-                    val entry = runCatching { values.getJSONObject(name) }.getOrNull() ?: return@forEach
-                    // The language is not a store key; it goes back to its own file below.
-                    // Absent in old backups, which simply keep the language they have.
-                    // Present-but-blank means follow the system — tracked separately so it
-                    // is not mistaken for absent.
-                    if (name == PREF_LANGUAGE && entry.optString("type") == "string") {
-                        language = entry.optString("value")
-                        languagePresent = true
-                        return@forEach
-                    }
-                    // Modes, not settings: a hand-edited backup must not smuggle back what
-                    // export refuses to carry (screenshot_mode and friends).
-                    if (name in NEVER_EXPORT) return@forEach
-                    // Pair(...) rather than `to`: DataStore has an infix `to` of its own on
-                    // Key, which builds a Preferences.Pair and not the one wanted here.
-                    // One bad entry skips itself rather than rejecting the whole backup.
-                    val pair: Pair<Preferences.Key<*>, Any> = runCatching {
-                        when (entry.getString("type")) {
-                            "boolean" -> Pair(booleanPreferencesKey(name), entry.getBoolean("value"))
-                            "int" -> Pair(intPreferencesKey(name), entry.getInt("value"))
-                            "long" -> Pair(longPreferencesKey(name), entry.getLong("value"))
-                            "float" -> Pair(floatPreferencesKey(name), entry.getDouble("value").toFloat())
-                            "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
-                            "stringSet" -> {
-                                val array = entry.getJSONArray("value")
-                                if (array.length() > ImportLimits.MAX_SET_ITEMS) return@forEach
-                                Pair(
-                                    stringSetPreferencesKey(name),
-                                    (0 until array.length()).map { array.getString(it) }.toSet(),
-                                )
-                            }
-                            else -> return@forEach
-                        }
-                    }.getOrNull() ?: return@forEach
-                    val safe = when (val value = pair.second) {
-                        is Int -> ImportLimits.int(name, value) ?: return@forEach
-                        is Float -> ImportLimits.float(name, value) ?: return@forEach
-                        is String -> ImportLimits.string(value) ?: return@forEach
-                        is Set<*> -> ImportLimits.stringSet(value.filterIsInstance<String>().toSet())
-                            ?: return@forEach
-                        else -> value
-                    }
-                    // A hand-edited backup can smuggle a shortcut id carrying a newline, which
-                    // would corrupt the whole favorites list on the way back in. The pin flow
-                    // refuses such ids; import does the same rather than storing them.
-                    if (name == PREF_FAVORITES && safe is String) {
-                        val lines = safe.split("\n").filter { line ->
-                            if (!EntryKeys.isShortcut(line)) true
-                            else EntryKeys.parseShortcut(line)?.let {
-                                EntryKeys.isStorableShortcutId(it.shortcutId)
-                            } == true
-                        }
-                        add(Pair(pair.first, lines.joinToString("\n")))
-                    } else {
-                        add(Pair(pair.first, safe))
-                    }
-                }
-            }
-        }.getOrNull() ?: return false
+    suspend fun importJson(text: String, onPartial: ((Int) -> Unit)? = null): Boolean {
+        val parsed = parseImport(text) ?: return false
 
         context.dataStore.edit { store ->
             // Device facts and modes are not carried in a backup, but they are also not
@@ -670,7 +599,7 @@ class Prefs(private val context: Context) {
                 @Suppress("UNCHECKED_CAST")
                 store[key as Preferences.Key<Any>] = value
             }
-            parsed.forEach { (key, value) ->
+            parsed.values.forEach { (key, value) ->
                 val merged = if (key.name == PREF_LOCKED_APPS && value is Set<*>) {
                     (locksBefore + value.filterIsInstance<String>()).toSet()
                 } else {
@@ -687,7 +616,11 @@ class Prefs(private val context: Context) {
         // Applied on the next recreate, like a language picked by hand. Absent means the
         // backup predates the language entry: keep whatever language is set now. Blank
         // means follow the system, which LanguagePrefs.write maps back to removing the key.
-        if (languagePresent) LanguagePrefs.write(context, language?.takeIf { it.isNotBlank() })
+        if (parsed.languagePresent) {
+            LanguagePrefs.write(context, parsed.language?.takeIf { it.isNotBlank() })
+        }
+        // "Imported" over a file whose entries were half dropped is a lie; the caller says so.
+        if (parsed.dropped > 0) onPartial?.invoke(parsed.dropped)
         return true
     }
 
@@ -1910,9 +1843,12 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { pref ->
             if (pref.contains(Keys.FREEZE_APPLIED)) return@edit
             val plan = jsonToMap(pref[Keys.FREEZE_METHODS]).keys
+            // An unreadable list is not an empty one: writing the complement of nothing
+            // would consume the one-time migration and leave every frozen app unrecorded.
+            if (plan.isEmpty()) return@edit
             val lifted = pref[stringSetPreferencesKey("freeze_lifted")] ?: emptySet()
             pref[Keys.FREEZE_APPLIED] = plan - lifted
-            wrote = plan.isNotEmpty()
+            wrote = true
         }
         return wrote
     }
@@ -2417,10 +2353,11 @@ class Prefs(private val context: Context) {
 
     suspend fun setWidgetProvider(id: Int, packageName: String) {
         context.dataStore.edit { pref ->
-            val obj = runCatching { JSONObject(pref[Keys.WIDGET_PROVIDERS] ?: "{}") }
-                .getOrDefault(JSONObject())
-            obj.put(id.toString(), packageName)
-            pref[Keys.WIDGET_PROVIDERS] = obj.toString()
+            // Unreadable table: writing this one entry would drop every other widget's
+            // provider and leave its page pointing at nothing.
+            val text = mergeStoredObject(pref[Keys.WIDGET_PROVIDERS], id.toString(), packageName)
+                ?: return@edit
+            pref[Keys.WIDGET_PROVIDERS] = text
         }
     }
 
@@ -2732,11 +2669,12 @@ class Prefs(private val context: Context) {
 
     suspend fun setAppTags(key: String, tags: Set<String>) {
         context.dataStore.edit { pref ->
-            val obj = runCatching { org.json.JSONObject(pref[Keys.APP_TAGS] ?: "{}") }
-                .getOrDefault(org.json.JSONObject())
             val clean = tags.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-            if (clean.isEmpty()) obj.remove(key) else obj.put(key, org.json.JSONArray(clean.toList()))
-            pref[Keys.APP_TAGS] = obj.toString()
+            // Same rule as the widget table: a corrupt map is left alone, not replaced.
+            val text = updateStoredObject(pref[Keys.APP_TAGS]) { obj ->
+                if (clean.isEmpty()) obj.remove(key) else obj.put(key, JSONArray(clean.toList()))
+            } ?: return@edit
+            pref[Keys.APP_TAGS] = text
         }
     }
 
@@ -3050,4 +2988,122 @@ class Prefs(private val context: Context) {
         map.forEach { (k, v) -> obj.put(k, v) }
         return obj.toString()
     }
+}
+/**
+ * Runs [change] on the JSON object stored in [existing], or answers null when that text is not
+ * an object at all.
+ *
+ * Null is the whole point: a table that cannot be parsed is left untouched, where overwriting
+ * it with the row being written would silently drop every other row it used to hold.
+ */
+internal fun updateStoredObject(existing: String?, change: (JSONObject) -> Unit): String? {
+    val obj = if (existing.isNullOrBlank()) {
+        JSONObject()
+    } else {
+        runCatching { JSONObject(existing) }.getOrNull() ?: return null
+    }
+    change(obj)
+    return obj.toString()
+}
+
+/** [updateStoredObject] for the common one-key case. */
+internal fun mergeStoredObject(existing: String?, key: String, value: Any): String? =
+    updateStoredObject(existing) { it.put(key, value) }
+
+/** What a settings file yielded, and how many of its entries had to be left out. */
+internal class ImportParse(
+    val values: List<Pair<Preferences.Key<*>, Any>>,
+    val language: String?,
+    val languagePresent: Boolean,
+    val dropped: Int,
+)
+
+/**
+ * Reads a settings file without touching the store.
+ *
+ * A newer file stays readable: entries this build does not understand skip themselves rather
+ * than rejecting the whole restore. What they must not do is disappear quietly, so they are
+ * counted and the caller can say how many did not land.
+ */
+internal fun parseImport(text: String): ImportParse? {
+    if (text.length > ImportLimits.MAX_BYTES) return null
+    var language: String? = null
+    var languagePresent = false
+    var dropped = 0
+    return runCatching {
+        val root = JSONObject(text)
+        if (root.optInt("format") < EXPORT_FORMAT) return null
+        val values = root.getJSONObject("values")
+        val entries = buildList {
+            values.keys().forEach { name ->
+                val entry = runCatching { values.getJSONObject(name) }.getOrNull()
+                if (entry == null) {
+                    dropped++
+                    return@forEach
+                }
+                // The language is not a store key; it goes back to its own file. Absent in
+                // old backups, which keep the language they have; blank means follow the
+                // system, tracked separately so it is not mistaken for absent.
+                if (name == PREF_LANGUAGE && entry.optString("type") == "string") {
+                    language = entry.optString("value")
+                    languagePresent = true
+                    return@forEach
+                }
+                // Modes, not settings: a hand-edited backup must not smuggle back what export
+                // refuses to carry (screenshot_mode and friends).
+                if (name in NEVER_EXPORT) return@forEach
+                // Pair(...) rather than `to`: DataStore has an infix `to` of its own on Key.
+                val pair: Pair<Preferences.Key<*>, Any>? = runCatching {
+                    when (entry.getString("type")) {
+                        "boolean" -> Pair(booleanPreferencesKey(name), entry.getBoolean("value"))
+                        "int" -> Pair(intPreferencesKey(name), entry.getInt("value"))
+                        "long" -> Pair(longPreferencesKey(name), entry.getLong("value"))
+                        "float" -> Pair(floatPreferencesKey(name), entry.getDouble("value").toFloat())
+                        "string" -> Pair(stringPreferencesKey(name), entry.getString("value"))
+                        "stringSet" -> {
+                            val array = entry.getJSONArray("value")
+                            if (array.length() > ImportLimits.MAX_SET_ITEMS) {
+                                throw IllegalArgumentException("set too large")
+                            }
+                            Pair(
+                                stringSetPreferencesKey(name),
+                                (0 until array.length()).map { array.getString(it) }.toSet(),
+                            )
+                        }
+                        else -> throw IllegalArgumentException("unknown type")
+                    }
+                }.getOrNull()
+                if (pair == null) {
+                    dropped++
+                    return@forEach
+                }
+                val safe: Any? = when (val value = pair.second) {
+                    is Int -> ImportLimits.int(name, value)
+                    is Float -> ImportLimits.float(name, value)
+                    is String -> ImportLimits.string(value)
+                    is Set<*> -> ImportLimits.stringSet(value.filterIsInstance<String>().toSet())
+                    else -> value
+                }
+                if (safe == null) {
+                    dropped++
+                    return@forEach
+                }
+                // A hand-edited backup can smuggle a shortcut id carrying a newline, which
+                // would corrupt the whole favorites list on the way back in. The pin flow
+                // refuses such ids; import does the same rather than storing them.
+                if (name == PREF_FAVORITES && safe is String) {
+                    val lines = safe.split("\n").filter { line ->
+                        if (!EntryKeys.isShortcut(line)) true
+                        else EntryKeys.parseShortcut(line)?.let {
+                            EntryKeys.isStorableShortcutId(it.shortcutId)
+                        } == true
+                    }
+                    add(Pair(pair.first, lines.joinToString("\n")))
+                } else {
+                    add(Pair(pair.first, safe))
+                }
+            }
+        }
+        ImportParse(entries, language, languagePresent, dropped)
+    }.getOrNull()
 }

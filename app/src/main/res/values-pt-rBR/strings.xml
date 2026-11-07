@@ -377,6 +377,7 @@
     <string name="settings_export_done">Configurações salvas</string>
     <string name="settings_export_done_private_omitted">Configurações salvas. Os apps do seu espaço privado foram deixados de fora.</string>
     <string name="settings_import_done">Configurações restauradas</string>
+    <string name="settings_import_partial">Configurações restauradas, mas %1$d não puderam ser aplicadas</string>
     <string name="settings_backup_failed">Esse arquivo não pôde ser lido</string>
     <string name="settings_dim_color">Cor do escurecimento</string>
     <string name="settings_dim_color_detail">A cor usada para escurecer o plano de fundo. A intensidade é ajustada em «Escurecer papel de parede».</string>
@@ -791,6 +792,8 @@
     <string name="settings_two_columns_detail">Use duas colunas na tela inicial e na lista de aplicativos.</string>
     <string name="settings_az_strip">Faixa A–Z</string>
     <string name="settings_az_strip_detail">Escolha onde a faixa de letras aparece.</string>
+    <string name="settings_az_strip_when">Quando mostrar</string>
+    <string name="settings_az_strip_side">Lado</string>
     <string name="settings_scrub_style">Animação da faixa A-Z</string>
     <string name="scrub_style_bell">Sino</string>
     <string name="scrub_style_ripple">Ondulação</string>

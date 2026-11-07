@@ -615,8 +615,16 @@ fun DelugeNavHost(
         if (widgetIds.any { !widgetProviders.containsKey(it) }) return@LaunchedEffect
         val manager = AppWidgetManager.getInstance(context)
         val pm = context.packageManager
-        fun packageGone(packageName: String): Boolean =
-            runCatching { pm.getPackageInfo(packageName, 0); false }.getOrDefault(true)
+        fun packageGone(packageName: String): Boolean = try {
+            pm.getPackageInfo(packageName, 0)
+            false
+        } catch (e: PackageManager.NameNotFoundException) {
+            true
+        } catch (e: Exception) {
+            // Not an absence: a hidden or cross-profile package can throw too, and dropping
+            // its record deleted a live widget page.
+            false
+        }
         app.prefs.keepWidgetIds { id ->
             if (runCatching { manager.getAppWidgetInfo(id) }.getOrNull() != null) return@keepWidgetIds true
             val pkg = widgetProviders[id] ?: return@keepWidgetIds false
@@ -942,7 +950,8 @@ fun DelugeNavHost(
 
     fun finishImport(text: String) {
         scope.launch {
-            val ok = app.prefs.importJson(text)
+            var dropped = 0
+            val ok = app.prefs.importJson(text) { dropped = it }
             // A shortcut lives on the launcher's behalf rather than in the file, so a
             // restored favorite naming one comes back as a row that resolves to nothing
             // until the system is asked for it again. Done here, right after the file is
@@ -955,7 +964,13 @@ fun DelugeNavHost(
             }
             Toast.makeText(
                 context,
-                if (ok) R.string.settings_import_done else R.string.settings_backup_failed,
+                when {
+                    !ok -> context.getString(R.string.settings_backup_failed)
+                    // Saying "done" over a file whose entries were dropped leaves the user
+                    // wondering why half their settings look wrong.
+                    dropped > 0 -> context.getString(R.string.settings_import_partial, dropped)
+                    else -> context.getString(R.string.settings_import_done)
+                },
                 Toast.LENGTH_SHORT,
             ).show()
         }

@@ -41,6 +41,22 @@ class FreezeSelectionTest {
     }
 
     @Test
+    fun `an app that is no longer installed is not attempted`() {
+        // The list keeps an app through its uninstall on purpose, but running the commands
+        // only produced "No UID" errors and a "could not freeze" warning that never cleared.
+        val targets = FreezeSelection.toFreeze(
+            plan,
+            emptySet(),
+            { false },
+            absent = setOf("com.example.loose"),
+        )
+        assertEquals(
+            listOf("com.example.disabled", "com.example.suspended", "com.example.stopped"),
+            targets,
+        )
+    }
+
+    @Test
     fun `lift trusts live state and only keeps a HIDE record`() {
         val applied = setOf("com.example.disabled", "com.example.stopped")
         val targets = FreezeSelection.toLift(

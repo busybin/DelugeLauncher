@@ -377,6 +377,7 @@
     <string name="settings_export_done">Ajustes guardados</string>
     <string name="settings_export_done_private_omitted">Ajustes guardados. Las aplicaciones de tu espacio privado se dejaron fuera.</string>
     <string name="settings_import_done">Ajustes restaurados</string>
+    <string name="settings_import_partial">Ajustes restaurados, pero %1$d no se pudieron aplicar</string>
     <string name="settings_backup_failed">Ese archivo no se pudo leer</string>
     <string name="settings_dim_color">Color de atenuación</string>
     <string name="settings_dim_color_detail">El color con el que se atenúa el fondo de pantalla. La intensidad se ajusta en «Oscurecer fondo».</string>
@@ -791,6 +792,8 @@
     <string name="settings_two_columns_detail">Usa dos columnas en la pantalla de inicio y en la lista.</string>
     <string name="settings_az_strip">Barra A–Z</string>
     <string name="settings_az_strip_detail">Elige dónde aparece la barra de letras.</string>
+    <string name="settings_az_strip_when">Cuándo mostrar</string>
+    <string name="settings_az_strip_side">Lado</string>
     <string name="settings_scrub_style">Animación de la tira A-Z</string>
     <string name="scrub_style_bell">Campana</string>
     <string name="scrub_style_ripple">Onda</string>

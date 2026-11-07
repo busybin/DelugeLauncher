@@ -491,6 +491,7 @@
     <string name="settings_export_done">تم حفظ الإعدادات</string>
     <string name="settings_export_done_private_omitted">تم حفظ الإعدادات. وقد استُثنيت التطبيقات في مساحتك الخاصة.</string>
     <string name="settings_import_done">تمت استعادة الإعدادات</string>
+    <string name="settings_import_partial">تمت استعادة الإعدادات، لكن %1$d منها لم يُطبَّق</string>
     <string name="settings_backup_failed">تعذّرت قراءة ذلك الملف</string>
     <string name="settings_dim_color">لون التعتيم</string>
     <string name="settings_dim_color_detail">اللون الذي تُعتَّم به الخلفية. تُضبط شدة التعتيم في «تعتيم الخلفية».</string>
@@ -815,6 +816,8 @@
     <string name="settings_two_columns_detail">استخدم عمودين في الشاشة الرئيسية وقائمة التطبيقات.</string>
     <string name="settings_az_strip">شريط A–Z</string>
     <string name="settings_az_strip_detail">اختر مكان ظهور شريط الحروف.</string>
+    <string name="settings_az_strip_when">متى يُعرض</string>
+    <string name="settings_az_strip_side">الجانب</string>
     <string name="settings_scrub_style">حركة شريط A-Z</string>
     <string name="scrub_style_bell">منحنى جرسي</string>
     <string name="scrub_style_ripple">تمويج</string>

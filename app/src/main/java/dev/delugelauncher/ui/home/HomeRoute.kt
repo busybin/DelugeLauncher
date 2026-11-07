@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
 import androidx.lifecycle.Lifecycle
@@ -144,6 +145,28 @@ import dev.delugelauncher.R
 /** Width of the invisible strip at each screen edge that opens the app list. */
 /** Android only honors this much gesture exclusion per side, so spend it on the strip. */
 private const val GESTURE_EXCLUSION_CAP_DP = 200
+
+/** Whether the idle A-Z strip is on for this orientation. */
+private fun stripIsVisible(visibility: AzStripVisibility, landscape: Boolean): Boolean =
+    when (visibility) {
+        AzStripVisibility.NEVER -> false
+        AzStripVisibility.ALWAYS -> true
+        AzStripVisibility.LANDSCAPE -> landscape
+    }
+
+/** Width each edge zone takes, so the caller does not repeat the branch twice. */
+private fun edgeZoneWidths(
+    side: EdgeSide,
+    widthDp: Int,
+    insetLeftDp: Int,
+    insetRightDp: Int,
+): Pair<Dp, Dp> = (when (side) {
+    EdgeSide.LEFT, EdgeSide.BOTH -> edgeZoneWidth(widthDp.dp, insetLeftDp.dp)
+    EdgeSide.RIGHT, EdgeSide.NONE -> 0.dp
+}) to (when (side) {
+    EdgeSide.RIGHT, EdgeSide.BOTH -> edgeZoneWidth(widthDp.dp, insetRightDp.dp)
+    EdgeSide.LEFT, EdgeSide.NONE -> 0.dp
+})
 
 /** How long a launch is given to take us off screen before the overlay closes itself. */
 private const val LAUNCH_CLOSE_TIMEOUT_MS = 2000L
@@ -1566,14 +1589,12 @@ fun HomeRoute(
     // Written as an exhaustive when rather than "anything but RIGHT": with an Off side there
     // is now a third state that takes nothing on either side, and a negated comparison would
     // have handed it a full-width zone to keep clear of.
-    val zoneWidthStartDp = when (settings.edgeSide) {
-        EdgeSide.LEFT, EdgeSide.BOTH -> edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetLeftDp.dp)
-        EdgeSide.RIGHT, EdgeSide.NONE -> 0.dp
-    }
-    val zoneWidthEndDp = when (settings.edgeSide) {
-        EdgeSide.RIGHT, EdgeSide.BOTH -> edgeZoneWidth(settings.edgeZoneWidthDp.dp, insetRightDp.dp)
-        EdgeSide.LEFT, EdgeSide.NONE -> 0.dp
-    }
+    val (zoneWidthStartDp, zoneWidthEndDp) = edgeZoneWidths(
+        settings.edgeSide,
+        settings.edgeZoneWidthDp,
+        insetLeftDp,
+        insetRightDp,
+    )
 
     LaunchedEffect(settings.edgeSide, settings.edgeZoneWidthDp, insetLeftDp, insetRightDp, view, band) {
         view.post {
@@ -1627,12 +1648,13 @@ fun HomeRoute(
     // Worked out once, because two things need it: the strip itself, and the home content
     // that has to keep clear of a strip which is always there. A widget runs the full width,
     // so without this the strip simply sits on top of one.
-    val stripAlwaysVisible = when (settings.azStripVisibility) {
-        AzStripVisibility.NEVER -> false
-        AzStripVisibility.ALWAYS -> true
-        AzStripVisibility.LANDSCAPE ->
-            LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
-    }
+    val stripAlwaysVisible = stripIsVisible(
+        settings.azStripVisibility,
+        LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE,
+    )
+    // Null while the strip is hidden, so the home content only moves when it has to.
+    val visibleStripSide =
+        if (stripAlwaysVisible && !homeEditMode) settings.azStripSide else null
 
     Box(
         modifier = Modifier
@@ -1787,6 +1809,7 @@ fun HomeRoute(
                 widgetOffsetXDp = settings.widgetOffsetXDp,
                 edgeZoneStartDp = zoneWidthStartDp,
                 edgeZoneEndDp = zoneWidthEndDp,
+                visibleStripSide = visibleStripSide,
                 onSetSidePadding = { scope.launch { app.prefs.setSidePaddingDp(it) } },
                 onSetWidgetSidePadding = { scope.launch { app.prefs.setWidgetSidePaddingDp(it) } },
                 onSetWidgetOffsetX = { scope.launch { app.prefs.setWidgetOffsetXDp(it) } },

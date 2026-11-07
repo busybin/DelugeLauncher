@@ -146,6 +146,29 @@ data class FreezeBatchResult(
     val kept: Int = 0,
 )
 
+/**
+ * Reads a package state into a yes/no answer for the freeze paths.
+ *
+ * The one rule both directions share: a state the device would not hand over is **not** an
+ * answer. Treating "unknown" as held made a whole freeze run a silent no-op, and treating it
+ * as free dropped the record of an app that was still frozen.
+ */
+internal object FreezeVerdict {
+    fun held(state: FreezeAppState?, parkedByPlatform: Boolean): Boolean {
+        state ?: return false
+        if (!state.installed) return false
+        if (state.hidden || state.suspended) return true
+        return !state.enabled && !parkedByPlatform
+    }
+
+    fun free(state: FreezeAppState?, suspended: Boolean, parkedByPlatform: Boolean): Boolean {
+        state ?: return false
+        if (!state.installed) return true
+        if (!state.enabled && !parkedByPlatform) return false
+        return !suspended
+    }
+}
+
 /** The shell commands behind a freeze, kept pure so they can be tested without a device. */
 object FreezeCommands {
 
@@ -230,9 +253,15 @@ object FreezeSelection {
         plan: Map<String, FreezeMethod>,
         skip: Set<String>,
         isFrozen: (String) -> Boolean,
+        /**
+         * Keys the device does not have at all. They stay on the list through an uninstall,
+         * but a run can neither freeze nor claim to have failed on them.
+         */
+        absent: Set<String> = emptySet(),
     ): List<String> = plan.entries
         .filter { (packageName, method) ->
-            packageName !in skip && (method == FreezeMethod.STOP || !isFrozen(packageName))
+            packageName !in skip && packageName !in absent &&
+                (method == FreezeMethod.STOP || !isFrozen(packageName))
         }
         .map { it.key }
 
@@ -360,6 +389,14 @@ class FreezeSnapshot private constructor(
      */
     fun isKnownAbsent(target: FreezeTarget): Boolean =
         target.userSerial == 0L && main.isNotEmpty() && target.packageName !in main
+
+    /**
+     * Whether the app is not on the device at all, in this profile or any other. The freeze
+     * list keeps an app through its uninstall, but a run has nothing to do for it until it
+     * is back.
+     */
+    fun isOffDevice(target: FreezeTarget): Boolean =
+        isKnownAbsent(target) || (target.userSerial != 0L && state(target) == null)
 
     fun state(target: FreezeTarget): FreezeAppState? {
         if (target.userSerial == 0L) return main[target.packageName]
@@ -1754,6 +1791,24 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     }
 
     /**
+     * How many listed apps the device actually reports as held right now.
+     *
+     * The applied record answers "what did we do", not "what is still true": an app can be
+     * uninstalled or lifted by another tool since. A tile that reads the record showed
+     * ACTIVE over an empty run.
+     */
+    suspend fun heldNowCount(): Int = withContext(Dispatchers.IO) {
+        val plan = prefs.freezeMethodsNow()
+        if (plan.isEmpty()) return@withContext 0
+        val snapshot = FreezeSnapshot.read(context)
+        plan.keys.count { key ->
+            val target = targetOf(key) ?: return@count false
+            if (snapshot.isOffDevice(target)) return@count false
+            looksFrozen(snapshot, target, plan[key])
+        }
+    }
+
+    /**
      * Freezes the whole list, each under its own method.
      *
      * [auto] is the screen-off run: it leaves out the app on screen and any app with a
@@ -1786,9 +1841,14 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 val skip = if (skipInUse) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
                 val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
                 val (frozenBefore, targets) = withContext(Dispatchers.IO) {
+                    val gone = mutableSetOf<String>()
                     val allowed = plan.filterKeys { key ->
                         if (key in locked) return@filterKeys false
                         val target = targetOf(key) ?: return@filterKeys false
+                        // The list keeps an app through its uninstall on purpose, but there is
+                        // nothing to freeze until it comes back: the commands answer "No UID"
+                        // and the run counted it as a failure every single time.
+                        if (snapshot.isOffDevice(target)) gone += key
                         val state = snapshot.state(target)
                         state?.installed != false &&
                             target.packageName != context.packageName &&
@@ -1803,7 +1863,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                         }
                     }
                     val already = allowed.keys.filter { it !in skip && isFrozen(it) }
-                    already to FreezeSelection.toFreeze(allowed, skip, isFrozen)
+                    already to FreezeSelection.toFreeze(allowed, skip, isFrozen, gone)
                         .associateWith { allowed.getValue(it) }
                 }
                 // Only the apps that need it: after the first screen-off every screen-off reads the
@@ -1867,6 +1927,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                     // was HIDE. Leaving it out lets a no-access unfreezeAll drop the record.
                     if (snapshot.isKnownAbsent(target)) return@mapNotNull null
                     if (snapshot.state(target)?.installed == false) return@mapNotNull null
+                    // Unreadable state: try the lift. Assuming "free" here deleted the record
+                    // of an app that was still frozen, with nothing left to lift it by.
+                    if (snapshot.state(target) == null) return@mapNotNull (key to true)
                     key to looksFrozen(snapshot, target, plan[key])
                 }.toMap()
                 FreezeSelection.toLift(held.keys, appliedNow, plan, locked, pinned) {
@@ -2057,7 +2120,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         val locked = lockedMainKeys()
         val resolved = targets
             .filterKeys { it !in locked }
-            .mapNotNull { (key, method) -> targetOf(key)?.let { key to (method to it) } }
+            .mapNotNull { (key, method) ->
+                val target = targetOf(key) ?: return@mapNotNull null
+                // Uninstalled while the run was being set up: nothing to send commands to.
+                if (snapshot.isOffDevice(target)) return@mapNotNull null
+                key to (method to target)
+            }
         if (resolved.isEmpty()) return emptySet()
         val done = mutableSetOf<String>()
         if (policy.active) {
@@ -2285,10 +2353,9 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         method: FreezeMethod?,
     ): Boolean {
         if (snapshot.isKnownAbsent(target)) return false
-        val state = snapshot.state(target) ?: return true
-        if (!state.installed) return false
-        if (state.hidden || state.suspended) return true
-        return !state.enabled && !parkedByPlatform(target)
+        // A state that could not be read is not proof of anything. Saying "frozen" here made
+        // the whole run a silent no-op.
+        return FreezeVerdict.held(snapshot.state(target), parkedByPlatform(target))
     }
 
     /**
@@ -2307,7 +2374,10 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         snapshot: FreezeSnapshot,
         target: FreezeTarget,
     ): Boolean {
+        if (snapshot.isOffDevice(target)) return false
         if (snapshot.state(target)?.installed == false) return false
+        // Unreadable state: ask the commands rather than assume the record is stale.
+        if (snapshot.state(target) == null) return true
         return looksFrozen(snapshot, target, method) ||
             (key in applied && method == FreezeMethod.HIDE)
     }
@@ -2341,7 +2411,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         target: FreezeTarget,
         method: FreezeMethod?,
     ): Boolean {
-        val state = snapshot.state(target) ?: return true
+        val state = snapshot.state(target) ?: return false
         if (!state.installed) return true
         // Hiding is a separate flag; an enabled app can still be hidden, and the old check
         // only looked at enabled/suspended, so a failed unhide was read as a success.
@@ -2350,8 +2420,8 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 ?: return true
             return FreezeState.hiddenState(info)?.not() ?: false
         }
-        if (!state.enabled && !parkedByPlatform(target)) return false
-        return if (target.userSerial == 0L) !suspendedNow(target) else !state.suspended
+        val suspended = if (target.userSerial == 0L) suspendedNow(target) else state.suspended
+        return FreezeVerdict.free(state, suspended, parkedByPlatform(target))
     }
 
     private fun suspendedNow(target: FreezeTarget): Boolean = target.userSerial == 0L && runCatching {

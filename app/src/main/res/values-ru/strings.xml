@@ -377,6 +377,7 @@
     <string name="settings_export_done">Настройки сохранены</string>
     <string name="settings_export_done_private_omitted">Настройки сохранены. Приложения из личного пространства не были включены.</string>
     <string name="settings_import_done">Настройки восстановлены</string>
+    <string name="settings_import_partial">Настройки восстановлены, но %1$d не удалось применить</string>
     <string name="settings_backup_failed">Не удалось прочитать этот файл</string>
     <string name="settings_dim_color">Цвет затемнения</string>
     <string name="settings_dim_color_detail">Чем затемняются обои. Степень задаётся в разделе «Затемнить обои».</string>
@@ -803,6 +804,8 @@
     <string name="settings_two_columns_detail">Использовать два столбца на главном экране и в списке.</string>
     <string name="settings_az_strip">Панель A–Z</string>
     <string name="settings_az_strip_detail">Выберите, где показывать панель букв.</string>
+    <string name="settings_az_strip_when">Когда показывать</string>
+    <string name="settings_az_strip_side">Сторона</string>
     <string name="settings_scrub_style">Анимация полосы A-Z</string>
     <string name="scrub_style_bell">Колокол</string>
     <string name="scrub_style_ripple">Рябь</string>

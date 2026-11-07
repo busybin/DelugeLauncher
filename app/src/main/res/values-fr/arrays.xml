@@ -1,5 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v30">
+        <item>Les gestes de bord peuvent être désactivés : le réglage de la bande A–Z propose Gauche, Droite, Les deux et Désactivé, et Désactivé empêche aussi un appui sur le bord d\'ouvrir la liste des applications.</item>
+        <item>Des entrées de la liste de gel peuvent être épinglées : une application épinglée reste gelée lors d\'un « Tout dégeler », de la libération d\'un dossier, d\'une sortie de mode remise ou d\'un dégel automatique. Geler et dégeler une seule application reste inchangé.</item>
+        <item>Gelez ou dégelez une seule application dans un dossier ouvert : appui long sur un membre, même menu que dans la liste des applications.</item>
+        <item>Geler un dossier ne touche plus que les applications déjà dans la liste ; les autres restent intactes et le message indique combien ont été ignorées.</item>
+        <item>Petits écrans : la fenêtre de gel automatique, Tout sélectionner, Inverser, l\'interrupteur des applications système et la boîte du mode de gel défilent jusqu\'en bas.</item>
+        <item>Les réglages affichent toutes les options d\'un coup. L\'interrupteur des réglages avancés disparaît, les cartes sont regroupées par ce qu\'elles changent et la bande A–Z a la sienne.</item>
+        <item>La bande A–Z peut se placer à gauche, à droite ou des deux côtés, et l\'écran d\'accueil comme la liste des applications s\'écartent pour lui laisser la place.</item>
+        <item>Les actions groupées disent ce qui s\'est passé : Tout dégeler ne compte que ce qui reste gelé, la libération d\'un dossier ne compte que ce qui a été dégelé et une importation partielle indique combien d\'entrées n\'ont pas pu être appliquées.</item>
+        <item>Un état illisible n\'est plus compté comme gelé ni comme dégelé, une application désinstallée n\'est plus comptée comme un échec et une table de réglages abîmée est refusée au lieu d\'être écrasée.</item>
+    </string-array>
     <string-array name="changelog_v29">
         <item>Le gel a son propre écran : Arrêter, Suspendre, Désactiver et Masquer ont chacun un onglet, et un tableau dit quel canal peut quoi.</item>
         <item>Gelez sans root ni Shizuku : faites de Deluge le propriétaire de l\'appareil, ou laissez Dhizuku prêter ses droits, et Suspendre ou Masquer marche depuis le téléphone seul.</item>

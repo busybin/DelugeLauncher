@@ -32,6 +32,8 @@ Wikimedia Commons.
   after Disable or Hide, so nothing has to be re-added.
 - **Four methods**, one tab each, with what each one breaks stated next to it: Stop, Suspend,
   Disable, Hide.
+- **Pins outlast a bulk thaw.** Pin the apps you want to keep asleep: Unfreeze all, a folder
+  release and the handover exit step around them, while a single tap still thaws one app.
 - **Triggers:** freeze all, the corner button, a shortcut, or automatic freezing after the screen
   goes off — skipping the app in front, apps with notifications, and a phone on a charger.
   Unlocking thaws the list if you enable it.
@@ -65,7 +67,10 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 
 - Faster start: icons cached on disk, icon-pack and navigation libraries removed.
 - A-Z strip follows the list, highlights the letters on screen, sits opposite the list alignment
-  and within thumb reach.
+  and within thumb reach. Its letters and its scrub gestures can each be set to the left, the
+  right or both sides, and the rows move aside to clear it.
+- The edge touch area can be switched off entirely, so nothing on the edge opens the app list;
+  a folder's members can be frozen one by one from the folder itself.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
 - Apps open out of their icon and shrink back into it on a gesture back.
 - Notification text under an app name in favorites, off by default: the app's newest three, each

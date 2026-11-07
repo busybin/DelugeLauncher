@@ -141,21 +141,26 @@ internal fun favoriteRulesFromJson(json: String?): List<FavoriteRule> {
                 .mapNotNull { namesArray.optString(it).takeIf { s -> s.isNotBlank() && s.length <= MAX_SSID } }
                 .take(MAX_WIFI_NAMES)
                 .toSet()
+            val action = runCatching {
+                FavoriteRuleAction.valueOf(obj.optString("action", FavoriteRuleAction.SHOW.name))
+            }.getOrNull() ?: return@mapNotNull null
+            // A rule written by a newer build is not the same rule without the part this one
+            // cannot read. Falling back to SHOW turned a filter into "show everything".
+            val wifi = runCatching {
+                FavoriteRuleWifi.valueOf(obj.optString("wifi", FavoriteRuleWifi.ANY.name))
+            }.getOrNull() ?: return@mapNotNull null
+            val headset = runCatching {
+                FavoriteRuleHeadset.valueOf(obj.optString("headset", FavoriteRuleHeadset.ANY.name))
+            }.getOrNull() ?: return@mapNotNull null
             FavoriteRule(
                 id = id,
                 name = obj.optString("name").take(MAX_RULE_NAME),
                 enabled = obj.optBoolean("enabled", true),
-                action = runCatching {
-                    FavoriteRuleAction.valueOf(obj.optString("action", FavoriteRuleAction.SHOW.name))
-                }.getOrDefault(FavoriteRuleAction.SHOW),
+                action = action,
                 tokens = tokens,
-                wifi = runCatching {
-                    FavoriteRuleWifi.valueOf(obj.optString("wifi", FavoriteRuleWifi.ANY.name))
-                }.getOrDefault(FavoriteRuleWifi.ANY),
+                wifi = wifi,
                 wifiNames = names,
-                headset = runCatching {
-                    FavoriteRuleHeadset.valueOf(obj.optString("headset", FavoriteRuleHeadset.ANY.name))
-                }.getOrDefault(FavoriteRuleHeadset.ANY),
+                headset = headset,
                 startMinute = obj.optInt("start", -1).takeIf { it in 0..1439 } ?: -1,
                 endMinute = obj.optInt("end", -1).takeIf { it in 0..1439 } ?: -1,
                 dailyLimit = obj.optInt("dailyLimit", 0).coerceIn(0, MAX_DAILY_LIMIT),

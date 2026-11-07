@@ -202,6 +202,10 @@ class FreezeAutoService : Service() {
             updateNotification(
                 when {
                     result.noAccess -> getString(R.string.freeze_auto_no_access)
+                    // A partial run is not a success with a footnote: saying only "frozen N"
+                    // hid the failures entirely.
+                    result.done > 0 && result.failed > 0 ->
+                        getString(R.string.freeze_many_partial, result.done, result.failed)
                     result.done > 0 -> getString(R.string.freeze_auto_done, result.done)
                     result.failed > 0 -> getString(R.string.freeze_auto_failed, result.failed)
                     else -> null
