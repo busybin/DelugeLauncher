@@ -164,6 +164,9 @@ internal object FreezeVerdict {
     fun free(state: FreezeAppState?, suspended: Boolean, parkedByPlatform: Boolean): Boolean {
         state ?: return false
         if (!state.installed) return true
+        // Hiding is its own flag and an enabled app can still be hidden, so this one cannot
+        // answer "free" for it: only the hide probe can.
+        if (state.hidden) return false
         if (!state.enabled && !parkedByPlatform) return false
         return !suspended
     }
@@ -1801,10 +1804,13 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         val plan = prefs.freezeMethodsNow()
         if (plan.isEmpty()) return@withContext 0
         val snapshot = FreezeSnapshot.read(context)
-        plan.keys.count { key ->
+        plan.count { (key, method) ->
             val target = targetOf(key) ?: return@count false
             if (snapshot.isOffDevice(target)) return@count false
-            looksFrozen(snapshot, target, plan[key])
+            // The state this entry's own method would leave it in, not "looks disabled some
+            // way": an app another tool disabled must not read as this list being asleep, or
+            // the tile would offer to thaw a list it never froze.
+            isHeld(snapshot, target, method)
         }
     }
 

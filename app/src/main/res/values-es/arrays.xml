@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v30">
-        <item>Los gestos de borde se pueden desactivar: el ajuste de la tira A–Z ofrece Izquierda, Derecha, Ambos y Desactivado, y Desactivado también impide que un toque en el borde abra la lista de aplicaciones.</item>
+        <item>Los gestos de borde se pueden desactivar: el diálogo de la tira A–Z tiene ahora una fila de posición (izquierda, derecha, ambos) y otra de gestos (izquierda, derecha, ambos, desactivado), y Desactivado también impide que un toque en el borde abra la lista de aplicaciones.</item>
         <item>Se pueden fijar entradas de la lista de congelación: una app fijada sigue congelada al descongelar todo, al liberar una carpeta, al salir del modo entrega o en un descongelado automático. Congelar y descongelar una sola app no cambia.</item>
         <item>Congela o descongela una sola app dentro de una carpeta abierta: mantén pulsado un miembro y usa el mismo menú que en la lista de aplicaciones.</item>
         <item>Congelar una carpeta ahora solo toca las apps que ya están en la lista; el resto se queda igual y el aviso dice cuántas se omitieron.</item>

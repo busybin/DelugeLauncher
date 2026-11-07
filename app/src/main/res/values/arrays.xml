@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v30">
-        <item>Edge gestures can be turned off: the A–Z strip setting now offers Left, Right, Both and Off, and Off also stops a tap on the edge from opening the app list.</item>
+        <item>Edge gestures can be turned off: the A–Z strip dialog now has a side row (left, right, both) and a gestures row (left, right, both, off), and Off also stops a tap on the edge from opening the app list.</item>
         <item>Entries on the freeze list can be pinned: a pinned app stays frozen through Unfreeze all, a folder release, a handover exit or an automatic thaw. Freezing and thawing a single app is unchanged.</item>
         <item>Freeze or thaw one app inside an open folder: long-press a member and use the same menu as the app list.</item>
         <item>Freezing a folder now touches only the apps already on the freeze list; the rest are left alone and the toast says how many were skipped.</item>

@@ -57,11 +57,12 @@ class FreezeVerdictTest {
     }
 
     @Test
-    fun `a hidden app is held even when enabled`() {
+    fun `a hidden app is held and never read as free`() {
         val hidden = state(hidden = true)
         assertTrue(FreezeVerdict.held(hidden, parkedByPlatform = false))
-        // Hiding has no enabled flag to read; only a real probe may call this one free.
-        assertTrue(FreezeVerdict.free(hidden, suspended = false, parkedByPlatform = false))
+        // An enabled app can still be hidden, so the shared predicate must not answer "free"
+        // for it: only the hide probe can say that.
+        assertFalse(FreezeVerdict.free(hidden, suspended = false, parkedByPlatform = false))
     }
 
     @Test

@@ -718,9 +718,10 @@ fun HomeScreen(
         Modifier.padding(start = edgeZoneStartDp, end = edgeZoneEndDp)
     }
     // An always-on strip reaches this far in from its edge. Rows and widgets already inset
-    // themselves, so the smaller of their two paddings is what the shift has to top up.
+    // themselves — a row by one padding less its 8dp inner gutter — so the one that starts
+    // closest to the edge decides how much the whole column still has to move.
     val stripExtraDp = (STRIP_LETTER_REACH_DP -
-        minOf(sidePaddingDp, widgetSidePaddingDp)).coerceAtLeast(0f).dp
+        minOf((sidePaddingDp - 8).coerceAtLeast(0), widgetSidePaddingDp)).coerceAtLeast(0f).dp
     val stripInsetStartDp = if (
         visibleStripSide == AzStripSide.LEFT || visibleStripSide == AzStripSide.BOTH
     ) stripExtraDp else 0.dp

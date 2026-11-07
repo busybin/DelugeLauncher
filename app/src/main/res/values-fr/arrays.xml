@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v30">
-        <item>Les gestes de bord peuvent être désactivés : le réglage de la bande A–Z propose Gauche, Droite, Les deux et Désactivé, et Désactivé empêche aussi un appui sur le bord d\'ouvrir la liste des applications.</item>
+        <item>Les gestes de bord peuvent être désactivés : la fenêtre de la bande A–Z a maintenant une ligne de position (gauche, droite, les deux) et une ligne de gestes (gauche, droite, les deux, désactivé), et Désactivé empêche aussi un appui sur le bord d\'ouvrir la liste des applications.</item>
         <item>Des entrées de la liste de gel peuvent être épinglées : une application épinglée reste gelée lors d\'un « Tout dégeler », de la libération d\'un dossier, d\'une sortie de mode remise ou d\'un dégel automatique. Geler et dégeler une seule application reste inchangé.</item>
         <item>Gelez ou dégelez une seule application dans un dossier ouvert : appui long sur un membre, même menu que dans la liste des applications.</item>
         <item>Geler un dossier ne touche plus que les applications déjà dans la liste ; les autres restent intactes et le message indique combien ont été ignorées.</item>
