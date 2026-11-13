@@ -1,9 +1,5 @@
 # Deluge Launcher
 
-<p align="center">
-  <a href="https://buymeacoffee.com/busybin"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="56"></a>
-</p>
-
 A minimal, list-based Android launcher that can freeze apps.
 
 Apps are frozen from the home screen instead of from a second app with a second list to keep in
@@ -17,6 +13,14 @@ A hard fork of [Victoria Launcher](https://github.com/adelmonte/victoria-launche
 This fork exists for freezing, then for speed and feel: fast cold start, a thumb-reachable A-Z
 strip, gestures that hold up under a real finger.
 
+| Home | Folder, opened in two columns | App list | Long-press menu |
+| ---- | ------------------------------ | -------- | --------------- |
+| ![Home](screenshots/home.jpg) | ![Folder](screenshots/folder.jpg) | ![App list](screenshots/app-list.jpg) | ![Long-press menu](screenshots/menu.jpg) |
+| Settings | Network firewall | Freeze methods | |
+| ![Settings](screenshots/settings.jpg) | ![Network firewall](screenshots/network.jpg) | ![Freeze methods](screenshots/freeze-methods.jpg) | |
+
+Screenshots are 720×1600, taken on an Android 16 emulator in its dark theme.
+
 ## App freezing
 
 - **The freeze list is the home screen.** No second list to maintain, no second place to look.
@@ -24,6 +28,11 @@ strip, gestures that hold up under a real finger.
   after Disable or Hide, so nothing has to be re-added.
 - **Four methods**, one tab each, with what each one breaks stated next to it: Stop, Suspend,
   Disable, Hide.
+- **Permanent means it stays asleep.** Unfreeze all, a folder release, the handover exit and
+  the automatic thaw all step around a permanent app, while a single tap still thaws it.
+- **One table for the whole phone.** Every installed app, the method it would freeze under, and
+  whether it is frozen right now; a method per app, count rows for the list, frozen and
+  permanent, filters by source and state, and a comparison page for what each method survives.
 - **Triggers:** freeze all, the corner button, a shortcut, or automatic freezing after the screen
   goes off — skipping the app in front, apps with notifications, and a phone on a charger.
   Unlocking thaws the list if you enable it.
@@ -31,9 +40,11 @@ strip, gestures that hold up under a real finger.
 - **Fast by design.** One package-manager pass reads every app's state, a run only touches what
   is not already asleep, and through Shizuku each app is a single binder call — hiding included
   when the manager runs as root. A 170-app list settles in well under a second of IPC.
-- **Root or Shizuku.** Shizuku is recommended and works without root (Android 11+, over wireless
-  debugging). Hide needs root. The screen names what answered, with its version. Any manager that
-  declares the Shizuku API is found, including Shizuku-Next and Shevery.
+- **Root, Shizuku or device owner.** Shizuku is recommended and works without root (Android
+  11+, over wireless debugging). Hide needs root or a device owner. A device owner needs neither:
+  the same screen shows the one adb command that sets it up. The screen names what answered,
+  with its version. Any manager that declares the Shizuku API is found, including Shizuku-Next
+  and Shevery.
 - **A paused app opened from elsewhere** gets an Unpause and open button in the system dialog
   instead of a dead end.
 - **Widgets and pinned shortcuts** stay, greyed, and a tap unfreezes.
@@ -49,18 +60,49 @@ strip, gestures that hold up under a real finger.
 - **Limits:** hiding is not invisible to `MATCH_UNINSTALLED_PACKAGES`. The automatic trigger is a
   foreground service and comes back after a reboot.
 
+## Network firewall
+
+- **Per app, not per phone.** Three answers for a row: follow the freeze, always blocked, or
+  unrestricted, so an app can be offline only while it sleeps.
+- **Nothing else is touched.** An app outside the list keeps the network, and protected apps and
+  the dialer are skipped whatever the list says.
+- **New apps can join on their own.** With that switch on, an app installed while the firewall
+  is running starts blocked.
+- **Android forgets the rules on reboot**, so they are written again at start-up; the page shows
+  what is applied, waiting and unconfirmed, and every row can be cleared again.
+- **Uses the platform's own switch** (`set-package-networking-enabled` and chain 3), not a VPN,
+  so there is no second app and no traffic leaves the phone to be filtered.
+
+It needs root or Shizuku, and the page says so instead of pretending to work when neither is
+there.
+
 The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NOTICE](NOTICE).
 
 ## Other changes in this fork
 
 - Faster start: icons cached on disk, icon-pack and navigation libraries removed.
 - A-Z strip follows the list, highlights the letters on screen, sits opposite the list alignment
-  and within thumb reach.
+  and within thumb reach. Its letters and its scrub gestures can each be set to the left, the
+  right or both sides, and the rows move aside to clear it.
+- The edge touch area can be switched off entirely, so nothing on the edge opens the app list;
+  a folder's members can be frozen one by one from the folder itself.
+- A folder takes the whole row in the two-column layout, its name stays on one line, and its
+  members open in a popup instead of pushing the screen around.
+- **Per-app firewall:** cut the apps you choose off the internet, with each app following the
+  freeze, staying blocked or staying online. Protected apps and the dialer are never touched,
+  an app installed while it is on joins the list, and the rules are written again at start-up
+  because Android forgets them on reboot.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
 - Apps open out of their icon and shrink back into it on a gesture back.
 - Notification text under an app name in favorites, off by default: the app's newest three, each
   one opening its own notification, with a text size of its own. A dot when icons are hidden.
-- Widgets can live inside a folder, above its apps, each with its own height.
+- Widgets can live inside a folder, above its apps, each with its own height, and a folder can
+  carry the Now Playing card even when nothing is playing.
+- Quick-launch swipes work along the bottom of the home screen too, and buttons inside an open
+  folder keep their taps clear of the edge strip that opens the app list.
+- The A-Z strip can move as a bell or a ripple, with speed, damping and stiffness, and its letter
+  bubble can be rounded, circular, square or hidden.
+- All home widgets can be stacked, each keeping its own height.
 - Japanese app names file under kana rows, kanji under a row of their own.
 - The clock widget follows the launcher's font.
 - Folders file under their own names in the app list, so one is reachable by scrolling the
@@ -86,8 +128,10 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
 
 ## Install
 
-Android 8.0 (API 26) or newer. Freezing needs root (Magisk, KernelSU or APatch) or
-[Shizuku](https://shizuku.rikka.app/).
+Android 8.0 (API 26) or newer. Freezing needs root (Magisk, KernelSU or APatch),
+[Shizuku](https://shizuku.rikka.app/), or Deluge set as the device owner (Settings → Freezing
+access shows the adb command). The network firewall needs root or Shizuku; a device owner can
+freeze apps but cannot write those rules.
 
 Pick Deluge Launcher under **Settings → Apps → Default apps → Home app**.
 
