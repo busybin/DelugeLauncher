@@ -100,9 +100,11 @@ class FavoriteRuleTest {
     }
 
     @Test
-    fun `a Wi-Fi condition with no network named holds everywhere`() {
+    fun `a Wi-Fi condition with no network named is still a condition`() {
+        // No name means "any network", which is a condition the editor can save; it must not
+        // read as an empty rule that the Save button refuses.
         val unnamed = rule(wifi = FavoriteRuleWifi.ON)
-        assertEquals(0, unnamed.conditions)
+        assertEquals(1, unnamed.conditions)
         assertFalse("a/A" in listOf(unnamed).hiddenTokens(quiet))
     }
 
@@ -149,5 +151,23 @@ class FavoriteRuleTest {
         val rule = favoriteRulesFromJson(json).single()
         assertEquals(-1, rule.startMinute)
         assertEquals(99, rule.dailyLimit)
+    }
+
+    @Test
+    fun `a rule whose action this build cannot read is dropped, not turned into SHOW`() {
+        val json = """[{"id":"future","tokens":["a/A"],"action":"FOO"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a rule whose wifi condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","tokens":["a/A"],"wifi":"MAYBE"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
+    }
+
+    @Test
+    fun `a rule whose headset condition this build cannot read is dropped`() {
+        val json = """[{"id":"future","tokens":["a/A"],"headset":"SOMETIMES"},{"id":"ok","tokens":["a/A"]}]"""
+        assertEquals(listOf("ok"), favoriteRulesFromJson(json).map { it.id })
     }
 }

@@ -17,11 +17,16 @@ private const val DIRECTION_MARGIN = 1.25f
  * Wraps an embedded AppWidgetHostView so a genuine long-press (finger held still) opens our
  * edit menu, while an ordinary tap or drag still reaches the widget underneath untouched.
  *
- * A plain Compose pointerInput long-press detector can't do this: once it starts tracking a
- * gesture it owns the whole touch stream, so the widget's own buttons (play/pause, a weather
- * tap-to-open) would stop working. This mirrors how scrollable containers arbitrate gestures
- * with their children: don't intercept on ACTION_DOWN, keep watching via onInterceptTouchEvent,
- * and only steal the stream once our own long-press timer actually fires.
+ * A plain Compose pointerInput long-press detector can't do this for a widget that scrolls:
+ * once it starts tracking a gesture it owns the whole touch stream, so the widget's own
+ * buttons (play/pause, a weather tap-to-open) would stop working. This mirrors how scrollable
+ * containers arbitrate gestures with their children: don't intercept on ACTION_DOWN, keep
+ * watching via onInterceptTouchEvent, and only steal the stream once our own long-press timer
+ * actually fires.
+ *
+ * A press that no child of the widget takes is not ours either — onTouchEvent answers false,
+ * so the home screen's own drag keeps it. The hold and tap for that case are handled in Compose
+ * (see WidgetPage), which is why the detector is only fed from here.
  */
 class LongPressFrameLayout(context: Context) : FrameLayout(context) {
 
@@ -113,6 +118,13 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
                     parent?.requestDisallowInterceptTouchEvent(true)
                 }
             }
+
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL -> {
+                longPressFired = false
+                claimed = false
+                parent?.requestDisallowInterceptTouchEvent(false)
+            }
         }
         gestureDetector.onTouchEvent(ev)
         if (longPressFired) {
@@ -144,12 +156,10 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
     }
 
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        gestureDetector.onTouchEvent(event)
-        if (event.actionMasked == MotionEvent.ACTION_UP || event.actionMasked == MotionEvent.ACTION_CANCEL) {
-            longPressFired = false
-            claimed = false
-            parent?.requestDisallowInterceptTouchEvent(false)
-        }
-        return true
+        // Never ours to take. A press that landed on the widget's own background is the home
+        // screen's: returning true here made the interop layer consume every move for the
+        // whole gesture, and the list underneath stopped scrolling anywhere a widget sat.
+        // The hold and the tap for such a widget are handled in Compose (see WidgetPage).
+        return false
     }
 }

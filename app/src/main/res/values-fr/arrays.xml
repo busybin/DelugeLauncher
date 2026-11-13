@@ -1,5 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v31">
+        <item>Pare-feu par application : coupez l\'internet des applications choisies pendant que tout le reste reste en ligne. Chaque application suit le gel, reste bloquée ou reste en ligne ; les applications protégées et le téléphone ne sont jamais touchés, et une application installée pare-feu actif rejoint la liste.</item>
+        <item>Le pare-feu a sa propre page : recherche, applications système, un filtre par état et des compteurs pour les applications bloquées, en attente et non confirmées. Android oublie ces règles au redémarrage, elles sont donc réécrites au démarrage.</item>
+        <item>La liste de gel n\'est plus qu\'un seul tableau : toutes les applications du téléphone, la méthode de chacune et si elle est gelée. La méthode se règle par application (Arrêter, Suspendre, Désactiver, Masquer), et une page de comparaison dit ce qui survit avec chacune.</item>
+        <item>Le gel permanent remplace l\'ancien épinglage : une application permanente reste gelée lors d\'un « Tout dégeler », de la libération d\'un dossier, d\'une sortie de mode remise et d\'un dégel automatique. Dégeler cette application fonctionne toujours, et la liste peut n\'afficher que les entrées permanentes.</item>
+        <item>Choisissez une méthode par défaut pour les nouvelles entrées, ajoutez ou retirez plusieurs applications d\'un coup depuis la barre de sélection, et désactivez le gel lui-même depuis la page de gel.</item>
+        <item>Le téléphone et les paquets critiques du système ne peuvent plus être gelés par accident ; la ligne dit pourquoi c\'est retenu.</item>
+        <item>Dégeler une application qu\'une ancienne version a suspendue sous une autre identité fonctionne désormais : la suspension est levée sous le nom que le système a enregistré, pas seulement sous l\'actuel.</item>
+        <item>Dossiers : le nom tient sur une ligne et occupe toute la rangée en disposition à deux colonnes, les noms d\'applications passent sur deux lignes et un dossier peut rester sans nom. Ouvrir un dossier en deux colonnes affiche ses membres dans une fenêtre contextuelle.</item>
+        <item>Une application verrouillée reste suspendue, pas seulement masquée, donc les Paramètres ne peuvent pas la remettre sur le lanceur.</item>
+        <item>Désinstaller l\'application qui prête le canal de gel, Shizuku ou le gestionnaire root, avertit que les applications gelées pourraient ne plus pouvoir être dégelées.</item>
+        <item>Options pour développeurs : échelle de l\'écran, pour essayer la disposition à une taille de téléphone autre que celle-ci.</item>
+    </string-array>
+    <string-array name="changelog_v30">
+        <item>Les gestes de bord peuvent être désactivés : la fenêtre de la bande A–Z a maintenant une ligne de position (gauche, droite, les deux) et une ligne de gestes (gauche, droite, les deux, désactivé), et Désactivé empêche aussi un appui sur le bord d\'ouvrir la liste des applications.</item>
+        <item>Des entrées de la liste de gel peuvent être épinglées : une application épinglée reste gelée lors d\'un « Tout dégeler », de la libération d\'un dossier, d\'une sortie de mode remise ou d\'un dégel automatique. Geler et dégeler une seule application reste inchangé.</item>
+        <item>Gelez ou dégelez une seule application dans un dossier ouvert : appui long sur un membre, même menu que dans la liste des applications.</item>
+        <item>Geler un dossier ne touche plus que les applications déjà dans la liste ; les autres restent intactes et le message indique combien ont été ignorées.</item>
+        <item>Petits écrans : la fenêtre de gel automatique, Tout sélectionner, Inverser, l\'interrupteur des applications système et la boîte du mode de gel défilent jusqu\'en bas.</item>
+        <item>Les réglages affichent toutes les options d\'un coup. L\'interrupteur des réglages avancés disparaît, les cartes sont regroupées par ce qu\'elles changent et la bande A–Z a la sienne.</item>
+        <item>La bande A–Z peut se placer à gauche, à droite ou des deux côtés, et l\'écran d\'accueil comme la liste des applications s\'écartent pour lui laisser la place.</item>
+        <item>Les actions groupées disent ce qui s\'est passé : Tout dégeler ne compte que ce qui reste gelé, la libération d\'un dossier ne compte que ce qui a été dégelé et une importation partielle indique combien d\'entrées n\'ont pas pu être appliquées.</item>
+        <item>Un état illisible n\'est plus compté comme gelé ni comme dégelé, une application désinstallée n\'est plus comptée comme un échec et une table de réglages abîmée est refusée au lieu d\'être écrasée.</item>
+    </string-array>
+    <string-array name="changelog_v29">
+        <item>Le gel a son propre écran : Arrêter, Suspendre, Désactiver et Masquer ont chacun un onglet, et un tableau dit quel canal peut quoi.</item>
+        <item>Gelez sans root ni Shizuku : faites de Deluge le propriétaire de l\'appareil, ou laissez Dhizuku prêter ses droits, et Suspendre ou Masquer marche depuis le téléphone seul.</item>
+        <item>Appui long sur un dossier pour geler ou dégeler d\'un coup toutes les applis qu\'il contient.</item>
+        <item>Pilotez-le par script : des diffusions et des liens deluge:// gèlent ou dégèlent une appli ou toute la liste, donc Tasker et les raccourcis aussi.</item>
+        <item>Règles de sommeil : gelez ou réveillez la liste selon le Wi-Fi, le casque, une plage horaire, la charge ou la batterie.</item>
+        <item>Limites quotidiennes : choisissez combien de fois une appli peut s\'ouvrir par jour ; atteint, elle reste gelée jusqu\'à demain.</item>
+        <item>Pas ouvert depuis 90 jours : une liste en un geste des applis oubliées ; ajoutez-les à la liste de gel depuis là.</item>
+        <item>Mode concentration : appui long sur une appli pour ne montrer qu\'elle ; le déverrouillage ramène le reste.</item>
+        <item>Mode remise et deux nouveaux tuiles : remettez le téléphone avec tout gelé, et verrouillez l\'espace privé depuis le volet.</item>
+        <item>Sauvegardes chiffrées : exportez avec un mot de passe ; un mauvais mot de passe à l\'import laisse la configuration intacte.</item>
+        <item>La couleur des notifications se choisit, et les applis en pause d\'un profil professionnel grisent comme les suspendues.</item>
+        <item>Petits correctifs : les réglages survivent à un fichier de préférences abîmé, et les verrous d\'applis sont reconstruits ensuite.</item>
+</string-array>
+    <string-array name="changelog_v28">
+        <item>Un dossier peut contenir la carte En cours de lecture : appui long sur un dossier, puis « Ajouter En cours de lecture ». La carte s\'ouvre avec le dossier, même sans lecture en cours.</item>
+        <item>Les balayages de lancement rapide atteignent maintenant le bas de l\'écran d\'accueil, même quand les favoris le remplissent.</item>
+        <item>Les boutons d\'un dossier ouvert ne perdent plus leurs appuis au profit de la bande de bord qui ouvre la liste des applications.</item>
+        <item>Avec la barre d\'état réglée sur 0 seconde, elle se masque aussitôt, y compris au retour d\'une application.</item>
+        <item>Tous les widgets de l\'accueil peuvent être empilés, chacun gardant sa hauteur.</item>
+        <item>La bande A-Z peut onduler comme une cloche ou une vague, avec des réglages de vitesse, d\'amortissement et de raideur.</item>
+        <item>La bulle de lettre de la bande A-Z peut être arrondie, circulaire, carrée ou masquée.</item>
+        <item>Les membres d\'un dossier affichent leurs dernières notifications, et un balayage latéral efface une ligne.</item>
+        <item>Le réglage d\'assombrissement indique maintenant qu\'il assombrit le fond d\'écran.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>Le texte des notifications sous les favoris affiche jusqu\'à trois notifications par application, les plus récentes d\'abord. Touchez-en une pour l\'ouvrir, et réglez sa taille de texte.</item>
         <item>Un point à côté du nom quand les icônes sont masquées et que l\'application a des notifications.</item>
@@ -11,8 +60,13 @@
         <item>Un panneau de notifications tiré depuis l\'écran d\'accueil : chaque notification avec ses boutons et une zone de réponse.</item>
         <item>Les règles de favoris affichent ou masquent des favoris selon le Wi-Fi, l\'heure, le casque ou une limite d\'ouvertures par jour.</item>
         <item>L\'écran de gel explique l\'espace privé d\'Android 15 quand le téléphone en a un.</item>
+        <item>Le verrouillage d\'apps couvre désormais les notifications, les raccourcis, la carte en cours de lecture, le bouton appareil photo et les widgets : chacun demande votre verrouillage d\'écran avant d\'ouvrir.</item>
+        <item>Une app verrouillée ne laisse plus d\'enregistrement de gel qui pourrait la garder désactivée après le déverrouillage ; la liste de gel survit à une réinstallation de Deluge.</item>
+        <item>Le sélecteur de méthode de gel affiche le nombre d\'apps installées par méthode, et les favoris peuvent être masqués depuis leur menu d\'appui long.</item>
+        <item>Le délai de verrouillage indique maintenant combien de temps une appli déverrouillée reste ouverte avant le reblocage.</item>
         <item>Les 8 langues complètes.</item>
     </string-array>
+
     <string-array name="changelog_v26">
         <item>Applications protégées, activé par défaut : le clavier en cours, l\'application d\'accueil, les services d\'accessibilité, Shizuku et les gestionnaires root ne sont jamais gelés.</item>
         <item>Les applications du profil professionnel et de l\'espace privé peuvent aussi être gelées, chaque profil étant séparé même à nom de paquet identique.</item>

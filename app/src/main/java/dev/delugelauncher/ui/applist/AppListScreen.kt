@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.applist
 
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.ui.focus.FocusMenuItem
 import dev.delugelauncher.data.Pinyin
 
 import androidx.compose.animation.core.Animatable
@@ -65,6 +66,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -108,6 +110,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -142,7 +145,11 @@ import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.Folder
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.ui.common.FolderIcon
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.RippleParams
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.PRIVATE_SPACE_UNLOCKED_CLASS
@@ -184,6 +191,9 @@ private val IDLE_BOTTOM_PADDING = 32.dp
 
 /** Smallest comfortable row, so a tap beside a small icon still lands on its app. */
 private val MIN_ROW_HEIGHT = 48.dp
+
+/** Where an app row's content starts (20dp row inset + 8dp inner padding). */
+private const val LIST_ROW_SIDE_INSET_DP = 28f
 
 /** Sets the settings shortcut apart from the last app above it. */
 private val SETTINGS_ROW_GAP = 20.dp
@@ -312,6 +322,11 @@ fun AppListScreen(
     onDismiss: () -> Unit,
     contentColor: Color,
     showAlphabet: Boolean,
+    /** Which side(s) the letters are drawn on; the scrub gesture is a separate setting. */
+    azStripSide: AzStripSide = AzStripSide.RIGHT,
+    scrubStyle: ScrubStyle = ScrubStyle.BELL,
+    scrubBubbleShape: ScrubBubbleShape = ScrubBubbleShape.ROUNDED,
+    rippleParams: RippleParams = RippleParams(),
     /** Hoisted so a swipe that overshoots the opening animation can keep scrolling it. */
     listState: LazyListState,
     /** How far the list still has to travel to be fully open; 0 once it has arrived. */
@@ -1412,14 +1427,26 @@ fun AppListScreen(
                     scrubLetter != null || !highlightRange.isEmpty() -> sectionTopPx.toDp()
                     else -> restingTopPadding
                 }
-                // Ghost strips: the edge zones scrub invisibly and nothing is
-                // drawn beside the rows, so no side is held clear. The price
-                // is that a tap landing inside a zone opens the list instead
-                // of the row — narrow the zone width in settings if the edge
-                // gets grabby, rather than bringing this padding back.
+                // A drawn strip owns its side: the rows already inset themselves by
+                // LIST_ROW_SIDE_INSET_DP, so only the rest is added. With the alphabet off,
+                // or while searching (the strip is hidden then), the side is left alone —
+                // the edge zone itself is invisible and must not eat a gutter.
+                val stripInset = if (showAlphabet && !searching) {
+                    (STRIP_LETTER_REACH_DP - LIST_ROW_SIDE_INSET_DP).coerceAtLeast(0f).dp
+                } else {
+                    0.dp
+                }
                 PaddingValues(
-                    start = 0.dp,
-                    end = 0.dp,
+                    start = if (azStripSide == AzStripSide.LEFT || azStripSide == AzStripSide.BOTH) {
+                        stripInset
+                    } else {
+                        0.dp
+                    },
+                    end = if (azStripSide == AzStripSide.RIGHT || azStripSide == AzStripSide.BOTH) {
+                        stripInset
+                    } else {
+                        0.dp
+                    },
                     top = top,
                     bottom = when {
                         searching -> SEARCH_EDGE_PADDING
@@ -1677,19 +1704,27 @@ fun AppListScreen(
         // from: the left edge scrubs blind, display and gesture are separate
         // things. It takes no room, so the rows run full-bleed under it.
         if (showAlphabet && !searching) {
-            val stripSide = if (alignment == HomeAlignment.RIGHT) EdgeSide.LEFT else EdgeSide.RIGHT
-            AlphabetSpyStrip(
-                cells = cells,
-                scrub = scrub,
-                listState = listState,
-                scrubY = scrubY,
-                pullPx = pullPx,
-                band = band,
-                stripSide = stripSide,
-                modifier = Modifier.align(
-                    if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
-                ),
-            )
+            val stripSides = when (azStripSide) {
+                AzStripSide.LEFT -> listOf(EdgeSide.LEFT)
+                AzStripSide.RIGHT -> listOf(EdgeSide.RIGHT)
+                AzStripSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
+            }
+            stripSides.forEach { stripSide ->
+                AlphabetSpyStrip(
+                    cells = cells,
+                    scrub = scrub,
+                    listState = listState,
+                    scrubY = scrubY,
+                    pullPx = pullPx,
+                    band = band,
+                    stripSide = stripSide,
+                    scrubStyle = scrubStyle,
+                    rippleParams = rippleParams,
+                    modifier = Modifier.align(
+                        if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
+                    ),
+                )
+            }
         }
 
         // While picking apps to tag, a bar says how many and offers the tag picker, and a FAB
@@ -1828,13 +1863,17 @@ fun AppListScreen(
         }
 
         // Bubble for the current letter, dragged out from the strip and springing back.
-        if (scrubLetter != null) {
+        if (scrubLetter != null && scrubBubbleShape != ScrubBubbleShape.HIDDEN) {
             val bubble = 72.dp
             val halfPx = with(density) { (bubble / 2).toPx() }
             val insetPx = with(density) { SCRUB_BUBBLE_INSET_DP.dp.toPx() }
             Surface(
                 color = Color.Black.copy(alpha = 0.6f),
-                shape = RoundedCornerShape(22.dp),
+                shape = when (scrubBubbleShape) {
+                    ScrubBubbleShape.CIRCLE -> CircleShape
+                    ScrubBubbleShape.SQUARE -> RectangleShape
+                    else -> RoundedCornerShape(22.dp)
+                },
                 modifier = Modifier
                     .align(if (activeSide == EdgeSide.LEFT) Alignment.TopStart else Alignment.TopEnd)
                     .offset {
@@ -2000,7 +2039,7 @@ private fun FolderListRow(
         ) {
             val text: @Composable () -> Unit = {
                 Text(
-                    text = folder.name,
+                    text = folder.name.ifBlank { stringResource(R.string.folder_unnamed) },
                     color = contentColor,
                     fontSize = labelSizeSp.sp,
                     maxLines = 1,
@@ -2106,7 +2145,7 @@ private fun AppRow(
     var freezeChoosing by remember { mutableStateOf(false) }
     // A paused app fades the way a hidden one does, when the setting asks; the icon goes with
     // the name so the whole row reads as set aside.
-    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
+    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
 
     Box {
         Row(
@@ -2295,10 +2334,12 @@ private fun AppRow(
                             onClick = { onDismissMenu(); onHide() },
                         )
                     }
+                    FocusMenuItem(app = app, onDismiss = onDismissMenu)
                     FreezeMenuItems(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = onDismissMenu,
+                        locked = isLocked,
                         onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                     )
                     DropdownMenuItem(
@@ -2422,6 +2463,7 @@ private fun AppRow(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
+                        locked = isLocked,
                     )
                     DropdownMenuItem(
                         text = {
@@ -2462,6 +2504,8 @@ private fun AppRow(
         FreezeMethodDialog(
             app = if (freezeChoosing) app else null,
             label = label,
+            counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false
@@ -2488,6 +2532,8 @@ private fun AlphabetSpyStrip(
     band: ScrubBand,
     /** Which side the strip is drawn on: the one the rows are not aligned against. */
     stripSide: EdgeSide,
+    scrubStyle: ScrubStyle,
+    rippleParams: RippleParams,
     modifier: Modifier = Modifier,
 ) {
     val scrubLetter = scrub.letter
@@ -2512,6 +2558,8 @@ private fun AlphabetSpyStrip(
         // leave their left side free, so that is where the strip goes.
         side = stripSide,
         spotlights = scrubLetter?.let { setOf(it) } ?: visibleLetters,
+        style = scrubStyle,
+        ripple = rippleParams,
         modifier = modifier,
     )
 }

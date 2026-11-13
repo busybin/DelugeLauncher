@@ -48,6 +48,11 @@ data class AppInfo(
      */
     val suspended: Boolean = false,
     /**
+     * This row's work profile is paused. Kept apart from [suspended]: the profile is quiet,
+     * not the app, and a focus session should not report a frozen app for it.
+     */
+    val quietProfile: Boolean = false,
+    /**
      * The method currently holding this app frozen, or null when it is free. Rows that only
      * exist because they were frozen carry it too, so they can offer a one-tap unfreeze.
      */
@@ -112,9 +117,19 @@ data class AppInfo(
      */
     fun lockedBy(locked: Set<String>): Boolean =
         key in locked || ((kind == EntryKind.APP || kind == EntryKind.SHORTCUT) &&
-            locked.any { other ->
-                !EntryKeys.isShortcut(other) &&
-                    other.substringBefore('/') == packageName &&
-                    EntryKeys.userSerial(other) == userSerial
-            })
+            isPackageLocked(locked, packageName, userSerial))
 }
+
+/**
+ * Whether [locked] holds an app lock for [packageName] in [userSerial].
+ *
+ * This is the answer when there is no row to ask: the app may be hidden, so its [AppInfo] is
+ * not in the list at all, yet a notification or a widget still names its package.
+ */
+fun isPackageLocked(locked: Set<String>, packageName: String, userSerial: Long): Boolean =
+    locked.any { other ->
+        !EntryKeys.isShortcut(other) &&
+            !EntryKeys.isPrivateSpace(other) &&
+            other.substringBefore('/') == packageName &&
+            EntryKeys.userSerial(other) == userSerial
+    }

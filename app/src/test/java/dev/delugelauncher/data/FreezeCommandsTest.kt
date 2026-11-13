@@ -78,6 +78,19 @@ class FreezeCommandsTest {
         ).forEach { bad ->
             assertEquals(emptyList<String>(), FreezeCommands.freeze(bad, FreezeMethod.STOP))
             assertEquals(emptyList<String>(), FreezeCommands.unfreezeEverything(bad))
+            assertEquals(emptyList<String>(), FreezeCommands.unfreezeAsShell(bad))
         }
+    }
+
+    @Test
+    fun `the shell uid fallback only unsuspends that one package`() {
+        assertEquals(
+            listOf("su 2000 -c \"pm unsuspend --user 0 $pkg\""),
+            FreezeCommands.unfreezeAsShell(pkg),
+        )
+        assertEquals(
+            listOf("su 2000 -c \"pm unsuspend --user 10 $pkg\""),
+            FreezeCommands.unfreezeAsShell(pkg, userId = 10),
+        )
     }
 }

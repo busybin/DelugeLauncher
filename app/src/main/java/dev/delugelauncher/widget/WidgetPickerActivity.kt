@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.widget
 
+import android.app.ActivityOptions
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
@@ -37,12 +38,20 @@ import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
 
 private const val REQUEST_CONFIGURE = 1
+private const val STATE_PENDING_ID = "pending_widget_id"
 
 class WidgetPickerActivity : ComponentActivity() {
 
     private lateinit var appWidgetManager: AppWidgetManager
     private lateinit var widgetHost: DelugeAppWidgetHost
     private var pendingWidgetId: Int = -1
+
+    /**
+     * A second tap before the bind dialog is on screen used to allocate a second id and
+     * overwrite [pendingWidgetId], so the first id stayed bound to a widget that never
+     * arrived and was never deleted.
+     */
+    private var picking = false
 
     private val bindLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -59,6 +68,9 @@ class WidgetPickerActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         appWidgetManager = AppWidgetManager.getInstance(this)
         widgetHost = (application as DelugeApp).widgetHost
+        // The setup screen can outlast this one; coming back to a fresh instance without the
+        // id would add the widget the user just set up as nothing.
+        pendingWidgetId = savedInstanceState?.getInt(STATE_PENDING_ID, -1) ?: -1
 
         setContent {
             DelugeTheme {
@@ -132,6 +144,8 @@ class WidgetPickerActivity : ComponentActivity() {
     }
 
     private fun pick(info: AppWidgetProviderInfo) {
+        if (picking || pendingWidgetId != -1) return
+        picking = true
         val id = widgetHost.allocateAppWidgetId()
         pendingWidgetId = id
         val bound = appWidgetManager.bindAppWidgetIdIfAllowed(id, info.provider)
@@ -146,6 +160,27 @@ class WidgetPickerActivity : ComponentActivity() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_PENDING_ID, pendingWidgetId)
+    }
+
+    /**
+     * Lets the setup screen open on the strength of this screen being in front.
+     *
+     * The host starts it through a sender the system made, and from Android 14 being in front
+     * is only lent to such a sender when asked. Without asking, the start is quietly blocked:
+     * nothing opens, the result comes back canceled, and the widget is thrown away.
+     */
+    private fun configureOptions(): Bundle? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return null
+        return ActivityOptions.makeBasic()
+            .setPendingIntentBackgroundActivityStartMode(
+                ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED,
+            )
+            .toBundle()
+    }
+
     private fun proceedAfterBind(id: Int) {
         val info = appWidgetManager.getAppWidgetInfo(id)
         if (info?.configure == null || configurationIsOptional(info)) {
@@ -157,7 +192,13 @@ class WidgetPickerActivity : ComponentActivity() {
         // widget id — so starting it directly is refused, and that refusal is a crash rather
         // than a missed widget. This is the call that carries the host's standing to open it.
         val started = runCatching {
-            widgetHost.startAppWidgetConfigureActivityForResult(this, id, 0, REQUEST_CONFIGURE, null)
+            widgetHost.startAppWidgetConfigureActivityForResult(
+                this,
+                id,
+                0,
+                REQUEST_CONFIGURE,
+                configureOptions(),
+            )
             true
         }.getOrDefault(false)
         // A widget whose configure screen will not open is still a widget; it gets added with

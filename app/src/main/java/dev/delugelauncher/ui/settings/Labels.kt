@@ -4,9 +4,12 @@ package dev.delugelauncher.ui.settings
 import androidx.annotation.StringRes
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.ScrubBubbleShape
+import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HomeAlignment
@@ -56,10 +59,32 @@ fun AzStripVisibility.labelRes(): Int = when (this) {
 }
 
 @StringRes
+fun AzStripSide.labelRes(): Int = when (this) {
+    AzStripSide.LEFT -> R.string.edge_left
+    AzStripSide.RIGHT -> R.string.edge_right
+    AzStripSide.BOTH -> R.string.edge_both
+}
+
+@StringRes
 fun EdgeSide.labelRes(): Int = when (this) {
     EdgeSide.LEFT -> R.string.edge_left
     EdgeSide.RIGHT -> R.string.edge_right
     EdgeSide.BOTH -> R.string.edge_both
+    EdgeSide.NONE -> R.string.edge_none
+}
+
+@StringRes
+fun ScrubStyle.labelRes(): Int = when (this) {
+    ScrubStyle.BELL -> R.string.scrub_style_bell
+    ScrubStyle.RIPPLE -> R.string.scrub_style_ripple
+}
+
+@StringRes
+fun ScrubBubbleShape.labelRes(): Int = when (this) {
+    ScrubBubbleShape.ROUNDED -> R.string.scrub_bubble_rounded
+    ScrubBubbleShape.CIRCLE -> R.string.scrub_bubble_circle
+    ScrubBubbleShape.SQUARE -> R.string.scrub_bubble_square
+    ScrubBubbleShape.HIDDEN -> R.string.scrub_bubble_hidden
 }
 
 @StringRes

@@ -32,6 +32,12 @@ internal const val PREF_CORNER_BUTTON_KEY = "corner_button_key"
 internal const val PREF_CORNER_SWIPE_KEY = "corner_swipe_key"
 internal const val PREF_LOCKED_APPS = "locked_apps"
 internal const val PREF_APP_TAGS = "app_tags"
+internal const val PREF_OPEN_LIMITS = "open_limits_json"
+internal const val PREF_DAILY_OPENS = "daily_opens_json"
+internal const val PREF_LAST_LAUNCH = "last_launch_json"
+internal const val PREF_LIMIT_FROZEN = "limit_frozen_json"
+internal const val PREF_FREEZE_RUN_LOG = "freeze_run_log_json"
+internal const val PREF_HANDOVER = "handover_json"
 
 /**
  * Strips every second profile's keys out of one stored preference's value, given the DataStore
@@ -72,8 +78,13 @@ fun stripPrivateSpaceFromExport(name: String, value: Any, stripOtherProfiles: Bo
             (value as? Set<*>)?.let { stripStringSet(it, isPrivate) } ?: value
         PREF_FOLDERS -> (value as? String)?.let { stripFoldersJson(it, isPrivate) } ?: value
         PREF_FAVORITE_RULES -> (value as? String)?.let { stripRulesJson(it, isPrivate) } ?: value
-        PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS, PREF_APP_TAGS ->
+        PREF_NAME_OVERRIDES, PREF_ICON_OVERRIDES, PREF_LAUNCH_COUNTS, PREF_APP_TAGS,
+        PREF_OPEN_LIMITS, PREF_DAILY_OPENS, PREF_LAST_LAUNCH ->
             (value as? String)?.let { stripJsonMap(it, isPrivate) } ?: value
+        // A bare array of keys, unlike the maps above.
+        PREF_LIMIT_FROZEN -> (value as? String)?.let { stripKeyArray(it, isPrivate) } ?: value
+        PREF_FREEZE_RUN_LOG, PREF_HANDOVER ->
+            (value as? String)?.let { stripJsonArrays(it, isPrivate) } ?: value
         PREF_QUICK_LAUNCH_LEFT, PREF_QUICK_LAUNCH_RIGHT, PREF_CORNER_BUTTON_KEY, PREF_CORNER_SWIPE_KEY -> {
             // Not `?.let { ... } ?: value`: that Elvis would mistake the deliberate null this
             // branch can return (drop the slot) for the cast having failed, and hand the
@@ -165,6 +176,41 @@ private fun stripJsonMap(raw: String, isPrivate: (String) -> Boolean): String {
     if (toDrop.isEmpty()) return raw
     toDrop.forEach { obj.remove(it) }
     return obj.toString()
+}
+
+/** A JSON array of app keys, keeping the order and formatting when nothing is dropped. */
+private fun stripKeyArray(raw: String, isPrivate: (String) -> Boolean): String {
+    val array = runCatching { JSONArray(raw) }.getOrNull() ?: return raw
+    val kept = JSONArray()
+    var dropped = false
+    for (i in 0 until array.length()) {
+        val key = array.optString(i)
+        if (isPrivate(key)) dropped = true else kept.put(key)
+    }
+    return if (dropped) kept.toString() else raw
+}
+
+/**
+ * Run logs and handover state hold the keys they touched in JSON arrays. Strip those arrays
+ * with the same suffix rule; everything else in the object is left as found.
+ */
+private fun stripJsonArrays(raw: String, isPrivate: (String) -> Boolean): String {
+    val obj = runCatching { JSONObject(raw) }.getOrNull() ?: return raw
+    var changed = false
+    obj.keys().asSequence().toList().forEach { name ->
+        val array = obj.optJSONArray(name) ?: return@forEach
+        val kept = JSONArray()
+        var dropped = false
+        for (i in 0 until array.length()) {
+            val key = array.optString(i)
+            if (isPrivate(key)) dropped = true else kept.put(key)
+        }
+        if (dropped) {
+            obj.put(name, kept)
+            changed = true
+        }
+    }
+    return if (changed) obj.toString() else raw
 }
 
 /**

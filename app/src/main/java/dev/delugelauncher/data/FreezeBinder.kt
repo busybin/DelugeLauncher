@@ -55,14 +55,20 @@ class FreezeBinder(private val context: Context) {
     /**
      * Re-applies the pause with the dialog on an app paused before the dialog existed.
      * Called once per app by the upgrade pass; a pause by the same suspender replaces the
-     * stored parameters, so this is what gives old records the unpause button.
+     * stored parameters, so this is what gives old records the unpause button. The record's
+     * own identity is used, not this channel's: re-pausing under another name would leave
+     * the old, dialog-less record in place.
      */
-    fun refreshSuspend(packageName: String, userId: Int): Boolean? =
-        attempt { it.setSuspended(packageName, suspended = true, userId = userId) }
+    fun refreshSuspend(packageName: String, userId: Int): Boolean? = attempt { proxy ->
+        proxy.setSuspended(
+            packageName, suspended = true, userId = userId,
+            suspender = proxy.currentSuspender(packageName, userId) ?: proxy.suspender,
+        )
+    }
 
     /** Lifts every kind of freeze, because the stored method can be wrong. */
     fun unfreeze(packageName: String, userId: Int, uid: Int): Boolean? = attempt { proxy ->
-        proxy.setSuspended(packageName, suspended = false, userId = userId)
+        proxy.liftSuspension(packageName, userId)
         proxy.setEnabled(packageName, enabled = true, userId = userId)
         runCatching { proxy.setHidden(packageName, hidden = false, userId = userId) }
         if (uid > 0) runCatching { proxy.setBackgroundRestricted(packageName, restricted = false, uid) }
@@ -113,9 +119,16 @@ class FreezeBinder(private val context: Context) {
 
         private val root: Boolean = runCatching { Shizuku.getUid() == 0 }.getOrDefault(false)
 
-        /** Who the system records for SUSPEND; has to match for a later lift to take. */
-        private val suspender = if (root) ROOT_SUSPENDER else SHELL_PACKAGE
-        private val caller = if (root) context.packageName else SHELL_PACKAGE
+        /**
+         * Who the system records for SUSPEND; has to match for a later lift to take.
+         *
+         * Always the shell name, even when this binder runs as root: a suspension recorded
+         * against "root" (or against this app) outlives the root grant, and once root is gone
+         * nothing but root can name that identity again -- the app stays suspended for good.
+         * `com.android.shell` is the name both `pm suspend` writes and every shell can lift.
+         */
+        val suspender = SHELL_PACKAGE
+        private val caller = SHELL_PACKAGE
         private val packageManager = service("package", "android.content.pm.IPackageManager")
         private val activityManager = service("activity", "android.app.IActivityManager")
         private val appOps = runCatching {
@@ -127,12 +140,13 @@ class FreezeBinder(private val context: Context) {
         }
 
         fun setEnabled(packageName: String, enabled: Boolean, userId: Int) {
-            val state = when {
-                enabled -> PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                // Root may disable outright; a shell only ever disables for the user, which
-                // is the state `pm disable-user` writes and what Settings offers to undo.
-                root -> PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                else -> PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
+            // Always the user-level state: it is what `pm disable-user` writes, it is what
+            // Settings offers an "Enable" button for, and it survives losing root. The
+            // outright DISABLED state hides that button and leaves the user with no way back.
+            val state = if (enabled) {
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+            } else {
+                PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER
             }
             call(
                 packageManager, "setApplicationEnabledSetting",
@@ -143,7 +157,12 @@ class FreezeBinder(private val context: Context) {
         fun setHidden(packageName: String, hidden: Boolean, userId: Int): Boolean =
             call(packageManager, "setApplicationHiddenSettingAsUser", packageName, hidden, userId) == true
 
-        fun setSuspended(packageName: String, suspended: Boolean, userId: Int): Boolean {
+        fun setSuspended(
+            packageName: String,
+            suspended: Boolean,
+            userId: Int,
+            suspender: String = this.suspender,
+        ): Boolean {
             val names = arrayOf(packageName)
             // Android 15 added the flags argument and split the suspender from the user it
             // acts on; before that the only suspender parameter is the calling package.
@@ -160,6 +179,33 @@ class FreezeBinder(private val context: Context) {
                 )
             }
             return (result as? Array<*>)?.isEmpty() ?: false
+        }
+
+        /** The identity that put the pause in place, as the platform reports it. */
+        fun currentSuspender(packageName: String, userId: Int): String? = runCatching {
+            call(packageManager, "getSuspendingPackage", packageName, userId) as? String
+        }.getOrNull()?.takeIf { it.isNotBlank() }
+
+        /** The platform's answer, or null when it could not be asked. */
+        fun isSuspended(packageName: String, userId: Int): Boolean? = runCatching {
+            call(packageManager, "isPackageSuspendedForUser", packageName, userId) as? Boolean
+        }.getOrNull()
+
+        /**
+         * Lifts the pause even when another identity added it.
+         *
+         * The platform keys suspensions by the identity that added them, and the call to
+         * lift one answers cleanly while changing nothing when the name does not match.
+         * Root is allowed to name any suspender, so the identity the platform reports and
+         * then both names `pm` can write are tried until the state reads back clear.
+         */
+        fun liftSuspension(packageName: String, userId: Int) {
+            for (name in suspendersToClear(currentSuspender(packageName, userId), suspender)) {
+                runCatching {
+                    setSuspended(packageName, suspended = false, userId = userId, suspender = name)
+                }
+                if (isSuspended(packageName, userId) == false) return
+            }
         }
 
         /** The same two app-ops `pm suspend` leaves behind, so scheduled work stops too. */
@@ -214,6 +260,22 @@ class FreezeBinder(private val context: Context) {
     companion object {
         /** The name `pm` records when it runs as root. */
         private const val ROOT_SUSPENDER = "root"
+
+        /**
+         * The suspender names worth clearing, in order.
+         *
+         * The reported owner comes first; the rest are the two names `pm` writes, so a
+         * record left by the other channel is still cleared. Without a reported owner the
+         * channel's own name is not added here — the caller passes it in.
+         */
+        internal fun suspendersToClear(current: String?, own: String? = null): List<String> {
+            val order = LinkedHashSet<String>()
+            current?.takeIf { it.isNotBlank() }?.let(order::add)
+            own?.takeIf { it.isNotBlank() }?.let(order::add)
+            order += ROOT_SUSPENDER
+            order += SHELL_PACKAGE
+            return order.toList()
+        }
 
         /** `SuspendDialogInfo.BUTTON_ACTION_UNSUSPEND`, the button that lifts and opens. */
         private const val UNPAUSE_ACTION = 1

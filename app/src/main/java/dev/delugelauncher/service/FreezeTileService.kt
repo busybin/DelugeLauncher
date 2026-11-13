@@ -23,13 +23,14 @@ class FreezeTileService : TileService() {
         app.runInBackground {
             val enabled = app.prefs.freezeEnabledNow()
             val hasPlan = app.prefs.freezeMethodsNow().isNotEmpty()
-            val frozen = app.prefs.freezeAppliedNow().isNotEmpty()
+            // Read the device, not the record: an app can be gone or lifted since the last run.
+            val held = app.freezeManager.heldNowCount()
             withContext(Dispatchers.Main) {
                 qsTile?.apply {
                     label = getString(R.string.freeze_tile_label)
                     state = when {
                         !enabled || !hasPlan -> Tile.STATE_UNAVAILABLE
-                        frozen -> Tile.STATE_ACTIVE
+                        held > 0 -> Tile.STATE_ACTIVE
                         else -> Tile.STATE_INACTIVE
                     }
                     updateTile()
@@ -42,7 +43,7 @@ class FreezeTileService : TileService() {
         val app = application as? DelugeApp ?: return
         app.runInBackground {
             if (!app.prefs.freezeEnabledNow()) return@runInBackground
-            val result = if (app.prefs.freezeAppliedNow().isNotEmpty()) {
+            val result = if (app.freezeManager.heldNowCount() > 0) {
                 app.freezeManager.unfreezeAll()
             } else {
                 app.freezeManager.freezeAll()

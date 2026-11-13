@@ -82,6 +82,31 @@ class AppListFoldersTest {
     }
 
     @Test
+    fun `a folder never shares a two column row`() {
+        val cells = build(showFolders = true).toCells(twoColumn = true)
+        assertTrue(cells.rows.filterIsInstance<CellRow.Two>().none {
+            it.left is ListItem.FolderItem || it.right is ListItem.FolderItem
+        })
+        assertTrue(cells.rows.any { it is CellRow.One && it.item is ListItem.FolderItem })
+    }
+
+    @Test
+    fun `an unnamed folder files under its stand in name`() {
+        val unnamed = Folder(id = "f3", name = "  ", apps = emptyList())
+        val rows = buildAppListModel(
+            apps = listOf(alpha),
+            hidden = emptySet(),
+            displayName = { it.label },
+            folders = listOf(unnamed),
+            showFolders = true,
+            unnamedFolder = "Folder",
+        ).rows
+        val at = rows.indexOfFirst { it is AppListRow.FolderRow }
+        assertTrue(at > 0)
+        assertEquals("F", (rows[at - 1] as AppListRow.Header).text)
+    }
+
+    @Test
     fun `folders vanish when the setting is turned back off`() {
         assertFalse(build(showFolders = false).toCells(twoColumn = false).rows.any {
             it is CellRow.One && it.item is ListItem.FolderItem

@@ -148,7 +148,10 @@ fun AppListModel.toCells(twoColumn: Boolean): CellModel {
             }
             is AppListRow.Entry, is AppListRow.FolderRow -> {
                 val next = rows.getOrNull(i + 1)
-                val pairs = next != null && next !is AppListRow.Header &&
+                // A folder keeps a row of its own: half a row leaves its name a couple of
+                // characters wide, and the two-column switch is shared with the home screen.
+                val pairs = row !is AppListRow.FolderRow && next != null &&
+                    next !is AppListRow.Header && next !is AppListRow.FolderRow &&
                     groupOf(i + 1) == groupOf(i)
                 if (pairs) {
                     recordLetter(i + 1)
@@ -481,6 +484,8 @@ fun buildAppListModel(
     folders: List<Folder> = emptyList(),
     /** Whether folders stand in the alphabet. Off, the list is apps only. */
     showFolders: Boolean = false,
+    /** What an unnamed folder is called here, so it files under the letter it is shown with. */
+    unnamedFolder: String = "Folder",
     /** Heading and how many, for a section of what was installed most recently. */
     recentSection: Pair<String, Int>? = null,
     /** Whether names that are not A-Z file under kana rows and kanji, as a Japanese phone sorts. */
@@ -549,8 +554,13 @@ fun buildAppListModel(
     val foldersByLetter = if (!showFolders) {
         emptyMap()
     } else {
-        folders.groupBy {
-            filingLetter(it.name, renamed = true, pinyin = pinyin, japanese = japanese) { null }
+        folders.groupBy { folder ->
+            filingLetter(
+                folder.name.ifBlank { unnamedFolder },
+                renamed = true,
+                pinyin = pinyin,
+                japanese = japanese,
+            ) { null }
         }
     }
 
@@ -571,7 +581,7 @@ fun buildAppListModel(
                 app = null,
                 folder = folder,
                 count = 0,
-                order = folder.name.lowercase(java.util.Locale.ROOT),
+                order = folder.name.ifBlank { unnamedFolder }.lowercase(java.util.Locale.ROOT),
                 key = folderToken(folder.id),
             )
         }

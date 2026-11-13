@@ -21,27 +21,38 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowCompat
 import dev.delugelauncher.data.AppFont
+import dev.delugelauncher.data.DevScale
+import dev.delugelauncher.data.FocusSession
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.media.NowPlayingListenerService
+import dev.delugelauncher.service.FreezeAutoService
+import dev.delugelauncher.service.FreezeIntents
 import dev.delugelauncher.service.StatusBarFader
 import dev.delugelauncher.widget.ClockWidgetProvider
 import dev.delugelauncher.ui.DelugeNavHost
+import dev.delugelauncher.ui.focus.FocusOverlay
 import dev.delugelauncher.ui.common.IconConfig
 import dev.delugelauncher.ui.theme.widgetTypeface
 import dev.delugelauncher.ui.common.LaunchOrigin
 import dev.delugelauncher.ui.common.FreezeToast
 import dev.delugelauncher.ui.common.LocalIconConfig
+import dev.delugelauncher.ui.common.LocalLockedApps
 import dev.delugelauncher.ui.theme.DelugeTheme
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
@@ -89,6 +100,9 @@ class MainActivity : ComponentActivity() {
      */
     private var desiredStatusBarVisible: Boolean? = null
 
+    /** A peek of 0: the bar is hidden at once rather than faded out. */
+    private var hideStatusBarInstantly = false
+
     /**
      * Keystrokes taken on the home screen, as a growing list so none is dropped.
      *
@@ -123,6 +137,7 @@ class MainActivity : ComponentActivity() {
             val hideStatusBar by app.prefs.hideStatusBar.collectAsState(initial = false)
             val hideStatusBarAppList by app.prefs.hideStatusBarAppList.collectAsState(initial = false)
             val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
+            val devScalePercent by app.prefs.devScalePercent.collectAsState(initial = 100)
             val peekSeconds by app.prefs.statusBarPeekSeconds.collectAsState(initial = 5)
             // A short pull-down peeks the status bar, then it slides away again.
             var statusBarPeek by remember { mutableStateOf(false) }
@@ -141,9 +156,15 @@ class MainActivity : ComponentActivity() {
             // Keyed on the answer, not on what went into it. Re-asking for a state the bar is
             // already in restarts the fade, and a fade out begins by holding the bar fully
             // shown — so opening the list with both set to hide flashed it into view.
+            // A peek of 0 is someone who wants the bar gone, and a fade is the bar lingering.
+            hideStatusBarInstantly = peekSeconds == 0
             LaunchedEffect(statusBarVisible) {
                 desiredStatusBarVisible = statusBarVisible
-                StatusBarFader.setVisible(window, visible = statusBarVisible)
+                StatusBarFader.setVisible(
+                    window,
+                    visible = statusBarVisible,
+                    instant = hideStatusBarInstantly,
+                )
             }
 
             val font by app.prefs.font.collectAsState(initial = AppFont.SYSTEM)
@@ -183,6 +204,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             val iconPackPackage by app.prefs.iconPackPackage.collectAsState(initial = null)
+            val lockedApps by app.prefs.lockedApps.collectAsState(initial = null)
 
             val iconOverrides by app.prefs.iconOverrides.collectAsState(initial = emptyMap())
             val showAppIcons by app.prefs.showAppIcons.collectAsState(initial = true)
@@ -207,27 +229,53 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
+            val focus by app.prefs.focus.collectAsState(initial = FocusSession())
+            // Developer mode's fake screen size. Everything is laid out in dp, so scaling the
+            // density is what makes one phone stand in for another; 100 is no change at all.
+            val baseDensity = LocalDensity.current
+            val devDensity = remember(baseDensity, devScalePercent) {
+                if (devScalePercent == 100) {
+                    baseDensity
+                } else {
+                    Density(
+                        density = DevScale.density(baseDensity.density, devScalePercent),
+                        fontScale = baseDensity.fontScale,
+                    )
+                }
+            }
             DelugeTheme(
                 font = font,
                 fontFile = fontFile,
                 scheme = colorSchemeChoice,
                 forceDark = if (autoDark) nightNow else null,
             ) {
-                CompositionLocalProvider(LocalIconConfig provides iconConfig) {
-                    DelugeNavHost(
-                        app = app,
-                        homeIntentTick = homeIntentTick,
-                        typedToSearch = typedToSearch,
-                        onTypedToSearchHandled = { handled -> typedToSearch = typedToSearch - handled.toSet() },
-                        font = font,
-                        hideStatusBar = hideStatusBar,
-                        hideStatusBarAppList = hideStatusBarAppList,
-                        iconPackPackage = iconPackPackage,
+                CompositionLocalProvider(
+                    LocalIconConfig provides iconConfig,
+                    LocalLockedApps provides lockedApps,
+                    LocalDensity provides devDensity,
+                ) {
+                    Box(Modifier.fillMaxSize()) {
+                        DelugeNavHost(
+                            app = app,
+                            homeIntentTick = homeIntentTick,
+                            typedToSearch = typedToSearch,
+                            onTypedToSearchHandled = { handled -> typedToSearch = typedToSearch - handled.toSet() },
+                            font = font,
+                            hideStatusBar = hideStatusBar,
+                            hideStatusBarAppList = hideStatusBarAppList,
+                            iconPackPackage = iconPackPackage,
 
-                        iconOverrides = iconOverrides,
-                        onPeekStatusBar = { statusBarPeek = true },
-                        onAppListVisibleChange = { appListOpen = it },
-                    )
+                            iconOverrides = iconOverrides,
+                            onPeekStatusBar = { if (peekSeconds > 0) statusBarPeek = true },
+                            onAppListVisibleChange = { appListOpen = it },
+                        )
+                        if (focus.active) {
+                            FocusOverlay(
+                                session = focus,
+                                onExit = { app.runInBackground { app.prefs.setFocus(FocusSession()) } },
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -292,9 +340,18 @@ class MainActivity : ComponentActivity() {
         // already in restarts the fade, and a fade out begins by showing the bar in full.
         if (!hasFocus) return
         val want = desiredStatusBarVisible ?: return
+        // Coming back from an app, the system hides the bar again with a fade of its own, and
+        // the insets already read as hidden while it plays. An instant hide cuts that fade
+        // short, and costs nothing when the bar is already gone.
+        if (!want && hideStatusBarInstantly) {
+            StatusBarFader.setVisible(window, visible = false, instant = true)
+            return
+        }
         val actual = ViewCompat.getRootWindowInsets(window.decorView)
             ?.isVisible(WindowInsetsCompat.Type.statusBars()) ?: return
-        if (actual != want) StatusBarFader.setVisible(window, visible = want)
+        if (actual != want) {
+            StatusBarFader.setVisible(window, visible = want, instant = hideStatusBarInstantly)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -354,6 +411,10 @@ class MainActivity : ComponentActivity() {
             ACTION_UNFREEZE_ALL -> false
             else -> return false
         }
+        // The activity is exported, so an action alone proves nothing: anyone could send it.
+        // The token is written into the shortcut when it is published; keep it before the
+        // action is consumed below.
+        val token = intent.getStringExtra(FreezeIntents.EXTRA_TOKEN)
         // Consumed here: a configuration change hands the same intent to onCreate again, and
         // freezing the whole list twice for one tap is not what the shortcut meant.
         intent.action = null
@@ -361,18 +422,31 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             // A stale shortcut pressed after the feature was switched off must do nothing.
             if (!app.prefs.freezeEnabledNow()) return@launch
+            if (!FreezeIntents.matches(app.prefs.externalControlTokenNow(), token)) return@launch
             FreezeToast.progress(
                 this@MainActivity,
                 if (freeze) R.string.freeze_working else R.string.unfreeze_working,
             )
             val toast = if (freeze) {
-                val result = app.freezeManager.freezeAll()
-                if (result.noAccess) getString(R.string.freeze_needs_access)
-                else getString(R.string.freeze_many_done, result.done)
+                // A shortcut can be pressed while the phone is in use; keep the app in
+                // front (and anything with a notification) out of the batch.
+                val result = app.freezeManager.freezeAll(auto = true)
+                when {
+                    result.noAccess -> getString(R.string.freeze_needs_access)
+                    result.failed > 0 ->
+                        getString(R.string.freeze_many_partial, result.done, result.failed)
+                    else -> getString(R.string.freeze_many_done, result.done)
+                }
             } else {
                 val result = app.freezeManager.unfreezeAll()
-                if (result.noAccess) getString(R.string.freeze_needs_access)
-                else getString(R.string.freeze_all_done)
+                when {
+                    result.noAccess -> getString(R.string.freeze_needs_access)
+                    result.failed > 0 ->
+                        getString(R.string.unfreeze_many_partial, result.done, result.failed)
+                    result.keptPermanent > 0 ->
+                        getString(R.string.freeze_unfrozen_pinned, result.done, result.keptPermanent)
+                    else -> getString(R.string.freeze_all_done)
+                }
             }
             FreezeToast.result(this@MainActivity, toast)
         }
@@ -395,6 +469,17 @@ class MainActivity : ComponentActivity() {
         // it stops being the thing on screen. Hiding it also force-stops it, so nothing of it
         // keeps running behind the lock.
         app.runInBackground { runCatching { app.appRepository.rehideLockedApps() } }
+        // Shizuku can be started after the launcher was already running; re-ping on every
+        // return, but the manager's TTL keeps that to one probe per ten seconds.
+        app.runInBackground { runCatching { app.freezeManager.refreshAccessQuietly() } }
+        // Sleep rules share the freeze watcher. Starting it from the Application could be
+        // refused on Android 12+ because there was no foreground at that moment; here there
+        // is one, and a rule that exists gets a service that can actually hear the network.
+        app.runInBackground {
+            if (app.prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.sync(this, enabled = true)
+            }
+        }
         // The clock widget's own rows go stale on their own — an event passes, an alarm is
         // set, "in 20 minutes" stops being true. Half an hour is the shortest the system will
         // wake a widget on a schedule, so the other half of keeping it honest is redrawing it

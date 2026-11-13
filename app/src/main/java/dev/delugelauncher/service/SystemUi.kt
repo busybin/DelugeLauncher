@@ -8,6 +8,7 @@ import android.provider.Settings
 import android.widget.Toast
 import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.R
+import dev.delugelauncher.data.DeviceOwnerPolicy
 import dev.delugelauncher.data.FreezeAccess
 import dev.delugelauncher.data.FreezeShell
 
@@ -18,6 +19,9 @@ object SystemUi {
 
     /** Probes root once per process; a refused prompt is retried by FreezeShell. */
     private var shell: FreezeShell? = null
+
+    /** Also probes the admin; kept next to the shell for the same reason. */
+    private var owner: DeviceOwnerPolicy? = null
 
     /**
      * Pulls down the notification shade.
@@ -57,21 +61,29 @@ object SystemUi {
      * block on a prompt, so this is meant to be called off the main thread.
      */
     fun canLockScreen(context: Context): Boolean =
-        DelugeAccessibilityService.isConnected || elevatedReady(context)
+        DelugeAccessibilityService.isConnected ||
+            policy(context).adminActive ||
+            elevatedReady(context)
 
     /** The accessibility action is instant and needs no shell grant. */
     fun lockScreenNow(): Boolean = DelugeAccessibilityService.lockScreen()
 
     /**
-     * Locks the screen through root or Shizuku by pressing the sleep key. Shell access can
-     * wait on a root prompt, so call this off the main thread.
+     * Locks the screen through the device admin, root or Shizuku, in that order. The policy
+     * call is instant; shell access can wait on a root prompt, so call this off the main
+     * thread.
      */
     fun lockScreenElevated(context: Context): Boolean =
-        shell(context).run(LOCK_SCREEN_COMMAND)
+        policy(context).lockNow() || shell(context).run(LOCK_SCREEN_COMMAND)
 
     private fun elevatedReady(context: Context): Boolean = runCatching {
         shell(context).status().access != FreezeAccess.NONE
     }.getOrDefault(false)
+
+    private fun policy(context: Context): DeviceOwnerPolicy =
+        owner ?: synchronized(this) {
+            owner ?: DeviceOwnerPolicy(context.applicationContext).also { owner = it }
+        }
 
     private fun shell(context: Context): FreezeShell =
         shell ?: synchronized(this) {

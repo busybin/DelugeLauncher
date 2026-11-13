@@ -1,5 +1,54 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v31">
+        <item>Cortafuegos por aplicación: corta el internet de las apps que elijas mientras el resto sigue en línea. Cada app sigue la congelación, sigue bloqueada o sigue en línea; las apps protegidas y la app de teléfono no se tocan nunca, y una app instalada con el cortafuegos activo se une a la lista.</item>
+        <item>El cortafuegos tiene su propia página: búsqueda, apps del sistema, un filtro por estado y recuentos de apps bloqueadas, en espera y sin confirmar. Android olvida estas reglas al reiniciar, así que se vuelven a escribir al arrancar.</item>
+        <item>La lista de congelación ahora es una sola tabla: todas las apps del teléfono, el método de cada una y si está congelada. El método se elige por app (Detener, Suspender, Desactivar, Ocultar) y una página de comparación dice qué sobrevive con cada uno.</item>
+        <item>La congelación permanente sustituye al antiguo fijado: una app permanente sigue congelada al descongelar todo, al liberar una carpeta, al salir del modo entrega y en un descongelado automático. Descongelar esa app sigue funcionando, y la lista puede mostrar solo las entradas permanentes.</item>
+        <item>Elige un método predeterminado para las entradas nuevas, añade o quita varias apps a la vez desde la barra de selección y desactiva la congelación desde la página de congelación.</item>
+        <item>La app de teléfono y los paquetes críticos del sistema ya no se pueden congelar por accidente; la fila dice por qué está retenida.</item>
+        <item>Descongelar una app que una versión anterior suspendió con otra identidad ya funciona: la suspensión se levanta con el nombre que el sistema registró, no solo con el actual.</item>
+        <item>Carpetas: el nombre se queda en una línea y ocupa toda la fila en el diseño de dos columnas, los nombres de las apps pasan a dos líneas y una carpeta puede quedar sin nombre. Abrir una carpeta en dos columnas muestra sus miembros en una ventana emergente.</item>
+        <item>Una app bloqueada sigue suspendida, no solo oculta, así que Ajustes no puede devolverla al lanzador.</item>
+        <item>Desinstalar la app que presta el canal de congelación, Shizuku o el gestor de root, avisa de que las apps congeladas podrían ya no poder descongelarse.</item>
+        <item>Opciones de desarrollador: escala de pantalla, para probar el diseño con un tamaño de teléfono distinto.</item>
+    </string-array>
+    <string-array name="changelog_v30">
+        <item>Los gestos de borde se pueden desactivar: el diálogo de la tira A–Z tiene ahora una fila de posición (izquierda, derecha, ambos) y otra de gestos (izquierda, derecha, ambos, desactivado), y Desactivado también impide que un toque en el borde abra la lista de aplicaciones.</item>
+        <item>Se pueden fijar entradas de la lista de congelación: una app fijada sigue congelada al descongelar todo, al liberar una carpeta, al salir del modo entrega o en un descongelado automático. Congelar y descongelar una sola app no cambia.</item>
+        <item>Congela o descongela una sola app dentro de una carpeta abierta: mantén pulsado un miembro y usa el mismo menú que en la lista de aplicaciones.</item>
+        <item>Congelar una carpeta ahora solo toca las apps que ya están en la lista; el resto se queda igual y el aviso dice cuántas se omitieron.</item>
+        <item>Pantallas bajas: la ventana de congelación automática, Seleccionar todo, Invertir, el interruptor de apps del sistema y el diálogo del método de congelación llegan hasta abajo.</item>
+        <item>Ajustes muestra todas las opciones a la vez. Ya no hay interruptor de ajustes avanzados; las tarjetas se agrupan por lo que cambian y la tira A–Z tiene la suya.</item>
+        <item>La tira A–Z puede ir a la izquierda, a la derecha o en ambos lados, y la pantalla de inicio y la lista de aplicaciones se apartan para dejarle sitio.</item>
+        <item>Las acciones en bloque dicen lo que pasó: Descongelar todo cuenta solo lo que sigue congelado, liberar una carpeta cuenta solo lo que descongeló y una importación parcial dice cuántas entradas no pudo aplicar.</item>
+        <item>Un estado que no se puede leer ya no cuenta como congelado ni como descongelado, una app desinstalada ya no cuenta como fallo y una tabla de ajustes dañada se rechaza en vez de sobrescribirse.</item>
+    </string-array>
+    <string-array name="changelog_v29">
+        <item>Congelar tiene su propia pantalla: Detener, Suspender, Desactivar y Ocultar tienen pestaña, y una tabla dice qué canal puede con cada una.</item>
+        <item>Congela sin root ni Shizuku: haz que Deluge sea el propietario del dispositivo, o deja que Dhizuku preste sus permisos, y Suspender u Ocultar funciona solo con el teléfono.</item>
+        <item>Mantén pulsada una carpeta para congelar o descongelar de una vez todas las apps que contiene.</item>
+        <item>Contrólalo desde un script: emisiones y enlaces deluge:// congelan o descongelan una app o toda la lista, así que Tasker y los atajos también pueden.</item>
+        <item>Reglas de sueño: congela o despierta la lista por Wi-Fi, auriculares, franja horaria, carga o nivel de batería.</item>
+        <item>Límites diarios: elige cuántas veces puede abrirse una app al día; al llegar, queda congelada hasta mañana.</item>
+        <item>Sin abrir en 90 días: una lista de un toque con las apps olvidadas; añádelas a la lista de congelación desde ahí.</item>
+        <item>Modo concentración: mantén pulsada una app para entregar el teléfono mostrando solo esa; al desbloquear vuelve el resto.</item>
+        <item>Modo entrega y dos mosaicos nuevos: entrega el teléfono con todo congelado y bloquea el espacio privado desde el panel.</item>
+        <item>Copias cifradas: exporta con contraseña; una contraseña incorrecta al importar no toca la configuración actual.</item>
+        <item>El color de las notificaciones ahora se elige, y las apps en pausa de un perfil de trabajo se atenúan como las suspendidas.</item>
+        <item>Arreglos menores: los ajustes sobreviven a un archivo de preferencias dañado, y los bloqueos de apps se reconstruyen después.</item>
+</string-array>
+    <string-array name="changelog_v28">
+        <item>Las carpetas pueden llevar la tarjeta En reproducción: mantén pulsada una carpeta y elige «Añadir En reproducción». La tarjeta se abre con la carpeta, aunque no suene nada.</item>
+        <item>Los deslizamientos de inicio rápido llegan ahora al borde inferior de la pantalla de inicio, aunque los favoritos lo llenen.</item>
+        <item>Los botones dentro de una carpeta abierta ya no pierden sus toques contra la franja del borde que abre la lista de aplicaciones.</item>
+        <item>Con la barra de estado a 0 segundos, la barra se oculta al instante, también al volver desde una aplicación.</item>
+        <item>Todos los widgets de inicio se pueden apilar, cada uno con su altura.</item>
+        <item>La tira A-Z puede moverse como una campana o como una onda, con controles de velocidad, amortiguación y rigidez.</item>
+        <item>La burbuja de la letra en la tira A-Z puede ser redondeada, circular, cuadrada u oculta.</item>
+        <item>Los miembros de una carpeta muestran sus notificaciones más recientes, y un deslizamiento lateral borra una línea.</item>
+        <item>El ajuste de atenuar el fondo ahora indica que atenúa el fondo de pantalla.</item>
+    </string-array>
     <string-array name="changelog_v27">
         <item>El texto de las notificaciones bajo los favoritos muestra hasta tres por aplicación, las más recientes primero. Toca una para abrirla, y ajusta su tamaño de letra.</item>
         <item>Un punto junto al nombre cuando los iconos están ocultos y la aplicación tiene notificaciones.</item>
@@ -11,8 +60,13 @@
         <item>Un panel de notificaciones que se abre deslizando desde la pantalla de inicio: cada notificación con sus botones y un cuadro de respuesta.</item>
         <item>Las reglas de favoritos muestran u ocultan favoritos según Wi-Fi, hora, auriculares o un límite diario de aperturas.</item>
         <item>La pantalla de congelación explica el espacio privado de Android 15 cuando el teléfono lo tiene.</item>
+        <item>El bloqueo de apps ahora cubre notificaciones, accesos directos, la tarjeta de reproducción, el botón de cámara y los widgets: todos piden el bloqueo de pantalla antes de abrir.</item>
+        <item>Una app bloqueada ya no deja un registro de congelación que pudiera mantenerla desactivada al desbloquear; la lista de congelación sobrevive a reinstalar Deluge.</item>
+        <item>El selector de método de congelación muestra cuántas apps instaladas hay en cada método, y los favoritos se pueden ocultar desde su menú de pulsación larga.</item>
+        <item>El tiempo de bloqueo ahora indica cuánto sigue abierta una app desbloqueada antes de volver a bloquearse.</item>
         <item>Los 8 idiomas completos.</item>
     </string-array>
+
     <string-array name="changelog_v26">
         <item>Apps protegidas, activado por defecto: el teclado actual, la app de inicio, los servicios de accesibilidad, Shizuku y los gestores de root nunca se congelan.</item>
         <item>Las apps del perfil de trabajo y del espacio privado también se pueden congelar, cada perfil por separado aunque el paquete se llame igual.</item>

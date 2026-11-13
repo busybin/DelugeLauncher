@@ -7,6 +7,8 @@ import android.app.Application
 import dev.delugelauncher.data.AppLock
 import dev.delugelauncher.data.AppRepository
 import dev.delugelauncher.data.FreezeManager
+import dev.delugelauncher.data.FreezeNetworkShell
+import dev.delugelauncher.data.NetworkManager
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.CrashLog
 import dev.delugelauncher.data.Prefs
@@ -18,6 +20,8 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 
 class DelugeApp : Application() {
@@ -38,6 +42,8 @@ class DelugeApp : Application() {
     lateinit var appRepository: AppRepository
         private set
     lateinit var freezeManager: FreezeManager
+        private set
+    lateinit var networkManager: NetworkManager
         private set
     lateinit var iconPackRepository: IconPackRepository
         private set
@@ -71,10 +77,77 @@ class DelugeApp : Application() {
         CrashLog.install(this)
         prefs = Prefs(this)
         freezeManager = FreezeManager(this, prefs)
+        networkManager = NetworkManager(this, prefs, FreezeNetworkShell(freezeManager.networkShell))
         appRepository = AppRepository(this, prefs, appScope, freezeManager)
+        // The status the settings and access screens draw is a probe, not a default. Do it
+        // once, off the main thread, before the first frame can show "no access".
+        //
+        // The restore below runs after it in the same coroutine on purpose: a reinstall has
+        // no channel recorded yet, so asking before the probe would answer "no access" and
+        // skip the very restore that this start exists for.
+        appScope.launch {
+            runCatching { freezeManager.checkAccessOnStart() }
+            // Try the restore directly instead of asking whether a channel "should" be there:
+            // on a fresh install the answer is computed before the binder connects, and the
+            // list was skipped exactly when the user needed it back. A call without a channel
+            // fails immediately and changes nothing.
+            var restored = false
+            repeat(8) {
+                if (restored) return@repeat
+                restored = runCatching { freezeManager.restoreBackupIfNeeded() }.getOrDefault(false)
+                if (!restored) kotlinx.coroutines.delay(1500)
+            }
+            if (!restored) return@launch
+            if (freezeManager.hasFreezePlan() || freezeManager.hasLockedApps()) {
+                // Only a restore needs its layers rebuilt here. A normal cold start must not
+                // suspend/hide a locked app the owner is already using.
+                runCatching { appRepository.rehideLockedApps() }
+                runCatching { appRepository.syncLockGuard() }
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
+        appScope.launch {
+            freezeManager.changes.filter { it > 0 }.collect {
+                runCatching { freezeManager.writeBackup() }
+                // Following the freeze is the default answer, so every freeze or release is
+                // a change to the desired set; reconcile here rather than only when the
+                // firewall's own page is open.
+                if (prefs.networkModeNow().enabled) runCatching { networkManager.sync() }
+            }
+        }
+        // Pinning is a change to the freeze record too, but it goes through the list setter
+        // rather than the manager, so `changes` never sees it. Without this, the copy outside
+        // the app data keeps the old pins until something else happens to be frozen.
+        appScope.launch {
+            prefs.freezePinned.drop(1).collect {
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
+        // Locks hide and suspend apps too; their record needs the same out-of-data copy.
+        appScope.launch {
+            prefs.lockedApps.drop(1).collect {
+                runCatching { freezeManager.writeBackup() }
+            }
+        }
         // A list saved by an older build has no guard yet. This writes it before the first
         // lock tap, and does nothing where root is unavailable.
         appScope.launch { runCatching { appRepository.syncLockGuard() } }
+        // A limit freeze ends with the calendar day, which may have passed while this was shut.
+        appScope.launch {
+            runCatching { appRepository.reconcileLimitFreezes() }
+            // The lift is handed straight to the rules: an app a rule keeps asleep must be
+            // frozen again now, not at the next network, battery or clock event.
+            if (prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.applyRulesNow(this@DelugeApp, "limit")
+            }
+        }
+        // Sleep rules need the same watcher as the screen-off freeze; it is the service that
+        // hears the network and the clock, so a rule with the freeze trigger off still works.
+        appScope.launch {
+            if (prefs.sleepRulesNow().any { it.enabled }) {
+                FreezeAutoService.sync(this@DelugeApp, true)
+            }
+        }
         iconPackRepository = IconPackRepository(this)
         widgetHost = DelugeAppWidgetHost(this, HOST_ID)
         // Nothing else keeps the clock widget's battery line current; see the object.
@@ -108,6 +181,9 @@ class DelugeApp : Application() {
             object : android.content.BroadcastReceiver() {
                 override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
                     val packageName = intent.data?.schemeSpecificPart ?: return
+                    // Freeze records survive this package's uninstall and reinstall on purpose:
+                    // the list is the user's choice, not a fact that dies with the APK. Only
+                    // the lock's own hide/suspend layer is repaired here.
                     appScope.launch {
                         if (!appRepository.isLockRevealActive(packageName)) {
                             appRepository.rehideLockedApps(only = packageName)
@@ -132,13 +208,20 @@ class DelugeApp : Application() {
             kotlinx.coroutines.flow.combine(
                 prefs.freezeEnabled,
                 prefs.freezeAutoEnabled,
-            ) { feature, auto -> feature && auto }.collect { enabled ->
-                FreezeAutoService.sync(this@DelugeApp, enabled)
-            }
+                prefs.sleepRules,
+            ) { feature, auto, rules -> feature && (auto || rules.any { it.enabled }) }
+                .collect { enabled ->
+                    FreezeAutoService.sync(this@DelugeApp, enabled)
+                }
         }
         // The long-press shortcuts are part of the feature, so they appear and disappear with it.
         appScope.launch {
-            prefs.freezeEnabled.collect { enabled ->
+            // The token is part of the shortcut intent; re-publishing on a rotation keeps the
+            // old shortcut from silently stopping working.
+            kotlinx.coroutines.flow.combine(
+                prefs.freezeEnabled,
+                prefs.externalControlToken,
+            ) { enabled, _ -> enabled }.collect { enabled ->
                 FreezeShortcuts.sync(this@DelugeApp, enabled)
             }
         }

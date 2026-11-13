@@ -28,6 +28,15 @@ class FreezeBootReceiver : BroadcastReceiver() {
                     if (prefs.freezeEnabledNow() && prefs.freezeAutoEnabledNow()) {
                         FreezeAutoService.sync(appContext, true)
                     }
+                    // chain3 keeps nothing across a reboot: put the firewall's rules back
+                    // before the user sees an app that was meant to be offline. Nothing to do
+                    // when the feature was never on.
+                    val network = (appContext as? dev.delugelauncher.DelugeApp)?.networkManager
+                    if (network != null &&
+                        (prefs.networkModeNow().enabled || prefs.networkAppliedNow().isNotEmpty())
+                    ) {
+                        network.sync()
+                    }
                 }
             } finally {
                 pending.finish()

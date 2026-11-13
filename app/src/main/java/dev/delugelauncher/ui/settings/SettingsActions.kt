@@ -104,6 +104,7 @@ import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppFont
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.CornerAction
@@ -184,6 +185,8 @@ class SettingsActionsA(
     val onSetFavoritesSource: (FavoritesSource) -> Unit,
     val onSetFrequentCount: (Int) -> Unit,
     val onSetScreenshotMode: (Boolean) -> Unit,
+    /** Developer mode's fake screen density, in percent; 100 is the device as it is. */
+    val onSetDevScalePercent: (Int) -> Unit,
     val onSetIconPack: (String?) -> Unit,
     val onSetShowAppIcons: (Boolean) -> Unit,
     val onSetIconSize: (Int) -> Unit,
@@ -215,6 +218,7 @@ class SettingsActionsB(
     val onSetDoubleTapToLock: (Boolean) -> Unit,
     val onSetEdgeSide: (EdgeSide) -> Unit,
     val onSetEdgeZoneWidth: (Int) -> Unit,
+    val onSetAzStripSide: (AzStripSide) -> Unit,
     val onSetAzStripVisibility: (AzStripVisibility) -> Unit,
     val onSetShowAlphabet: (Boolean) -> Unit,
     val onSetSortByUsage: (Boolean) -> Unit,

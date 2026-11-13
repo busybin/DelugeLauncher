@@ -72,8 +72,11 @@ fun NotificationPanelScreen(
     accessGranted: Boolean,
     /** Whether the setting that keeps notifications for this screen is on. */
     panelEnabled: Boolean,
-    /** Opens a notification's app when the notification itself has no intent to run. */
-    onOpenApp: (AppInfo) -> Unit,
+    /**
+     * Opens a notification, with the app it came from when one is installed. The caller
+     * checks the app lock before either the notification's own intent or the app row runs.
+     */
+    onOpenNotification: (NotificationEntry, AppInfo?) -> Unit,
     onOpenSettings: () -> Unit,
     /** Whether a gesture that opens the panel is available at all, for the empty-state hint. */
     onBack: () -> Unit,
@@ -213,10 +216,7 @@ fun NotificationPanelScreen(
                             draft = ""
                         },
                         onAction = { action -> NotificationGateway.send(context, action) },
-                        onOpen = {
-                            val opened = NotificationGateway.open(context, entry)
-                            if (!opened) appsByAppKey[appKey]?.let(onOpenApp)
-                        },
+                        onOpen = { onOpenNotification(entry, appsByAppKey[appKey]) },
                         onDismiss = {
                             NotificationGateway.dismiss(entry.notificationKey)
                             if (replyingTo == entry.notificationKey) replyingTo = null

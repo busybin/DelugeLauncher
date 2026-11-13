@@ -29,8 +29,14 @@ class FreezePlanFileTest {
     fun `another version or junk is refused`() {
         assertNull(FreezePlanFile.decode(""))
         assertNull(FreezePlanFile.decode("not json"))
-        assertNull(FreezePlanFile.decode("{\"version\":2,\"apps\":[]}"))
+        // Version 3 is what this build writes now, so it is read; a version this build does
+        // not know is still refused. The flags it carries are covered by FreezePlanFilePinnedTest.
+        assertEquals(
+            emptyMap<String, FreezePlanFile.Entry>(),
+            FreezePlanFile.decode("{\"version\":3,\"apps\":[]}"),
+        )
         assertNull(FreezePlanFile.decode("{\"version\":1}"))
+        assertNull(FreezePlanFile.decode("{\"version\":4,\"apps\":[]}"))
     }
 
     @Test

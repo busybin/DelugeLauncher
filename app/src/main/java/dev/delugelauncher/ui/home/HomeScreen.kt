@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.home
 
 import dev.delugelauncher.ui.common.DelugeIcons
+import dev.delugelauncher.ui.focus.FocusMenuItem
 
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
@@ -21,7 +22,6 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.gestures.calculateZoom
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
@@ -61,6 +61,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -68,6 +69,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Info
@@ -81,6 +83,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -92,6 +95,7 @@ import androidx.compose.material3.LocalTextStyle
 import dev.delugelauncher.ui.theme.launcherTextShadow
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
@@ -113,6 +117,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -133,6 +138,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.targetKind
@@ -146,12 +153,14 @@ import dev.delugelauncher.media.NotificationGateway
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.HomeAlignment
+import dev.delugelauncher.data.AzStripSide
+import dev.delugelauncher.ui.applist.STRIP_LETTER_REACH_DP
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.HomePaddings
 import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.data.PaddingSlot
+import dev.delugelauncher.media.NowPlayingBus
 import dev.delugelauncher.media.NowPlayingWidget
-import dev.delugelauncher.media.openNowPlayingApp
 import dev.delugelauncher.service.HapticUtil
 import androidx.compose.runtime.CompositionLocalProvider
 import dev.delugelauncher.ui.common.AppIcon
@@ -159,6 +168,9 @@ import dev.delugelauncher.ui.common.swipeForShortcuts
 import dev.delugelauncher.ui.common.AppShortcutMenu
 import dev.delugelauncher.ui.common.FreezeActions
 import dev.delugelauncher.ui.common.FreezeMenuItems
+import dev.delugelauncher.ui.common.LocalNetworkActions
+import dev.delugelauncher.ui.common.NetworkMenuItems
+import dev.delugelauncher.ui.common.NetworkSubmenu
 import dev.delugelauncher.ui.common.FreezeRemoveMenuItem
 import dev.delugelauncher.ui.common.FreezeMethodDialog
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
@@ -254,12 +266,18 @@ fun HomeScreen(
     notificationPreviews: Map<String, List<NotificationEntry>> = emptyMap(),
     /** Point size for those lines. */
     notificationTextSp: Int = 12,
+    notificationColor: Int = 0,
     iconSizeDp: Int,
     labelSizeSp: Int,
     itemSpacingDp: Int,
     sidePaddingDp: Int,
     widgetSidePaddingDp: Int,
     widgetOffsetXDp: Int,
+    /** How wide the edge zone's live strip is on each side, so folder controls stay clear. */
+    edgeZoneStartDp: Dp = 0.dp,
+    edgeZoneEndDp: Dp = 0.dp,
+    /** The side an always-on A-Z strip is showing on, or null while it is hidden. */
+    visibleStripSide: AzStripSide? = null,
     onSetSidePadding: (Int) -> Unit,
     onSetWidgetSidePadding: (Int) -> Unit,
     onSetWidgetOffsetX: (Int) -> Unit,
@@ -274,6 +292,7 @@ fun HomeScreen(
     folderDisguise: Map<String, String>,
     widgetPosition: Int,
     widgetHeightDp: Int,
+    widgetsStacked: Boolean,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
     widgetTick: Int,
     hapticFeedback: HapticFeedback,
@@ -282,7 +301,11 @@ fun HomeScreen(
     onResizeNowPlaying: (Int) -> Unit,
     widgetActions: WidgetSlotActions,
     onLaunch: (AppInfo) -> Unit,
+    /** Starts whatever is playing, through the app lock gate when it is a locked app. */
+    onOpenNowPlaying: () -> Boolean = { false },
     onRemoveFavorite: (AppInfo) -> Unit,
+    /** Hides a favorite from the home screen and the app list. */
+    onHideFavorite: (AppInfo) -> Unit,
     onOpenFolderApp: (AppInfo) -> Unit,
     onRemoveFromFolder: (Folder, AppInfo) -> Unit,
     onRenameFolder: (Folder, String) -> Unit,
@@ -292,6 +315,12 @@ fun HomeScreen(
     /** Set when folders are also in the app list, where one taken off here still lives. */
     onRemoveFolderFromHome: ((Folder) -> Unit)? = null,
     onManageFolder: (Folder) -> Unit,
+    /**
+     * Freezes the listed members of a folder and releases the frozen ones; members outside
+     * the freeze list are left alone. Null when freezing is switched off.
+     */
+    onFreezeFolder: ((List<AppInfo>) -> Unit)? = null,
+    onUnfreezeFolder: ((List<AppInfo>) -> Unit)? = null,
     onMoveToFolder: (AppInfo) -> Unit,
     appsByKey: Map<String, AppInfo>,
     onReorderHome: (newFavoriteKeys: List<String>, newWidgetPosition: Int) -> Unit,
@@ -379,7 +408,9 @@ fun HomeScreen(
     onUnfreezeAll: () -> Unit = {},
     /** Opens the freeze screen itself from the same menu. */
     onOpenFreezeList: () -> Unit = {},
-) {    // Appended at the point of showing rather than stored in the label, so a rename still
+) {
+    val networkActions = LocalNetworkActions.current
+    // Appended at the point of showing rather than stored in the label, so a rename still
     // wins and turning this off needs no re-reading of every app. The disguise wins over
     // everything while it is on: a rename is exactly what must not show.
     val workSuffix = stringResource(R.string.app_work_suffix)
@@ -388,6 +419,10 @@ fun HomeScreen(
         val base = nameOverrides[app.key] ?: app.label
         return if (markWorkApps && app.work) base + workSuffix else base
     }
+
+    // What a folder holds right now, computed the same way the row draws it.
+    fun folderMembers(folder: Folder): List<AppInfo> =
+        folder.apps.mapNotNull { appsByKey[it] }.filterNot { it.key in hiddenApps }
 
     var menuForKey by remember { mutableStateOf<String?>(null) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
@@ -631,7 +666,10 @@ fun HomeScreen(
     // Survives rotation and trips to settings: without it every return lands back on top,
     // which on a long favorites list is losing your place for nothing.
     var savedOffsetY by rememberSaveable { mutableFloatStateOf(0f) }
-    var offsetRestored by rememberSaveable { mutableStateOf(false) }
+    // Not saveable on purpose: it records "this composition has already run the restore",
+    // and a restored true would skip the very restore it is meant to gate, leaving the
+    // freshly created Animatable at zero after a rotation.
+    var offsetRestored by remember { mutableStateOf(false) }
     DisposableEffect(Unit) {
         onDispose { savedOffsetY = offsetY.value }
     }
@@ -680,6 +718,25 @@ fun HomeScreen(
     val gestureInsetRightPx = WindowInsets.systemGestures.getRight(density, layoutDir).toFloat()
     /** Where a grab handle at the end of a row sits: clear of the back gesture. */
     val dragHandleInsetDp = with(density) { gestureInsetRightPx.toDp() } + EDIT_CONTROL_END_INSET
+    // Controls inside an open folder — the Now Playing card's buttons, a widget's height
+    // stepper — run to the far end, which is where the edge zone that opens the app list
+    // lives. They make up that width so the zone does not take their taps.
+    val folderControlsInset = if (edgeZoneStartDp == 0.dp && edgeZoneEndDp == 0.dp) {
+        Modifier
+    } else {
+        Modifier.padding(start = edgeZoneStartDp, end = edgeZoneEndDp)
+    }
+    // An always-on strip reaches this far in from its edge. Rows and widgets already inset
+    // themselves — a row by one padding less its 8dp inner gutter — so the one that starts
+    // closest to the edge decides how much the whole column still has to move.
+    val stripExtraDp = (STRIP_LETTER_REACH_DP -
+        minOf((sidePaddingDp - 8).coerceAtLeast(0), widgetSidePaddingDp)).coerceAtLeast(0f).dp
+    val stripInsetStartDp = if (
+        visibleStripSide == AzStripSide.LEFT || visibleStripSide == AzStripSide.BOTH
+    ) stripExtraDp else 0.dp
+    val stripInsetEndDp = if (
+        visibleStripSide == AzStripSide.RIGHT || visibleStripSide == AzStripSide.BOTH
+    ) stripExtraDp else 0.dp
     // The button's placement frame and the spot it should be at: the stored value once
     // there is one, otherwise the default. Computed, never stored, so a fresh install and
     // a rotation both land somewhere sane.
@@ -772,6 +829,18 @@ fun HomeScreen(
                 viewportWidth = it.width
             }
             .onGloballyPositioned { rootY = it.positionInWindow().y }
+            // A finger landing on the list takes it from a settling fling at once, not only
+            // once it has travelled past the touch slop. Watched, never consumed.
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.changes.any { it.pressed && !it.previousPressed }) {
+                            scope.launch { offsetY.stop() }
+                        }
+                    }
+                }
+            }
             // Two fingers resize the icons; one finger is left entirely to the drag below,
             // which is why nothing is consumed until a second pointer is actually down.
             .then(
@@ -866,8 +935,13 @@ fun HomeScreen(
                     // Queued per-increment snaps must not keep landing after the finger lifts,
                     // and the fling must not race them on the same value.
                     dragGeneration++
+                    val generation = dragGeneration
                     offsetY.stop()
                     dragMutex.withLock {
+                        // A finger that landed while this gesture was still queued for the
+                        // lock owns the list now. Running the fling anyway would hold the
+                        // lock for its whole spring and swallow that drag until it settled.
+                        if (generation != dragGeneration) return@withLock
                         val decay = exponentialDecay<Float>(frictionMultiplier = 1.6f)
                         val target = decay.calculateTargetValue(offsetY.value, velocity)
                             .coerceIn(minOffset, 0f)
@@ -886,28 +960,53 @@ fun HomeScreen(
                 // Only worth a pointer handler when something is actually bound to it.
                 if (quickLaunchEnabled) {
                     Modifier.pointerInput(editMode, contentHeight) {
-                        var eligible = false
-                        var travelled = 0f
-                        detectHorizontalDragGestures(
-                            onDragStart = { start ->
-                                // The empty space under the whole stack. Anywhere higher is a
-                                // row, the widget, or Now Playing, and belongs to them.
-                                eligible = !editMode && start.y > offsetY.value + contentHeight
-                                travelled = 0f
-                            },
-                            onDragEnd = {
-                                if (eligible && abs(travelled) > quickLaunchPx) {
-                                    onQuickLaunch(
-                                        if (travelled < 0f) QuickLaunchSlot.LEFT else QuickLaunchSlot.RIGHT
-                                    )
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val slop = viewConfiguration.touchSlop
+                            var accX = 0f
+                            var accY = 0f
+                            var travelled = 0f
+                            var claimed = false
+                            // The empty space under the whole stack, and the bottom of the
+                            // screen even when the favorites reach it, for a list too long
+                            // to leave any space. A row that swipes for its shortcuts
+                            // still claims the gesture first.
+                            val eligible = !editMode && (
+                                down.position.y > offsetY.value + contentHeight ||
+                                    down.position.y > size.height * (1f - QUICK_LAUNCH_BOTTOM_FRACTION)
+                                )
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                val dx = change.position.x - change.previousPosition.x
+                                val dy = change.position.y - change.previousPosition.y
+                                if (!claimed) {
+                                    accX += dx
+                                    accY += dy
+                                    // Mostly up-and-down is the list's drag, and the stock
+                                    // horizontal detector took it anyway: it spent the slop
+                                    // the moment sideways crossed it, and the list stayed
+                                    // stuck until the finger lifted and started again.
+                                    if (abs(accY) > slop && abs(accY) > abs(accX)) break
+                                    // Clearly sideways: only now is the swipe ours.
+                                    if (
+                                        abs(accX) > slop &&
+                                        abs(accX) > QUICK_LAUNCH_DOMINANCE * abs(accY)
+                                    ) {
+                                        claimed = true
+                                        travelled = accX
+                                        change.consume()
+                                    }
+                                } else {
+                                    travelled += dx
+                                    change.consume()
                                 }
-                                eligible = false
-                            },
-                            onDragCancel = { eligible = false },
-                        ) { change, dx ->
-                            if (eligible) {
-                                change.consume()
-                                travelled += dx
+                            }
+                            if (claimed && eligible && abs(travelled) > quickLaunchPx) {
+                                onQuickLaunch(
+                                    if (travelled < 0f) QuickLaunchSlot.LEFT else QuickLaunchSlot.RIGHT
+                                )
                             }
                         }
                     }
@@ -966,6 +1065,8 @@ fun HomeScreen(
                 )
                 .align(alignment.wideScreenAlignment())
                 .fillMaxWidth()
+                // Keeps the rows, widgets and folder cards out from under an always-on strip.
+                .padding(start = stripInsetStartDp, end = stripInsetEndDp)
                 .then(
                     // Edit mode roughly doubles the stack's height and its handles are
                     // themselves drag targets, so it needs ordinary scrolling.
@@ -1078,6 +1179,7 @@ fun HomeScreen(
                     touchPosition = touchPosition,
                     menuExpanded = nowPlayingMenu,
                     menuOffset = nowPlayingMenuOffset,
+                    onOpenNowPlaying = onOpenNowPlaying,
                     onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
                     onDismissMenu = { nowPlayingMenu = false },
                     onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
@@ -1129,7 +1231,12 @@ fun HomeScreen(
                             while (i < displayItems.size) {
                                 val item = displayItems[i]
                                 val next = displayItems.getOrNull(i + 1)
-                                if (item !is HomeItem.Widget && next != null && next !is HomeItem.Widget) {
+                                // Folders stand alone for the same reason widgets do: a row
+                                // that opens into more rows needs the width, and half of a
+                                // narrow screen leaves its name one letter wide.
+                                if (item !is HomeItem.Widget && item !is HomeItem.FolderItem &&
+                                    next != null && next !is HomeItem.Widget && next !is HomeItem.FolderItem
+                                ) {
                                     add(listOf(item to i, next to (i + 1)))
                                     i += 2
                                 } else {
@@ -1248,6 +1355,7 @@ fun HomeScreen(
                             WidgetSlot(
                                 widgetIds = widgetIds,
                                 heightDp = widgetHeightDp,
+                                stacked = widgetsStacked,
                                 refreshTick = widgetTick,
                                 onEditLayout = { onEditModeChange(true) },
                                 actions = widgetActions,
@@ -1274,19 +1382,22 @@ fun HomeScreen(
                             compactTapArea = compactTapArea,
                             shortcutSwipe = shortcutSwipe,
                             folder = item.folder,
-                            members = item.folder.apps.mapNotNull { appsByKey[it] }
-                                .filterNot { it.key in hiddenApps },
+                            members = folderMembers(item.folder),
                             expanded = item.folder.id in expandedFolders,
                             editMode = editMode,
+                            popupContents = homeTwoColumn && item.folder.widgets.isEmpty() &&
+                                !item.folder.nowPlaying,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
+                            controlsInset = folderControlsInset,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
                             alignment = alignment,
                             iconSide = iconSide,
+                            onOpenNowPlaying = onOpenNowPlaying,
                             menuExpanded = folderMenuFor == item.folder.id,
                             menuOffset = menuOffset,
                             touchPosition = touchPosition,
@@ -1337,6 +1448,12 @@ fun HomeScreen(
                             onOpenMenu = { offset -> menuOffset = offset; folderMenuFor = item.folder.id },
                             onDismissMenu = { folderMenuFor = null },
                             onManage = { folderMenuFor = null; onManageFolder(item.folder) },
+                            onFreeze = onFreezeFolder?.let { freeze ->
+                                { folderMenuFor = null; freeze(folderMembers(item.folder)) }
+                            },
+                            onUnfreeze = onUnfreezeFolder?.let { release ->
+                                { folderMenuFor = null; release(folderMembers(item.folder)) }
+                            },
                             onEdit = { folderMenuFor = null; folderRenameFor = item.folder },
                             onDelete = { folderMenuFor = null; onDeleteFolder(item.folder) },
                             onOpenApp = { member ->
@@ -1354,6 +1471,11 @@ fun HomeScreen(
                             onMemberEditIconName = { member -> renameDialogFor = member },
                             onOpenSettings = onOpenSettings,
                             dimPausedApps = dimPausedApps,
+                            notificationPreviews = notificationPreviews,
+                            notificationTextSp = notificationTextSp,
+                            notificationColor = notificationColor,
+                            lockedApps = lockedApps,
+                            freezeActions = freezeActions,
                         )
 
                         is HomeItem.Favorite -> FavoriteRow(
@@ -1365,6 +1487,7 @@ fun HomeScreen(
                                 NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
                             ].orEmpty(),
                             notificationTextSp = notificationTextSp,
+                            notificationColor = notificationColor,
                             editMode = editMode,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
@@ -1392,6 +1515,7 @@ fun HomeScreen(
                             isLocked = item.app.lockedBy(lockedApps),
                             onUnpin = { menuForKey = null; onUnpinShortcut(item.app) },
                             onRemove = { menuForKey = null; onRemoveFavorite(item.app) },
+                            onHide = { menuForKey = null; onHideFavorite(item.app) },
                             onEditIconName = { menuForKey = null; renameDialogFor = item.app },
                             freezeActions = freezeActions,
                         )
@@ -1433,6 +1557,7 @@ fun HomeScreen(
                             touchPosition = touchPosition,
                             menuExpanded = nowPlayingMenu,
                             menuOffset = nowPlayingMenuOffset,
+                            onOpenNowPlaying = onOpenNowPlaying,
                             onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
                             onDismissMenu = { nowPlayingMenu = false },
                             onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
@@ -1552,6 +1677,13 @@ fun HomeScreen(
                 )
                 HorizontalDivider()
             }
+            if (networkActions != null) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.network_open)) },
+                    leadingIcon = { Icon(DelugeIcons.LinkOff, contentDescription = null) },
+                    onClick = { backgroundMenu = false; networkActions.open() },
+                )
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open_settings)) },
                 leadingIcon = { Icon(Icons.Filled.Settings, contentDescription = null) },
@@ -1633,6 +1765,7 @@ private fun FavoriteRow(
     notificationLines: List<NotificationEntry>,
     /** Point size for those lines. */
     notificationTextSp: Int,
+    notificationColor: Int = 0,
     editMode: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
@@ -1660,6 +1793,7 @@ private fun FavoriteRow(
     isLocked: Boolean,
     onUnpin: () -> Unit,
     onRemove: () -> Unit,
+    onHide: () -> Unit,
     onEditIconName: () -> Unit,
     freezeActions: FreezeActions?,
 ) {
@@ -1724,7 +1858,7 @@ private fun FavoriteRow(
         ) {
             // A paused app fades the same way a retired shortcut does, when the setting asks;
             // the icon goes with the name so the whole row reads as set aside.
-            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && app.suspended)
+            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
             AlignedIconLabel(
                 alignment = alignment,
                 showLabel = showLabels,
@@ -1752,6 +1886,10 @@ private fun FavoriteRow(
                         color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
                         fontSize = labelSizeSp.sp,
                         textAlign = alignment.textAlign(),
+                        // A name in a half row has a letter's width before it starts stacking
+                        // downwards; two lines then a cut reads like a name, not a column.
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     // A lock beside the name, so which apps ask for the device lock is visible
@@ -1784,10 +1922,17 @@ private fun FavoriteRow(
         AppShortcutMenu(app, shortcutMenu, labelSizeSp) { shortcutMenu = false }
 
         var moreMenu by remember { mutableStateOf(false) }
+        // The network answers open one level down, from a single row in this menu.
+        var networkMenu by remember { mutableStateOf(false) }
         // The favorite's first level is about the row in front of you: lock it, put it in
         // the private space, take it off the home screen, or go one step deeper. Editing
         // and app management are not what a press on a favorite usually means.
-        LaunchedEffect(menuExpanded) { if (menuExpanded) moreMenu = false }
+        LaunchedEffect(menuExpanded) {
+            if (menuExpanded) {
+                moreMenu = false
+                networkMenu = false
+            }
+        }
         TouchAnchoredMenu(expanded = menuExpanded, offset = menuOffset, onDismissRequest = onDismissMenu) {
             if (app.kind == EntryKind.APP) {
                 DropdownMenuItem(
@@ -1806,12 +1951,29 @@ private fun FavoriteRow(
                     },
                     onClick = onToggleLock,
                 )
+                FocusMenuItem(app = app, onDismiss = onDismissMenu)
                 FreezeMenuItems(
                     app = app,
                     actions = freezeActions,
                     onDismissMenu = onDismissMenu,
+                    locked = isLocked,
                     onChooseMethod = { onDismissMenu(); freezeChoosing = true },
                 )
+                NetworkMenuItems(
+                    app = app,
+                    actions = LocalNetworkActions.current,
+                    onDismissMenu = onDismissMenu,
+                    onOpenSubmenu = { networkMenu = true },
+                )
+                // A locked app must be unlocked before it can be hidden, as in the app list:
+                // hiding is a launcher action and the lock still owns the package state.
+                if (!isLocked) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.applist_hide)) },
+                        leadingIcon = { Icon(DelugeIcons.VisibilityOff, contentDescription = null) },
+                        onClick = { onDismissMenu(); onHide() },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_app_info)) },
                     leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
@@ -1865,6 +2027,7 @@ private fun FavoriteRow(
                         app = app,
                         actions = freezeActions,
                         onDismissMenu = { moreMenu = false },
+                        locked = isLocked,
                     )
                     DropdownMenuItem(
                         text = {
@@ -1880,9 +2043,25 @@ private fun FavoriteRow(
             }
         }
 
+        if (networkMenu) {
+            TouchAnchoredMenu(
+                expanded = true,
+                offset = menuOffset,
+                onDismissRequest = { networkMenu = false },
+            ) {
+                NetworkSubmenu(
+                    app = app,
+                    actions = LocalNetworkActions.current,
+                    onDismissMenu = { networkMenu = false },
+                )
+            }
+        }
+
         FreezeMethodDialog(
             app = if (freezeChoosing) app else null,
             label = label,
+            counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
             onDismiss = { freezeChoosing = false },
             onPick = { method ->
                 freezeChoosing = false
@@ -1893,7 +2072,6 @@ private fun FavoriteRow(
     // A locked app keeps its notifications to itself: the text would be readable on the home
     // screen, and the line's tap reaches the app's own activity without the lock.
     if (!editMode && !isLocked && notificationLines.isNotEmpty()) {
-        val context = LocalContext.current
         Column(
             Modifier
                 .fillMaxWidth()
@@ -1904,27 +2082,14 @@ private fun FavoriteRow(
                     bottom = 2.dp,
                 )
         ) {
-            notificationLines.forEach { line ->
-                Text(
-                    line.line,
-                    color = contentColor.copy(alpha = 0.65f),
-                    fontSize = notificationTextSp.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = alignment.textAlign(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // Each line opens its own notification, as the shade would; an app
-                        // that gave us nothing to open still opens.
-                        .clickable {
-                            if (!NotificationGateway.open(context, line)) {
-                                onLaunch()
-                            } else if (line.dismissOnOpen) {
-                                NotificationGateway.dismiss(line.notificationKey)
-                            }
-                        },
-                )
-            }
+            NotificationLines(
+                lines = notificationLines,
+                alignment = alignment,
+                contentColor = notificationTint(contentColor, notificationColor),
+                textSizeSp = notificationTextSp,
+                interactive = true,
+                onFallback = onLaunch,
+            )
         }
     }
     }
@@ -1940,6 +2105,8 @@ private fun FolderRow(
     members: List<AppInfo>,
     expanded: Boolean,
     editMode: Boolean,
+    /** Whether its contents open as a card over the screen instead of growing in place. */
+    popupContents: Boolean,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
     /** How far in from the end the handle sits, clear of the system back gesture. */
@@ -1947,10 +2114,14 @@ private fun FolderRow(
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
+    /** Keeps this folder's own controls out from under the edge zone. */
+    controlsInset: Modifier,
     contentColor: Color,
     showLabels: Boolean,
     alignment: HomeAlignment,
     iconSide: IconSide,
+    /** Starts whatever is playing, through the app lock gate when it is a locked app. */
+    onOpenNowPlaying: () -> Boolean,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
     touchPosition: MutableState<Offset>,
@@ -1963,6 +2134,8 @@ private fun FolderRow(
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onManage: () -> Unit,
+    onFreeze: (() -> Unit)?,
+    onUnfreeze: (() -> Unit)?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onRemoveFromHome: (() -> Unit)?,
@@ -1977,12 +2150,28 @@ private fun FolderRow(
     onOpenSettings: () -> Unit,
     /** Whether a paused (suspended) app is shown greyed out, like outside folders. */
     dimPausedApps: Boolean,
+    /** Newest notifications per app, for the lines under its name. */
+    notificationPreviews: Map<String, List<NotificationEntry>>,
+    notificationTextSp: Int,
+    notificationColor: Int = 0,
+    /** Keys that ask for the device lock before opening. */
+    lockedApps: Set<String>,
+    /**
+     * Freeze-list actions a member's long-press menu offers, the same set the rows outside a
+     * folder get. Null where freezing is not set up, and then the entries simply do not appear.
+     */
+    freezeActions: FreezeActions? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val density = LocalDensity.current
     // Which member is showing its menu, and where the press that opened it landed.
     var memberMenuFor by remember { mutableStateOf<String?>(null) }
+    // Which member has its network answers open, one level below that menu.
+    var memberNetworkFor by remember { mutableStateOf<String?>(null) }
+    // Which member is picking a freeze method. By key rather than a flag: the dialog has to
+    // outlive the menu it came from, and the member it belongs to has to survive that too.
+    var memberFreezeChoosing by remember { mutableStateOf<String?>(null) }
     var memberMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
     val memberTouch = remember { mutableStateOf(Offset.Zero) }
     var memberShortcutFor by remember { mutableStateOf<String?>(null) }
@@ -1994,7 +2183,7 @@ private fun FolderRow(
     Column {
         // An emptied folder keeps its row (deleting it silently would surprise), but there
         // is nothing to open: no chevron, and a tap does nothing.
-        val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty()
+        val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty() || folder.nowPlaying
         Box(Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
@@ -2039,13 +2228,27 @@ private fun FolderRow(
                         }
                     },
                 ) { labelModifier ->
-                    Text(
-                        folderDisguise[folder.id] ?: folder.name,
-                        color = contentColor,
-                        fontSize = labelSizeSp.sp,
-                        modifier = labelModifier,
-                        textAlign = alignment.textAlign(),
-                    )
+                    val name = folderDisguise[folder.id] ?: folder.name
+                    // An unnamed folder is allowed: its preview icon is its face. Only when
+                    // icons are off is there nothing left to read, so the row says "Folder".
+                    val drawn = when {
+                        name.isNotBlank() -> name
+                        !LocalIconConfig.current.showIcons -> stringResource(R.string.folder_unnamed)
+                        else -> null
+                    }
+                    if (drawn != null) {
+                        Text(
+                            drawn,
+                            color = contentColor,
+                            fontSize = labelSizeSp.sp,
+                            modifier = labelModifier,
+                            textAlign = alignment.textAlign(),
+                            // One line, cut with an ellipsis. Left to wrap, a narrow cell turned
+                            // a folder name into a column of single letters.
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
                 // What a bare row never says: whether tapping opens anything, and how
                 // much is inside. The chevron turns with the expansion so the state is
@@ -2071,10 +2274,41 @@ private fun FolderRow(
                     leadingIcon = { Icon(DelugeIcons.Checklist, contentDescription = null) },
                     onClick = onManage,
                 )
+                onFreeze?.let { freeze ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_freeze)) },
+                        leadingIcon = { Icon(DelugeIcons.Freeze, contentDescription = null) },
+                        enabled = members.isNotEmpty(),
+                        onClick = freeze,
+                    )
+                }
+                onUnfreeze?.let { release ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.folder_unfreeze)) },
+                        leadingIcon = { Icon(DelugeIcons.Thaw, contentDescription = null) },
+                        enabled = members.isNotEmpty(),
+                        onClick = release,
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.widget_add)) },
                     leadingIcon = { Icon(DelugeIcons.Height, contentDescription = null) },
                     onClick = { onDismissMenu(); widgetActions.onAddWidgetToFolder(folder.id) },
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(
+                                if (folder.nowPlaying) R.string.folder_remove_now_playing
+                                else R.string.folder_add_now_playing
+                            )
+                        )
+                    },
+                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                    onClick = {
+                        onDismissMenu()
+                        widgetActions.onSetFolderNowPlaying(folder.id, !folder.nowPlaying)
+                    },
                 )
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_edit_icon_and_name)) },
@@ -2101,8 +2335,15 @@ private fun FolderRow(
         // transition is held here rather than derived from `visible` so the wait
         // below can ask it when it has finished.
         val expansion = remember { MutableTransitionState(false) }
-        expansion.targetState = expanded && !editMode && canExpand
-        AnimatedVisibility(visibleState = expansion) {
+        // Half a row has no width to open a grid into, so there the folder opens as a card
+        // over the home screen instead. A folder holding widgets or the playing card keeps
+        // the in-place expansion: those belong under the folder's own row.
+        expansion.targetState = expanded && !editMode && canExpand && !popupContents
+        @Composable
+        fun Contents() {
+            // Inside the card the wallpaper is hidden, so labels follow the card instead of
+            // the colour chosen to sit on the wallpaper.
+            val contentsColor = if (popupContents) LocalContentColor.current else contentColor
             Column(
                 modifier = Modifier.onGloballyPositioned { coords ->
                     membersBottomPx = coords.positionInWindow().y + coords.size.height
@@ -2110,7 +2351,40 @@ private fun FolderRow(
             ) {
                 // Above the apps, so a folder's widget is what it opens onto.
                 folder.widgets.forEach { widget ->
-                    key(widget.id) { FolderWidgetBlock(folder.id, widget, widgetTick, widgetActions) }
+                    key(widget.id) {
+                        FolderWidgetBlock(folder.id, widget, widgetTick, widgetActions, controlsInset)
+                    }
+                }
+                if (folder.nowPlaying) {
+                    // Shown even when silent: it was put here on purpose, and a folder that
+                    // opens without it looks like it lost it. Only a playing card is a way in;
+                    // an empty one is a placeholder, so it does not pretend to be tappable.
+                    val context = LocalContext.current
+                    val playing by NowPlayingBus.state.collectAsState()
+                    NowPlayingWidget(
+                        contentColor = contentsColor,
+                        alignment = alignment,
+                        showPlaceholder = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(controlsInset)
+                            .padding(horizontal = sidePaddingDp.dp)
+                            .then(
+                                if (playing == null) {
+                                    Modifier
+                                } else {
+                                    Modifier.clickable {
+                                        if (!onOpenNowPlaying()) {
+                                            Toast.makeText(
+                                                context,
+                                                context.getString(R.string.now_playing_open_failed),
+                                                Toast.LENGTH_SHORT,
+                                            ).show()
+                                        }
+                                    }
+                                }
+                            ),
+                    )
                 }
                 members.forEach { member ->
                     // Keyed so each member keeps its own press state: an unkeyed remember in
@@ -2127,6 +2401,11 @@ private fun FolderRow(
                                 start = if (alignment == HomeAlignment.RIGHT) sidePaddingDp.dp else (sidePaddingDp + 24).dp,
                                 end = if (alignment == HomeAlignment.RIGHT) (sidePaddingDp + 24).dp else sidePaddingDp.dp,
                             )
+                            // The edge strip sits over the last few dp of every row, and a
+                            // member row is the one place a tap near the name could open the
+                            // app list instead of the app. Kept out the same way the folder's
+                            // own widgets are.
+                            .then(controlsInset)
                             .recordTouchPosition(memberTouch)
                             .swipeForShortcuts(shortcutSwipe, member.kind == EntryKind.APP) {
                                 memberShortcutFor = member.key
@@ -2160,7 +2439,7 @@ private fun FolderRow(
                                 // the setting asks; the icon goes with the name so the whole
                                 // row reads as set aside.
                                 val dimmed = member.disabled || member.frozen != null ||
-                                    (dimPausedApps && member.suspended)
+                                    (dimPausedApps && (member.suspended || member.quietProfile))
                                 Box(
                                     Modifier
                                         .pressPop(memberPress)
@@ -2170,19 +2449,41 @@ private fun FolderRow(
                                 }
                             },
                         ) { labelModifier ->
-                            Text(
-                                displayName(member),
-                                color = if (member.disabled || member.frozen != null ||
-                                    (dimPausedApps && member.suspended)
-                                ) {
-                                    contentColor.copy(alpha = 0.5f)
-                                } else {
-                                    contentColor
-                                },
-                                fontSize = labelSizeSp.sp,
-                                modifier = labelModifier,
-                                textAlign = alignment.textAlign(),
-                            )
+                            Column(
+                                labelModifier,
+                                horizontalAlignment = alignment.columnAlignment(),
+                            ) {
+                                Text(
+                                    displayName(member),
+                                    color = if (member.disabled || member.frozen != null ||
+                                        (dimPausedApps && (member.suspended || member.quietProfile))
+                                    ) {
+                                        contentsColor.copy(alpha = 0.5f)
+                                    } else {
+                                        contentsColor
+                                    },
+                                    fontSize = labelSizeSp.sp,
+                                    textAlign = alignment.textAlign(),
+                                    // Two lines at most: a folder opened inside a narrow
+                                    // column used to break a name mid-word down the row.
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                // A locked app keeps its notifications to itself, as it does
+                                // outside a folder: the text would be readable here.
+                                if (!member.lockedBy(lockedApps)) {
+                                    NotificationLines(
+                                        lines = notificationPreviews[
+                                            NotificationPreviewBus.key(member.packageName, member.userSerial)
+                                        ].orEmpty(),
+                                        alignment = alignment,
+                                        textSizeSp = notificationTextSp,
+                                        contentColor = notificationTint(contentsColor, notificationColor),
+                                        interactive = true,
+                                        onFallback = { onOpenApp(member) },
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -2198,12 +2499,35 @@ private fun FolderRow(
                         onDismissRequest = { memberMenuFor = null },
                     ) {
                         // A folder member is an app like any other row, so it offers what the
-                        // app publishes the same way the rows outside a folder do.
+                        // app publishes the same way the rows outside a folder do — freezing
+                        // included, since putting an app in a folder says nothing about
+                        // whether it should be running.
                         if (member.kind == EntryKind.APP) {
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.action_app_info)) },
                                 leadingIcon = { Icon(Icons.Filled.Info, contentDescription = null) },
                                 onClick = { memberMenuFor = null; onMemberAppInfo(member) },
+                            )
+                            // Same entries as outside a folder, and the same bargain: adding
+                            // an app here is adding it to the freeze list, which freezes it.
+                            FreezeMenuItems(
+                                app = member,
+                                actions = freezeActions,
+                                onDismissMenu = { memberMenuFor = null },
+                                locked = member.lockedBy(lockedApps),
+                                onChooseMethod = {
+                                    memberMenuFor = null
+                                    memberFreezeChoosing = member.key
+                                },
+                            )
+                            NetworkMenuItems(
+                                app = member,
+                                actions = LocalNetworkActions.current,
+                                onDismissMenu = { memberMenuFor = null },
+                                onOpenSubmenu = {
+                                    memberMenuFor = null
+                                    memberNetworkFor = member.key
+                                },
                             )
                         }
                         if (member.kind == EntryKind.SHORTCUT) {
@@ -2224,6 +2548,16 @@ private fun FolderRow(
                             onClick = { memberMenuFor = null; onManage() },
                         )
                         HorizontalDivider()
+                        // Taking the app off the freeze list lives one level in, with the rest
+                        // of the row's management, exactly as it does outside a folder.
+                        if (member.kind == EntryKind.APP) {
+                            FreezeRemoveMenuItem(
+                                app = member,
+                                actions = freezeActions,
+                                onDismissMenu = { memberMenuFor = null },
+                                locked = member.lockedBy(lockedApps),
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.home_folder_remove_app)) },
                             leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
@@ -2242,19 +2576,65 @@ private fun FolderRow(
                 if (members.isEmpty() && (expanded || editMode)) {
                     Text(
                         stringResource(R.string.home_folder_empty),
-                        color = contentColor.copy(alpha = 0.6f),
+                        color = contentsColor.copy(alpha = 0.6f),
                         fontSize = (labelSizeSp - 3).coerceAtLeast(10).sp,
                         modifier = Modifier.padding(start = (sidePaddingDp + 24).dp, top = 4.dp, bottom = 4.dp),
                     )
                 }
             }
         }
+        if (popupContents) {
+            if (expanded && !editMode && canExpand) {
+                FolderContentsDialog(
+                    title = (folderDisguise[folder.id] ?: folder.name)
+                        .ifBlank { stringResource(R.string.folder_unnamed) },
+                    onDismiss = onToggleExpanded,
+                    content = { Contents() },
+                )
+            }
+        } else {
+            AnimatedVisibility(visibleState = expansion) { Contents() }
+        }
+
+        // A member's network answers, resolved by key so one removed by a package event in
+        // the meantime simply closes the menu.
+        val networkTarget = members.firstOrNull { it.key == memberNetworkFor }
+        if (networkTarget != null) {
+            TouchAnchoredMenu(
+                expanded = true,
+                offset = memberMenuOffset,
+                onDismissRequest = { memberNetworkFor = null },
+            ) {
+                NetworkSubmenu(
+                    app = networkTarget,
+                    actions = LocalNetworkActions.current,
+                    onDismissMenu = { memberNetworkFor = null },
+                )
+            }
+        }
+
+        // Held here rather than inside the member row: the menu that opens it is dismissed on
+        // the same press, and a dialog remembered inside a row keyed by member key would be
+        // torn down with the menu's own composition. Resolved by key so a member removed
+        // while the dialog was up simply closes it.
+        val freezeTarget = members.firstOrNull { it.key == memberFreezeChoosing }
+        FreezeMethodDialog(
+            app = freezeTarget,
+            label = freezeTarget?.let(displayName).orEmpty(),
+            counts = freezeActions?.methodCounts ?: emptyMap(),
+            supports = { method, serial -> freezeActions?.supports?.invoke(method, serial) ?: true },
+            onDismiss = { memberFreezeChoosing = null },
+            onPick = { method ->
+                memberFreezeChoosing = null
+                if (freezeTarget != null) freezeActions?.add(freezeTarget, method)
+            },
+        )
 
         // The rows have to finish growing into place before there is a bottom to aim
         // at: a half-grown one would scroll the list by half of what it needs. The
         // screen scrolls them into view once they have landed.
         LaunchedEffect(expanded) {
-            if (!expanded) return@LaunchedEffect
+            if (!expanded || popupContents) return@LaunchedEffect
             while (!expansion.isIdle) withFrameNanos {}
             // One further frame lets the final layout land before the bottom is read.
             withFrameNanos {}
@@ -2278,6 +2658,7 @@ private fun NowPlayingBlock(
     touchPosition: MutableState<Offset>,
     menuExpanded: Boolean,
     menuOffset: DpOffset,
+    onOpenNowPlaying: () -> Boolean,
     onOpenMenu: (DpOffset) -> Unit,
     onDismissMenu: () -> Unit,
     onEditLayout: () -> Unit,
@@ -2310,7 +2691,7 @@ private fun NowPlayingBlock(
                     // card itself — which should get you to what is playing. Say so when it
                     // can't, rather than leaving a tap that looks ignored.
                     onClick = {
-                        if (!openNowPlayingApp(context)) {
+                        if (!onOpenNowPlaying()) {
                             Toast.makeText(
                                 context,
                                 context.getString(R.string.now_playing_open_failed),
@@ -2369,6 +2750,7 @@ private fun FolderWidgetBlock(
     widget: FolderWidget,
     refreshTick: Int,
     actions: WidgetSlotActions,
+    controlsInset: Modifier,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
@@ -2410,7 +2792,7 @@ private fun FolderWidgetBlock(
             }
         }
         if (resizing) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(modifier = controlsInset, verticalAlignment = Alignment.CenterVertically) {
                 StepperRow(
                     label = stringResource(R.string.handle_widget_height),
                     value = liveHeight,
@@ -2494,6 +2876,17 @@ private val MAX_CONTENT_WIDTH = 600.dp
  * range: three icons' worth of length past where the content stops.
  */
 private const val BOTTOM_ROOM_ROWS = 3
+
+/** How much of the bottom of the home screen always answers the quick-launch swipes. */
+private const val QUICK_LAUNCH_BOTTOM_FRACTION = 0.2f
+
+/**
+ * How many times further sideways than up-and-down a drag must be before the quick-launch
+ * swipes call it theirs. Past the slop alone is not enough: a scroll that starts a little
+ * crooked crosses the sideways slop first, and taking it left the list stuck until the
+ * finger lifted.
+ */
+private const val QUICK_LAUNCH_DOMINANCE = 2f
 
 /** The same span the icon-size slider offers, so a pinch cannot go where a drag cannot. */
 private const val MIN_ICON_DP = 12
@@ -2585,10 +2978,123 @@ private fun HomeAlignment.textAlign() = when (this) {
     HomeAlignment.RIGHT -> TextAlign.End
 }
 
+private fun HomeAlignment.columnAlignment() = when (this) {
+    HomeAlignment.LEFT -> Alignment.Start
+    HomeAlignment.CENTER -> Alignment.CenterHorizontally
+    HomeAlignment.RIGHT -> Alignment.End
+}
+
+/**
+ * An app's notifications, a line each. A tap opens that one and a sideways swipe clears it,
+ * as in the shade.
+ */
+@Composable
+private fun NotificationLines(
+    lines: List<NotificationEntry>,
+    alignment: HomeAlignment,
+    contentColor: Color,
+    textSizeSp: Int,
+    interactive: Boolean,
+    onFallback: () -> Unit,
+) {
+    val context = LocalContext.current
+    lines.forEach { line ->
+        key(line.notificationKey) {
+            val offset = remember { Animatable(0f) }
+            val scope = rememberCoroutineScope()
+            var width by remember { mutableStateOf(1) }
+            Text(
+                line.line,
+                color = contentColor.copy(
+                    alpha = 0.65f * (1f - (abs(offset.value) / width).coerceIn(0f, 1f))
+                ),
+                fontSize = textSizeSp.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = alignment.textAlign(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { width = it.width.coerceAtLeast(1) }
+                    .graphicsLayer { translationX = offset.value }
+                    .then(
+                        if (!interactive) Modifier else Modifier
+                            // Each line opens its own notification, as the shade would; an
+                            // app that gave us nothing to open still opens.
+                            .clickable {
+                                if (!NotificationGateway.open(context, line)) {
+                                    onFallback()
+                                } else if (line.dismissOnOpen) {
+                                    NotificationGateway.dismiss(line.notificationKey)
+                                }
+                            }
+                            .draggable(
+                                orientation = Orientation.Horizontal,
+                                state = rememberDraggableState { delta ->
+                                    scope.launch { offset.snapTo(offset.value + delta) }
+                                },
+                                onDragStopped = {
+                                    if (abs(offset.value) > width / 3f) {
+                                        offset.animateTo(
+                                            if (offset.value > 0) width.toFloat() else -width.toFloat()
+                                        )
+                                        NotificationGateway.dismiss(line.notificationKey)
+                                    } else {
+                                        offset.animateTo(0f)
+                                    }
+                                },
+                            )
+                    ),
+            )
+        }
+    }
+}
+
 private fun HomeAlignment.arrangement() = when (this) {
     HomeAlignment.LEFT -> Arrangement.Start
     HomeAlignment.CENTER -> Arrangement.Center
     HomeAlignment.RIGHT -> Arrangement.End
+}
+
+/**
+ * A folder's contents as a card over the home screen, for a row that has no width to open
+ * into. The same rows as in place, so everything a member offers there still works; the card
+ * is the one thing that keeps a folder from pushing the rest of the screen around.
+ */
+@Composable
+private fun FolderContentsDialog(
+    title: String,
+    onDismiss: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(vertical = 48.dp),
+        ) {
+            Column(Modifier.padding(vertical = 8.dp)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                Column(
+                    Modifier
+                        .heightIn(max = 460.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) { content() }
+            }
+        }
+    }
 }
 
 /** Folders get the same treatment as apps: their own name and their own icon. */
@@ -2617,8 +3123,14 @@ private fun FolderEditDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { if (text.isNotBlank()) onConfirm(text.trim()) }) { Text(stringResource(R.string.action_save)) }
+            // An empty name is a choice, not a mistake: the folder then shows only its
+            // preview icon. Trimmed either way, so a field full of spaces clears it.
+            TextButton(onClick = { onConfirm(text.trim()) }) { Text(stringResource(R.string.action_save)) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
     )
 }
+
+/** A notification preview follows the theme unless the owner picked a colour for it. */
+private fun notificationTint(base: Color, argb: Int): Color =
+    if (argb == 0) base else Color(argb)

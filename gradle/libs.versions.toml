@@ -11,6 +11,8 @@ datastorePreferences = "1.2.1"
 shizuku = "13.1.5"
 # Reaches IPackageManager and friends at runtime; Shizuku then runs one IPC per app.
 hiddenApiBypass = "6.1"
+# Dhizuku shares the device owner with this app through delegated package access.
+dhizuku = "2.7.0"
 
 junit = "4.13.2"
 json = "20260814"
@@ -33,6 +35,7 @@ androidx-datastore-preferences = { group = "androidx.datastore", name = "datasto
 shizuku-api = { group = "dev.rikka.shizuku", name = "api", version.ref = "shizuku" }
 shizuku-provider = { group = "dev.rikka.shizuku", name = "provider", version.ref = "shizuku" }
 hiddenapi-bypass = { group = "org.lsposed.hiddenapibypass", name = "hiddenapibypass", version.ref = "hiddenApiBypass" }
+dhizuku-api = { group = "io.github.iamr0s", name = "Dhizuku-API", version.ref = "dhizuku" }
 
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }

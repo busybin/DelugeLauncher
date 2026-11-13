@@ -4,6 +4,8 @@ package dev.delugelauncher.ui.common
 import dev.delugelauncher.ui.common.DelugeIcons
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,7 +60,9 @@ fun FolderPickerDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.folder_picker_title, appLabel)) },
         text = {
-            Column {
+            // A list of folders plus the "new folder" row grows past the dialog on a phone
+            // with more than a handful of them, and Material's AlertDialog does not scroll it.
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (!creating) {
                     folders.forEach { folder ->
                         Row(
@@ -71,7 +75,10 @@ fun FolderPickerDialog(
                             Icon(DelugeIcons.Folder, contentDescription = null)
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(folder.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    folder.name.ifBlank { stringResource(R.string.folder_unnamed) },
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
                                 Text(
                                     stringResource(R.string.folder_picker_app_count, memberCount(folder)),
                                     style = MaterialTheme.typography.bodySmall,
@@ -111,7 +118,7 @@ fun FolderPickerDialog(
         confirmButton = {
             if (creating) {
                 TextButton(
-                    onClick = { if (newName.isNotBlank()) onCreateFolder(newName.trim()) },
+                    onClick = { onCreateFolder(newName.trim()) },
                 ) { Text(stringResource(R.string.action_create)) }
             }
         },

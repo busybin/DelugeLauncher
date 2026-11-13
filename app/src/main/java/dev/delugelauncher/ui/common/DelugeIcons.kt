@@ -139,6 +139,12 @@ object DelugeIcons {
         stroke("M5,11h14a1,1 0 0 1 1,1v8a1,1 0 0 1 -1,1H5a1,1 0 0 1 -1,-1v-8a1,1 0 0 1 1,-1z", 2f)
         fill("M12,14.5m-1.6,0a1.6,1.6 0 1 1,3.2 0a1.6,1.6 0 1 1,-3.2 0")
     }
+
+    /** A ring with a bar through it: an app the firewall keeps offline. */
+    val Block: ImageVector = vector("VicBlock") {
+        stroke("M12,12m-9,0a9,9 0,1 1,18 0a9,9 0,1 1,-18 0", 2f)
+        stroke("M5.6,5.6l12.8,12.8", 2f)
+    }
 }
 
 /** The Material icon size, so one of these sits right beside a `material-icons-core` icon. */

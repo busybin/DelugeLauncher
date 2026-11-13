@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
@@ -27,7 +29,6 @@ import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.FreezeMethod
-import dev.delugelauncher.ui.settings.methodName
 
 /**
  * The four things a row can ask of the freeze list.
@@ -45,6 +46,10 @@ class FreezeActions(
     val unfreeze: (AppInfo) -> Unit,
     /** Takes it off the list for good. */
     val remove: (AppInfo) -> Unit,
+    /** How many apps are already listed under each method, for the picker. */
+    val methodCounts: Map<FreezeMethod, Int> = emptyMap(),
+    /** Which methods this channel can run for that profile; the picker offers only these. */
+    val supports: (FreezeMethod, Long) -> Boolean = { _, _ -> true },
 )
 
 /**
@@ -59,11 +64,14 @@ fun FreezeMenuItems(
     app: AppInfo,
     actions: FreezeActions?,
     onDismissMenu: () -> Unit,
+    /** The app lock already owns this row's suspend/hide state. */
+    locked: Boolean = false,
     /** The row's own state says a method still has to be picked; the dialog lives with it. */
     onChooseMethod: () -> Unit,
 ) {
     if (actions == null) return
     if (app.kind != EntryKind.APP) return
+    if (locked) return
     if (!app.planned) {
         DropdownMenuItem(
             text = { Text(stringResource(R.string.freeze_menu_add)) },
@@ -98,9 +106,12 @@ fun FreezeRemoveMenuItem(
     app: AppInfo,
     actions: FreezeActions?,
     onDismissMenu: () -> Unit,
+    /** The app lock owns this row; the freeze list must not drop its layers. */
+    locked: Boolean = false,
 ) {
     if (actions == null) return
     if (app.kind != EntryKind.APP) return
+    if (locked) return
     if (!app.planned) return
     DropdownMenuItem(
         text = { Text(stringResource(R.string.freeze_menu_remove)) },
@@ -115,16 +126,22 @@ fun FreezeMethodDialog(
     /** The app being listed, or null when no dialog is showing. */
     app: AppInfo?,
     label: String,
+    /** Listed apps per method, so the choice says how busy each one already is. */
+    counts: Map<FreezeMethod, Int> = emptyMap(),
+    /** Methods the channel can run for this row's profile. */
+    supports: (FreezeMethod, Long) -> Boolean = { _, _ -> true },
     onDismiss: () -> Unit,
     onPick: (FreezeMethod) -> Unit,
 ) {
     if (app == null) return
+    val offered = FreezeMethod.entries.filter { supports(it, app.userSerial) }
+    if (offered.isEmpty()) return
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.freeze_pick_title, label)) },
         text = {
-            Column {
-                FreezeMethod.entries.forEach { method ->
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                offered.forEach { method ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -134,7 +151,14 @@ fun FreezeMethodDialog(
                     ) {
                         RadioButton(selected = false, onClick = null)
                         Spacer(Modifier.width(12.dp))
-                        Text(methodName(method), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            stringResource(
+                                R.string.freeze_method_count,
+                                stringResource(freezeMethodName(method)),
+                                counts[method] ?: 0,
+                            ),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
             }

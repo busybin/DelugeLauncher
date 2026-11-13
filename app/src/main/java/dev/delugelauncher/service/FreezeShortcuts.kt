@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
+import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.MainActivity
 import dev.delugelauncher.R
 
@@ -21,14 +22,19 @@ object FreezeShortcuts {
     private const val FREEZE_ALL = "freeze_all"
     private const val UNFREEZE_ALL = "unfreeze_all"
 
-    fun sync(context: Context, enabled: Boolean) {
+    suspend fun sync(context: Context, enabled: Boolean) {
         val manager = context.getSystemService(ShortcutManager::class.java) ?: return
+        // The shortcut lands on an exported activity, so it carries the same secret as the
+        // broadcast door. Publishing without one would leave a verb anyone could send.
+        val prefs = (context.applicationContext as? DelugeApp)?.prefs ?: return
+        val token = prefs.ensureExternalControlToken()
         runCatching {
             if (!enabled) {
                 manager.removeAllDynamicShortcuts()
                 return
             }
-            if (manager.dynamicShortcuts.any { it.id == FREEZE_ALL }) return
+            // Republished even when the ids already exist: the intent carries the token, and
+            // an old shortcut left in place would keep failing the check after a rotation.
             manager.dynamicShortcuts = listOf(
                 shortcut(
                     context,
@@ -37,6 +43,7 @@ object FreezeShortcuts {
                     R.string.freeze_shortcut_freeze_long,
                     MainActivity.ACTION_FREEZE_ALL,
                     0,
+                    token,
                 ),
                 shortcut(
                     context,
@@ -45,6 +52,7 @@ object FreezeShortcuts {
                     R.string.freeze_shortcut_unfreeze_long,
                     MainActivity.ACTION_UNFREEZE_ALL,
                     1,
+                    token,
                 ),
             )
         }
@@ -57,6 +65,7 @@ object FreezeShortcuts {
         longLabel: Int,
         action: String,
         rank: Int,
+        token: String,
     ): ShortcutInfo = ShortcutInfo.Builder(context, id)
         .setShortLabel(context.getString(shortLabel))
         .setLongLabel(context.getString(longLabel))
@@ -64,6 +73,7 @@ object FreezeShortcuts {
         .setIntent(
             Intent(context, MainActivity::class.java)
                 .setAction(action)
+                .putExtra(FreezeIntents.EXTRA_TOKEN, token)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         )
         .setRank(rank)

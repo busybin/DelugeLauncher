@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -40,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -58,9 +60,13 @@ import androidx.compose.ui.viewinterop.AndroidView
 import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.isPackageLocked
 import dev.delugelauncher.ui.common.TouchAnchoredMenu
+import dev.delugelauncher.ui.common.rememberAppLockRequest
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import dev.delugelauncher.R
 import androidx.compose.ui.res.stringResource
 
@@ -78,12 +84,15 @@ data class WidgetSlotActions(
     val onAddWidgetToFolder: (folderId: String) -> Unit = {},
     val onRemoveFolderWidget: (folderId: String, widgetId: Int) -> Unit = { _, _ -> },
     val onResizeFolderWidget: (folderId: String, widgetId: Int, heightDp: Int) -> Unit = { _, _, _ -> },
+    /** Adds or removes the Now Playing card in a folder. */
+    val onSetFolderNowPlaying: (folderId: String, on: Boolean) -> Unit = { _, _ -> },
     /** Null while the height is automatic, so the menu offers no reset for it. */
     val onResetHeight: (() -> Unit)? = null,
 )
 
 /**
- * The home screen's widget area: one widget on screen at a time, swiped between.
+ * The home screen's widget area: one widget on screen at a time, swiped between, or with
+ * [stacked] all of them one under another.
  *
  * Every page shares [heightDp] rather than carrying its own, so swiping never moves the
  * favorites underneath — a widget that changed the layout of the rest of the screen as it
@@ -93,6 +102,7 @@ data class WidgetSlotActions(
 fun WidgetSlot(
     widgetIds: List<Int>,
     heightDp: Int,
+    stacked: Boolean,
     onEditLayout: () -> Unit,
     actions: WidgetSlotActions,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
@@ -112,8 +122,23 @@ fun WidgetSlot(
         menuExpanded = true
     }
 
-    Box(modifier = modifier.height(heightDp.dp)) {
-        if (widgetIds.isEmpty()) {
+    val rows = if (stacked) widgetIds.size.coerceAtLeast(1) else 1
+    Box(modifier = modifier.height((heightDp * rows).dp)) {
+        if (stacked && widgetIds.isNotEmpty()) {
+            Column(Modifier.fillMaxSize()) {
+                widgetIds.forEach { id ->
+                    key(id) {
+                        Box(Modifier.fillMaxWidth().height(heightDp.dp)) {
+                            WidgetPage(
+                                widgetId = id,
+                                refreshTick = refreshTick,
+                                onPressAndHold = { x, y -> openMenu(id, x, y) },
+                            )
+                        }
+                    }
+                }
+            }
+        } else if (widgetIds.isEmpty()) {
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -280,16 +305,63 @@ internal fun WidgetPage(
     val frozenApplied by app.prefs.freezeApplied.collectAsState(initial = emptySet())
     val frozenMethods by app.prefs.freezeMethods.collectAsState(initial = emptyMap())
     val widgetProviders by app.prefs.widgetProviders.collectAsState(initial = emptyMap())
+    val lockedApps by app.prefs.lockedApps.collectAsState(initial = null)
     val scope = rememberCoroutineScope()
+    val requestUnlock = rememberAppLockRequest()
     // A dead provider names no package, so the mapping written at bind time answers instead.
     val providerPackage = providerInfo?.provider?.packageName ?: widgetProviders[widgetId]
+    // Null until the store answers: a tap is asked for credentials rather than waved through.
+    val providerLocked = providerPackage?.let { pkg ->
+        lockedApps?.let { isPackageLocked(it, pkg, 0L) } ?: true
+    } ?: false
     // A stopped app starts again on a tap, so only the methods that hold it need the lift.
     val frozen = providerPackage != null &&
         providerPackage in frozenApplied &&
         frozenMethods[providerPackage] != FreezeMethod.STOP
 
+    fun startWidgetApp(packageName: String) {
+        val label = runCatching {
+            context.packageManager.getApplicationInfo(packageName, 0)
+                .loadLabel(context.packageManager).toString()
+        }.getOrDefault(packageName)
+        scope.launch {
+            val revealed = withContext(Dispatchers.IO) {
+                app.appRepository.revealForLock(packageName)
+            }
+            if (!revealed) {
+                Toast.makeText(
+                    context,
+                    context.getString(R.string.app_lock_reveal_failed, label),
+                    Toast.LENGTH_LONG,
+                ).show()
+                return@launch
+            }
+            runCatching {
+                context.packageManager.getLaunchIntentForPackage(packageName)?.let {
+                    context.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    true
+                } ?: false
+            }.getOrDefault(false).let { launched ->
+                // A tap that could not start the app must not leave the lock's layers up.
+                if (!launched) {
+                    withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
+                }
+            }
+        }
+    }
+
     fun lift(open: Boolean) {
+        // Nothing is known about the locks yet; a tap here cannot open anything safely.
+        if (lockedApps == null) return
         val packageName = providerPackage ?: return
+        // The lock owns this app's suspend/hide state, so a tap here must not unfreeze it.
+        // Opening needs the same credential as an app row; without an open there is nothing
+        // safe to do, and the long-press menu is still available to remove the widget.
+        if (providerLocked) {
+            if (!open) return
+            requestUnlock(packageName) { startWidgetApp(packageName) }
+            return
+        }
         scope.launch {
             when (app.freezeManager.unfreeze(packageName)) {
                 FreezeOutcome.DONE -> if (open) runCatching {
@@ -346,60 +418,107 @@ internal fun WidgetPage(
         return
     }
 
+    // An app widget can carry its provider's own PendingIntent, which would start a locked
+    // app without ever reaching the launcher's credential prompt. Keep the provider's view
+    // off screen while the lock is on; a tap asks for the lock, a long press still edits.
+    if (providerLocked) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp)
+                .pointerInput(widgetId, providerLocked) {
+                    detectTapGestures(
+                        onTap = { lift(open = true) },
+                        onLongPress = { offset -> onPressAndHold(offset.x, offset.y) },
+                    )
+                },
+            color = Color.Black.copy(alpha = 0.25f),
+            shape = RoundedCornerShape(20.dp),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Text(
+                    stringResource(R.string.app_lock_title),
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+            }
+        }
+        return
+    }
+
     // A real long-press (finger held still) opens the edit menu; an ordinary tap or drag
     // still reaches the widget's own view untouched — see LongPressFrameLayout.
-    AndroidView(
+    //
+    // The press on the widget's own background is handled here rather than by that layout:
+    // a widget that has nothing under the finger to touch hands the gesture to the home
+    // screen, which is what lets the list scroll from on top of a clock. Only a widget
+    // whose own views claim the press keeps it, and then this detector never starts.
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .onSizeChanged { size ->
-                slotSizeDp = with(density) { size.width.toDp().value.toInt() to size.height.toDp().value.toInt() }
+            .pointerInput(widgetId, frozen) {
+                detectTapGestures(
+                    onTap = { if (frozen) lift(open = true) },
+                    onLongPress = { at -> onPressAndHold(at.x, at.y) },
+                )
             },
-        factory = { ctx ->
-            // A widget draws with code from the app that provides it, and one that throws on
-            // the way up would otherwise take the launcher down with it — leaving a home
-            // screen that crashes on sight and no obvious way back. An empty slot is a poor
-            // widget but it is still a home screen.
-            // createView already binds the id to the view; calling setAppWidget after it is
-            // not a second helping of the same thing — see the update block.
-            val hostView = runCatching {
-                app.widgetHost.createView(ctx, widgetId, providerInfo)
-            }.getOrNull()
-            LongPressFrameLayout(ctx).apply {
-                hostView?.let { addView(it) }
-                onLongPress = { x, y -> onPressAndHold(x, y) }
-                isFrozen = { frozen }
-                onFrozenTap = { lift(open = true) }
-            }
-        },
-        update = { container ->
-            val hostView = container.getChildAt(0) as? AppWidgetHostView
-            // Deliberately not calling setAppWidget here any more, and this is the whole of
-            // issue #80. It does not merely restate which widget this is: it resets the view
-            // to the provider's initial layout, throwing away whatever the widget has since
-            // drawn. A widget whose content arrives on its own schedule — a calendar agenda
-            // and anything else backed by a collection — was being wiped back to its loading
-            // state on every recomposition, and settled on "Can't show content" because it
-            // never got to finish. A widget that draws once from a plain RemoteViews survived
-            // it, which is why some worked and some did not.
-            //
-            // Widgets lay themselves out for the size they were *told*, not the size of the
-            // view; without this they render for some other size and get clipped.
-            //
-            // Pass the widget's existing options rather than an empty Bundle — a blank one
-            // replaces them outright, dropping the size hints (and on Android 12+ the size
-            // list) that responsive widgets pick their layout from, which is how a widget
-            // ends up drawing half its text. Only report real changes, since this ran on
-            // every recomposition.
-            val (wDp, hDp) = slotSizeDp
-            if (hostView != null && wDp > 0 && hDp > 0 && slotSizeDp != reportedSizeDp) {
-                reportedSizeDp = slotSizeDp
-                val options = runCatching { appWidgetManager.getAppWidgetOptions(widgetId) }
-                    .getOrNull() ?: Bundle()
-                hostView.updateAppWidgetSize(options, wDp, hDp, wDp, hDp)
-            }
-            container.onLongPress = { x, y -> onPressAndHold(x, y) }
-            container.isFrozen = { frozen }
-            container.onFrozenTap = { lift(open = true) }
-        },
-    )
+    ) {
+        AndroidView(
+            modifier = Modifier
+                .fillMaxSize()
+                .onSizeChanged { size ->
+                    slotSizeDp = with(density) { size.width.toDp().value.toInt() to size.height.toDp().value.toInt() }
+                },
+            factory = { ctx ->
+                // A widget draws with code from the app that provides it, and one that throws on
+                // the way up would otherwise take the launcher down with it — leaving a home
+                // screen that crashes on sight and no obvious way back. An empty slot is a poor
+                // widget but it is still a home screen.
+                // createView already binds the id to the view; calling setAppWidget after it is
+                // not a second helping of the same thing — see the update block.
+                val hostView = runCatching {
+                    app.widgetHost.createView(ctx, widgetId, providerInfo)
+                }.getOrNull()
+                LongPressFrameLayout(ctx).apply {
+                    hostView?.let { addView(it) }
+                    onLongPress = { x, y -> onPressAndHold(x, y) }
+                    isFrozen = { frozen }
+                    onFrozenTap = { lift(open = true) }
+                }
+            },
+            update = { container ->
+                val hostView = container.getChildAt(0) as? AppWidgetHostView
+                // Deliberately not calling setAppWidget here any more, and this is the whole of
+                // issue #80. It does not merely restate which widget this is: it resets the view
+                // to the provider's initial layout, throwing away whatever the widget has since
+                // drawn. A widget whose content arrives on its own schedule — a calendar agenda
+                // and anything else backed by a collection — was being wiped back to its loading
+                // state on every recomposition, and settled on "Can't show content" because it
+                // never got to finish. A widget that draws once from a plain RemoteViews survived
+                // it, which is why some worked and some did not.
+                //
+                // Widgets lay themselves out for the size they were *told*, not the size of the
+                // view; without this they render for some other size and get clipped.
+                //
+                // Pass the widget's existing options rather than an empty Bundle — a blank one
+                // replaces them outright, dropping the size hints (and on Android 12+ the size
+                // list) that responsive widgets pick their layout from, which is how a widget
+                // ends up drawing half its text. Only report real changes, since this ran on
+                // every recomposition.
+                val (wDp, hDp) = slotSizeDp
+                if (hostView != null && wDp > 0 && hDp > 0 && slotSizeDp != reportedSizeDp) {
+                    reportedSizeDp = slotSizeDp
+                    val options = runCatching { appWidgetManager.getAppWidgetOptions(widgetId) }
+                        .getOrNull() ?: Bundle()
+                    hostView.updateAppWidgetSize(options, wDp, hDp, wDp, hDp)
+                }
+                container.onLongPress = { x, y -> onPressAndHold(x, y) }
+                container.isFrozen = { frozen }
+                container.onFrozenTap = { lift(open = true) }
+            },
+        )
+    }
 }
