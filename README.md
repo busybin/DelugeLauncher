@@ -13,13 +13,13 @@ A hard fork of [Victoria Launcher](https://github.com/adelmonte/victoria-launche
 This fork exists for freezing, then for speed and feel: fast cold start, a thumb-reachable A-Z
 strip, gestures that hold up under a real finger.
 
-| Home | Folder, opened in two columns | App list | Long-press menu |
-| ---- | ------------------------------ | -------- | --------------- |
-| ![Home](screenshots/home.jpg) | ![Folder](screenshots/folder.jpg) | ![App list](screenshots/app-list.jpg) | ![Long-press menu](screenshots/menu.jpg) |
-| Settings | Network firewall | Freeze methods | |
-| ![Settings](screenshots/settings.jpg) | ![Network firewall](screenshots/network.jpg) | ![Freeze methods](screenshots/freeze-methods.jpg) | |
+| Home | Folder, opened in two columns | App list | Scrubbing the A-Z strip |
+| ---- | ------------------------------ | -------- | ----------------------- |
+| ![Home](screenshots/home.jpg) | ![Folder](screenshots/folder.jpg) | ![App list](screenshots/app-list.jpg) | ![Scrubbing the A-Z strip](screenshots/scrub.jpg) |
+| Long-press menu | App freezing | Network firewall | Settings |
+| ![Long-press menu](screenshots/menu.jpg) | ![App freezing](screenshots/freeze.jpg) | ![Network firewall](screenshots/network.jpg) | ![Settings](screenshots/settings.jpg) |
 
-Screenshots are 720×1600, taken on an Android 16 emulator in its dark theme.
+Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
 
 ## App freezing
 
