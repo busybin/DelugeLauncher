@@ -2915,6 +2915,7 @@ fun DelugeNavHost(
             }
             AccessScreen(
                 status = status,
+                networkSupported = networkSupported,
                 onRefresh = { scope.launch { runCatching { app.freezeManager.refreshAccess() } } },
                 onOpenShizuku = {
                     // FreezeManager resolves the package that owns the API permission, so a

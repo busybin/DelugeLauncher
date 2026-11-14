@@ -28,6 +28,7 @@ class AccessScreenTest {
         compose.setContent {
             AccessScreen(
                 status = status,
+                networkSupported = false,
                 onRefresh = {},
                 onOpenShizuku = {},
                 onGetShizuku = {},

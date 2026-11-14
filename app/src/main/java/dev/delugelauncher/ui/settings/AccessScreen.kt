@@ -73,6 +73,8 @@ import dev.delugelauncher.data.RootProvider
 @Composable
 fun AccessScreen(
     status: FreezeStatus,
+    /** Whether this phone has the per-app networking switch at all. */
+    networkSupported: Boolean,
     onRefresh: () -> Unit,
     onOpenShizuku: () -> Unit,
     onGetShizuku: () -> Unit,
@@ -151,7 +153,7 @@ fun AccessScreen(
             }
             item(key = "table") {
                 ListSectionLabel(stringResource(R.string.access_table_title))
-                CapabilityTable()
+                CapabilityTable(networkSupported)
                 Text(
                     stringResource(R.string.access_table_footnote),
                     style = MaterialTheme.typography.bodySmall,
@@ -353,7 +355,7 @@ fun AccessScreen(
 
 /** The three channels against the things the freeze screen can do. */
 @Composable
-private fun CapabilityTable() {
+private fun CapabilityTable(networkSupported: Boolean) {
     val rows = listOf(
         Capability(R.string.freeze_method_stop, root = true, shizuku = true, owner = false),
         Capability(R.string.freeze_method_disable, root = true, shizuku = true, owner = false),
@@ -361,8 +363,14 @@ private fun CapabilityTable() {
         Capability(R.string.freeze_method_suspend, root = true, shizuku = true, owner = true),
         Capability(R.string.access_table_background, root = true, shizuku = true, owner = false),
         Capability(R.string.access_table_lock, root = true, shizuku = true, owner = true),
-        // A device owner can freeze but cannot run the shell command the firewall needs.
-        Capability(R.string.access_table_network, root = true, shizuku = true, owner = false),
+        // The switch lives in the system, not in the channel: on a phone that does not have
+        // it, ticking a channel would promise something that never happens there.
+        Capability(
+            R.string.access_table_network,
+            root = networkSupported,
+            shizuku = networkSupported,
+            owner = false,
+        ),
     )
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
