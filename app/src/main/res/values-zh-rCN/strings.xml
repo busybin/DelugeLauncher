@@ -327,7 +327,7 @@
     <string name="freeze_menu_unfreeze">解冻</string>
     <string name="freeze_menu_remove">从冻结名单移除</string>
     <string name="freeze_pick_title">%1$s 的冻结方式</string>
-    <string name="freeze_auto">自动冻结</string>
+    <string name="freeze_auto">自动冻结规则</string>
     <string name="freeze_auto_enable">锁屏后冻结名单</string>
     <string name="freeze_auto_enable_detail">开启后会在后台保留一个服务，并显示通知。</string>
     <string name="freeze_auto_delay">锁屏后等待</string>

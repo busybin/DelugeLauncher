@@ -449,7 +449,7 @@ fun FreezeAppsScreen(
                 }
                 if (freezeEnabled && shown.isNotEmpty()) {
                     stickyHeader(key = "freeze-table-header") {
-                        FreezeTableHeader()
+                        FreezeTableHeader(onOpenMethods = onNavigateMethods)
                     }
                 }
                 items(shown, key = { it.key }) { row ->

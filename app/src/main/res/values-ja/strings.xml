@@ -232,7 +232,7 @@
     <string name="freeze_menu_unfreeze">解除</string>
     <string name="freeze_menu_remove">凍結リストから削除</string>
     <string name="freeze_pick_title">%1$s の凍結方法</string>
-    <string name="freeze_auto">自動凍結</string>
+    <string name="freeze_auto">自動凍結のルール</string>
     <string name="freeze_auto_enable">画面オフ後にリストを凍結</string>
     <string name="freeze_auto_enable_detail">オンの間はバックグラウンドサービスが動き、通知が表示されます。</string>
     <string name="freeze_auto_delay">画面が消えてから</string>

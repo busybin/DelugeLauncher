@@ -262,24 +262,31 @@ fun Step(text: String) {
 }
 
 @Composable
-fun RowScope.HeaderCell(@StringRes label: Int) {
+fun RowScope.HeaderCell(@StringRes label: Int, available: Boolean = true) {
     Text(
         stringResource(label),
         style = MaterialTheme.typography.labelSmall,
         textAlign = TextAlign.Center,
+        // A channel this phone does not have is greyed, not crossed: the column is not
+        // saying "impossible", it is saying "not granted here".
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (available) 0.87f else 0.38f),
         modifier = Modifier.weight(0.8f),
     )
 }
 
 @Composable
-fun RowScope.Mark(ok: Boolean) {
+fun RowScope.Mark(ok: Boolean, available: Boolean = true) {
     Box(Modifier.weight(0.8f), contentAlignment = Alignment.Center) {
         Icon(
             if (ok) Icons.Filled.Check else Icons.Filled.Close,
             contentDescription = stringResource(
                 if (ok) R.string.access_yes else R.string.access_no
             ),
-            tint = if (ok) positiveMarkColor() else MaterialTheme.colorScheme.error,
+            tint = if (available) {
+                if (ok) positiveMarkColor() else MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.45f)
+            },
             modifier = Modifier.size(18.dp),
         )
     }

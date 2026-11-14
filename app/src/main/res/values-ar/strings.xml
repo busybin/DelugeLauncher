@@ -346,7 +346,7 @@
     <string name="freeze_menu_unfreeze">إلغاء التجميد</string>
     <string name="freeze_menu_remove">إزالة من قائمة التجميد</string>
     <string name="freeze_pick_title">طريقة تجميد %1$s</string>
-    <string name="freeze_auto">التجميد التلقائي</string>
+    <string name="freeze_auto">قواعد التجميد التلقائي</string>
     <string name="freeze_auto_enable">تجميد القائمة عند إطفاء الشاشة</string>
     <string name="freeze_auto_enable_detail">يبقي خدمة تعمل في الخلفية مع إشعار طالما هذا مفعّل.</string>
     <string name="freeze_auto_delay">بعد إطفاء الشاشة</string>

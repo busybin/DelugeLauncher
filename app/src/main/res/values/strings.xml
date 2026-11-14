@@ -362,7 +362,7 @@
     <string name="freeze_menu_keep">Keep frozen when unfreezing all</string>
     <string name="freeze_menu_unkeep">Don\'t keep frozen</string>
     <string name="freeze_pick_title">Freeze method for %1$s</string>
-    <string name="freeze_auto">Automatic freezing</string>
+    <string name="freeze_auto">Automatic freezing rules</string>
     <string name="freeze_auto_enable">Freeze the list when the screen is off</string>
     <string name="freeze_auto_enable_detail">Keeps a background service running, with a notification, while this is on.</string>
     <string name="freeze_auto_delay">After the screen goes off</string>

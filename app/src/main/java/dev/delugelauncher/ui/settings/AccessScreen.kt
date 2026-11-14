@@ -153,7 +153,7 @@ fun AccessScreen(
             }
             item(key = "table") {
                 ListSectionLabel(stringResource(R.string.access_table_title))
-                CapabilityTable(networkSupported)
+                CapabilityTable(status, networkSupported)
                 Column(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
                     CAPABILITY_NOTES.forEach { note ->
                         Text(
@@ -368,7 +368,11 @@ private val CAPABILITY_NOTES = listOf(
 
 /** The three channels against the things the freeze screen can do. */
 @Composable
-private fun CapabilityTable(networkSupported: Boolean) {
+private fun CapabilityTable(status: FreezeStatus, networkSupported: Boolean) {
+    // What this phone actually has, so a column nobody granted reads grey instead of red.
+    val root = status.rootGranted
+    val shizuku = status.shizukuRunning && status.shizukuAuthorized
+    val owner = status.deviceOwner
     val rows = listOf(
         Capability(R.string.freeze_method_stop, root = true, shizuku = true, owner = false),
         Capability(R.string.freeze_method_disable, root = true, shizuku = true, owner = false),
@@ -396,9 +400,9 @@ private fun CapabilityTable(networkSupported: Boolean) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(Modifier.weight(1.6f))
-                HeaderCell(R.string.access_root)
-                HeaderCell(R.string.access_shizuku)
-                HeaderCell(R.string.access_owner)
+                HeaderCell(R.string.access_root, root)
+                HeaderCell(R.string.access_shizuku, shizuku)
+                HeaderCell(R.string.access_owner, owner)
             }
             HorizontalDivider(
                 Modifier.padding(horizontal = 12.dp),
@@ -414,9 +418,9 @@ private fun CapabilityTable(networkSupported: Boolean) {
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.weight(1.6f),
                     )
-                    Mark(row.root)
-                    Mark(row.shizuku)
-                    Mark(row.owner)
+                    Mark(row.root, root)
+                    Mark(row.shizuku, shizuku)
+                    Mark(row.owner, owner)
                 }
                 if (index != rows.lastIndex) {
                     HorizontalDivider(

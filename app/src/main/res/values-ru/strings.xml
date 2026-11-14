@@ -232,7 +232,7 @@
     <string name="freeze_menu_unfreeze">Разморозить</string>
     <string name="freeze_menu_remove">Убрать из списка заморозки</string>
     <string name="freeze_pick_title">Способ заморозки для %1$s</string>
-    <string name="freeze_auto">Автоматическая заморозка</string>
+    <string name="freeze_auto">Правила авто-заморозки</string>
     <string name="freeze_auto_enable">Замораживать список при выключении экрана</string>
     <string name="freeze_auto_enable_detail">Пока это включено, в фоне работает служба и висит уведомление.</string>
     <string name="freeze_auto_delay">После выключения экрана</string>

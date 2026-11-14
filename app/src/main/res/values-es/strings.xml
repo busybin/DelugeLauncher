@@ -232,7 +232,7 @@
     <string name="freeze_menu_unfreeze">Descongelar</string>
     <string name="freeze_menu_remove">Quitar de la lista de congelación</string>
     <string name="freeze_pick_title">Método de congelación para %1$s</string>
-    <string name="freeze_auto">Congelación automática</string>
+    <string name="freeze_auto">Reglas de congelación automática</string>
     <string name="freeze_auto_enable">Congelar la lista al apagar la pantalla</string>
     <string name="freeze_auto_enable_detail">Mantiene un servicio en segundo plano, con una notificación, mientras esté activado.</string>
     <string name="freeze_auto_delay">Tras apagar la pantalla</string>

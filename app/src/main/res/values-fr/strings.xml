@@ -232,7 +232,7 @@
     <string name="freeze_menu_unfreeze">Dégeler</string>
     <string name="freeze_menu_remove">Retirer de la liste de gel</string>
     <string name="freeze_pick_title">Méthode de gel pour %1$s</string>
-    <string name="freeze_auto">Gel automatique</string>
+    <string name="freeze_auto">Règles de gel automatique</string>
     <string name="freeze_auto_enable">Geler la liste quand l\'écran s\'éteint</string>
     <string name="freeze_auto_enable_detail">Maintient un service en arrière-plan, avec une notification, tant que c\'est activé.</string>
     <string name="freeze_auto_delay">Après extinction de l\'écran</string>

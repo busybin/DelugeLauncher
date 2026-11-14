@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.DropdownMenu
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.delugelauncher.R
@@ -218,7 +220,7 @@ fun FreezeStateCard(
  * number. The widths come from the row, so the two cannot drift apart.
  */
 @Composable
-fun FreezeTableHeader() {
+fun FreezeTableHeader(onOpenMethods: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface) {
         Row(
             modifier = Modifier
@@ -254,14 +256,30 @@ fun FreezeTableHeader() {
                 maxLines = 1,
                 modifier = Modifier.width(METHOD_COLUMN),
             )
-            Text(
-                text = stringResource(R.string.freeze_permanent),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                modifier = Modifier.width(PERMANENT_COLUMN),
-            )
+            // The word is the way into the methods page: "permanent" is the one column whose
+            // effect people ask about, and the answer already lives on that page.
+            Row(
+                modifier = Modifier
+                    .width(PERMANENT_COLUMN)
+                    .clickable(onClick = onOpenMethods)
+                    .testTag("freeze-permanent-help"),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(R.string.freeze_permanent),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textDecoration = TextDecoration.Underline,
+                    maxLines = 1,
+                )
+                Icon(
+                    Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
         }
     }
 }
