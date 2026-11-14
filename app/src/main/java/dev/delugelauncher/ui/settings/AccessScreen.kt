@@ -154,12 +154,16 @@ fun AccessScreen(
             item(key = "table") {
                 ListSectionLabel(stringResource(R.string.access_table_title))
                 CapabilityTable(networkSupported)
-                Text(
-                    stringResource(R.string.access_table_footnote),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
-                )
+                Column(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                    CAPABILITY_NOTES.forEach { note ->
+                        Text(
+                            stringResource(note),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                            modifier = Modifier.padding(vertical = 2.dp),
+                        )
+                    }
+                }
             }
             item(key = "root") {
                 ChannelCard(
@@ -353,14 +357,23 @@ fun AccessScreen(
     }
 }
 
+/** One numbered note per capability that needs a caveat, in the order the rows appear. */
+private val CAPABILITY_NOTES = listOf(
+    R.string.access_note_hide,
+    R.string.access_note_suspend,
+    R.string.access_note_background,
+    R.string.access_note_lock,
+    R.string.access_note_network,
+)
+
 /** The three channels against the things the freeze screen can do. */
 @Composable
 private fun CapabilityTable(networkSupported: Boolean) {
     val rows = listOf(
         Capability(R.string.freeze_method_stop, root = true, shizuku = true, owner = false),
         Capability(R.string.freeze_method_disable, root = true, shizuku = true, owner = false),
-        Capability(R.string.freeze_method_hide, root = true, shizuku = false, owner = true),
-        Capability(R.string.freeze_method_suspend, root = true, shizuku = true, owner = true),
+        Capability(R.string.access_table_hide, root = true, shizuku = false, owner = true),
+        Capability(R.string.access_table_suspend, root = true, shizuku = true, owner = true),
         Capability(R.string.access_table_background, root = true, shizuku = true, owner = false),
         Capability(R.string.access_table_lock, root = true, shizuku = true, owner = true),
         // The switch lives in the system, not in the channel: on a phone that does not have
