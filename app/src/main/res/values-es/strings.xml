@@ -900,8 +900,8 @@
     <string name="access_table_title">Qué puede hacer cada canal</string>
     <string name="access_table_background">Restringir segundo plano</string>
     <string name="access_table_lock">Bloquear pantalla</string>
-    <string name="access_table_network">Red por aplicación</string>
-    <string name="access_table_footnote">Suspender por sí solo no detiene una app en segundo plano. Shizuku iniciado como root también puede ocultar. La red por aplicación solo se ofrece donde el sistema tiene el interruptor.</string>
+    <string name="access_table_network">Red por aplicación¹</string>
+    <string name="access_table_footnote">Suspender por sí solo no detiene una app en segundo plano. Shizuku iniciado como root también puede ocultar. La red por aplicación solo se ofrece donde el sistema tiene el interruptor. ¹ Android 11 o posterior, y el sistema debe ofrecer chain 3; algunas versiones de fabricante no lo hacen. Las marcas siguen a este teléfono.</string>
     <string name="access_state_checking">Comprobando acceso…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Gestor</string>

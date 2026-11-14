@@ -924,8 +924,8 @@
     <string name="access_table_title">ما تستطيع كل قناة فعله</string>
     <string name="access_table_background">تقييد الخلفية</string>
     <string name="access_table_lock">قفل الشاشة</string>
-    <string name="access_table_network">قطع الشبكة لكل تطبيق</string>
-    <string name="access_table_footnote">التعليق وحده لا يوقف التطبيق في الخلفية. وShizuku المشغّل كـ root يستطيع الإخفاء أيضًا.قطع الشبكة لكل تطبيق متاح فقط عندما يوفّر النظام هذا المفتاح.</string>
+    <string name="access_table_network">قطع الشبكة لكل تطبيق¹</string>
+    <string name="access_table_footnote">التعليق وحده لا يوقف التطبيق في الخلفية. وShizuku المشغّل كـ root يستطيع الإخفاء أيضًا.قطع الشبكة لكل تطبيق متاح فقط عندما يوفّر النظام هذا المفتاح. ¹ يتطلب Android 11 أو أحدث، ويجب أن يوفّر النظام chain 3 — بعض إصدارات الشركات لا توفّره. العلامات حسب هذا الهاتف.</string>
     <string name="access_state_checking">جارٍ التحقق من الوصول…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">المدير</string>

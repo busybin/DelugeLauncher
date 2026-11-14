@@ -940,8 +940,8 @@
     <string name="access_table_title">What each channel can do</string>
     <string name="access_table_background">Restrict background</string>
     <string name="access_table_lock">Lock screen</string>
-    <string name="access_table_network">Per-app networking</string>
-    <string name="access_table_footnote">Suspend alone does not stop an app running in the background. Shizuku started as root can also hide. Per-app networking is offered only where the system has the switch.</string>
+    <string name="access_table_network">Per-app networking¹</string>
+    <string name="access_table_footnote">Suspend alone does not stop an app running in the background. Shizuku started as root can also hide. Per-app networking is offered only where the system has the switch. ¹ Android 11 or newer, and the system must still provide chain 3 — some vendor builds do not. The ticks follow this phone.</string>
     <string name="access_state_checking">Checking access…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Manager</string>

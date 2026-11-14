@@ -898,8 +898,8 @@
     <string name="access_table_title">各チャネルでできること</string>
     <string name="access_table_background">バックグラウンド制限</string>
     <string name="access_table_lock">画面ロック</string>
-    <string name="access_table_network">アプリ別のネットワーク遮断</string>
-    <string name="access_table_footnote">一時停止だけではバックグラウンド実行は止まりません。root で起動した Shizuku も非表示にできます。アプリ別のネットワーク遮断は、システムにその切り替えがある場合だけ使えます。</string>
+    <string name="access_table_network">アプリ別のネットワーク遮断¹</string>
+    <string name="access_table_footnote">一時停止だけではバックグラウンド実行は止まりません。root で起動した Shizuku も非表示にできます。アプリ別のネットワーク遮断は、システムにその切り替えがある場合だけ使えます。 ¹ Android 11 以降で、システムに chain 3 があること（一部のメーカー製では提供されません）。チェックはこの端末の実測に従います。</string>
     <string name="access_state_checking">アクセスを確認中…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">マネージャー</string>

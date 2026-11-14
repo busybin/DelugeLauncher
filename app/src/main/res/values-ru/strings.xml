@@ -912,8 +912,8 @@
     <string name="access_table_title">Что умеет каждый канал</string>
     <string name="access_table_background">Ограничить фон</string>
     <string name="access_table_lock">Блокировка экрана</string>
-    <string name="access_table_network">Сеть по приложениям</string>
-    <string name="access_table_footnote">Приостановка сама по себе не останавливает приложение в фоне. Shizuku, запущенный как root, тоже умеет скрывать. Отключение сети по приложениям есть только там, где система предоставляет этот переключатель.</string>
+    <string name="access_table_network">Сеть по приложениям¹</string>
+    <string name="access_table_footnote">Приостановка сама по себе не останавливает приложение в фоне. Shizuku, запущенный как root, тоже умеет скрывать. Отключение сети по приложениям есть только там, где система предоставляет этот переключатель. ¹ Android 11 или новее, и система должна предоставлять chain 3 — в некоторых сборках производителя её нет. Отметки соответствуют этому телефону.</string>
     <string name="access_state_checking">Проверка доступа…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Менеджер</string>

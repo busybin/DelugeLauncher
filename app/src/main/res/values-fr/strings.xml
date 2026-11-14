@@ -900,8 +900,8 @@
     <string name="access_table_title">Ce que chaque canal peut faire</string>
     <string name="access_table_background">Restreindre l\'arrière-plan</string>
     <string name="access_table_lock">Verrouiller l\'écran</string>
-    <string name="access_table_network">Réseau par application</string>
-    <string name="access_table_footnote">Suspendre n\'arrête pas une appli en arrière-plan. Shizuku lancé en root peut aussi masquer. Le réseau par application n\'est proposé que si le système en a l\'interrupteur.</string>
+    <string name="access_table_network">Réseau par application¹</string>
+    <string name="access_table_footnote">Suspendre n\'arrête pas une appli en arrière-plan. Shizuku lancé en root peut aussi masquer. Le réseau par application n\'est proposé que si le système en a l\'interrupteur. ¹ Android 11 ou plus récent, et le système doit fournir chain 3 — certaines versions constructeur ne le font pas. Les coches suivent ce téléphone.</string>
     <string name="access_state_checking">Vérification de l\'accès…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Gestionnaire</string>
