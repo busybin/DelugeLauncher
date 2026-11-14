@@ -1029,7 +1029,7 @@
     <string name="freeze_protected_short">Aplicativo protegido</string>
     <string name="freeze_col_method">Método</string>
     <string name="freeze_method_none">Nenhum</string>
-    <string name="freeze_permanent_body">Uma linha permanente ignora qualquer descongelamento em massa: Descongelar tudo, selecionar tudo, pastas, bloqueio e a programação automática a ignoram. Só o próprio interruptor a libera. Use para apps que você para de propósito.</string>
+    <string name="freeze_permanent_body">Uma linha permanente ignora todo desbloqueio em massa: Descongelar tudo, selecionar tudo, os gestos de pasta e bloqueio e o agendamento automático a ignoram. A saída da entrega e o próprio interruptor ainda a descongelam. Para apps que você para de propósito.</string>
     <string name="freeze_scroll_top">Voltar ao topo</string>
     <string name="freeze_state_title">%1$d congelados</string>
     <string name="freeze_state_body">%1$d na lista · %2$d permanentes</string>

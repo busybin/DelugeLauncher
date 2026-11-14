@@ -1064,7 +1064,7 @@
     <string name="freeze_protected_short">Protected app</string>
     <string name="freeze_col_method">Method</string>
     <string name="freeze_method_none">None</string>
-    <string name="freeze_permanent_body">A permanent row ignores every bulk lift: Unfreeze all, select all, folder and lock gestures, and the automatic schedule all skip it. Only its own switch lets it go. Use it for apps you stop on purpose and want to stay stopped.</string>
+    <string name="freeze_permanent_body">A permanent row ignores every bulk lift: Unfreeze all, select all, folder and lock gestures, and the automatic schedule all skip it. A handover exit and its own switch still let it go. Use it for apps you stop on purpose and want to stay stopped.</string>
     <string name="freeze_scroll_top">Back to top</string>
     <string name="freeze_state_title">%1$d frozen</string>
     <string name="freeze_state_body">%1$d on the list · %2$d permanent</string>

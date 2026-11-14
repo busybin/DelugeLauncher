@@ -1029,7 +1029,7 @@
     <string name="freeze_protected_short">Appli protégée</string>
     <string name="freeze_col_method">Méthode</string>
     <string name="freeze_method_none">Aucune</string>
-    <string name="freeze_permanent_body">Une ligne permanente ignore tout dégel groupé : Tout dégeler, la sélection globale, les dossiers, le verrouillage et la planification automatique la sautent. Seul son propre interrupteur la libère. À réserver aux applis que vous arrêtez volontairement.</string>
+    <string name="freeze_permanent_body">Une ligne permanente ignore tout dégel groupé : Tout dégeler, tout sélectionner, les gestes de dossier et de verrouillage et la planification automatique la contournent. La sortie du passage de main et son propre interrupteur la dégèlent. Pour les apps arrêtées volontairement.</string>
     <string name="freeze_scroll_top">Retour en haut</string>
     <string name="freeze_state_title">%1$d gelées</string>
     <string name="freeze_state_body">%1$d dans la liste · %2$d permanentes</string>

@@ -4,7 +4,7 @@
         <item>Per-app firewall: cut the apps you choose off the internet while everything else stays online. Each app follows freeze, stays blocked or stays online, protected apps and the dialer are never touched, and an app installed while the firewall is on joins the list.</item>
         <item>The firewall has a page of its own: search, system apps, a filter per state, and counts for offline, waiting and unconfirmed apps. Android drops these rules on reboot, so they are written again at start-up.</item>
         <item>The freeze list is now one table: every app on the phone, the method for each and whether it is frozen. The method is set per app (Stop, Suspend, Disable, Hide), and a comparison page says what each one survives.</item>
-        <item>Permanent freeze replaces the old pin: a permanent app stays frozen through Unfreeze all, a folder release, a handover exit and an automatic thaw. Thawing that one app still works, and the list can show only permanent entries.</item>
+        <item>Permanent freeze replaces the old pin: a permanent app stays frozen through Unfreeze all, a folder release and the automatic thaw. A handover exit or the app\'s own switch still thaws it, and the list can show only permanent entries.</item>
         <item>Pick a default method for new entries, add or remove several apps at once from the selection bar, and switch freezing itself off from the freeze page.</item>
         <item>The dialer and the system-critical packages can no longer be frozen by accident; the row says why it is held.</item>
         <item>Thawing an app that an older version suspended under another identity now works: the suspension is lifted under the name the system recorded, not only under the current one.</item>

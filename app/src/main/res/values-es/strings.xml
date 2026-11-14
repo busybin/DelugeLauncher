@@ -1029,7 +1029,7 @@
     <string name="freeze_protected_short">Aplicación protegida</string>
     <string name="freeze_col_method">Método</string>
     <string name="freeze_method_none">Ninguno</string>
-    <string name="freeze_permanent_body">Una fila permanente ignora todos los desbloqueos masivos: Descongelar todo, seleccionar todo, las carpetas, el bloqueo y la programación automática la omiten. Solo su propio interruptor la libera. Úsala para apps que detienes a propósito.</string>
+    <string name="freeze_permanent_body">Una fila permanente ignora todo levantamiento masivo: Descongelar todo, seleccionar todo, los gestos de carpeta y bloqueo y la programación automática la omiten. La salida del traspaso y su propio interruptor sí la descongelan. Para apps que paras a propósito.</string>
     <string name="freeze_scroll_top">Volver arriba</string>
     <string name="freeze_state_title">%1$d congeladas</string>
     <string name="freeze_state_body">%1$d en la lista · %2$d permanentes</string>

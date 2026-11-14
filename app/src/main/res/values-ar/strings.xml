@@ -1053,7 +1053,7 @@
     <string name="freeze_protected_short">تطبيق محمي</string>
     <string name="freeze_col_method">الطريقة</string>
     <string name="freeze_method_none">لا شيء</string>
-    <string name="freeze_permanent_body">يتجاهل الصف الدائم كل عمليات إلغاء التجميد الجماعية: إلغاء تجميد الكل، تحديد الكل، المجلدات، القفل، والجدولة التلقائية تتخطاه. مفتاحه وحده يحرره. استخدمه للتطبيقات التي توقفها عمدًا.</string>
+    <string name="freeze_permanent_body">يتجاهل الصف الدائم كل رفع جماعي: إلغاء التجميد الكل واختيار الكل وإيماءات المجلد والقفل والجدول التلقائي كلها تتجاوزه. لكن الخروج من التسليم ومفتاحه الخاص يرفعانه. استخدمه للتطبيقات التي توقفها عمدًا وتريدها متوقفة.</string>
     <string name="freeze_scroll_top">العودة إلى الأعلى</string>
     <string name="freeze_state_title">%1$d مجمّد</string>
     <string name="freeze_state_body">%1$d في القائمة · %2$d دائم</string>

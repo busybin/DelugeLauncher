@@ -1027,7 +1027,7 @@
     <string name="freeze_protected_short">保護されたアプリ</string>
     <string name="freeze_col_method">方式</string>
     <string name="freeze_method_none">なし</string>
-    <string name="freeze_permanent_body">永続の行は一括解除の対象外です。「すべて解除」、全選択、フォルダー、ロック、自動スケジュールはすべてこの行を飛ばします。解除できるのは行自身のスイッチだけです。意図的に止め続けたいアプリに使います。</string>
+    <string name="freeze_permanent_body">永久行は一括解除をすべて無視します。すべて解凍、全選択、フォルダとロックのジェスチャー、自動スケジュールは触れません。引き渡しの終了と、その行自身のスイッチは解除します。意図的に止めたままにしたいアプリ向けです。</string>
     <string name="freeze_scroll_top">先頭へ</string>
     <string name="freeze_state_title">%1$d 件を凍結中</string>
     <string name="freeze_state_body">%1$d 件がリスト内 · 永続 %2$d 件</string>
