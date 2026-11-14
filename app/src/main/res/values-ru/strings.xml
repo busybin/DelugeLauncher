@@ -912,7 +912,8 @@
     <string name="access_table_title">Что умеет каждый канал</string>
     <string name="access_table_background">Ограничить фон</string>
     <string name="access_table_lock">Блокировка экрана</string>
-    <string name="access_table_footnote">Приостановка сама по себе не останавливает приложение в фоне. Shizuku, запущенный как root, тоже умеет скрывать.</string>
+    <string name="access_table_network">Сеть по приложениям</string>
+    <string name="access_table_footnote">Приостановка сама по себе не останавливает приложение в фоне. Shizuku, запущенный как root, тоже умеет скрывать. Отключение сети по приложениям есть только там, где система предоставляет этот переключатель.</string>
     <string name="access_state_checking">Проверка доступа…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Менеджер</string>
@@ -1056,7 +1057,7 @@
     <string name="network_firewall">Брандмауэр по приложениям</string>
     <string name="network_open">Сетевой брандмауэр</string>
     <string name="network_firewall_detail">Отключает интернет приложениям из списка. Остальные остаются в сети.</string>
-    <string name="network_unsupported">Нужен Android 11 или новее.</string>
+    <string name="network_unsupported">Система этого телефона не поддерживает отключение сети по приложениям.</string>
     <string name="network_needs_access">Нужен root или Shizuku, чтобы менять другое приложение.</string>
     <string name="network_block_new_apps">Блокировать новые приложения</string>
     <string name="network_block_new_apps_detail">Приложение, установленное при включённом брандмауэре, попадает в список.</string>

@@ -580,6 +580,9 @@ fun DelugeNavHost(
     val networkMode by app.prefs.networkMode.collectAsState(initial = dev.delugelauncher.data.NetworkMode.OFF)
     val networkBlocked by app.prefs.networkBlocked.collectAsState(initial = emptySet())
     val networkApplied by app.prefs.networkApplied.collectAsState(initial = emptySet())
+    val networkSupported by produceState(initialValue = app.networkManager.supportedCached()) {
+        value = app.networkManager.supported()
+    }
     val networkPending by app.prefs.networkPending.collectAsState(initial = emptySet())
     val networkUnknown by app.prefs.networkUnknown.collectAsState(initial = emptySet())
     val networkBlockNewApps by app.prefs.networkBlockNewApps.collectAsState(initial = false)
@@ -1864,6 +1867,7 @@ fun DelugeNavHost(
                 networkCount = networkApplied.size,
                 networkHasAccess = freezeStatus.access != dev.delugelauncher.data.FreezeAccess.NONE,
                 networkEnabled = networkMode.enabled,
+                networkSupported = networkSupported,
                 onOpenNetwork = { navController.navigate("settings/network") },
                 externalControlEnabled = externalControlEnabled,
                 onSetExternalControl = { enabled ->

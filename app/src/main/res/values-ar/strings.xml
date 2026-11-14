@@ -924,7 +924,8 @@
     <string name="access_table_title">ما تستطيع كل قناة فعله</string>
     <string name="access_table_background">تقييد الخلفية</string>
     <string name="access_table_lock">قفل الشاشة</string>
-    <string name="access_table_footnote">التعليق وحده لا يوقف التطبيق في الخلفية. وShizuku المشغّل كـ root يستطيع الإخفاء أيضًا.</string>
+    <string name="access_table_network">قطع الشبكة لكل تطبيق</string>
+    <string name="access_table_footnote">التعليق وحده لا يوقف التطبيق في الخلفية. وShizuku المشغّل كـ root يستطيع الإخفاء أيضًا.قطع الشبكة لكل تطبيق متاح فقط عندما يوفّر النظام هذا المفتاح.</string>
     <string name="access_state_checking">جارٍ التحقق من الوصول…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">المدير</string>
@@ -1068,7 +1069,7 @@
     <string name="network_firewall">جدار حماية لكل تطبيق</string>
     <string name="network_open">جدار حماية الشبكة</string>
     <string name="network_firewall_detail">يقطع الإنترنت عن التطبيقات المدرجة. يبقى الباقي متصلًا.</string>
-    <string name="network_unsupported">يحتاج Android 11 أو أحدث.</string>
+    <string name="network_unsupported">نظام هذا الهاتف لا يدعم قطع الشبكة لكل تطبيق.</string>
     <string name="network_needs_access">يتطلب Root أو Shizuku لتغيير تطبيق آخر.</string>
     <string name="network_block_new_apps">حجب التطبيقات الجديدة</string>
     <string name="network_block_new_apps_detail">التطبيق المثبَّت أثناء تشغيل الجدار ينضم إلى القائمة.</string>

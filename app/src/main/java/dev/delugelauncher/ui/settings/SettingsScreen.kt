@@ -389,6 +389,8 @@ class SettingsScreenModel(
     val networkHasAccess: Boolean,
     /** Whether the firewall is on. A running firewall stays reachable without a channel. */
     val networkEnabled: Boolean,
+    /** Whether this phone's system has the switches at all; Android 11 does not. */
+    val networkSupported: Boolean,
     val onOpenNetwork: () -> Unit,
     /** Whether scripts and links may drive the freeze list. Off unless switched on here. */
     val externalControlEnabled: Boolean,
@@ -1370,6 +1372,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
             BackupRow(
                 label = stringResource(R.string.network_firewall),
                 detail = when {
+                    !networkSupported -> stringResource(R.string.network_unsupported)
                     !networkHasAccess && !networkEnabled ->
                         stringResource(R.string.network_needs_access)
                     networkCount == 0 -> stringResource(R.string.network_status_none)
@@ -1377,7 +1380,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 },
                 onClick = onOpenNetwork,
                 leading = DelugeIcons.LinkOff,
-                enabled = networkHasAccess || networkEnabled,
+                enabled = networkSupported && (networkHasAccess || networkEnabled),
             )
         },
         // The automation doors are exported; this switch is what makes them closed by default.

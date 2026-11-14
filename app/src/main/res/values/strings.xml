@@ -795,7 +795,7 @@
     <string name="network_firewall">Per-app firewall</string>
     <string name="network_open">Network firewall</string>
     <string name="network_firewall_detail">Cut the listed apps off from the internet. Everything else stays online.</string>
-    <string name="network_unsupported">This needs Android 11 or newer.</string>
+    <string name="network_unsupported">This phone\'s system does not support per-app networking.</string>
     <string name="network_needs_access">Needs root or Shizuku to change another app.</string>
     <string name="network_block_new_apps">Block new apps</string>
     <string name="network_block_new_apps_detail">An app installed while the firewall is on joins the list.</string>
@@ -940,7 +940,8 @@
     <string name="access_table_title">What each channel can do</string>
     <string name="access_table_background">Restrict background</string>
     <string name="access_table_lock">Lock screen</string>
-    <string name="access_table_footnote">Suspend alone does not stop an app running in the background. Shizuku started as root can also hide.</string>
+    <string name="access_table_network">Per-app networking</string>
+    <string name="access_table_footnote">Suspend alone does not stop an app running in the background. Shizuku started as root can also hide. Per-app networking is offered only where the system has the switch.</string>
     <string name="access_state_checking">Checking access…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Manager</string>

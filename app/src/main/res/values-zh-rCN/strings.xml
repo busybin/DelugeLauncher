@@ -898,7 +898,8 @@
     <string name="access_table_title">各通道能做什么</string>
     <string name="access_table_background">限制后台</string>
     <string name="access_table_lock">锁屏</string>
-    <string name="access_table_footnote">仅靠暂停不会停止后台运行。以 root 启动的 Shizuku 也能隐藏。</string>
+    <string name="access_table_network">按应用断网</string>
+    <string name="access_table_footnote">仅靠暂停不会停止后台运行。以 root 启动的 Shizuku 也能隐藏。按应用断网只在系统提供该开关的版本上出现。</string>
     <string name="access_state_checking">正在检查权限…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">管理器</string>
@@ -1042,7 +1043,7 @@
     <string name="network_firewall">按应用防火墙</string>
     <string name="network_open">网络防火墙</string>
     <string name="network_firewall_detail">让名单内的应用断网，其余应用保持联网。</string>
-    <string name="network_unsupported">需要 Android 11 或更高版本。</string>
+    <string name="network_unsupported">这台手机的系统不支持按应用断网。</string>
     <string name="network_needs_access">改动其他应用需要 Root 或 Shizuku。</string>
     <string name="network_block_new_apps">拦截新装应用</string>
     <string name="network_block_new_apps_detail">防火墙开启期间安装的应用会自动加入名单。</string>

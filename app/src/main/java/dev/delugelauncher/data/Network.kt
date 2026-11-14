@@ -292,7 +292,30 @@ class NetworkManager(
 ) {
     private val gate = Mutex()
 
-    fun supported(): Boolean = Build.VERSION.SDK_INT >= 30
+    @Volatile private var supportProbed = false
+    @Volatile private var supportAnswer = false
+
+    /** The cached answer, for composables that must decide before a probe can run. */
+    fun supportedCached(): Boolean = supportAnswer
+
+    /**
+     * Whether this phone's shell can switch per-app networking at all.
+     *
+     * The API level alone is not enough: on Android 11 both commands answer "Unknown command",
+     * so the page opened, said nothing was blocked and enforced nothing. Probed once per
+     * process with the same read the sync uses, and the result is what the page reports.
+     */
+    suspend fun supported(): Boolean {
+        if (supportProbed) return supportAnswer
+        val answer = withContext(Dispatchers.IO) {
+            Build.VERSION.SDK_INT >= 30 &&
+                shell.runCapture(NetworkCommands.readChain(), TIMEOUT)
+                    ?.second?.let(NetworkCommands::parseChain) != null
+        }
+        supportAnswer = answer
+        supportProbed = true
+        return answer
+    }
 
     suspend fun statusNow(): NetworkStatus = withContext(Dispatchers.IO) {
         val applied = prefs.networkAppliedNow()

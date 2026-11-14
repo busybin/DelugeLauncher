@@ -361,6 +361,8 @@ private fun CapabilityTable() {
         Capability(R.string.freeze_method_suspend, root = true, shizuku = true, owner = true),
         Capability(R.string.access_table_background, root = true, shizuku = true, owner = false),
         Capability(R.string.access_table_lock, root = true, shizuku = true, owner = true),
+        // A device owner can freeze but cannot run the shell command the firewall needs.
+        Capability(R.string.access_table_network, root = true, shizuku = true, owner = false),
     )
     Surface(
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),

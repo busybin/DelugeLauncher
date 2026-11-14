@@ -900,7 +900,8 @@
     <string name="access_table_title">O que cada canal pode fazer</string>
     <string name="access_table_background">Restringir segundo plano</string>
     <string name="access_table_lock">Bloquear tela</string>
-    <string name="access_table_footnote">Suspender sozinho não para um app em segundo plano. O Shizuku iniciado como root também oculta.</string>
+    <string name="access_table_network">Rede por aplicativo</string>
+    <string name="access_table_footnote">Suspender sozinho não para um app em segundo plano. O Shizuku iniciado como root também oculta. A rede por aplicativo só aparece onde o sistema tem a chave.</string>
     <string name="access_state_checking">Verificando acesso…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Gerenciador</string>
@@ -1044,7 +1045,7 @@
     <string name="network_firewall">Firewall por aplicativo</string>
     <string name="network_open">Firewall de rede</string>
     <string name="network_firewall_detail">Corta a internet dos aplicativos da lista. O resto continua online.</string>
-    <string name="network_unsupported">Precisa do Android 11 ou mais recente.</string>
+    <string name="network_unsupported">O sistema deste telefone não permite cortar a rede por aplicativo.</string>
     <string name="network_needs_access">Precisa de root ou Shizuku para alterar outro aplicativo.</string>
     <string name="network_block_new_apps">Bloquear novos aplicativos</string>
     <string name="network_block_new_apps_detail">Um aplicativo instalado com o firewall ativo entra na lista.</string>

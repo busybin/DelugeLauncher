@@ -25,11 +25,13 @@ class FreezeTileService : TileService() {
             val hasPlan = app.prefs.freezeMethodsNow().isNotEmpty()
             // Read the device, not the record: an app can be gone or lifted since the last run.
             val held = app.freezeManager.heldNowCount()
+            // Without a channel the tile would freeze nothing; say so instead of looking live.
+            val canAct = app.freezeManager.hasQuietAccess()
             withContext(Dispatchers.Main) {
                 qsTile?.apply {
                     label = getString(R.string.freeze_tile_label)
                     state = when {
-                        !enabled || !hasPlan -> Tile.STATE_UNAVAILABLE
+                        !enabled || !hasPlan || !canAct -> Tile.STATE_UNAVAILABLE
                         held > 0 -> Tile.STATE_ACTIVE
                         else -> Tile.STATE_INACTIVE
                     }

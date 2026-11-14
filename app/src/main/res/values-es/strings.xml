@@ -900,7 +900,8 @@
     <string name="access_table_title">Qué puede hacer cada canal</string>
     <string name="access_table_background">Restringir segundo plano</string>
     <string name="access_table_lock">Bloquear pantalla</string>
-    <string name="access_table_footnote">Suspender por sí solo no detiene una app en segundo plano. Shizuku iniciado como root también puede ocultar.</string>
+    <string name="access_table_network">Red por aplicación</string>
+    <string name="access_table_footnote">Suspender por sí solo no detiene una app en segundo plano. Shizuku iniciado como root también puede ocultar. La red por aplicación solo se ofrece donde el sistema tiene el interruptor.</string>
     <string name="access_state_checking">Comprobando acceso…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">Gestor</string>
@@ -1044,7 +1045,7 @@
     <string name="network_firewall">Cortafuegos por aplicación</string>
     <string name="network_open">Cortafuegos de red</string>
     <string name="network_firewall_detail">Corta el internet de las aplicaciones de la lista. El resto sigue en línea.</string>
-    <string name="network_unsupported">Necesita Android 11 o posterior.</string>
+    <string name="network_unsupported">El sistema de este teléfono no permite cortar la red por aplicación.</string>
     <string name="network_needs_access">Necesita root o Shizuku para cambiar otra aplicación.</string>
     <string name="network_block_new_apps">Bloquear aplicaciones nuevas</string>
     <string name="network_block_new_apps_detail">Una aplicación instalada con el cortafuegos activo se une a la lista.</string>

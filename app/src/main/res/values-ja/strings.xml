@@ -898,7 +898,8 @@
     <string name="access_table_title">各チャネルでできること</string>
     <string name="access_table_background">バックグラウンド制限</string>
     <string name="access_table_lock">画面ロック</string>
-    <string name="access_table_footnote">一時停止だけではバックグラウンド実行は止まりません。root で起動した Shizuku も非表示にできます。</string>
+    <string name="access_table_network">アプリ別のネットワーク遮断</string>
+    <string name="access_table_footnote">一時停止だけではバックグラウンド実行は止まりません。root で起動した Shizuku も非表示にできます。アプリ別のネットワーク遮断は、システムにその切り替えがある場合だけ使えます。</string>
     <string name="access_state_checking">アクセスを確認中…</string>
     <string name="access_unknown">—</string>
     <string name="access_manager">マネージャー</string>
@@ -1042,7 +1043,7 @@
     <string name="network_firewall">アプリ別ファイアウォール</string>
     <string name="network_open">ネットワークファイアウォール</string>
     <string name="network_firewall_detail">一覧のアプリだけをインターネットから遮断します。ほかのアプリはオンラインのままです。</string>
-    <string name="network_unsupported">Android 11 以降が必要です。</string>
+    <string name="network_unsupported">この端末のシステムはアプリ別のネットワーク遮断に対応していません。</string>
     <string name="network_needs_access">ほかのアプリを変更するには Root または Shizuku が必要です。</string>
     <string name="network_block_new_apps">新しいアプリを遮断</string>
     <string name="network_block_new_apps_detail">ファイアウォールが有効な間にインストールしたアプリは一覧に加わります。</string>

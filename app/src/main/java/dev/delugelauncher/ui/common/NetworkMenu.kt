@@ -12,6 +12,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -193,9 +196,12 @@ fun rememberNetworkActions(
     val scope = rememberCoroutineScope()
     val mode by app.prefs.networkMode.collectAsState(initial = NetworkMode.OFF)
     val freezeStatus by app.freezeManager.status.collectAsState()
-    if (freezeStatus.checked && freezeStatus.access == FreezeAccess.NONE && !mode.enabled) {
-        return null
-    }
+    var supported by remember { mutableStateOf(app.networkManager.supportedCached()) }
+    LaunchedEffect(app) { supported = app.networkManager.supported() }
+    // No channel, or a system without the switches: nothing this menu offers can run, so it
+    // is not offered. Settings still shows the row and says why it cannot be used.
+    if (!supported) return null
+    if (freezeStatus.checked && freezeStatus.access == FreezeAccess.NONE) return null
     val blocked by app.prefs.networkBlocked.collectAsState(initial = emptySet())
     val unrestricted by app.prefs.networkUnrestricted.collectAsState(initial = emptySet())
     val protected = remember(app) { app.networkManager.protectedPackages() }

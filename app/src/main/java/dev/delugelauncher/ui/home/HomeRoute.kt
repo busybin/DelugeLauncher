@@ -14,6 +14,7 @@ import android.provider.MediaStore
 import androidx.core.content.ContextCompat
 import dev.delugelauncher.data.CornerAction
 import android.content.Context
+import dev.delugelauncher.data.FreezeAccess
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
 import dev.delugelauncher.data.FreezeStatus
@@ -399,6 +400,10 @@ fun HomeRoute(
     val cornerSwipeAction by app.prefs.cornerSwipeAction.collectAsState(initial = CornerAction.APP_LIST)
     // Everything freeze-shaped is hidden while the feature is off.
     val freezeEnabled by app.prefs.freezeEnabled.collectAsState(initial = true)
+    val freezeAccess by app.freezeManager.status.collectAsState()
+    // A menu entry that cannot act is worse than none: with no channel the freeze actions are
+    // hidden and the freeze page, which explains why, is the only way in.
+    val freezeUsable = freezeEnabled && freezeAccess.access != FreezeAccess.NONE
     // The method picker asks the channel what it can run, so it never offers a verb that
     // will silently fail on this phone.
     val freezeStatus by app.freezeManager.status.collectAsState()
@@ -1444,8 +1449,8 @@ fun HomeRoute(
             CornerAction.LOCK -> lockOrExplain()
             // The list's own two verbs, run off the main thread by the manager: this is
             // several shell commands per app, and the button must not wait for them.
-            CornerAction.FREEZE_ALL -> if (freezeEnabled) runFreezeAll()
-            CornerAction.UNFREEZE_ALL -> if (freezeEnabled) runUnfreezeAll()
+            CornerAction.FREEZE_ALL -> if (freezeUsable) runFreezeAll()
+            CornerAction.UNFREEZE_ALL -> if (freezeUsable) runUnfreezeAll()
             CornerAction.DO_NOTHING -> Unit
         }
     }
@@ -1738,8 +1743,8 @@ fun HomeRoute(
                     }
                 },
                 cornerSwipeBound = cornerSwipeBound,
-                freezeEnabled = freezeEnabled,
-                freezeActions = if (freezeEnabled) freezeActions else null,
+                freezeEnabled = freezeUsable,
+                freezeActions = if (freezeUsable) freezeActions else null,
                 onFreezeAll = { runFreezeAll() },
                 onUnfreezeAll = { runUnfreezeAll() },
                 onOpenFreezeList = { onNavigate("settings/freeze") },
@@ -1825,7 +1830,7 @@ fun HomeRoute(
                 onManageFolder = { folder ->
                     onNavigate("folder/" + android.net.Uri.encode(folder.id))
                 },
-                onFreezeFolder = if (freezeEnabled) {
+                onFreezeFolder = if (freezeUsable) {
                     { members ->
                         scope.launch {
                             val result = app.freezeManager.freezeMany(members)
@@ -1874,7 +1879,7 @@ fun HomeRoute(
                 } else {
                     null
                 },
-                onUnfreezeFolder = if (freezeEnabled) {
+                onUnfreezeFolder = if (freezeUsable) {
                     { members ->
                         scope.launch {
                             val result = app.freezeManager.unfreezeMany(members)
@@ -2200,7 +2205,7 @@ fun HomeRoute(
                 } else {
                     null
                 },
-                freezeActions = if (freezeEnabled) freezeActions else null,
+                freezeActions = if (freezeUsable) freezeActions else null,
                 appTags = appTags,
                 allTags = allTags,
                 reservedTags = reservedTags,
