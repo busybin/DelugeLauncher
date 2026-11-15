@@ -4,6 +4,12 @@
         <item>Les dossiers retrouvent leur colonne en affichage à deux colonnes : ils partagent à nouveau la ligne avec une appli, et le chevron disparaît dans cette cellule pour laisser de la place au nom. Un dossier contenant un widget ou la lecture en cours garde la ligne entière, car il s\'ouvre sur place.</item>
         <item>La liste des applis suit : en deux colonnes, un dossier se place à côté d\'une appli de sa lettre au lieu d\'occuper une ligne seul.</item>
         <item>Un réglage de portée de l\'onde dans la barre A–Z : rapproche l\'onde et sa bulle du bord pour qu\'elles ne couvrent plus les noms, ou les en éloigne.</item>
+        <item>Un widget qui défile prend désormais ses propres gestes verticaux : l\'écran d\'accueil n\'ouvre plus la liste ni le volet en dessous, et un défilement lent n\'ouvre plus son menu.</item>
+        <item>Un dossier près du bas entre dans l\'écran pendant qu\'il s\'ouvre, pour que le doigt qui descend tombe sur la bonne appli.</item>
+        <item>Le clavier de recherche arrive pendant que la liste glisse encore, plus un instant après.</item>
+        <item>Les barres du haut évitent la caméra quand la barre d\'état est masquée.</item>
+        <item>L\'horloge peut prendre la hauteur de ce qu\'elle affiche, et chaque ligne a son propre espace au-dessus. Les deux dans Modifier la disposition.</item>
+        <item>Les réglages de la barre A–Z indiquent où se règle son étendue.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Pare-feu par application : coupez l\'internet des applications choisies pendant que tout le reste reste en ligne. Chaque application suit le gel, reste bloquée ou reste en ligne ; les applications protégées et le téléphone ne sont jamais touchés, et une application installée pare-feu actif rejoint la liste.</item>

@@ -1953,6 +1953,19 @@ fun SettingsScreen(model: SettingsScreenModel) {
                         onSetShowAlphabet,
                     )
                     RowDivider()
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                        Text(
+                            stringResource(R.string.settings_az_range),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        Text(
+                            stringResource(R.string.settings_az_range_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                    RowDivider()
                     ScrubReachRow(scrubReach, onSetScrubReach)
                 }
             },

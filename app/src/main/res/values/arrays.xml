@@ -4,6 +4,12 @@
         <item>Folders are back in their column in the two-column layout: a folder shares its row with an app again, and the chevron is dropped in that cell so its name has room. A folder that holds a widget or Now Playing keeps the whole row, because that one opens in place.</item>
         <item>The app list follows: with two columns on, a folder sits beside an app of its own letter instead of alone on a line.</item>
         <item>A wave reach slider under the A-Z strip settings: pull the wave and its letter bubble in from the edge so they stop covering the app names, or push them out.</item>
+        <item>A widget that scrolls takes its own up-and-down swipes: the home screen no longer opens the list or the shade underneath it, and a slow scroll no longer pops the widget\'s menu.</item>
+        <item>A folder near the bottom slides into view while it opens, so a finger already on its way down lands on the app it was aimed at.</item>
+        <item>The search keyboard comes up while the list is still sliding in, not a moment after it settles.</item>
+        <item>Top bars stay clear of the camera cutout on phones whose status bar is hidden.</item>
+        <item>The clock can size the widget to what it is showing, and each clock row gets its own space above. Both live in Edit layout.</item>
+        <item>The A-Z strip settings now say where the strip\'s range is dragged.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Per-app firewall: cut the apps you choose off the internet while everything else stays online. Each app follows freeze, stays blocked or stays online, protected apps and the dialer are never touched, and an app installed while the firewall is on joins the list.</item>

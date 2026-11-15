@@ -1110,4 +1110,6 @@
     <string name="settings_group_network">الشبكة</string>
     <string name="settings_scrub_reach">مدى الموجة</string>
     <string name="settings_scrub_reach_detail">إلى أي مدى تدخل موجة A-Z وفقاعتها من الحافة. قلّله حتى لا تغطي الموجة أسماء التطبيقات.</string>
+    <string name="settings_az_range">نطاق الشريط</string>
+    <string name="settings_az_range_detail">يُسحب أعلى الشريط وأسفله في «تعديل التخطيط»: اضغط مطولًا على الشاشة الرئيسية ثم «تعديل التخطيط» ثم «نطاق شريط A–Z».</string>
 </resources>

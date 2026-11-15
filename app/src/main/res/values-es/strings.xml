@@ -1086,4 +1086,6 @@
     <string name="settings_group_network">Red</string>
     <string name="settings_scrub_reach">Alcance de la onda</string>
     <string name="settings_scrub_reach_detail">Cuánto entran la onda A–Z y su burbuja desde el borde. Redúcelo para que la onda no tape los nombres.</string>
+    <string name="settings_az_range">Rango de la tira</string>
+    <string name="settings_az_range_detail">Los extremos de la tira se arrastran en Editar diseño: mantén pulsado el inicio, elige Editar diseño y luego Rango de la tira A–Z.</string>
 </resources>

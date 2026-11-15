@@ -4,6 +4,12 @@
         <item>Las carpetas vuelven a su columna en el diseño de dos columnas: comparten fila con una app otra vez y, en esa celda, se quita la flecha para que el nombre tenga sitio. Una carpeta con widget o Reproducción en curso conserva la fila entera, porque se abre en el sitio.</item>
         <item>La lista de apps hace lo mismo: con dos columnas, una carpeta se coloca junto a una app de su misma letra en vez de sola en una línea.</item>
         <item>Un ajuste de alcance de la onda en la tira A–Z: acerca la onda y su burbuja al borde para que no tapen los nombres, o las aleja.</item>
+        <item>Un widget que se desplaza recibe sus propios deslizamientos verticales: la pantalla de inicio ya no abre la lista ni la cortina debajo, y un desplazamiento lento ya no abre su menú.</item>
+        <item>Una carpeta cerca del borde inferior entra en vista mientras se abre, así el dedo que baja aterriza en la app que buscaba.</item>
+        <item>El teclado de búsqueda aparece mientras la lista aún entra, no un momento después.</item>
+        <item>Las barras superiores esquivan la cámara cuando la barra de estado está oculta.</item>
+        <item>El reloj puede ajustar el widget a lo que muestra, y cada fila tiene su propio espacio arriba. Ambas cosas en Editar diseño.</item>
+        <item>Los ajustes de la tira A–Z dicen dónde se arrastra su rango.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Cortafuegos por aplicación: corta el internet de las apps que elijas mientras el resto sigue en línea. Cada app sigue la congelación, sigue bloqueada o sigue en línea; las apps protegidas y la app de teléfono no se tocan nunca, y una app instalada con el cortafuegos activo se une a la lista.</item>
