@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v32">
-        <item>Les dossiers retrouvent leur colonne en affichage à deux colonnes : ils partagent à nouveau la ligne avec une appli, et le chevron disparaît dans cette cellule pour laisser de la place au nom. Un dossier contenant un widget ou la lecture en cours garde la ligne entière, car il s\'ouvre sur place.</item>
-        <item>La liste des applis suit : en deux colonnes, un dossier se place à côté d\'une appli de sa lettre au lieu d\'occuper une ligne seul.</item>
-        <item>Un réglage de portée de l\'onde dans la barre A–Z : rapproche l\'onde et sa bulle du bord pour qu\'elles ne couvrent plus les noms, ou les en éloigne.</item>
-        <item>Un widget qui défile prend désormais ses propres gestes verticaux : l\'écran d\'accueil n\'ouvre plus la liste ni le volet en dessous, et un défilement lent n\'ouvre plus son menu.</item>
+        <item>Les dossiers retrouvent leur colonne en affichage à deux colonnes. Ils partagent à nouveau la ligne avec une appli, et le chevron disparaît dans cette cellule pour laisser de la place au nom. Un dossier contenant un widget ou la lecture en cours garde la ligne entière, car il s\'ouvre sur place.</item>
+        <item>La liste des applis suit. En deux colonnes, un dossier se place à côté d\'une appli de sa lettre au lieu d\'occuper une ligne seul.</item>
+        <item>Un réglage de portée de l\'onde dans la barre A–Z rapproche l\'onde et sa bulle du bord pour qu\'elles ne couvrent plus les noms, ou les en éloigne.</item>
+        <item>Un widget qui défile prend désormais ses propres gestes verticaux. L\'écran d\'accueil n\'ouvre plus la liste ni le volet en dessous, et un défilement lent n\'ouvre plus son menu.</item>
         <item>Un dossier près du bas entre dans l\'écran pendant qu\'il s\'ouvre, pour que le doigt qui descend tombe sur la bonne appli.</item>
         <item>Le clavier de recherche arrive pendant que la liste glisse encore, plus un instant après.</item>
         <item>Les barres du haut évitent la caméra quand la barre d\'état est masquée.</item>

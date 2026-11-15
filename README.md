@@ -2,16 +2,16 @@
 
 A minimal, list-based Android launcher that can freeze apps.
 
-Apps are frozen from the home screen instead of from a second app with a second list to keep in
-sync: a sleeping app keeps its row, folder, favorite slot and tag, drawn grey, and a tap wakes
-it and opens it.
+Apps freeze from the home screen itself, so there is no second app and no second list to keep in
+sync. A sleeping app keeps its row, folder, favorite slot and tag, drawn grey; a tap wakes it and
+opens it.
 
 A hard fork of [Victoria Launcher](https://github.com/adelmonte/victoria-launcher) by
 [adelmonte](https://github.com/adelmonte), itself an open source alternative to
 [Niagara Launcher](https://niagaralauncher.app).
 
-This fork exists for freezing, then for speed and feel: fast cold start, a thumb-reachable A-Z
-strip, gestures that hold up under a real finger.
+The fork is built around freezing, and around speed and feel. That means a fast cold start, a
+thumb-reachable A-Z strip, and gestures that hold up under a real finger.
 
 | Home | Folder, opened in two columns | App list | Scrubbing the A-Z strip |
 | ---- | ------------------------------ | -------- | ----------------------- |
@@ -38,8 +38,8 @@ Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
   goes off — skipping the app in front, apps with notifications, and a phone on a charger.
   Unlocking thaws the list if you enable it.
 - **A tap is a temporary thaw.** The row stays and the next trigger puts it back to sleep.
-- **Fast by design.** One package-manager pass reads every app's state, a run only touches what
-  is not already asleep, and through Shizuku each app is a single binder call — hiding included
+- **Fast by design.** One package-manager pass reads every app's state, and a run only touches
+  what is not already asleep. Through Shizuku each app is a single binder call, hiding included
   when the manager runs as root. A 170-app list settles in well under a second of IPC.
 - **Root, Shizuku or device owner.** Shizuku is recommended and works without root (Android
   11+, over wireless debugging). Hide needs root or a device owner. A device owner needs neither:
@@ -94,7 +94,7 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
   an app installed while it is on joins the list, and the rules are written again at start-up
   because Android forgets them on reboot.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
-- Apps open out of their icon and shrink back into it on a gesture back.
+- Apps open out of their icon and shrink back into it when you go back.
 - Notification text under an app name in favorites, off by default: the app's newest three, each
   one opening its own notification, with a text size of its own. A dot when icons are hidden.
 - Widgets can live inside a folder, above its apps, each with its own height, and a folder can

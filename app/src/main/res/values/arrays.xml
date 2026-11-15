@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v32">
-        <item>Folders are back in their column in the two-column layout: a folder shares its row with an app again, and the chevron is dropped in that cell so its name has room. A folder that holds a widget or Now Playing keeps the whole row, because that one opens in place.</item>
-        <item>The app list follows: with two columns on, a folder sits beside an app of its own letter instead of alone on a line.</item>
-        <item>A wave reach slider under the A-Z strip settings: pull the wave and its letter bubble in from the edge so they stop covering the app names, or push them out.</item>
-        <item>A widget that scrolls takes its own up-and-down swipes: the home screen no longer opens the list or the shade underneath it, and a slow scroll no longer pops the widget\'s menu.</item>
+        <item>Folders sit in their column again in the two-column layout. A folder shares its row with an app, and the chevron is dropped in that cell so the name has room. One that holds a widget or Now Playing keeps the whole row, because it opens in place.</item>
+        <item>The app list follows. With two columns on, a folder sits beside an app of its own letter instead of alone on a line.</item>
+        <item>A wave reach slider under the A-Z strip settings pulls the wave and its letter bubble in from the edge, so they stop covering app names, or pushes them out.</item>
+        <item>A widget that scrolls takes its own up-and-down swipes. The home screen no longer opens the list or the shade underneath it, and a slow scroll no longer pops the widget\'s menu.</item>
         <item>A folder near the bottom slides into view while it opens, so a finger already on its way down lands on the app it was aimed at.</item>
         <item>The search keyboard comes up while the list is still sliding in, not a moment after it settles.</item>
         <item>Top bars stay clear of the camera cutout on phones whose status bar is hidden.</item>

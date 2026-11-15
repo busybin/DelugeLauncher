@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v32">
-        <item>As pastas voltam à sua coluna no layout de duas colunas: dividem a linha com um app de novo, e a seta some nessa célula para o nome ter espaço. Uma pasta com widget ou Reprodução em andamento mantém a linha inteira, porque abre no lugar.</item>
+        <item>As pastas voltam à sua coluna no layout de duas colunas. Dividem a linha com um app de novo, e a seta some nessa célula para o nome ter espaço. Uma pasta com widget ou Reprodução em andamento mantém a linha inteira, porque abre no lugar.</item>
         <item>A lista de apps segue o mesmo: com duas colunas, uma pasta fica ao lado de um app da própria letra em vez de sozinha numa linha.</item>
-        <item>Um controle de alcance da onda nas opções da tira A–Z: aproxima a onda e sua bolha da borda para não cobrirem os nomes, ou as afasta.</item>
-        <item>Um widget que rola agora recebe os próprios gestos verticais: a tela inicial não abre mais a lista nem a gaveta por baixo, e rolar devagar não abre o menu dele.</item>
+        <item>Um controle de alcance da onda nas opções da tira A–Z aproxima a onda e sua bolha da borda para não cobrirem os nomes, ou as afasta.</item>
+        <item>Um widget que rola agora recebe os próprios gestos verticais. A tela inicial não abre mais a lista nem a gaveta por baixo, e rolar devagar não abre o menu dele.</item>
         <item>Uma pasta perto da base entra na tela enquanto abre, para o dedo que desce cair no app certo.</item>
         <item>O teclado da busca aparece enquanto a lista ainda desliza, não um instante depois.</item>
         <item>As barras de cima desviam da câmera quando a barra de status está oculta.</item>
