@@ -285,16 +285,34 @@ fun EdgeTouchZone(
 
                     if (!moved) {
                         val doubleTap = currentDoubleTap
-                        val previous = state.lastTapUptimeMs
-                        if (doubleTap != null && down.uptimeMillis - previous <= DOUBLE_TAP_WINDOW_MS) {
-                            state.lastTapUptimeMs = 0L
-                            doubleTap()
-                        } else {
-                            state.lastTapUptimeMs = down.uptimeMillis
-                            // Nothing was picked, so this was a tap on bare strip. Above and
-                            // below the letters the strip is empty space like the space above
-                            // the list, and it dismisses for the same reason.
-                            if (!enteredBand && openAtDown) currentDismiss()
+                        val withinWindow = doubleTap != null &&
+                            down.uptimeMillis - state.lastTapUptimeMs <= DOUBLE_TAP_WINDOW_MS
+                        when (stripTapAction(withinWindow, state.lastTapEffect)) {
+                            StripTap.CLOSE -> {
+                                // The first tap opened the list; this one is the "oops, close
+                                // it again" tap, not a request for the lock.
+                                state.lastTapUptimeMs = 0L
+                                state.lastTapEffect = TapEffect.NONE
+                                currentDismiss()
+                            }
+                            StripTap.LOCK -> {
+                                state.lastTapUptimeMs = 0L
+                                state.lastTapEffect = TapEffect.NONE
+                                doubleTap?.invoke()
+                            }
+                            StripTap.RESTART -> {
+                                state.lastTapUptimeMs = down.uptimeMillis
+                                // Nothing was picked, so this was a tap on bare strip. Above
+                                // and below the letters the strip is empty space like the
+                                // space above the list, and it dismisses for the same reason.
+                                val dismissed = !enteredBand && openAtDown
+                                if (dismissed) currentDismiss()
+                                state.lastTapEffect = when {
+                                    !openAtDown -> TapEffect.OPENED
+                                    dismissed -> TapEffect.DISMISSED
+                                    else -> TapEffect.NONE
+                                }
+                            }
                         }
                     }
                 }

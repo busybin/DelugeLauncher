@@ -80,6 +80,9 @@ class ScrubState {
      */
     var lastTapUptimeMs: Long = 0L
 
+    /** What that tap did, so the next one can undo it instead of locking the phone. */
+    internal var lastTapEffect: TapEffect = TapEffect.NONE
+
     fun currentY(): Float? = if (active) y else null
 
     fun currentPull(): Float = if (releasing) releasePull.value else pull
@@ -168,4 +171,26 @@ class ScrubState {
         releasing = false
         pull = 0f
     }
+}
+
+/** What a tap on the strip did, so the next one in the window knows what it means. */
+internal enum class TapEffect { NONE, OPENED, DISMISSED }
+
+/** What the tap that just ended should do. */
+internal enum class StripTap { RESTART, CLOSE, LOCK }
+
+/**
+ * Resolves a tap against the one before it.
+ *
+ * The strip opens the list on touch-down, so the first tap of a pair always leaves the list
+ * open. Calling the second one "lock" — the old rule — locked the phone on the double tap
+ * people make to open and close the list again. Only a tap that changed nothing (a tap on a
+ * letter, with the list already up) can be the first half of a lock; a tap that opened the
+ * list hands the second tap back as "close"; one that closed it starts the window over.
+ */
+internal fun stripTapAction(withinWindow: Boolean, previous: TapEffect): StripTap = when {
+    !withinWindow -> StripTap.RESTART
+    previous == TapEffect.OPENED -> StripTap.CLOSE
+    previous == TapEffect.NONE -> StripTap.LOCK
+    else -> StripTap.RESTART
 }
