@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.joinMiddleDot
 
 import android.app.TimePickerDialog
@@ -144,6 +145,7 @@ fun SleepRulesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.sleep_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -414,6 +416,7 @@ private fun SleepRuleEditor(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = {
                     Text(stringResource(if (initial.id.isBlank()) R.string.sleep_new else R.string.sleep_edit))
                 },

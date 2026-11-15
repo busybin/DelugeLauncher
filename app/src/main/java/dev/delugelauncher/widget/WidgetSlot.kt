@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.widget
 
+import kotlin.math.abs
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import dev.delugelauncher.ui.common.DelugeIcons
 
 import android.appwidget.AppWidgetHostView
@@ -466,12 +470,14 @@ internal fun WidgetPage(
                 )
             },
     ) {
+        val containerRef = remember { arrayOfNulls<LongPressFrameLayout>(1) }
         AndroidView(
             modifier = Modifier
                 .fillMaxSize()
                 .onSizeChanged { size ->
                     slotSizeDp = with(density) { size.width.toDp().value.toInt() to size.height.toDp().value.toInt() }
-                },
+                }
+                .claimsVerticalScroll { containerRef[0] },
             factory = { ctx ->
                 // A widget draws with code from the app that provides it, and one that throws on
                 // the way up would otherwise take the launcher down with it — leaving a home
@@ -487,6 +493,7 @@ internal fun WidgetPage(
                     onLongPress = { x, y -> onPressAndHold(x, y) }
                     isFrozen = { frozen }
                     onFrozenTap = { lift(open = true) }
+                    containerRef[0] = this
                 }
             },
             update = { container ->
@@ -522,3 +529,33 @@ internal fun WidgetPage(
         )
     }
 }
+
+/**
+ * Gives a widget that scrolls its up-and-down drags, before the home screen can take them for
+ * opening the app list or pulling down the shade.
+ *
+ * Watched in the Initial pass, which reaches this before the home screen's own drag sees the
+ * move. Claimed at half a slop and only for up and down: sideways is never claimed, so the
+ * pager keeps it, and a widget with nothing to scroll is never claimed for either. Until a
+ * claim is made every move is another chance to read the direction.
+ */
+private fun Modifier.claimsVerticalScroll(container: () -> LongPressFrameLayout?): Modifier =
+    pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val view = container() ?: return@awaitEachGesture
+            if (!view.hasScrollableContent()) return@awaitEachGesture
+            val decisionSlop = viewConfiguration.touchSlop / 2f
+            while (true) {
+                val change = awaitPointerEvent(PointerEventPass.Initial).changes
+                    .firstOrNull { it.id == down.id } ?: break
+                if (!change.pressed) break
+                val dx = abs(change.position.x - down.position.x)
+                val dy = abs(change.position.y - down.position.y)
+                if (dy > decisionSlop && dy > dx * DIRECTION_MARGIN) {
+                    view.claimScroll()
+                    break
+                }
+            }
+        }
+    }

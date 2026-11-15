@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.network
 
+import dev.delugelauncher.ui.common.topBarInsets
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -133,6 +134,7 @@ fun NetworkAppsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.network_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

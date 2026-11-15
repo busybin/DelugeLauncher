@@ -6,32 +6,45 @@ import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewConfiguration
 import android.widget.FrameLayout
-import kotlin.math.abs
 
 /** How much more vertical than sideways a drag must be before the widget takes it for a scroll. */
-private const val DIRECTION_MARGIN = 1.25f
+internal const val DIRECTION_MARGIN = 1.25f
 
 /**
  * Wraps an embedded AppWidgetHostView so a genuine long-press (finger held still) opens our
  * edit menu, while an ordinary tap or drag still reaches the widget underneath untouched.
  *
- * A plain Compose pointerInput long-press detector can't do this for a widget that scrolls:
- * once it starts tracking a gesture it owns the whole touch stream, so the widget's own
- * buttons (play/pause, a weather tap-to-open) would stop working. This mirrors how scrollable
- * containers arbitrate gestures with their children: don't intercept on ACTION_DOWN, keep
- * watching via onInterceptTouchEvent, and only steal the stream once our own long-press timer
- * actually fires.
- *
- * A press that no child of the widget takes is not ours either — onTouchEvent answers false,
- * so the home screen's own drag keeps it. The hold and tap for that case are handled in Compose
- * (see WidgetPage), which is why the detector is only fed from here.
+ * A plain Compose pointerInput long-press detector can't do this: once it starts tracking a
+ * gesture it owns the whole touch stream, so the widget's own buttons (play/pause, a weather
+ * tap-to-open) would stop working. This mirrors how scrollable containers arbitrate gestures
+ * with their children: don't intercept on ACTION_DOWN, keep watching via onInterceptTouchEvent,
+ * and only steal the stream once our own long-press timer actually fires.
  */
 class LongPressFrameLayout(context: Context) : FrameLayout(context) {
 
     /** x/y are the press position in this view's local pixel coordinates. */
     var onLongPress: ((x: Float, y: Float) -> Unit)? = null
+
+    /**
+     * Given, told the content's own height in pixels on every measure, whatever height this
+     * view is being made to fill.
+     *
+     * Asked here rather than of the Compose side: the hosted view hiding a row did lay itself
+     * out again, but only ever inside the height it already had, so a clock could grow to fit
+     * and never shrink back.
+     */
+    var onNaturalHeight: ((Int) -> Unit)? = null
+        set(value) {
+            val turnedOn = field == null && value != null
+            field = value
+            // Nothing else may be about to lay this out, and the first answer is the one wanted.
+            if (turnedOn) {
+                lastNaturalHeight = -1
+                requestLayout()
+            }
+        }
+    private var lastNaturalHeight = -1
 
     /**
      * Called on a tap while [isFrozen] answers true.
@@ -46,19 +59,8 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
 
     private var longPressFired = false
 
-    /** Where the current gesture began, so its direction can be judged as it moves. */
-    private var downX = 0f
-    private var downY = 0f
-
     /** Set once the widget has taken this gesture, so the claim is made once and not per move. */
     private var claimed = false
-
-    /** Read at the press rather than per move: a view-tree walk is not a per-event cost. */
-    private var canScroll = false
-
-    /** Half a touch slop: enough to read a direction, short enough to beat the home screen. */
-    private val decisionSlop get() = touchSlop / 2
-    private val touchSlop = ViewConfiguration.get(context).scaledTouchSlop
 
     private val gestureDetector = GestureDetector(
         context,
@@ -75,58 +77,43 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         },
     )
 
-    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-        when (ev.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                longPressFired = false
-                claimed = false
-                downX = ev.x
-                downY = ev.y
-                canScroll = hasScrollableContent()
-            }
+    /**
+     * Hands this gesture to the widget's own scrolling, and to nothing else: the home screen
+     * stops seeing it, and the press can no longer turn into a long-press.
+     *
+     * Decided on the Compose side, which sees each move before the home screen does — see
+     * [claimsVerticalScroll].
+     */
+    fun claimScroll() {
+        if (claimed) return
+        claimed = true
+        parent?.requestDisallowInterceptTouchEvent(true)
+        val now = android.os.SystemClock.uptimeMillis()
+        val cancel = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+        gestureDetector.onTouchEvent(cancel)
+        cancel.recycle()
+    }
 
-            MotionEvent.ACTION_MOVE -> if (!claimed && canScroll) {
-                val dx = abs(ev.x - downX)
-                val dy = abs(ev.y - downY)
-                // Claimed early, and only for up and down.
-                //
-                // Claiming on the press instead took sideways with it, and handing it back
-                // once the drag turned out to be sideways does not give the pager its chance
-                // again — so a widget that scrolls could never be swiped past. Waiting for a
-                // full touch slop was the other way round: the home screen decides at exactly
-                // that distance, and whichever ran first won, which is how a list inside a
-                // widget lost its scroll to the notification shade.
-                //
-                // Half a slop is far enough to tell a direction and short enough to answer
-                // before the home screen does. Sideways is never claimed, so the pager keeps
-                // it, and a widget with nothing to scroll is never claimed for either.
-                //
-                // Nothing is written off, though. This used to settle on the first sample to
-                // pass that distance and stand by it for the rest of the gesture, including
-                // when it settled on sideways — and twelve pixels in, a thumb that has just
-                // come back down to carry on scrolling is mostly noise. A swipe that started a
-                // little across and then went down had already given the drag away, which is
-                // what made it "hit or miss whether it's recognized on the widget or the app
-                // scroller". Only the claim is final now; until one is made every move is
-                // another chance to read the direction.
-                //
-                // And read with a margin rather than by a hair, or the same wobble in the
-                // other direction claims a sideways swipe for a scroll before the pager can
-                // have it — which is the stack needing "the perfect angle".
-                if (dy > decisionSlop && dy > dx * DIRECTION_MARGIN) {
-                    claimed = true
-                    parent?.requestDisallowInterceptTouchEvent(true)
-                }
-            }
-
-            MotionEvent.ACTION_UP,
-            MotionEvent.ACTION_CANCEL -> {
-                longPressFired = false
-                claimed = false
-                parent?.requestDisallowInterceptTouchEvent(false)
-            }
+    // The long-press timer is fed here rather than from onInterceptTouchEvent. A list inside
+    // the widget that starts scrolling asks this view to stop intercepting, after which
+    // onInterceptTouchEvent hears nothing more of the gesture — the timer never saw the finger
+    // move, and a slow scroll opened the menu partway through.
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            longPressFired = false
+            claimed = false
         }
-        gestureDetector.onTouchEvent(ev)
+        if (!claimed) gestureDetector.onTouchEvent(ev)
+        val handled = super.dispatchTouchEvent(ev)
+        if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) {
+            longPressFired = false
+            claimed = false
+            parent?.requestDisallowInterceptTouchEvent(false)
+        }
+        return handled
+    }
+
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
         if (longPressFired) {
             // Our own menu is taking over, so the hold on the parent is no longer wanted.
             parent?.requestDisallowInterceptTouchEvent(false)
@@ -140,7 +127,7 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
      * Asked of the view tree rather than the widget's declaration: a list that is too short to
      * scroll answers no, which is the right answer — there is nothing to take the gesture for.
      */
-    private fun hasScrollableContent(): Boolean {
+    fun hasScrollableContent(): Boolean {
         fun scrollable(view: View): Boolean {
             if (view.canScrollVertically(1) || view.canScrollVertically(-1)) return true
             if (view !is ViewGroup) return false
@@ -155,11 +142,21 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         return false
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        // Never ours to take. A press that landed on the widget's own background is the home
-        // screen's: returning true here made the interop layer consume every move for the
-        // whole gesture, and the list underneath stopped scrolling anywhere a widget sat.
-        // The hold and the tap for such a widget are handled in Compose (see WidgetPage).
-        return false
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val report = onNaturalHeight
+        val content = getChildAt(0)
+        if (report != null && content != null && MeasureSpec.getSize(widthMeasureSpec) > 0) {
+            content.measure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            val natural = content.measuredHeight + paddingTop + paddingBottom
+            if (natural > 0 && natural != lastNaturalHeight) {
+                lastNaturalHeight = natural
+                // After the pass rather than inside it: the answer resizes the slot this is
+                // being measured for.
+                post { report(natural) }
+            }
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean = true
 }

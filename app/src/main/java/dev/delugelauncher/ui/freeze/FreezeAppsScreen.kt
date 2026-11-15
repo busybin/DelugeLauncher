@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.freeze
 
+import dev.delugelauncher.ui.common.topBarInsets
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -236,6 +237,7 @@ fun FreezeAppsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = {
                     Text(
                         if (multi) {

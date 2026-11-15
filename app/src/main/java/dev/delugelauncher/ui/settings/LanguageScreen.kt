@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -82,6 +83,7 @@ fun LanguageScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.settings_language)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 
 import androidx.compose.foundation.combinedClickable
@@ -104,6 +105,7 @@ fun ManageFavoritesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.favorites_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

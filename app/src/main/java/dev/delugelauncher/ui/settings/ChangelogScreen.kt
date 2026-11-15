@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -61,6 +62,7 @@ fun ChangelogScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.settings_changelog)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

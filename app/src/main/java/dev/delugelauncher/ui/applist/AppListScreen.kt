@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.applist
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.focus.FocusMenuItem
 import dev.delugelauncher.data.Pinyin
@@ -1743,7 +1744,7 @@ fun AppListScreen(
                 // Below the status bar rather than under it: parked at the very top it
                 // collided with the clock. The inset is zero while the bar is hidden.
                 modifier = Modifier.align(Alignment.TopCenter).fillMaxWidth()
-                    .statusBarsPadding(),
+                    .windowInsetsPadding(topBarInsets.only(WindowInsetsSides.Top)),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),

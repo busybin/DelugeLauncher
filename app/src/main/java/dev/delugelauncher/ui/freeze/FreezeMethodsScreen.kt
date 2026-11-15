@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.freeze
 
+import dev.delugelauncher.ui.common.topBarInsets
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -45,6 +46,7 @@ fun FreezeMethodsScreen(onBack: () -> Unit) {
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.freeze_methods_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

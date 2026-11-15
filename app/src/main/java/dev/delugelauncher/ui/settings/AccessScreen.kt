@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.joinMiddleDot
 
 import androidx.annotation.StringRes
@@ -98,6 +99,7 @@ fun AccessScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.access_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

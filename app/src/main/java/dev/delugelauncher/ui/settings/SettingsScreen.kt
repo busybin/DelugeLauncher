@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 
 import androidx.compose.foundation.background
@@ -1579,6 +1580,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         containerColor = surface.copy(alpha = 1f - dimPreviewReveal),
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = {
                     Text(
                         stringResource(openCard?.labelRes ?: R.string.settings_title),

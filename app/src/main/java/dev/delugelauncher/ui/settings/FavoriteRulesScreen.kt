@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.joinMiddleDot
 
 import android.app.TimePickerDialog
@@ -121,6 +122,7 @@ fun FavoriteRulesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.rules_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -306,6 +308,7 @@ private fun RuleEditor(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = {
                     Text(
                         stringResource(

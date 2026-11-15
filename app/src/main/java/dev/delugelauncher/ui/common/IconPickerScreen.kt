@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.common
 
+import dev.delugelauncher.ui.common.topBarInsets
 import android.graphics.drawable.Drawable
 import android.widget.ImageView
 import androidx.compose.foundation.clickable
@@ -108,6 +109,7 @@ fun IconPickerScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
+            windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.icon_picker_title, appLabel)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

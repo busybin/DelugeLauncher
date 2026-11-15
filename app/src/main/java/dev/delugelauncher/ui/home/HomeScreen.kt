@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.home
 
+import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.focus.FocusMenuItem
 
@@ -1040,7 +1041,7 @@ fun HomeScreen(
                     // window draws edge to edge on purpose, so edge to edge includes the
                     // system bar until something says otherwise. Hidden, there is nothing to
                     // clear. Edit mode pads its own header and is left alone.
-                    if (avoidStatusBar && !editMode) Modifier.statusBarsPadding() else Modifier
+                    if (avoidStatusBar && !editMode) Modifier.windowInsetsPadding(topBarInsets.only(WindowInsetsSides.Top)) else Modifier
                 )
                 // The mirror at the bottom: without it the last row slides under the gesture
                 // bar and no amount of dragging brings it fully into view — the scroll range
@@ -1089,7 +1090,7 @@ fun HomeScreen(
                         .fillMaxWidth()
                         // The overlay draws under the status bar, so without this the Done
                         // button sits behind the clock.
-                        .statusBarsPadding()
+                        .windowInsetsPadding(topBarInsets.only(WindowInsetsSides.Top))
                         .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically,
@@ -1426,27 +1427,23 @@ fun HomeScreen(
                                 // a chore. The list scrolls itself up by whatever sticks
                                 // out past the gesture bar — the move a finger makes, only
                                 // animated and clamped the same way.
-                                revealScroll?.cancel()
-                                revealScroll = scope.launch {
-                                    try {
-                                        // The gesture bar's own strip of the window is where
-                                        // the list must stop, mirroring the column's bottom
-                                        // padding.
-                                        val limit = rootY + viewportHeight - navBarBottomPx
-                                        val overshoot = bottomWindowPx - limit
-                                        if (overshoot > 1f) {
-                                            offsetY.stop()
-                                            offsetY.animateTo(
-                                                targetValue = (offsetY.value - overshoot)
-                                                    .coerceIn(minOffset, 0f),
-                                                animationSpec = spring(
-                                                    dampingRatio = Spring.DampingRatioNoBouncy,
-                                                    stiffness = Spring.StiffnessMedium,
-                                                ),
-                                            )
+                                // Followed frame by frame while the folder opens, so the list
+                                // moves with what it is revealing rather than after it. A
+                                // snap, because the growth is already the animation.
+                                val limit = rootY + viewportHeight - navBarBottomPx
+                                val overshoot = bottomWindowPx - limit
+                                if (overshoot > 1f) {
+                                    val target = (offsetY.value - overshoot).coerceIn(minOffset, 0f)
+                                    if (target != offsetY.value) {
+                                        revealScroll?.cancel()
+                                        revealScroll = scope.launch {
+                                            try {
+                                                offsetY.stop()
+                                                offsetY.snapTo(target)
+                                            } finally {
+                                                revealScroll = null
+                                            }
                                         }
-                                    } finally {
-                                        revealScroll = null
                                     }
                                 }
                             },
@@ -2638,12 +2635,15 @@ private fun FolderRow(
             },
         )
 
-        // The rows have to finish growing into place before there is a bottom to aim
-        // at: a half-grown one would scroll the list by half of what it needs. The
-        // screen scrolls them into view once they have landed.
+        // The bottom is reported as the folder grows, not once it has landed: moving the
+        // list after the animation looked done meant a finger already on its way down
+        // landed on the app next door. The screen follows the growth frame by frame.
         LaunchedEffect(expanded) {
             if (!expanded || popupContents) return@LaunchedEffect
-            while (!expansion.isIdle) withFrameNanos {}
+            while (!expansion.isIdle) {
+                withFrameNanos {}
+                if (!membersBottomPx.isNaN()) onExpandedContentBottom(membersBottomPx)
+            }
             // One further frame lets the final layout land before the bottom is read.
             withFrameNanos {}
             if (!membersBottomPx.isNaN()) onExpandedContentBottom(membersBottomPx)

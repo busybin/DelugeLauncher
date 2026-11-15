@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.home
 
+import dev.delugelauncher.ui.common.topBarInsets
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.WindowInsetsSides
 import android.app.KeyguardManager
 import android.app.SearchManager
 import android.Manifest
@@ -2008,18 +2012,25 @@ fun HomeRoute(
                     scope.launch {
                         val settled = openAnim.value > openDistancePx * 0.4f || velocity < -1200f
                         if (settled) {
+                            // Asked for once the list is nearly there, not on the way: a
+                            // keyboard arriving mid-animation fights the list for the same
+                            // space. Nearly rather than fully, because the spring's last few
+                            // pixels take most of a second, and that was the keyboard's delay.
+                            val wantsSearch = settings.swipeUpOpensSearch && !scrolled
+                            var asked = false
                             openAnim.animateTo(
                                 targetValue = openDistancePx,
                                 animationSpec = spring(
                                     dampingRatio = Spring.DampingRatioNoBouncy,
                                     stiffness = Spring.StiffnessMediumLow,
                                 ),
-                            )
-                            // Asked for once it has settled, not on the way: a keyboard
-                            // arriving mid-animation fights the list for the same space.
-                            if (settings.swipeUpOpensSearch && !scrolled) {
-                                searchFocusTick++
+                            ) {
+                                if (wantsSearch && !asked && value >= openDistancePx * 0.9f) {
+                                    asked = true
+                                    searchFocusTick++
+                                }
                             }
+                            if (wantsSearch && !asked) searchFocusTick++
                         } else {
                             openAnim.animateTo(0f, tween(160, easing = FastOutLinearInEasing))
                             closeAppList()
@@ -2302,7 +2313,7 @@ fun HomeRoute(
                 onDismiss = onDismissDefaultPrompt,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .statusBarsPadding()
+                    .windowInsetsPadding(topBarInsets.only(WindowInsetsSides.Top))
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             )
         }
