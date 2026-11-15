@@ -1082,4 +1082,6 @@
     <string name="network_col_app">Aplicación</string>
     <string name="network_col_state">Estado</string>
     <string name="settings_group_network">Red</string>
+    <string name="settings_scrub_reach">Alcance de la onda</string>
+    <string name="settings_scrub_reach_detail">Cuánto entran la onda A–Z y su burbuja desde el borde. Redúcelo para que la onda no tape los nombres.</string>
 </resources>

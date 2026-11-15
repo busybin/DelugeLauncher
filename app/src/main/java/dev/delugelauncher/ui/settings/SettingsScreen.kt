@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import dev.delugelauncher.data.MAX_SCRUB_REACH
+import dev.delugelauncher.data.MIN_SCRUB_REACH
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.SlotKind
@@ -209,6 +211,9 @@ class SettingsScreenModel(
     val onSetAppLockScreenOff: (Boolean) -> Unit,
     val edgeSide: EdgeSide,
     val scrubStyle: ScrubStyle,
+    /** How far the A-Z wave reaches in from the edge; 1 is the built-in reach. */
+    val scrubReach: Float = 1f,
+    val onSetScrubReach: (Float) -> Unit = {},
     val scrubBubbleShape: ScrubBubbleShape,
     val rippleParams: RippleParams,
     val widgetsStacked: Boolean,
@@ -1945,6 +1950,8 @@ fun SettingsScreen(model: SettingsScreenModel) {
                         showAlphabet,
                         onSetShowAlphabet,
                     )
+                    RowDivider()
+                    ScrubReachRow(scrubReach, onSetScrubReach)
                 }
             },
             confirmButton = {
@@ -2112,6 +2119,40 @@ private fun SwitchRow(
             checked = checked,
             onCheckedChange = null,
             colors = SwitchDefaults.colors(checkedTrackColor = MaterialTheme.colorScheme.primary),
+        )
+    }
+}
+
+/**
+ * How far the A-Z wave and its bubble reach in from the edge.
+ *
+ * One slider for both: the bubble sits a fixed gap beyond the wave's peak, so moving the
+ * reach moves the letter you are looking at with it — pulling the wave in only to leave the
+ * bubble out where it was would cover the names it is meant to clear.
+ */
+@Composable
+private fun ScrubReachRow(reach: Float, onSet: (Float) -> Unit) {
+    val percent = (reach * 100).roundToInt()
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(stringResource(R.string.settings_scrub_reach), style = MaterialTheme.typography.bodyLarge)
+            Text("$percent%", style = MaterialTheme.typography.bodyMedium)
+        }
+        Slider(
+            value = percent.toFloat(),
+            onValueChange = { onSet((it / 100f).coerceIn(MIN_SCRUB_REACH, MAX_SCRUB_REACH)) },
+            valueRange = (MIN_SCRUB_REACH * 100).roundToInt().toFloat()..
+                (MAX_SCRUB_REACH * 100).roundToInt().toFloat(),
+            steps = 9,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            text = stringResource(R.string.settings_scrub_reach_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.62f),
         )
     }
 }

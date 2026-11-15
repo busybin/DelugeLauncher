@@ -621,6 +621,7 @@ fun DelugeNavHost(
     val edgeSide by app.prefs.edgeSide.collectAsState(initial = EdgeSide.BOTH)
     val scrubStyle by app.prefs.scrubStyle.collectAsState(initial = ScrubStyle.BELL)
     val scrubBubbleShape by app.prefs.scrubBubbleShape.collectAsState(initial = ScrubBubbleShape.ROUNDED)
+    val scrubReach by app.prefs.scrubReach.collectAsState(initial = 1f)
     val rippleParams by app.prefs.rippleParams.collectAsState(initial = RippleParams())
     val azStripVisibility by app.prefs.azStripVisibility.collectAsState(initial = AzStripVisibility.NEVER)
     val azStripSide by app.prefs.azStripSide.collectAsState(initial = AzStripSide.RIGHT)
@@ -1987,6 +1988,8 @@ fun DelugeNavHost(
                 onSetAppLockScreenOff = { enabled -> scope.launch { app.prefs.setAppLockScreenOff(enabled) } },
                 edgeSide = edgeSide,
                 scrubStyle = scrubStyle,
+                scrubReach = scrubReach,
+                onSetScrubReach = { v -> scope.launch { app.prefs.setScrubReach(v) } },
                 scrubBubbleShape = scrubBubbleShape,
                 rippleParams = rippleParams,
                 widgetsStacked = widgetsStacked,

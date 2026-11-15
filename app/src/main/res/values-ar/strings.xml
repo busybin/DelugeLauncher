@@ -1106,4 +1106,6 @@
     <string name="network_col_app">التطبيق</string>
     <string name="network_col_state">الحالة</string>
     <string name="settings_group_network">الشبكة</string>
+    <string name="settings_scrub_reach">مدى الموجة</string>
+    <string name="settings_scrub_reach_detail">إلى أي مدى تدخل موجة A-Z وفقاعتها من الحافة. قلّله حتى لا تغطي الموجة أسماء التطبيقات.</string>
 </resources>

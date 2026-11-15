@@ -3,6 +3,7 @@
     <string-array name="changelog_v32">
         <item>Las carpetas vuelven a su columna en el diseño de dos columnas: comparten fila con una app otra vez y, en esa celda, se quita la flecha para que el nombre tenga sitio. Una carpeta con widget o Reproducción en curso conserva la fila entera, porque se abre en el sitio.</item>
         <item>La lista de apps hace lo mismo: con dos columnas, una carpeta se coloca junto a una app de su misma letra en vez de sola en una línea.</item>
+        <item>Un ajuste de alcance de la onda en la tira A–Z: acerca la onda y su burbuja al borde para que no tapen los nombres, o las aleja.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Cortafuegos por aplicación: corta el internet de las apps que elijas mientras el resto sigue en línea. Cada app sigue la congelación, sigue bloqueada o sigue en línea; las apps protegidas y la app de teléfono no se tocan nunca, y una app instalada con el cortafuegos activo se une a la lista.</item>

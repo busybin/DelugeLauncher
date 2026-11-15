@@ -90,6 +90,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.MutableState
@@ -387,6 +388,12 @@ fun AppListScreen(
     alignment: HomeAlignment,
     iconSide: IconSide,
 ) {
+    // Read here instead of threaded through the home screen: HomeRoute already sits against
+    // the JVM's 64 KB method limit, and a value only this strip uses is not worth a parameter
+    // on every layer above it.
+    val launcher = LocalContext.current.applicationContext as DelugeApp
+    val scrubReach by launcher.prefs.scrubReach.collectAsState(initial = 1f)
+
     // Appended at the point of showing rather than stored in the label, so a rename still
     // wins and turning this off needs no re-reading of every app. The disguise wins over
     // everything while it is on: a rename is exactly what must not show.
@@ -1719,6 +1726,7 @@ fun AppListScreen(
                     band = band,
                     stripSide = stripSide,
                     scrubStyle = scrubStyle,
+                    scrubReach = scrubReach,
                     rippleParams = rippleParams,
                     modifier = Modifier.align(
                         if (stripSide == EdgeSide.LEFT) Alignment.CenterStart else Alignment.CenterEnd
@@ -1866,7 +1874,7 @@ fun AppListScreen(
         if (scrubLetter != null && scrubBubbleShape != ScrubBubbleShape.HIDDEN) {
             val bubble = 72.dp
             val halfPx = with(density) { (bubble / 2).toPx() }
-            val insetPx = with(density) { SCRUB_BUBBLE_INSET_DP.dp.toPx() }
+            val insetPx = with(density) { scrubBubbleInsetDp(scrubReach).dp.toPx() }
             Surface(
                 color = Color.Black.copy(alpha = 0.6f),
                 shape = when (scrubBubbleShape) {
@@ -2533,6 +2541,7 @@ private fun AlphabetSpyStrip(
     /** Which side the strip is drawn on: the one the rows are not aligned against. */
     stripSide: EdgeSide,
     scrubStyle: ScrubStyle,
+    scrubReach: Float,
     rippleParams: RippleParams,
     modifier: Modifier = Modifier,
 ) {
@@ -2560,6 +2569,7 @@ private fun AlphabetSpyStrip(
         spotlights = scrubLetter?.let { setOf(it) } ?: visibleLetters,
         style = scrubStyle,
         ripple = rippleParams,
+        reachScale = scrubReach,
         modifier = modifier,
     )
 }

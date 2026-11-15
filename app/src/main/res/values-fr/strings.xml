@@ -1082,4 +1082,6 @@
     <string name="network_col_app">Application</string>
     <string name="network_col_state">État</string>
     <string name="settings_group_network">Réseau</string>
+    <string name="settings_scrub_reach">Portée de l\'onde</string>
+    <string name="settings_scrub_reach_detail">Jusqu\'où l\'onde A–Z et sa bulle entrent depuis le bord. Réduisez-la pour qu\'elle ne couvre pas les noms.</string>
 </resources>

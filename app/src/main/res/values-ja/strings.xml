@@ -1080,4 +1080,6 @@
     <string name="network_col_app">アプリ</string>
     <string name="network_col_state">状態</string>
     <string name="settings_group_network">ネットワーク</string>
+    <string name="settings_scrub_reach">波の届く距離</string>
+    <string name="settings_scrub_reach_detail">A–Z の波と文字の吹き出しが画面の端からどれだけ内側に入るか。小さくすると波がアプリ名にかかりません。</string>
 </resources>

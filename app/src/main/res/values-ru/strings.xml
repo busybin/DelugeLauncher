@@ -1094,4 +1094,6 @@
     <string name="network_col_app">Приложение</string>
     <string name="network_col_state">Состояние</string>
     <string name="settings_group_network">Сеть</string>
+    <string name="settings_scrub_reach">Дальность волны</string>
+    <string name="settings_scrub_reach_detail">Насколько волна A–Z и её пузырёк заходят от края. Уменьшите, чтобы волна не закрывала названия.</string>
 </resources>

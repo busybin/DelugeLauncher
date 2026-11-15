@@ -1082,4 +1082,6 @@
     <string name="network_col_app">Aplicativo</string>
     <string name="network_col_state">Estado</string>
     <string name="settings_group_network">Rede</string>
+    <string name="settings_scrub_reach">Alcance da onda</string>
+    <string name="settings_scrub_reach_detail">Até onde a onda A–Z e sua bolha entram a partir da borda. Diminua para a onda não cobrir os nomes.</string>
 </resources>

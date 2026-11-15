@@ -1080,4 +1080,6 @@
     <string name="network_col_app">应用</string>
     <string name="network_col_state">状态</string>
     <string name="settings_group_network">网络</string>
+    <string name="settings_scrub_reach">波浪距离</string>
+    <string name="settings_scrub_reach_detail">A–Z 的波浪和字母气泡离屏幕边缘多远。往回收，波浪就不会压到应用名。</string>
 </resources>

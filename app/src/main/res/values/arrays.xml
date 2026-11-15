@@ -3,6 +3,7 @@
     <string-array name="changelog_v32">
         <item>Folders are back in their column in the two-column layout: a folder shares its row with an app again, and the chevron is dropped in that cell so its name has room. A folder that holds a widget or Now Playing keeps the whole row, because that one opens in place.</item>
         <item>The app list follows: with two columns on, a folder sits beside an app of its own letter instead of alone on a line.</item>
+        <item>A wave reach slider under the A-Z strip settings: pull the wave and its letter bubble in from the edge so they stop covering the app names, or push them out.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Per-app firewall: cut the apps you choose off the internet while everything else stays online. Each app follows freeze, stays blocked or stays online, protected apps and the dialer are never touched, and an app installed while the firewall is on joins the list.</item>

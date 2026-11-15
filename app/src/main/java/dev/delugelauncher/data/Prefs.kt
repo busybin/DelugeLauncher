@@ -29,6 +29,13 @@ enum class EdgeSide { LEFT, RIGHT, BOTH, NONE }
 /** How the A-Z strip moves under a fingertip. */
 enum class ScrubStyle { BELL, RIPPLE }
 
+/**
+ * How far the A-Z wave and its bubble may be pulled in or pushed out, as a multiple of the
+ * reach the strip was built around.
+ */
+const val MIN_SCRUB_REACH = 0.5f
+const val MAX_SCRUB_REACH = 1.5f
+
 /** The bubble that shows the letter under a finger on the A-Z strip, or none at all. */
 enum class ScrubBubbleShape { ROUNDED, CIRCLE, SQUARE, HIDDEN }
 
@@ -376,6 +383,7 @@ class Prefs(private val context: Context) {
         val LIST_TWO_COLUMN_PORTRAIT = booleanPreferencesKey("list_two_column_portrait")
         val LIST_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("list_two_column_landscape")
         val SHOW_ALPHABET = booleanPreferencesKey("show_alphabet")
+        val SCRUB_REACH = floatPreferencesKey("scrub_reach")
         val ALIGN_RIGHT = booleanPreferencesKey("align_right")
         val ICON_PACK_PACKAGE = stringPreferencesKey("icon_pack_package")
         val NOW_PLAYING_ENABLED = booleanPreferencesKey("now_playing_enabled")
@@ -1310,6 +1318,14 @@ class Prefs(private val context: Context) {
 
     /** The A-Z strip inside the app list; the edge gesture still works without it. */
     val showAlphabet: Flow<Boolean> = data.map { it[Keys.SHOW_ALPHABET] ?: true }.distinctUntilChanged()
+
+    /**
+     * How far the A-Z wave and its letter bubble come in from the screen edge, as a
+     * multiple of the built-in reach. 1 leaves the strip as it was.
+     */
+    val scrubReach: Flow<Float> = data.map { pref ->
+        (pref[Keys.SCRUB_REACH] ?: 1f).coerceIn(MIN_SCRUB_REACH, MAX_SCRUB_REACH)
+    }.distinctUntilChanged()
 
     /** Two favorites per home row, upright and sideways separately. */
     val homeTwoColumnPortrait: Flow<Boolean> =
@@ -2537,6 +2553,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setShowAlphabet(v: Boolean) {
         context.dataStore.edit { it[Keys.SHOW_ALPHABET] = v }
+    }
+
+    suspend fun setScrubReach(v: Float) {
+        context.dataStore.edit { it[Keys.SCRUB_REACH] = v.coerceIn(MIN_SCRUB_REACH, MAX_SCRUB_REACH) }
     }
 
     suspend fun setTwoColumn(which: TwoColumnSlot, v: Boolean) {

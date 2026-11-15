@@ -61,12 +61,17 @@ private const val LETTER_HALF_DP = 10f
 private const val SPOTLIGHT_SCALE = 1.6f
 
 /**
- * Where the letter bubble starts, kept a fixed gap beyond the peak of the bell.
+ * Where the letter bubble starts, for a given reach: a fixed gap beyond the peak of the bell.
  *
  * Derived rather than written down twice: the bubble sat at a number of its own, so growing
- * the bulge to clear a fingertip walked the strip straight into it.
+ * the bulge to clear a fingertip walked the strip straight into it. The reach moves both
+ * together, which is the point of the setting — a wave pulled in leaves a bubble pulled in.
  */
-const val SCRUB_BUBBLE_INSET_DP = EDGE_INSET_DP + BELL_AMPLITUDE_DP + LETTER_HALF_DP + 18f
+fun scrubBubbleInsetDp(reach: Float): Float =
+    EDGE_INSET_DP + BELL_AMPLITUDE_DP * reach + LETTER_HALF_DP + 18f
+
+/** The bubble's place at the default reach. */
+val SCRUB_BUBBLE_INSET_DP: Float = scrubBubbleInsetDp(1f)
 
 // ---- Ripple simulation -----------------------------------------------------------------------
 private const val SIM_DT = 1f / 240f
@@ -144,6 +149,8 @@ fun EdgeScrubber(
     coveredPx: ClosedFloatingPointRange<Float>? = null,
     style: ScrubStyle = ScrubStyle.BELL,
     ripple: RippleParams = RippleParams(),
+    /** How far the wave reaches in from the edge, as a multiple of the built-in reach. */
+    reachScale: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     if (letters.isEmpty()) return
@@ -151,7 +158,7 @@ fun EdgeScrubber(
     val spacingPx = band.heightPx / letters.size
     // Wide enough that a good stretch of the alphabet takes part in the curve.
     val sigmaPx = 2.6f * spacingPx
-    val bellPx = BELL_AMPLITUDE_DP * density
+    val bellPx = BELL_AMPLITUDE_DP * reachScale * density
     val centerYs = remember(letters.size, band.topPx, band.heightPx) {
         FloatArray(letters.size) {
             ScrubberGeometry.letterCenterY(it, band.topPx, band.heightPx, letters.size)

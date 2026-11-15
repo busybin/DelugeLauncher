@@ -1082,4 +1082,6 @@
     <string name="freeze_search_clear">Clear</string>
     <string name="settings_dev_scale">Screen scale</string>
     <string name="settings_dev_scale_detail">Only inside developer mode. Pretends the screen is smaller or larger than it is; switching developer mode off puts it back.</string>
+    <string name="settings_scrub_reach">Wave reach</string>
+    <string name="settings_scrub_reach_detail">How far the A-Z wave and its letter bubble come in from the edge. Pull it in to keep the wave off the app names.</string>
 </resources>
