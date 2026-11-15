@@ -85,6 +85,19 @@ object FreezeIntents {
         putExtra(EXTRA_TOKEN, token)
     }
 
+    /**
+     * The per-app shortcut target is exported, because the launcher showing the shortcut is the
+     * one that starts it. A stranger's launch comes from its own package, so a toggle is only
+     * allowed from this app itself or with the token written into newer shortcuts.
+     */
+    fun toggleAllowed(
+        expectedToken: String?,
+        givenToken: String?,
+        launchedFrom: String?,
+        ownPackage: String,
+    ): Boolean = (launchedFrom != null && launchedFrom == ownPackage) ||
+        matches(expectedToken, givenToken)
+
     /** Maps a `deluge://` link onto the same actions. */
     fun actionOf(uri: Uri?): String? = when (uri?.host) {
         "freeze" -> ACTION_FREEZE

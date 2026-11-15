@@ -5,6 +5,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -46,5 +48,22 @@ class FreezeDoorTest {
             FreezeIntents.actionOf(Uri.parse("deluge://unfreeze_all")),
         )
         assertEquals(null, FreezeIntents.actionOf(Uri.parse("deluge://something_else")))
+    }
+
+    @Test
+    fun `only this app or the token may toggle a per-app shortcut`() {
+        // The home screen starts its own shortcut: no token needed.
+        assertTrue(FreezeIntents.toggleAllowed(null, null, "dev.delugelauncher", "dev.delugelauncher"))
+        // A stranger's launch comes from its own package and carries no token.
+        assertFalse(FreezeIntents.toggleAllowed(null, null, "com.example.evil", "dev.delugelauncher"))
+        // A newer shortcut carries the token, so any launcher may start it.
+        assertTrue(
+            FreezeIntents.toggleAllowed("secret", "secret", "com.example.launcher", "dev.delugelauncher"),
+        )
+        assertFalse(
+            FreezeIntents.toggleAllowed("secret", "guess", "com.example.launcher", "dev.delugelauncher"),
+        )
+        // No record of the caller is not a reason to trust it.
+        assertFalse(FreezeIntents.toggleAllowed(null, null, null, "dev.delugelauncher"))
     }
 }
