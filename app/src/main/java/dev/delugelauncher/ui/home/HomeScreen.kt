@@ -1233,6 +1233,10 @@ fun HomeScreen(
                 LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             val homeTwoColumn =
                 (if (homeLandscape) homeTwoColumnLandscape else homeTwoColumnPortrait) && !editMode
+            // A half cell narrower than this has no room for a name beside the folder icon,
+            // so the folder stacks its icon over its name instead of being cut to a letter.
+            val stackHalfCellFolders = homeTwoColumn && viewportWidth > 0 &&
+                with(density) { (viewportWidth / 2f).toDp() } < 170.dp
             val homeCells: List<List<Pair<HomeItem, Int>>> =
                 remember(displayItems, homeTwoColumn) {
                     if (!homeTwoColumn) {
@@ -1264,10 +1268,112 @@ fun HomeScreen(
                         }
                     }
                 }
+            // Row chrome lives outside the cell: inside a two-column pair's Box the spacer
+            // would be measured as an overlay sibling and inflate the row instead of moving
+            // it — which is what split the favorites between the top and bottom edges.
+            val beforeRow: @Composable (Int, HomeItem) -> Unit = { index, item ->
+                // Spacing handles live outside the draggable wrapper: inside it they would
+                // travel with a dragged row and skew the height the swap threshold uses.
+                if (item is HomeItem.Widget) {
+                    PaddingHandle(
+                        editMode = editMode,
+                        label = R.string.handle_widget_top,
+                        value = padOf(PaddingSlot.WIDGET_TOP),
+                        onChange = { setPadding(PaddingSlot.WIDGET_TOP, it) },
+                        contentColor = contentColor,
+                    )
+                } else if (index == firstRowIndex) {
+                    PaddingHandle(
+                        editMode = editMode,
+                        label = R.string.handle_favorites_top,
+                        value = padOf(PaddingSlot.FAVORITES_TOP),
+                        onChange = { setPadding(PaddingSlot.FAVORITES_TOP, it) },
+                        contentColor = contentColor,
+                    )
+                    // Beside the favorites it moves, rather than up with the widget controls.
+                    if (editMode) {
+                        StepperRow(
+                            label = stringResource(R.string.handle_side_padding),
+                            value = sidePaddingDp,
+                            range = 0..96,
+                            step = PADDING_STEP_DP,
+                            onChange = onSetSidePadding,
+                            contentColor = contentColor,
+                        )
+                    }
+                }
+            }
+            val afterRow: @Composable (Int, HomeItem) -> Unit = { index, item ->
+                if (item is HomeItem.Widget) {
+                    if (editMode) {
+                        Spacer(Modifier.height(6.dp))
+                        StepperRow(
+                            label = stringResource(R.string.handle_widget_height),
+                            value = widgetHeightDp,
+                            range = 80..900,
+                            step = HEIGHT_STEP_DP,
+                            onChange = { widgetActions.onResize(it) },
+                            contentColor = contentColor,
+                        )
+                        // Only where it can do something: no other widget says how tall its
+                        // content is, so for those the box would do nothing.
+                        if (widgetIds.any { isDelugeClock(context, it) }) {
+                            Spacer(Modifier.height(6.dp))
+                            CheckRow(
+                                label = stringResource(R.string.handle_widget_height_auto),
+                                checked = widgetHeightAuto,
+                                onCheckedChange = { widgetActions.onSetAutoHeight(it) },
+                            )
+                        }
+                    }
+                    PaddingHandle(
+                        editMode = editMode,
+                        label = R.string.handle_widget_bottom,
+                        value = padOf(PaddingSlot.WIDGET_BOTTOM),
+                        onChange = { setPadding(PaddingSlot.WIDGET_BOTTOM, it) },
+                        contentColor = contentColor,
+                    )
+                    // Now Playing sits between the widget and the favorites, and stays there
+                    // while editing whether or not anything is playing — see the other branch.
+                    if (nowPlayingHasContent || (editMode && nowPlayingEnabled)) {
+                        NowPlayingBlock(
+                            editMode = editMode,
+                            showPlaceholder = editMode,
+                            heightDp = nowPlayingHeightDp,
+                            contentColor = contentColor,
+                            alignment = alignment,
+                            iconSide = iconSide,
+                            sidePaddingDp = sidePaddingDp,
+                            padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
+                            padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
+                            touchPosition = touchPosition,
+                            menuExpanded = nowPlayingMenu,
+                            menuOffset = nowPlayingMenuOffset,
+                            onOpenNowPlaying = onOpenNowPlaying,
+                            onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
+                            onDismissMenu = { nowPlayingMenu = false },
+                            onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
+                            onOpenSettings = { nowPlayingMenu = false; onOpenSettings() },
+                            onResize = onResizeNowPlaying,
+                            onSetPadding = { slot, v -> setPadding(slot, v) },
+                        )
+                    }
+                } else if (index == lastRowIndex) {
+                    PaddingHandle(
+                        editMode = editMode,
+                        label = R.string.handle_favorites_bottom,
+                        value = padOf(PaddingSlot.FAVORITES_BOTTOM),
+                        onChange = { setPadding(PaddingSlot.FAVORITES_BOTTOM, it) },
+                        contentColor = contentColor,
+                    )
+                } else {
+                    Spacer(Modifier.height(itemSpacingDp.dp))
+                }
+            }
             // One row, drawn wherever its caller has keyed it. The key belongs to the loop
             // below, which is where a row's identity has to live — see what it says about
             // branching over the keyed groups.
-            val renderItem: @Composable (Int, HomeItem) -> Unit = { index, item ->
+            val renderItem: @Composable (HomeItem) -> Unit = { item ->
                 // Reordering hangs off a visible grab handle now. It used to be a long press
                 // anywhere on the row, which nothing on screen advertised and which fought
                 // every other thing a long press could mean.
@@ -1318,37 +1424,6 @@ fun HomeScreen(
                     }
                 } else {
                     null
-                }
-
-                // Spacing handles live outside the draggable wrapper: inside it they would
-                // travel with a dragged row and skew the height the swap threshold uses.
-                if (item is HomeItem.Widget) {
-                    PaddingHandle(
-                        editMode = editMode,
-                        label = R.string.handle_widget_top,
-                        value = padOf(PaddingSlot.WIDGET_TOP),
-                        onChange = { setPadding(PaddingSlot.WIDGET_TOP, it) },
-                        contentColor = contentColor,
-                    )
-                } else if (index == firstRowIndex) {
-                    PaddingHandle(
-                        editMode = editMode,
-                        label = R.string.handle_favorites_top,
-                        value = padOf(PaddingSlot.FAVORITES_TOP),
-                        onChange = { setPadding(PaddingSlot.FAVORITES_TOP, it) },
-                        contentColor = contentColor,
-                    )
-                    // Beside the favorites it moves, rather than up with the widget controls.
-                    if (editMode) {
-                        StepperRow(
-                            label = stringResource(R.string.handle_side_padding),
-                            value = sidePaddingDp,
-                            range = 0..96,
-                            step = PADDING_STEP_DP,
-                            onChange = onSetSidePadding,
-                            contentColor = contentColor,
-                        )
-                    }
                 }
 
                         // Lifted by which row it is, not by where it sits: after a swap the
@@ -1416,6 +1491,7 @@ fun HomeScreen(
                             editMode = editMode,
                             popupContents = homeTwoColumn && item.folder.widgets.isEmpty() &&
                                 !item.folder.nowPlaying,
+                            stackedHalfCell = stackHalfCellFolders,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
@@ -1547,71 +1623,6 @@ fun HomeScreen(
                     }
                 }
 
-                if (item is HomeItem.Widget) {
-                    if (editMode) {
-                        Spacer(Modifier.height(6.dp))
-                        StepperRow(
-                            label = stringResource(R.string.handle_widget_height),
-                            value = widgetHeightDp,
-                            range = 80..900,
-                            step = HEIGHT_STEP_DP,
-                            onChange = { widgetActions.onResize(it) },
-                            contentColor = contentColor,
-                        )
-                        // Only where it can do something: no other widget says how tall its
-                        // content is, so for those the box would do nothing.
-                        if (widgetIds.any { isDelugeClock(context, it) }) {
-                            Spacer(Modifier.height(6.dp))
-                            CheckRow(
-                                label = stringResource(R.string.handle_widget_height_auto),
-                                checked = widgetHeightAuto,
-                                onCheckedChange = { widgetActions.onSetAutoHeight(it) },
-                            )
-                        }
-                    }
-                    PaddingHandle(
-                        editMode = editMode,
-                        label = R.string.handle_widget_bottom,
-                        value = padOf(PaddingSlot.WIDGET_BOTTOM),
-                        onChange = { setPadding(PaddingSlot.WIDGET_BOTTOM, it) },
-                        contentColor = contentColor,
-                    )
-                    // Now Playing sits between the widget and the favorites, and stays there
-                    // while editing whether or not anything is playing — see the other branch.
-                    if (nowPlayingHasContent || (editMode && nowPlayingEnabled)) {
-                        NowPlayingBlock(
-                            editMode = editMode,
-                            showPlaceholder = editMode,
-                            heightDp = nowPlayingHeightDp,
-                            contentColor = contentColor,
-                            alignment = alignment,
-                            iconSide = iconSide,
-                            sidePaddingDp = sidePaddingDp,
-                            padTop = padOf(PaddingSlot.NOW_PLAYING_TOP),
-                            padBottom = padOf(PaddingSlot.NOW_PLAYING_BOTTOM),
-                            touchPosition = touchPosition,
-                            menuExpanded = nowPlayingMenu,
-                            menuOffset = nowPlayingMenuOffset,
-                            onOpenNowPlaying = onOpenNowPlaying,
-                            onOpenMenu = { offset -> nowPlayingMenuOffset = offset; nowPlayingMenu = true },
-                            onDismissMenu = { nowPlayingMenu = false },
-                            onEditLayout = { nowPlayingMenu = false; onEditModeChange(true) },
-                            onOpenSettings = { nowPlayingMenu = false; onOpenSettings() },
-                            onResize = onResizeNowPlaying,
-                            onSetPadding = { slot, v -> setPadding(slot, v) },
-                        )
-                    }
-                } else if (index == lastRowIndex) {
-                    PaddingHandle(
-                        editMode = editMode,
-                        label = R.string.handle_favorites_bottom,
-                        value = padOf(PaddingSlot.FAVORITES_BOTTOM),
-                        onChange = { setPadding(PaddingSlot.FAVORITES_BOTTOM, it) },
-                        contentColor = contentColor,
-                    )
-                } else {
-                    Spacer(Modifier.height(itemSpacingDp.dp))
-                }
             }
             // Each row is identified by which row it is, not by where it sits: without the
             // key, a loop is matched up by position from one composition to the next, so
@@ -1628,7 +1639,11 @@ fun HomeScreen(
             // in it and no branch; two-column mode never reorders, so its branch can stay.
             if (!homeTwoColumn) {
                 homeCells.forEach { pair ->
-                    key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                    val item = pair[0].first
+                    val at = pair[0].second
+                    beforeRow(at, item)
+                    key(measureKey(item)) { renderItem(item) }
+                    afterRow(at, item)
                 }
             } else {
                 homeCells.forEach { pair ->
@@ -1637,8 +1652,9 @@ fun HomeScreen(
                     // branch is how the two-column switches came to crash — a one-element
                     // pair reached `pair[1]`. (Two columns never reorder, so branching around
                     // the keys is safe here; see the note above.)
+                    beforeRow(pair[0].second, pair[0].first)
                     if (pair.size == 1) {
-                        key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                        key(measureKey(pair[0].first)) { renderItem(pair[0].first) }
                     } else {
                     // Pulled together by one side padding: two rows side by side otherwise
                     // double the gutter in the middle while the outer edges keep one. Mirrors
@@ -1649,13 +1665,15 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.spacedBy((-(sidePaddingDp - 8).coerceAtLeast(0)).dp),
                     ) {
                         Box(Modifier.weight(1f)) {
-                            key(measureKey(pair[0].first)) { renderItem(pair[0].second, pair[0].first) }
+                            key(measureKey(pair[0].first)) { renderItem(pair[0].first) }
                         }
                         Box(Modifier.weight(1f)) {
-                            key(measureKey(pair[1].first)) { renderItem(pair[1].second, pair[1].first) }
+                            key(measureKey(pair[1].first)) { renderItem(pair[1].first) }
                         }
                     }
                     }
+                    val tail = pair.last()
+                    afterRow(tail.second, tail.first)
                 }
             }
             }
@@ -2142,6 +2160,8 @@ private fun FolderRow(
     editMode: Boolean,
     /** Whether its contents open as a card over the screen instead of growing in place. */
     popupContents: Boolean,
+    /** Whether a half cell is too narrow to keep the icon and the name side by side. */
+    stackedHalfCell: Boolean = false,
     /** Non-null in edit mode: the gesture that reorders, attached to this row's grab handle. */
     dragHandle: Modifier?,
     /** How far in from the end the handle sits, clear of the system back gesture. */
@@ -2220,42 +2240,74 @@ private fun FolderRow(
         // is nothing to open: no chevron, and a tap does nothing.
         val canExpand = members.isNotEmpty() || folder.widgets.isNotEmpty() || folder.nowPlaying
         Box(Modifier.fillMaxWidth()) {
+            val folderIcon: @Composable () -> Unit = {
+                Box(Modifier.pressPop(interaction)) {
+                    FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                }
+            }
+            val folderName = folderDisguise[folder.id] ?: folder.name
+            // An unnamed folder is allowed: its preview icon is its face. Only when icons are
+            // off is there nothing left to read, so the row says "Folder".
+            val drawn = when {
+                folderName.isNotBlank() -> folderName
+                !LocalIconConfig.current.showIcons -> stringResource(R.string.folder_unnamed)
+                else -> null
+            }
+            val rowModifier = Modifier
+                .then(if (compactTapArea) Modifier.align(alignment.boxAlignment()) else Modifier.fillMaxWidth())
+                .padding(horizontal = (sidePaddingDp - 8).coerceAtLeast(0).dp)
+                .background(
+                    color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                    shape = RoundedCornerShape(18.dp),
+                )
+                .then(
+                    if (editMode) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .recordTouchPosition(touchPosition)
+                            .combinedClickable(
+                                interactionSource = interaction,
+                                indication = null,
+                                // The chevron is hidden in a half cell, so the row itself has
+                                // to say that a tap opens it and what is inside.
+                                onClickLabel = if (canExpand) {
+                                    stringResource(R.string.folder_open_label, members.size)
+                                } else {
+                                    null
+                                },
+                                onClick = { if (canExpand) onToggleExpanded() },
+                                onLongClick = {
+                                    onOpenMenu(
+                                        with(density) {
+                                            DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
+                                        }
+                                    )
+                                },
+                            )
+                    }
+                )
+                .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp)
+            if (stackedHalfCell && popupContents) {
+                // Icon over name. A half cell this narrow leaves a name beside the icon a few
+                // characters, and under the icon the name gets the whole cell instead.
+                Column(modifier = rowModifier, horizontalAlignment = alignment.columnAlignment()) {
+                    folderIcon()
+                    if (showLabels && drawn != null) {
+                        Text(
+                            drawn,
+                            color = contentColor,
+                            fontSize = labelSizeSp.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp),
+                        )
+                    }
+                }
+            } else {
             Row(
-                modifier = Modifier
-                    .then(if (compactTapArea) Modifier.align(alignment.boxAlignment()) else Modifier.fillMaxWidth())
-                    .padding(horizontal = (sidePaddingDp - 8).coerceAtLeast(0).dp)
-                    .background(
-                        color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
-                        shape = RoundedCornerShape(18.dp),
-                    )
-                    .then(
-                        if (editMode) {
-                            Modifier
-                        } else {
-                            Modifier
-                                .recordTouchPosition(touchPosition)
-                                .combinedClickable(
-                                    interactionSource = interaction,
-                                    indication = null,
-                                    // The chevron is hidden in a half cell, so the row itself has
-                                    // to say that a tap opens it and what is inside.
-                                    onClickLabel = if (canExpand) {
-                                        stringResource(R.string.folder_open_label, members.size)
-                                    } else {
-                                        null
-                                    },
-                                    onClick = { if (canExpand) onToggleExpanded() },
-                                    onLongClick = {
-                                        onOpenMenu(
-                                            with(density) {
-                                                DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
-                                            }
-                                        )
-                                    },
-                                )
-                        }
-                    )
-                    .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp),
+                modifier = rowModifier,
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = alignment.arrangement(),
             ) {
@@ -2264,20 +2316,8 @@ private fun FolderRow(
                     showLabel = showLabels,
                     iconSide = iconSide,
                     iconWidth = iconSizeDp.dp,
-                    icon = {
-                        Box(Modifier.pressPop(interaction)) {
-                            FolderIcon(members, iconSizeDp, contentColor, folder.icon)
-                        }
-                    },
+                    icon = folderIcon,
                 ) { labelModifier ->
-                    val name = folderDisguise[folder.id] ?: folder.name
-                    // An unnamed folder is allowed: its preview icon is its face. Only when
-                    // icons are off is there nothing left to read, so the row says "Folder".
-                    val drawn = when {
-                        name.isNotBlank() -> name
-                        !LocalIconConfig.current.showIcons -> stringResource(R.string.folder_unnamed)
-                        else -> null
-                    }
                     if (drawn != null) {
                         Text(
                             drawn,
@@ -2301,6 +2341,7 @@ private fun FolderRow(
                 if (!editMode && canExpand && !popupContents) {
                     FolderChevron(expanded = expanded, count = members.size, contentColor = contentColor)
                 }
+            }
             }
 
             // Outside the row's own layout so it sits against the screen edge rather than
