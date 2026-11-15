@@ -86,17 +86,18 @@ object FreezeIntents {
     }
 
     /**
-     * The per-app shortcut target is exported, because the launcher showing the shortcut is the
-     * one that starts it. A stranger's launch comes from its own package, so a toggle is only
-     * allowed from this app itself or with the token written into newer shortcuts.
+     * The target of a pinned per-app freeze shortcut.
+     *
+     * The launcher that hosts the shortcut starts it under its own package, so the token is the
+     * only proof of origin; one is written when the shortcut is published, and pins from before
+     * that are refreshed once the app starts.
      */
-    fun toggleAllowed(
-        expectedToken: String?,
-        givenToken: String?,
-        launchedFrom: String?,
-        ownPackage: String,
-    ): Boolean = (launchedFrom != null && launchedFrom == ownPackage) ||
-        matches(expectedToken, givenToken)
+    fun toggleIntent(context: Context, key: String, token: String?): Intent =
+        Intent(context, dev.delugelauncher.FreezeToggleActivity::class.java).apply {
+            action = dev.delugelauncher.FreezeToggleActivity.ACTION_TOGGLE
+            putExtra(dev.delugelauncher.FreezeToggleActivity.EXTRA_KEY, key)
+            putExtra(EXTRA_TOKEN, token)
+        }
 
     /** Maps a `deluge://` link onto the same actions. */
     fun actionOf(uri: Uri?): String? = when (uri?.host) {

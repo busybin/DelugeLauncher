@@ -22,22 +22,16 @@ class FreezeToggleActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val key = intent?.getStringExtra(EXTRA_KEY)
         val token = intent?.getStringExtra(FreezeIntents.EXTRA_TOKEN)
-        // Read before finish(): the record of who started this is kept on the activity.
-        val startedBy = launchedFromPackage
         val app = application as? DelugeApp
         finish()
         if (key == null || app == null) return
         app.runInBackground {
-            // Exported so any launcher can start it, which also means any app can: a stranger
-            // unfreezing the list would defeat the feature. Only our own launches and the
-            // token carried by newer shortcuts may toggle.
-            val allowed = FreezeIntents.toggleAllowed(
-                app.prefs.externalControlTokenNow(),
-                token,
-                startedBy,
-                packageName,
-            )
-            if (!allowed) return@runInBackground
+            // Exported so the hosting launcher can start it, which also means any app can: a
+            // stranger unfreezing the list would defeat the feature. The shortcut carries the
+            // automation token, and nothing else is accepted.
+            if (!FreezeIntents.matches(app.prefs.externalControlTokenNow(), token)) {
+                return@runInBackground
+            }
             // Two shortcuts launched in the same second used to run side by side, both
             // reading the record before either had written it and both going the same way.
             if (!busy.compareAndSet(false, true)) return@runInBackground

@@ -4,9 +4,8 @@ package dev.delugelauncher.service
 import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
+import dev.delugelauncher.FreezeToggleActivity
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -51,19 +50,14 @@ class FreezeDoorTest {
     }
 
     @Test
-    fun `only this app or the token may toggle a per-app shortcut`() {
-        // The home screen starts its own shortcut: no token needed.
-        assertTrue(FreezeIntents.toggleAllowed(null, null, "dev.delugelauncher", "dev.delugelauncher"))
-        // A stranger's launch comes from its own package and carries no token.
-        assertFalse(FreezeIntents.toggleAllowed(null, null, "com.example.evil", "dev.delugelauncher"))
-        // A newer shortcut carries the token, so any launcher may start it.
-        assertTrue(
-            FreezeIntents.toggleAllowed("secret", "secret", "com.example.launcher", "dev.delugelauncher"),
+    fun `a per-app shortcut carries the token its target checks`() {
+        val intent = FreezeIntents.toggleIntent(context, "org.fossify.notes", "secret")
+        assertEquals(FreezeToggleActivity.ACTION_TOGGLE, intent.action)
+        assertEquals(FreezeToggleActivity::class.java.name, intent.component?.className)
+        assertEquals(
+            "org.fossify.notes",
+            intent.getStringExtra(FreezeToggleActivity.EXTRA_KEY),
         )
-        assertFalse(
-            FreezeIntents.toggleAllowed("secret", "guess", "com.example.launcher", "dev.delugelauncher"),
-        )
-        // No record of the caller is not a reason to trust it.
-        assertFalse(FreezeIntents.toggleAllowed(null, null, null, "dev.delugelauncher"))
+        assertEquals("secret", intent.getStringExtra(FreezeIntents.EXTRA_TOKEN))
     }
 }

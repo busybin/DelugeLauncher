@@ -28,6 +28,8 @@ object FreezeShortcuts {
         // broadcast door. Publishing without one would leave a verb anyone could send.
         val prefs = (context.applicationContext as? DelugeApp)?.prefs ?: return
         val token = prefs.ensureExternalControlToken()
+        // Pins made before the token existed would fail the check that now guards them.
+        if (enabled) repairPinned(context, manager, token)
         runCatching {
             if (!enabled) {
                 manager.removeAllDynamicShortcuts()
@@ -55,6 +57,29 @@ object FreezeShortcuts {
                     token,
                 ),
             )
+        }
+    }
+
+    /**
+     * Rewrites the intent of every per-app pin this app published before the token existed.
+     *
+     * The system keeps those shortcuts across updates. They are the app's own pins, so their
+     * intents are readable here; an update that is refused leaves the pin as it was, which is
+     * the same as before this ran.
+     */
+    private fun repairPinned(context: Context, manager: ShortcutManager, token: String) {
+        runCatching {
+            val stale = manager.pinnedShortcuts.mapNotNull { info ->
+                val intent = info.intent ?: return@mapNotNull null
+                if (intent.action != dev.delugelauncher.FreezeToggleActivity.ACTION_TOGGLE) return@mapNotNull null
+                if (!intent.getStringExtra(FreezeIntents.EXTRA_TOKEN).isNullOrEmpty()) return@mapNotNull null
+                val key = intent.getStringExtra(dev.delugelauncher.FreezeToggleActivity.EXTRA_KEY)
+                    ?: return@mapNotNull null
+                ShortcutInfo.Builder(context, info.id)
+                    .setIntent(FreezeIntents.toggleIntent(context, key, token))
+                    .build()
+            }
+            if (stale.isNotEmpty()) manager.updateShortcuts(stale)
         }
     }
 

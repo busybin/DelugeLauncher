@@ -7,7 +7,6 @@ import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
 import dev.delugelauncher.DelugeApp
-import dev.delugelauncher.FreezeToggleActivity
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.service.FreezeIntents
@@ -28,12 +27,7 @@ object FreezePinned {
         val shortcut = ShortcutInfoCompat.Builder(context, shortcutId(app.freezeKey))
             .setShortLabel(label.take(MAX_LABEL))
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_freeze_notification))
-            .setIntent(
-                Intent(context, FreezeToggleActivity::class.java)
-                    .setAction(FreezeToggleActivity.ACTION_TOGGLE)
-                    .putExtra(FreezeToggleActivity.EXTRA_KEY, app.freezeKey)
-                    .putExtra(FreezeIntents.EXTRA_TOKEN, token)
-            )
+            .setIntent(FreezeIntents.toggleIntent(context, app.freezeKey, token))
             .build()
         // Null callback: the system shows its own confirmation and there is nothing to undo.
         ShortcutManagerCompat.requestPinShortcut(context, shortcut, null)
