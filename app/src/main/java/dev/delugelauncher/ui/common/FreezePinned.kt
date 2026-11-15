@@ -6,9 +6,11 @@ import android.content.Intent
 import androidx.core.content.pm.ShortcutInfoCompat
 import androidx.core.content.pm.ShortcutManagerCompat
 import androidx.core.graphics.drawable.IconCompat
+import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.FreezeToggleActivity
 import dev.delugelauncher.R
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.service.FreezeIntents
 
 /**
  * A home-screen shortcut that freezes or unfreezes one listed app.
@@ -19,7 +21,10 @@ import dev.delugelauncher.data.AppInfo
  */
 object FreezePinned {
 
-    fun request(context: Context, app: AppInfo, label: String): Boolean = runCatching {
+    suspend fun request(context: Context, app: AppInfo, label: String): Boolean = runCatching {
+        // The target is exported, so the shortcut carries the same secret as the broadcast
+        // door: a launcher other than this one starts it under its own package.
+        val token = (context.applicationContext as? DelugeApp)?.prefs?.ensureExternalControlToken()
         val shortcut = ShortcutInfoCompat.Builder(context, shortcutId(app.freezeKey))
             .setShortLabel(label.take(MAX_LABEL))
             .setIcon(IconCompat.createWithResource(context, R.drawable.ic_freeze_notification))
@@ -27,6 +32,7 @@ object FreezePinned {
                 Intent(context, FreezeToggleActivity::class.java)
                     .setAction(FreezeToggleActivity.ACTION_TOGGLE)
                     .putExtra(FreezeToggleActivity.EXTRA_KEY, app.freezeKey)
+                    .putExtra(FreezeIntents.EXTRA_TOKEN, token)
             )
             .build()
         // Null callback: the system shows its own confirmation and there is nothing to undo.

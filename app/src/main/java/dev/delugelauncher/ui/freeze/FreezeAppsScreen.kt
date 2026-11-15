@@ -543,10 +543,12 @@ fun FreezeAppsScreen(
                 onDismiss = { sheetKey = null },
                 onPin = {
                     sheetKey = null
-                    if (FreezePinned.request(context, app, row.label)) {
-                        onSetPinned?.invoke(app, true)
-                    } else {
-                        Toast.makeText(context, R.string.freeze_pin_failed, Toast.LENGTH_SHORT).show()
+                    scope.launch {
+                        if (FreezePinned.request(context, app, row.label)) {
+                            onSetPinned?.invoke(app, true)
+                        } else {
+                            Toast.makeText(context, R.string.freeze_pin_failed, Toast.LENGTH_SHORT).show()
+                        }
                     }
                 },
                 onRemove = {
