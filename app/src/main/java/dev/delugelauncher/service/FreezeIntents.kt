@@ -14,10 +14,15 @@ import java.security.MessageDigest
  * The small external surface, so a script, Tasker or a hardware button can drive the freeze
  * list without opening the launcher.
  *
- * Two ways in, one implementation: a broadcast (`adb shell am broadcast -a …`) and a
- * `deluge://` link. Both are exported, so both are closed unless the user turned external
- * control on and sent the token from settings. Without that, any installed app — and any web
- * page, through `deluge://` — could lift the whole list with one intent.
+ * Two ways in, one implementation: a broadcast and a `deluge://` link. Both are exported, so
+ * both are closed unless the user turned external control on and sent the token from settings.
+ * Without that, any installed app — and any web page, through `deluge://` — could lift the
+ * whole list with one intent.
+ *
+ * The broadcast must name the receiver:
+ * `adb shell am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a …`.
+ * Android drops implicit broadcasts to manifest receivers, so the bare `-a <action>` form
+ * never arrives, however the process is running.
  *
  * Only things the user could do by hand are exposed: no hidden state, no lock verb, and a
  * package never leaves the list, so a freeze can always be undone from the screen.
@@ -62,6 +67,24 @@ object FreezeIntents {
         }
     }
 
+    /**
+     * The intent the link door hands to the broadcast door.
+     *
+     * A finished activity is a cached process, and the system freezes it long before a
+     * multi-pass lift can return — which is why the activity used to swallow most unfreezes.
+     * The receiver holds the process open with `goAsync`, so both doors share its lifetime.
+     */
+    fun receiverIntent(
+        context: Context,
+        action: String,
+        packageName: String?,
+        token: String?,
+    ): Intent = Intent(context, FreezeActionReceiver::class.java).apply {
+        this.action = action
+        putExtra(EXTRA_PACKAGE, packageName)
+        putExtra(EXTRA_TOKEN, token)
+    }
+
     /** Maps a `deluge://` link onto the same actions. */
     fun actionOf(uri: Uri?): String? = when (uri?.host) {
         "freeze" -> ACTION_FREEZE
@@ -86,7 +109,7 @@ object FreezeIntents {
     }
 }
 
-/** The broadcast door: `am broadcast -a dev.delugelauncher.action.FREEZE_ALL`. */
+/** The broadcast door: `am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a …`. */
 class FreezeActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as? DelugeApp ?: return
@@ -115,8 +138,8 @@ class FreezeActionActivity : Activity() {
             ?: intent.data?.getQueryParameter(FreezeIntents.EXTRA_PACKAGE)
         val token = intent.getStringExtra(FreezeIntents.EXTRA_TOKEN)
             ?: intent.data?.getQueryParameter(FreezeIntents.EXTRA_TOKEN)
-        (application as? DelugeApp)?.runInBackground {
-            FreezeIntents.dispatch(this, action, packageName, token)
+        if (action != null) {
+            sendBroadcast(FreezeIntents.receiverIntent(this, action, packageName, token))
         }
         finish()
     }

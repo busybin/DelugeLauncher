@@ -866,7 +866,7 @@
     <string name="settings_external_token">Токен автоматизации</string>
     <string name="settings_external_token_none">Токена пока нет</string>
     <string name="settings_external_token_title">Токен автоматизации</string>
-    <string name="settings_external_token_body">Передавайте его с каждой командой: am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">Передавайте его с каждой командой: am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">Токен скопирован</string>
     <string name="settings_external_token_new">Новый токен</string>
     <string name="action_copy">Копировать</string>

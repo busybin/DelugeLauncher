@@ -878,7 +878,7 @@
     <string name="settings_external_token">رمز الأتمتة</string>
     <string name="settings_external_token_none">لا يوجد رمز بعد</string>
     <string name="settings_external_token_title">رمز الأتمتة</string>
-    <string name="settings_external_token_body">أرسله مع كل أمر: am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">أرسله مع كل أمر: am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">تم نسخ الرمز</string>
     <string name="settings_external_token_new">رمز جديد</string>
     <string name="action_copy">نسخ</string>

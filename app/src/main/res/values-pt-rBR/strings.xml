@@ -854,7 +854,7 @@
     <string name="settings_external_token">Token de automação</string>
     <string name="settings_external_token_none">Ainda não há token</string>
     <string name="settings_external_token_title">Token de automação</string>
-    <string name="settings_external_token_body">Envie-o em cada comando: am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">Envie-o em cada comando: am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">Token copiado</string>
     <string name="settings_external_token_new">Novo token</string>
     <string name="action_copy">Copiar</string>

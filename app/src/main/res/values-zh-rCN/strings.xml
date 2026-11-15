@@ -852,7 +852,7 @@
     <string name="settings_external_token">自动化令牌</string>
     <string name="settings_external_token_none">尚未生成令牌</string>
     <string name="settings_external_token_title">自动化令牌</string>
-    <string name="settings_external_token_body">每条命令都要带上它：am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">每条命令都要带上它：am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">令牌已复制</string>
     <string name="settings_external_token_new">新建令牌</string>
     <string name="action_copy">复制</string>

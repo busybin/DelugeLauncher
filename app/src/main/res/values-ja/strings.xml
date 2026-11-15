@@ -852,7 +852,7 @@
     <string name="settings_external_token">自動化トークン</string>
     <string name="settings_external_token_none">トークンはまだありません</string>
     <string name="settings_external_token_title">自動化トークン</string>
-    <string name="settings_external_token_body">各コマンドに付けて送信します: am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">各コマンドに付けて送信します: am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">トークンをコピーしました</string>
     <string name="settings_external_token_new">新しいトークン</string>
     <string name="action_copy">コピー</string>

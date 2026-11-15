@@ -854,7 +854,7 @@
     <string name="settings_external_token">Jeton d\'automatisation</string>
     <string name="settings_external_token_none">Pas encore de jeton</string>
     <string name="settings_external_token_title">Jeton d\'automatisation</string>
-    <string name="settings_external_token_body">Envoyez-le avec chaque commande : am broadcast -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
+    <string name="settings_external_token_body">Envoyez-le avec chaque commande : am broadcast -n dev.delugelauncher/.service.FreezeActionReceiver -a dev.delugelauncher.action.FREEZE_ALL -e token %1$s</string>
     <string name="settings_external_token_copied">Jeton copié</string>
     <string name="settings_external_token_new">Nouveau jeton</string>
     <string name="action_copy">Copier</string>
