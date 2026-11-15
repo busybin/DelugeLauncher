@@ -26,8 +26,9 @@ internal fun tagSectionToken(label: String) = "tag:$label"
 /**
  * What a cell holds: an app, or a folder standing in the alphabet among them.
  *
- * Folders are only ever a full row of their own, but they pair like apps do when two columns
- * are on — pairing is a layout question, and a folder is as tall as an app.
+ * A folder is an ordinary cell when two columns are on: it opens its own screen, so nothing
+ * grows in the row and half a row is enough for its name. On the home screen the folders
+ * that open in place are the exception, and the layout keeps those on a row of their own.
  */
 @Immutable
 sealed interface ListItem {
@@ -148,10 +149,11 @@ fun AppListModel.toCells(twoColumn: Boolean): CellModel {
             }
             is AppListRow.Entry, is AppListRow.FolderRow -> {
                 val next = rows.getOrNull(i + 1)
-                // A folder keeps a row of its own: half a row leaves its name a couple of
-                // characters wide, and the two-column switch is shared with the home screen.
-                val pairs = row !is AppListRow.FolderRow && next != null &&
-                    next !is AppListRow.Header && next !is AppListRow.FolderRow &&
+                // A folder is an ordinary cell in two columns: it opens its own screen, so
+                // there is nothing growing in the row and half a row is enough. Only the
+                // heading ends a row, and only its own letter or tag may sit beside it.
+                val pairs = next != null &&
+                    next !is AppListRow.Header &&
                     groupOf(i + 1) == groupOf(i)
                 if (pairs) {
                     recordLetter(i + 1)

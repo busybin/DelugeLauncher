@@ -1227,16 +1227,21 @@ fun HomeScreen(
                         displayItems.mapIndexed { i, item -> listOf(item to i) }
                     } else {
                         buildList {
+                            // What needs the whole row: a widget always, and a folder that
+                            // opens in place, because the rows it grows into need the width.
+                            // A folder that opens in a card is an ordinary cell, so it pairs
+                            // like an app — the two-column switch has to mean two columns.
+                            fun spansRow(item: HomeItem): Boolean = when (item) {
+                                is HomeItem.Widget -> true
+                                is HomeItem.FolderItem ->
+                                    item.folder.widgets.isNotEmpty() || item.folder.nowPlaying
+                                else -> false
+                            }
                             var i = 0
                             while (i < displayItems.size) {
                                 val item = displayItems[i]
                                 val next = displayItems.getOrNull(i + 1)
-                                // Folders stand alone for the same reason widgets do: a row
-                                // that opens into more rows needs the width, and half of a
-                                // narrow screen leaves its name one letter wide.
-                                if (item !is HomeItem.Widget && item !is HomeItem.FolderItem &&
-                                    next != null && next !is HomeItem.Widget && next !is HomeItem.FolderItem
-                                ) {
+                                if (!spansRow(item) && next != null && !spansRow(next)) {
                                     add(listOf(item to i, next to (i + 1)))
                                     i += 2
                                 } else {
@@ -2253,7 +2258,10 @@ private fun FolderRow(
                 // What a bare row never says: whether tapping opens anything, and how
                 // much is inside. The chevron turns with the expansion so the state is
                 // visible without reading anything. Nothing inside, nothing to open.
-                if (!editMode && canExpand) {
+                // A folder that opens in a card does not need it either: in the half row
+                // it is the chevron's ~45dp that leaves the name a couple of letters, and
+                // the preview icon already says what the row is.
+                if (!editMode && canExpand && !popupContents) {
                     FolderChevron(expanded = expanded, count = members.size, contentColor = contentColor)
                 }
             }

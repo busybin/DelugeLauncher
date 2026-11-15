@@ -82,12 +82,26 @@ class AppListFoldersTest {
     }
 
     @Test
-    fun `a folder never shares a two column row`() {
+    fun `a folder shares a two column row with its own letter`() {
         val cells = build(showFolders = true).toCells(twoColumn = true)
-        assertTrue(cells.rows.filterIsInstance<CellRow.Two>().none {
+        val paired = cells.rows.filterIsInstance<CellRow.Two>().filter {
             it.left is ListItem.FolderItem || it.right is ListItem.FolderItem
+        }
+        assertTrue(paired.isNotEmpty())
+        // Pairing never crosses a group: both cells belong to the same letter.
+        paired.forEach { pair ->
+            val names = listOfNotNull(pair.left, pair.right).map {
+                when (it) {
+                    is ListItem.FolderItem -> it.row.folder.name
+                    is ListItem.AppItem -> it.entry.app.label
+                }
+            }
+            assertEquals(1, names.map { it.first() }.toSet().size)
+        }
+        // A folder with no neighbour in its letter still stands alone.
+        assertTrue(cells.rows.any {
+            it is CellRow.One && it.item is ListItem.FolderItem && it.item.key == "folder:f1"
         })
-        assertTrue(cells.rows.any { it is CellRow.One && it.item is ListItem.FolderItem })
     }
 
     @Test
