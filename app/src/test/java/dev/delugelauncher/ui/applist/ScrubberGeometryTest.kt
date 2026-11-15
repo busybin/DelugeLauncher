@@ -42,6 +42,19 @@ class ScrubberGeometryTest {
     }
 
     @Test
+    fun `a span measured past the screen is kept on it`() {
+        // The favorites were still growing when the band was read, so the bottom ran past the
+        // viewport. Letters past the edge could never be reached (#153).
+        val band = ScrubberGeometry.bandForFavorites(
+            topPx = 1900f, bottomPx = 2600f, viewportPx = 2000f, minHeightPx = 400f,
+        )
+        assertTrue(band.topPx >= 0f)
+        assertTrue(band.topPx + band.heightPx <= 2000.01f)
+        assertEquals(700f, band.heightPx, 0.01f)
+        assertEquals(1300f, band.topPx, 0.01f)
+    }
+
+    @Test
     fun `a minimum taller than the screen is capped by the screen`() {
         val band = ScrubberGeometry.bandForFavorites(
             topPx = 100f, bottomPx = 200f, viewportPx = 600f, minHeightPx = 900f,
