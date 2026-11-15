@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v32">
+        <item>Les dossiers retrouvent leur colonne en affichage à deux colonnes : ils partagent à nouveau la ligne avec une appli, et le chevron disparaît dans cette cellule pour laisser de la place au nom. Un dossier contenant un widget ou la lecture en cours garde la ligne entière, car il s\'ouvre sur place.</item>
+        <item>La liste des applis suit : en deux colonnes, un dossier se place à côté d\'une appli de sa lettre au lieu d\'occuper une ligne seul.</item>
+    </string-array>
     <string-array name="changelog_v31">
         <item>Pare-feu par application : coupez l\'internet des applications choisies pendant que tout le reste reste en ligne. Chaque application suit le gel, reste bloquée ou reste en ligne ; les applications protégées et le téléphone ne sont jamais touchés, et une application installée pare-feu actif rejoint la liste.</item>
         <item>Le pare-feu a sa propre page : recherche, applications système, un filtre par état et des compteurs pour les applications bloquées, en attente et non confirmées. Android oublie ces règles au redémarrage, elles sont donc réécrites au démarrage.</item>

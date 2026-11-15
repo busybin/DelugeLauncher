@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v32">
+        <item>Las carpetas vuelven a su columna en el diseño de dos columnas: comparten fila con una app otra vez y, en esa celda, se quita la flecha para que el nombre tenga sitio. Una carpeta con widget o Reproducción en curso conserva la fila entera, porque se abre en el sitio.</item>
+        <item>La lista de apps hace lo mismo: con dos columnas, una carpeta se coloca junto a una app de su misma letra en vez de sola en una línea.</item>
+    </string-array>
     <string-array name="changelog_v31">
         <item>Cortafuegos por aplicación: corta el internet de las apps que elijas mientras el resto sigue en línea. Cada app sigue la congelación, sigue bloqueada o sigue en línea; las apps protegidas y la app de teléfono no se tocan nunca, y una app instalada con el cortafuegos activo se une a la lista.</item>
         <item>El cortafuegos tiene su propia página: búsqueda, apps del sistema, un filtro por estado y recuentos de apps bloqueadas, en espera y sin confirmar. Android olvida estas reglas al reiniciar, así que se vuelven a escribir al arrancar.</item>
