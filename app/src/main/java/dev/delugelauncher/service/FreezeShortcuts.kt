@@ -72,16 +72,23 @@ object FreezeShortcuts {
             val stale = manager.pinnedShortcuts.mapNotNull { info ->
                 val intent = info.intent ?: return@mapNotNull null
                 if (intent.action != dev.delugelauncher.FreezeToggleActivity.ACTION_TOGGLE) return@mapNotNull null
-                if (!intent.getStringExtra(FreezeIntents.EXTRA_TOKEN).isNullOrEmpty()) return@mapNotNull null
+                if (!needsTokenRefresh(intent, token)) return@mapNotNull null
                 val key = intent.getStringExtra(dev.delugelauncher.FreezeToggleActivity.EXTRA_KEY)
                     ?: return@mapNotNull null
                 ShortcutInfo.Builder(context, info.id)
+                    .apply { info.shortLabel?.let { setShortLabel(it) } }
+                    .apply { info.longLabel?.let { setLongLabel(it) } }
+                    .setIcon(Icon.createWithResource(context, R.drawable.ic_freeze_notification))
                     .setIntent(FreezeIntents.toggleIntent(context, key, token))
                     .build()
             }
             if (stale.isNotEmpty()) manager.updateShortcuts(stale)
         }
     }
+
+    /** A pin keeps working only while it carries the token the target checks right now. */
+    internal fun needsTokenRefresh(intent: Intent, token: String): Boolean =
+        intent.getStringExtra(FreezeIntents.EXTRA_TOKEN) != token
 
     private fun shortcut(
         context: Context,

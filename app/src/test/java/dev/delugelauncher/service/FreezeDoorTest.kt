@@ -2,10 +2,13 @@
 package dev.delugelauncher.service
 
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import dev.delugelauncher.FreezeToggleActivity
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -59,5 +62,13 @@ class FreezeDoorTest {
             intent.getStringExtra(FreezeToggleActivity.EXTRA_KEY),
         )
         assertEquals("secret", intent.getStringExtra(FreezeIntents.EXTRA_TOKEN))
+    }
+
+    @Test
+    fun `a pin is refreshed whenever its token is not the current one`() {
+        val pinned = FreezeIntents.toggleIntent(context, "org.fossify.notes", "old")
+        assertTrue(FreezeShortcuts.needsTokenRefresh(pinned, "current"))
+        assertFalse(FreezeShortcuts.needsTokenRefresh(pinned, "old"))
+        assertTrue(FreezeShortcuts.needsTokenRefresh(Intent(), "current"))
     }
 }
