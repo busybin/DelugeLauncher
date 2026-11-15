@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.widget
 
+import dev.delugelauncher.ui.common.topBarInsets
 import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.Intent
@@ -135,6 +136,7 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                         containerColor = MaterialTheme.colorScheme.surface,
                         topBar = {
                             TopAppBar(
+                                windowInsets = topBarInsets,
                                 title = { Text(stringResource(R.string.widget_clock_label)) },
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.surface,

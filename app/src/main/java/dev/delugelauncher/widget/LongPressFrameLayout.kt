@@ -158,5 +158,11 @@ class LongPressFrameLayout(context: Context) : FrameLayout(context) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean = true
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        // Never ours to take. A press that landed on the widget's own background is the home
+        // screen's: returning true here made the interop layer consume every move for the
+        // whole gesture, and the list underneath stopped scrolling anywhere a widget sat.
+        // The hold and the tap for such a widget are handled in Compose (see WidgetPage).
+        return false
+    }
 }

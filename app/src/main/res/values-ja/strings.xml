@@ -1086,4 +1086,5 @@
     <string name="settings_scrub_reach_detail">A–Z の波と文字の吹き出しが画面の端からどれだけ内側に入るか。小さくすると波がアプリ名にかかりません。</string>
     <string name="settings_az_range">バーの範囲</string>
     <string name="settings_az_range_detail">バーの上下は「レイアウトを編集」でドラッグします：ホーム画面を長押し →「レイアウトを編集」→「A–Z バーの範囲」。</string>
+    <string name="folder_open_label">フォルダーを開く、%1$d 個のアプリ</string>
 </resources>

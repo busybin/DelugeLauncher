@@ -180,7 +180,9 @@ fun CheckRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit
             fontSize = 11.sp,
             modifier = Modifier.weight(1f).padding(start = 12.dp),
         )
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        // The row is the target, so the box itself is not one: with both taking a tap, a
+        // press on the box toggled it and then the row toggled it back.
+        Checkbox(checked = checked, onCheckedChange = null)
     }
 }
 

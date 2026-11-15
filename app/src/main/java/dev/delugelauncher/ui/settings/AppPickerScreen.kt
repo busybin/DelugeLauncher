@@ -56,7 +56,7 @@ fun AppPickerScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

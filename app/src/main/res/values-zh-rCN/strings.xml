@@ -1086,4 +1086,5 @@
     <string name="settings_scrub_reach_detail">A–Z 的波浪和字母气泡离屏幕边缘多远。往回收，波浪就不会压到应用名。</string>
     <string name="settings_az_range">字母条范围</string>
     <string name="settings_az_range_detail">字母条的上下两端在「编辑布局」里拖动：长按桌面 → 编辑布局 → A–Z 条范围。</string>
+    <string name="folder_open_label">打开文件夹，%1$d 个应用</string>
 </resources>

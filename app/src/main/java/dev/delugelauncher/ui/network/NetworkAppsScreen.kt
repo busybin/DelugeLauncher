@@ -134,7 +134,7 @@ fun NetworkAppsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.network_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

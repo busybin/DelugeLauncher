@@ -46,7 +46,7 @@ const val STRIP_LETTER_REACH_DP = EDGE_INSET_DP + LETTER_CELL_WIDTH_DP
  * Has to clear the fingertip without reaching the bubble. The thumb is already an edge-zone in
  * from the screen edge, so at 75dp the peak landed about 7dp from it — underneath, hidden by
  * the hand pointing at it — while the bubble beginning at 122dp left only about 19dp of room
- * to move into. The two only go further out together, which is what [SCRUB_BUBBLE_INSET_DP]
+ * to move into. The two only go further out together, which is what [scrubBubbleInsetDp]
  * is for.
  */
 private const val BELL_AMPLITUDE_DP = 112f
@@ -70,8 +70,6 @@ private const val SPOTLIGHT_SCALE = 1.6f
 fun scrubBubbleInsetDp(reach: Float): Float =
     EDGE_INSET_DP + BELL_AMPLITUDE_DP * reach + LETTER_HALF_DP + 18f
 
-/** The bubble's place at the default reach. */
-val SCRUB_BUBBLE_INSET_DP: Float = scrubBubbleInsetDp(1f)
 
 // ---- Ripple simulation -----------------------------------------------------------------------
 private const val SIM_DT = 1f / 240f

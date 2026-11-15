@@ -1088,4 +1088,5 @@
     <string name="settings_scrub_reach_detail">Jusqu\'où l\'onde A–Z et sa bulle entrent depuis le bord. Réduisez-la pour qu\'elle ne couvre pas les noms.</string>
     <string name="settings_az_range">Plage de la barre</string>
     <string name="settings_az_range_detail">Le haut et le bas de la barre se règlent dans Modifier la disposition : appui long sur l\'écran d\'accueil, Modifier la disposition, puis Plage de la barre A–Z.</string>
+    <string name="folder_open_label">Ouvrir le dossier, %1$d applis</string>
 </resources>

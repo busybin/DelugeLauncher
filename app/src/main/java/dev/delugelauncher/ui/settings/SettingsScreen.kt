@@ -1580,7 +1580,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         containerColor = surface.copy(alpha = 1f - dimPreviewReveal),
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = {
                     Text(
                         stringResource(openCard?.labelRes ?: R.string.settings_title),
@@ -2147,7 +2147,10 @@ private fun SwitchRow(
  */
 @Composable
 private fun ScrubReachRow(reach: Float, onSet: (Float) -> Unit) {
-    val percent = (reach * 100).roundToInt()
+    // Held while the finger is down and written once when it lifts: a DataStore write per
+    // pixel of drag is a file write per frame.
+    var dragging by remember { mutableStateOf<Float?>(null) }
+    val percent = ((dragging ?: reach) * 100).roundToInt()
     Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -2158,7 +2161,11 @@ private fun ScrubReachRow(reach: Float, onSet: (Float) -> Unit) {
         }
         Slider(
             value = percent.toFloat(),
-            onValueChange = { onSet((it / 100f).coerceIn(MIN_SCRUB_REACH, MAX_SCRUB_REACH)) },
+            onValueChange = { dragging = (it / 100f).coerceIn(MIN_SCRUB_REACH, MAX_SCRUB_REACH) },
+            onValueChangeFinished = {
+                dragging?.let(onSet)
+                dragging = null
+            },
             valueRange = (MIN_SCRUB_REACH * 100).roundToInt().toFloat()..
                 (MAX_SCRUB_REACH * 100).roundToInt().toFloat(),
             steps = 9,

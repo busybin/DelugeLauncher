@@ -46,7 +46,7 @@ fun FreezeMethodsScreen(onBack: () -> Unit) {
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.freeze_methods_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

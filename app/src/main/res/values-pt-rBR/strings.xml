@@ -1088,4 +1088,5 @@
     <string name="settings_scrub_reach_detail">Até onde a onda A–Z e sua bolha entram a partir da borda. Diminua para a onda não cobrir os nomes.</string>
     <string name="settings_az_range">Faixa da tira</string>
     <string name="settings_az_range_detail">O topo e a base da tira são arrastados em Editar layout: toque e segure a tela inicial, escolha Editar layout e depois Faixa da tira A–Z.</string>
+    <string name="folder_open_label">Abrir pasta, %1$d apps</string>
 </resources>

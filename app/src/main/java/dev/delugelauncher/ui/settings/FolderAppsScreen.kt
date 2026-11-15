@@ -80,7 +80,7 @@ fun FolderAppsScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(folder?.name ?: stringResource(R.string.folder_title_fallback)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -1100,4 +1100,5 @@
     <string name="settings_scrub_reach_detail">Насколько волна A–Z и её пузырёк заходят от края. Уменьшите, чтобы волна не закрывала названия.</string>
     <string name="settings_az_range">Диапазон полосы</string>
     <string name="settings_az_range_detail">Верх и низ полосы задаются в «Изменить макет»: долгое нажатие на главном экране → «Изменить макет» → «Диапазон полосы A–Z».</string>
+    <string name="folder_open_label">Открыть папку, %1$d приложений</string>
 </resources>

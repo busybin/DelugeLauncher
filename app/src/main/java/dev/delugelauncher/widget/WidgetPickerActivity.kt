@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.widget
 
+import dev.delugelauncher.ui.common.topBarInsets
 import android.app.ActivityOptions
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
@@ -99,6 +100,7 @@ class WidgetPickerActivity : ComponentActivity() {
                         containerColor = MaterialTheme.colorScheme.surface,
                         topBar = {
                             TopAppBar(
+                                windowInsets = topBarInsets,
                                 title = { Text(stringResource(R.string.widget_add)) },
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = MaterialTheme.colorScheme.surface,

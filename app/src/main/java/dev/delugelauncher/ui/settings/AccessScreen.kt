@@ -99,7 +99,7 @@ fun AccessScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.access_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

@@ -62,7 +62,7 @@ fun ChangelogScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.settings_changelog)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

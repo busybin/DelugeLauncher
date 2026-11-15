@@ -1530,7 +1530,7 @@ fun AppListScreen(
                 },
             ) { index, cell ->
                 @Composable
-                fun ItemCell(item: ListItem) {
+                fun ItemCell(item: ListItem, compact: Boolean = false) {
                     val entry = (item as? ListItem.AppItem)?.entry
                     if (entry == null) {
                         val folderRow = (item as ListItem.FolderItem).row
@@ -1542,6 +1542,7 @@ fun AppListScreen(
                             iconSide = iconSide,
                             iconSizeDp = iconSizeDp,
                             labelSizeSp = labelSizeSp,
+                            compact = compact,
                             onHome = folderToken(folderRow.folder.id) in favoriteKeys,
                             onOpen = { onOpenFolder(folderRow.folder) },
                             onManage = { onOpenFolder(folderRow.folder) },
@@ -1638,9 +1639,9 @@ fun AppListScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(-28.dp),
                     ) {
-                        Box(Modifier.weight(1f)) { ItemCell(cell.left) }
+                        Box(Modifier.weight(1f)) { ItemCell(cell.left, compact = true) }
                         Box(Modifier.weight(1f)) {
-                            cell.right?.let { ItemCell(it) }
+                            cell.right?.let { ItemCell(it, compact = true) }
                         }
                     }
                 }
@@ -2000,6 +2001,8 @@ private fun FolderListRow(
     iconSide: IconSide,
     iconSizeDp: Int,
     labelSizeSp: Int,
+    /** Half a row: the outer gutter stays for alignment, the inner one and the gap give way. */
+    compact: Boolean = false,
     onHome: Boolean,
     onOpen: () -> Unit,
     onManage: () -> Unit,
@@ -2038,7 +2041,7 @@ private fun FolderListRow(
                     },
                 )
                 .heightIn(min = MIN_ROW_HEIGHT)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                .padding(horizontal = if (compact) 0.dp else 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = when (alignment) {
                 HomeAlignment.LEFT -> Arrangement.Start
@@ -2058,11 +2061,11 @@ private fun FolderListRow(
             }
             if (showIcons && iconSide == IconSide.LEFT) {
                 FolderIcon(members, iconSizeDp, contentColor, folder.icon)
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
             }
             text()
             if (showIcons && iconSide == IconSide.RIGHT) {
-                Spacer(Modifier.width(16.dp))
+                Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
                 FolderIcon(members, iconSizeDp, contentColor, folder.icon)
             }
         }

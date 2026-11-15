@@ -145,7 +145,7 @@ fun SleepRulesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.sleep_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -416,7 +416,7 @@ private fun SleepRuleEditor(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = {
                     Text(stringResource(if (initial.id.isBlank()) R.string.sleep_new else R.string.sleep_edit))
                 },

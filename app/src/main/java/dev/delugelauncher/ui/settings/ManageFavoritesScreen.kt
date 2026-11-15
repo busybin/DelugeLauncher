@@ -105,7 +105,7 @@ fun ManageFavoritesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.favorites_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

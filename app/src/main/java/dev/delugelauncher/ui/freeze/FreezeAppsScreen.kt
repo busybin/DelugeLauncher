@@ -237,7 +237,7 @@ fun FreezeAppsScreen(
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = {
                     Text(
                         if (multi) {

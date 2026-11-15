@@ -68,7 +68,7 @@ fun HiddenAppsScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(titleRes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {

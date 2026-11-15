@@ -28,8 +28,9 @@ Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
   after Disable or Hide, so nothing has to be re-added.
 - **Four methods**, one tab each, with what each one breaks stated next to it: Stop, Suspend,
   Disable, Hide.
-- **Permanent means it stays asleep.** Unfreeze all, a folder release, the handover exit and
-  the automatic thaw all step around a permanent app, while a single tap still thaws it.
+- **Permanent means it stays asleep.** Unfreeze all, a folder release, select all and the
+  automatic thaw all step around a permanent app, while its own switch still thaws it. A
+  handover exit thaws everything, permanent included.
 - **One table for the whole phone.** Every installed app, the method it would freeze under, and
   whether it is frozen right now; a method per app, count rows for the list, frozen and
   permanent, filters by source and state, and a comparison page for what each method survives.

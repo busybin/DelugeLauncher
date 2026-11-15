@@ -122,7 +122,7 @@ fun FavoriteRulesScreen(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = { Text(stringResource(R.string.rules_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -308,7 +308,7 @@ private fun RuleEditor(
         containerColor = surface,
         topBar = {
             TopAppBar(
-            windowInsets = topBarInsets,
+                windowInsets = topBarInsets,
                 title = {
                     Text(
                         stringResource(

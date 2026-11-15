@@ -2237,6 +2237,13 @@ private fun FolderRow(
                                 .combinedClickable(
                                     interactionSource = interaction,
                                     indication = null,
+                                    // The chevron is hidden in a half cell, so the row itself has
+                                    // to say that a tap opens it and what is inside.
+                                    onClickLabel = if (canExpand) {
+                                        stringResource(R.string.folder_open_label, members.size)
+                                    } else {
+                                        null
+                                    },
                                     onClick = { if (canExpand) onToggleExpanded() },
                                     onLongClick = {
                                         onOpenMenu(
