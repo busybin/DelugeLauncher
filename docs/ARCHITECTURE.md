@@ -22,6 +22,9 @@ widget/     AppWidgetHost, plain widgets, clock widgets
 - The A-Z strip bows by translating each letter along a gaussian; scaling the glyphs pixelated
   them. Scrub position arrives as lambdas read inside `graphicsLayer` to keep the work in the
   draw phase.
+- `FreezeToggleActivity` is exported because the launcher that hosts a per-app shortcut starts it
+  under its own package, so the shortcut carries the automation token and the target checks it;
+  pins issued before that token existed are rewritten with it on start.
 - `recordTouchPosition` does not consume the down event, so `combinedClickable` and scrolling
   parents still arbitrate normally.
 - The app-list overlay stays composed while hidden (measured, never placed) — rebuilding it on
