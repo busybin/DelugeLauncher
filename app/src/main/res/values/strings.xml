@@ -98,6 +98,7 @@
     <string name="handle_widget_top">Widget top</string>
     <string name="handle_widget_bottom">Widget bottom</string>
     <string name="handle_widget_height">Widget height</string>
+    <string name="handle_widget_height_auto">Clock auto height</string>
     <string name="handle_widget_side_padding">Widget side padding</string>
     <string name="handle_widget_offset_x">Widget left / right</string>
     <string name="handle_az_range">A-Z strip range</string>
@@ -584,6 +585,7 @@
     <string name="widget_clock_hour_24">24-hour</string>
     <string name="widget_clock_date_format">Date</string>
     <string name="widget_clock_date_none">No date</string>
+    <string name="widget_clock_gap">Space above</string>
     <string name="widget_clock_size">Time size</string>
     <string name="widget_clock_date_size">Date size</string>
     <string name="widget_clock_color">Color</string>

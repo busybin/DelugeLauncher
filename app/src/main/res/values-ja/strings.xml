@@ -43,6 +43,7 @@
     <string name="handle_widget_top">ウィジェットの上端</string>
     <string name="handle_widget_bottom">ウィジェットの下端</string>
     <string name="handle_widget_height">ウィジェットの高さ</string>
+    <string name="handle_widget_height_auto">時計の高さを自動調整</string>
     <string name="handle_widget_side_padding">ウィジェットの左右の余白</string>
     <string name="handle_widget_offset_x">ウィジェットの左右位置</string>
     <string name="handle_az_range">A-Zバーの範囲</string>
@@ -453,6 +454,7 @@
     <string name="widget_clock_hour_24">24時間</string>
     <string name="widget_clock_date_format">日付</string>
     <string name="widget_clock_date_none">日付なし</string>
+    <string name="widget_clock_gap">上の余白</string>
     <string name="widget_clock_size">時刻のサイズ</string>
     <string name="widget_clock_date_size">日付のサイズ</string>
     <string name="widget_clock_color">色</string>

@@ -104,7 +104,15 @@ class ClockWidgetProvider : AppWidgetProvider() {
             val config = ClockWidgetConfig.read(context, widgetId)
             val twelve = "h:mm"
             val twentyFour = "HH:mm"
+            val density = context.resources.displayMetrics.density
+            fun gap(dp: Int) = (dp * density).toInt()
             val views = RemoteViews(context.packageName, R.layout.widget_clock).apply {
+                // Padding rather than a margin: RemoteViews can set it by id, and a row that
+                // is hidden takes its gap out of the layout with it.
+                setViewPadding(R.id.widget_date, 0, gap(config.dateGapDp), 0, 0)
+                setViewPadding(R.id.widget_weather, 0, gap(config.weatherGapDp), 0, 0)
+                setViewPadding(R.id.widget_notifications, 0, gap(config.notificationsGapDp), 0, 0)
+                setViewPadding(R.id.widget_battery, 0, gap(config.batteryGapDp), 0, 0)
                 when (config.hourFormat) {
                     ClockWidgetConfig.HourFormat.SYSTEM -> {
                         setCharSequence(R.id.widget_time, "setFormat12Hour", twelve)
@@ -197,6 +205,19 @@ class ClockWidgetProvider : AppWidgetProvider() {
                     )
                 } else {
                     emptyList()
+                }
+                // Above the group rather than above every row in it: the events read as one
+                // list. When the list is empty the gap moves to the alarm, which is then the
+                // first row of the same group.
+                val firstAgendaRow = if (events.isNotEmpty()) R.id.widget_event_1 else R.id.widget_alarm
+                (EVENT_ROWS.toList() + R.id.widget_alarm).forEach { viewId ->
+                    setViewPadding(
+                        viewId,
+                        0,
+                        if (viewId == firstAgendaRow) gap(config.agendaGapDp) else 0,
+                        0,
+                        0,
+                    )
                 }
                 EVENT_ROWS.forEachIndexed { index, viewId ->
                     val entry = events.getOrNull(index)

@@ -1334,6 +1334,7 @@ fun DelugeNavHost(
                     ?.let { app.appRepository.openAppInfo(it.provider.packageName) }
             },
             onResize = { newHeight -> scope.launch { app.prefs.setWidgetHeightDp(newHeight) } },
+            onSetAutoHeight = { on -> scope.launch { app.prefs.setWidgetHeightAuto(on) } },
             // Null while the height is automatic, so the menu offers no reset for it.
             onResetHeight = if (hasCustomWidgetHeight) {
                 { scope.launch { app.prefs.clearWidgetHeightDp() } }

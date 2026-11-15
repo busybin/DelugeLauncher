@@ -43,6 +43,7 @@
     <string name="handle_widget_top">Topo do widget</string>
     <string name="handle_widget_bottom">Base do widget</string>
     <string name="handle_widget_height">Altura do widget</string>
+    <string name="handle_widget_height_auto">Altura automática do relógio</string>
     <string name="handle_widget_side_padding">Margem lateral do widget</string>
     <string name="handle_widget_offset_x">Esquerda / direita do widget</string>
     <string name="handle_az_range">Extensão da barra A-Z</string>
@@ -453,6 +454,7 @@
     <string name="widget_clock_hour_24">24 horas</string>
     <string name="widget_clock_date_format">Data</string>
     <string name="widget_clock_date_none">Sem data</string>
+    <string name="widget_clock_gap">Espaço acima</string>
     <string name="widget_clock_size">Tamanho da hora</string>
     <string name="widget_clock_date_size">Tamanho da data</string>
     <string name="widget_clock_color">Cor</string>

@@ -2,6 +2,7 @@
 package dev.delugelauncher.widget
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -10,6 +11,7 @@ import dev.delugelauncher.ui.common.DelugeIcons
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProviderInfo
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -46,9 +48,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,23 +94,39 @@ data class WidgetSlotActions(
     val onResizeFolderWidget: (folderId: String, widgetId: Int, heightDp: Int) -> Unit = { _, _, _ -> },
     /** Adds or removes the Now Playing card in a folder. */
     val onSetFolderNowPlaying: (folderId: String, on: Boolean) -> Unit = { _, _ -> },
+    /** Turns the clock's taking its own content height on or off. */
+    val onSetAutoHeight: (on: Boolean) -> Unit = {},
     /** Null while the height is automatic, so the menu offers no reset for it. */
     val onResetHeight: (() -> Unit)? = null,
 )
+
+/** Whether [widgetId] is our own clock, the one widget that can size itself to fit. */
+fun isDelugeClock(context: Context, widgetId: Int): Boolean =
+    widgetId > 0 && runCatching {
+        AppWidgetManager.getInstance(context).getAppWidgetInfo(widgetId)?.provider ==
+            ClockWidgetProvider.componentName(context)
+    }.getOrDefault(false)
 
 /**
  * The home screen's widget area: one widget on screen at a time, swiped between, or with
  * [stacked] all of them one under another.
  *
- * Every page shares [heightDp] rather than carrying its own, so swiping never moves the
+ * Every page shares one height rather than carrying its own, so swiping never moves the
  * favorites underneath — a widget that changed the layout of the rest of the screen as it
- * scrolled past would be far more distracting than the widget itself.
+ * scrolled past would be far more distracting than the widget itself. Under [autoHeight] the
+ * clock alone takes the height of what it shows; the pages then share the tallest of them, so
+ * the same rule still holds.
  */
 @Composable
 fun WidgetSlot(
     widgetIds: List<Int>,
     heightDp: Int,
     stacked: Boolean,
+    /**
+     * Our clock takes the height of what it shows rather than [heightDp], so an empty agenda is
+     * not a gap. Every other widget keeps [heightDp]: none of them says how tall its content is.
+     */
+    autoHeight: Boolean,
     onEditLayout: () -> Unit,
     actions: WidgetSlotActions,
     /** Bumped on every package event, so frozen and unfrozen providers re-read. */
@@ -126,17 +146,29 @@ fun WidgetSlot(
         menuExpanded = true
     }
 
-    val rows = if (stacked) widgetIds.size.coerceAtLeast(1) else 1
-    Box(modifier = modifier.height((heightDp * rows).dp)) {
+    // Each clock's own content height, as it last measured. The set height is left alone rather
+    // than used as a floor: a floor kept the very gap this is here to close, and the value is
+    // still there for whenever auto is turned off.
+    val fitted = remember { mutableStateMapOf<Int, Int>() }
+    fun pageHeight(id: Int): Int = if (autoHeight) fitted[id] ?: heightDp else heightDp
+    fun fitTo(id: Int): ((Int) -> Unit)? = if (autoHeight) ({ h -> fitted[id] = h }) else null
+    // Swiped pages still share one height, the tallest, so a swipe never moves the favorites.
+    val slotHeight = when {
+        widgetIds.isEmpty() -> heightDp
+        stacked -> widgetIds.sumOf { pageHeight(it) }
+        else -> widgetIds.maxOf { pageHeight(it) }
+    }
+    Box(modifier = modifier.height(slotHeight.dp)) {
         if (stacked && widgetIds.isNotEmpty()) {
             Column(Modifier.fillMaxSize()) {
                 widgetIds.forEach { id ->
                     key(id) {
-                        Box(Modifier.fillMaxWidth().height(heightDp.dp)) {
+                        Box(Modifier.fillMaxWidth().height(pageHeight(id).dp)) {
                             WidgetPage(
                                 widgetId = id,
                                 refreshTick = refreshTick,
                                 onPressAndHold = { x, y -> openMenu(id, x, y) },
+                                onContentHeight = fitTo(id),
                             )
                         }
                     }
@@ -188,6 +220,7 @@ fun WidgetSlot(
                     widgetId = id,
                     refreshTick = refreshTick,
                     onPressAndHold = { x, y -> openMenu(id, x, y) },
+                    onContentHeight = fitTo(id),
                 )
             }
 
@@ -292,6 +325,8 @@ internal fun WidgetPage(
     /** Bumped on every package event; the provider is re-read, so freeze and unfreeze show. */
     refreshTick: Int,
     onPressAndHold: (x: Float, y: Float) -> Unit,
+    /** Given, the page measures its content's own height and reports it here, in dp. */
+    onContentHeight: ((Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as DelugeApp
@@ -460,6 +495,9 @@ internal fun WidgetPage(
     // a widget that has nothing under the finger to touch hands the gesture to the home
     // screen, which is what lets the list scroll from on top of a clock. Only a widget
     // whose own views claim the press keeps it, and then this detector never starts.
+    val fits = onContentHeight != null && providerInfo.provider == ClockWidgetProvider.componentName(context)
+    // The container reports how tall the clock's content is, and the slot takes that height.
+    val latestOnContentHeight by rememberUpdatedState(onContentHeight)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -525,6 +563,13 @@ internal fun WidgetPage(
                 container.onLongPress = { x, y -> onPressAndHold(x, y) }
                 container.isFrozen = { frozen }
                 container.onFrozenTap = { lift(open = true) }
+                // Asked of the container because only it can measure the content smaller: the
+                // hosted view hiding a row lays out again inside the height it already has.
+                container.onNaturalHeight = if (fits) {
+                    { px -> latestOnContentHeight?.invoke(with(density) { px.toDp().value.roundToInt() }) }
+                } else {
+                    null
+                }
             },
         )
     }

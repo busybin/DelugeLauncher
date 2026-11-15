@@ -203,6 +203,8 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     color = config.textColor,
                                     onSize = { config = config.copy(dateSizeSp = it) },
                                     onOpacity = { config = config.copy(dateOpacity = it) },
+                                    gap = config.dateGapDp,
+                                    onGap = { config = config.copy(dateGapDp = it) },
                                 )
                             }
                             if (config.showBattery) {
@@ -219,6 +221,8 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     color = config.textColor,
                                     onSize = { config = config.copy(batterySizeSp = it) },
                                     onOpacity = { config = config.copy(batteryOpacity = it) },
+                                    gap = config.batteryGapDp,
+                                    onGap = { config = config.copy(batteryGapDp = it) },
                                 )
                             }
 
@@ -235,6 +239,8 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     color = config.textColor,
                                     onSize = { config = config.copy(weatherSizeSp = it) },
                                     onOpacity = { config = config.copy(weatherOpacity = it) },
+                                    gap = config.weatherGapDp,
+                                    onGap = { config = config.copy(weatherGapDp = it) },
                                 )
                             }
                             if (config.showAgenda || config.showAlarm) {
@@ -249,6 +255,8 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     color = config.textColor,
                                     onSize = { config = config.copy(agendaSizeSp = it) },
                                     onOpacity = { config = config.copy(agendaOpacity = it) },
+                                    gap = config.agendaGapDp,
+                                    onGap = { config = config.copy(agendaGapDp = it) },
                                 )
                             }
                             if (config.showNotifications) {
@@ -264,6 +272,8 @@ class ClockWidgetConfigActivity : ComponentActivity() {
                                     color = config.textColor,
                                     onSize = { config = config.copy(notificationsSizeSp = it) },
                                     onOpacity = { config = config.copy(notificationsOpacity = it) },
+                                    gap = config.notificationsGapDp,
+                                    onGap = { config = config.copy(notificationsGapDp = it) },
                                 )
                             }
 
@@ -473,9 +483,22 @@ private fun TextSection(
     color: Int,
     onSize: (Int) -> Unit,
     onOpacity: (Int) -> Unit,
+    /** Room above the row; left out for the time, which has nothing above it. */
+    gap: Int? = null,
+    onGap: (Int) -> Unit = {},
 ) {
     val opacityRange = ClockWidgetConfig.OPACITY_RANGE
     Column {
+        if (gap != null) {
+            val gapRange = ClockWidgetConfig.GAP_RANGE
+            SliderRow(
+                label = stringResource(R.string.widget_clock_gap),
+                value = gap.toFloat(),
+                range = gapRange.first.toFloat()..gapRange.last.toFloat(),
+                valueLabel = { "${it.roundToInt()} dp" },
+                onValueChange = { onGap(it.roundToInt().coerceIn(gapRange)) },
+            )
+        }
         // The same row the rest of the launcher sets a size with: minus and plus for one step
         // at a time, and the slider for crossing the range.
         SliderRow(

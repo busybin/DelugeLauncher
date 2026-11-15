@@ -182,8 +182,10 @@ import dev.delugelauncher.ui.common.recordTouchPosition
 import dev.delugelauncher.ui.common.pressPop
 import dev.delugelauncher.widget.WidgetPage
 import dev.delugelauncher.widget.WidgetSlot
+import dev.delugelauncher.widget.isDelugeClock
 import androidx.compose.ui.semantics.Role
 import dev.delugelauncher.widget.WidgetSlotActions
+import dev.delugelauncher.DelugeApp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -445,6 +447,11 @@ fun HomeScreen(
     val density = LocalDensity.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+    // Read here rather than passed through HomeRoute: its composable is already at the JVM
+    // method limit, and this is one setting with two readers on this screen.
+    val context = LocalContext.current
+    val widgetHeightAuto by (context.applicationContext as DelugeApp).prefs.widgetHeightAuto
+        .collectAsState(initial = false)
 
     var backgroundMenu by remember { mutableStateOf(false) }
     var backgroundMenuOffset by remember { mutableStateOf(DpOffset.Zero) }
@@ -1131,16 +1138,20 @@ fun HomeScreen(
                         Text(stringResource(R.string.action_done))
                     }
                 }
-                StepperRow(
-                    label = stringResource(R.string.handle_side_padding),
-                    value = sidePaddingDp,
-                    range = 0..96,
-                    step = PADDING_STEP_DP,
-                    onChange = onSetSidePadding,
-                    contentColor = contentColor,
-                )
+                // Up here only while there are no favorites to put it beside; otherwise it
+                // sits with them, since they are all it moves.
+                if (firstRowIndex < 0) {
+                    StepperRow(
+                        label = stringResource(R.string.handle_side_padding),
+                        value = sidePaddingDp,
+                        range = 0..96,
+                        step = PADDING_STEP_DP,
+                        onChange = onSetSidePadding,
+                        contentColor = contentColor,
+                    )
+                }
                 if (showWidgetSlot) {
-                    Spacer(Modifier.height(6.dp))
+                    if (firstRowIndex < 0) Spacer(Modifier.height(6.dp))
                     StepperRow(
                         label = stringResource(R.string.handle_widget_side_padding),
                         value = widgetSidePaddingDp,
@@ -1327,6 +1338,17 @@ fun HomeScreen(
                         onChange = { setPadding(PaddingSlot.FAVORITES_TOP, it) },
                         contentColor = contentColor,
                     )
+                    // Beside the favorites it moves, rather than up with the widget controls.
+                    if (editMode) {
+                        StepperRow(
+                            label = stringResource(R.string.handle_side_padding),
+                            value = sidePaddingDp,
+                            range = 0..96,
+                            step = PADDING_STEP_DP,
+                            onChange = onSetSidePadding,
+                            contentColor = contentColor,
+                        )
+                    }
                 }
 
                         // Lifted by which row it is, not by where it sits: after a swap the
@@ -1362,6 +1384,7 @@ fun HomeScreen(
                                 widgetIds = widgetIds,
                                 heightDp = widgetHeightDp,
                                 stacked = widgetsStacked,
+                                autoHeight = widgetHeightAuto,
                                 refreshTick = widgetTick,
                                 onEditLayout = { onEditModeChange(true) },
                                 actions = widgetActions,
@@ -1535,6 +1558,16 @@ fun HomeScreen(
                             onChange = { widgetActions.onResize(it) },
                             contentColor = contentColor,
                         )
+                        // Only where it can do something: no other widget says how tall its
+                        // content is, so for those the box would do nothing.
+                        if (widgetIds.any { isDelugeClock(context, it) }) {
+                            Spacer(Modifier.height(6.dp))
+                            CheckRow(
+                                label = stringResource(R.string.handle_widget_height_auto),
+                                checked = widgetHeightAuto,
+                                onCheckedChange = { widgetActions.onSetAutoHeight(it) },
+                            )
+                        }
                     }
                     PaddingHandle(
                         editMode = editMode,
@@ -2768,10 +2801,14 @@ private fun FolderWidgetBlock(
     val density = LocalDensity.current
     Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
         Box(Modifier.fillMaxWidth().height(liveHeight.dp)) {
-            WidgetPage(widget.id, refreshTick) { x, y ->
-                menuOffset = with(density) { DpOffset(x.toDp(), y.toDp()) }
-                menuExpanded = true
-            }
+            WidgetPage(
+                widgetId = widget.id,
+                refreshTick = refreshTick,
+                onPressAndHold = { x, y ->
+                    menuOffset = with(density) { DpOffset(x.toDp(), y.toDp()) }
+                    menuExpanded = true
+                },
+            )
             TouchAnchoredMenu(
                 expanded = menuExpanded,
                 offset = menuOffset,

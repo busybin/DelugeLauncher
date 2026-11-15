@@ -98,6 +98,7 @@
     <string name="handle_widget_top">أعلى الأداة</string>
     <string name="handle_widget_bottom">أسفل الأداة</string>
     <string name="handle_widget_height">ارتفاع الأداة</string>
+    <string name="handle_widget_height_auto">ارتفاع الساعة تلقائيًا</string>
     <string name="handle_widget_side_padding">الحشوة الجانبية للأداة</string>
     <string name="handle_widget_offset_x">يسار / يمين الأداة</string>
     <string name="handle_az_range">نطاق شريط A-Z</string>
@@ -567,6 +568,7 @@
     <string name="widget_clock_hour_24">24 ساعة</string>
     <string name="widget_clock_date_format">التاريخ</string>
     <string name="widget_clock_date_none">بلا تاريخ</string>
+    <string name="widget_clock_gap">مسافة أعلاه</string>
     <string name="widget_clock_size">حجم الوقت</string>
     <string name="widget_clock_date_size">حجم التاريخ</string>
     <string name="widget_clock_color">اللون</string>

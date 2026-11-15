@@ -22,6 +22,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -152,6 +153,34 @@ fun StepperRow(
             onConfirm = { onChange(it); typing = false },
             onDismiss = { typing = false },
         )
+    }
+}
+
+/**
+ * An on/off choice beside the steppers, on the same surface and for the same reason.
+ *
+ * A row rather than a switch in the settings screen: it changes what the widget above it does,
+ * and it only exists where it can do anything (see HomeScreen).
+ */
+@Composable
+fun CheckRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val surface = MaterialTheme.colorScheme.surface
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = STEPPER_ROW_INSET)
+            .background(surface.copy(alpha = 0.92f), RoundedCornerShape(8.dp))
+            .clickable { onCheckedChange(!checked) },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            label,
+            color = onSurface,
+            fontSize = 11.sp,
+            modifier = Modifier.weight(1f).padding(start = 12.dp),
+        )
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

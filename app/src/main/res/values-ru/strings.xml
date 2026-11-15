@@ -43,6 +43,7 @@
     <string name="handle_widget_top">Виджет сверху</string>
     <string name="handle_widget_bottom">Виджет снизу</string>
     <string name="handle_widget_height">Высота виджета</string>
+    <string name="handle_widget_height_auto">Автовысота часов</string>
     <string name="handle_widget_side_padding">Боковой отступ виджета</string>
     <string name="handle_widget_offset_x">Виджет слева / справа</string>
     <string name="handle_az_range">Диапазон полосы A-Z</string>
@@ -453,6 +454,7 @@
     <string name="widget_clock_hour_24">24-часовой</string>
     <string name="widget_clock_date_format">Дата</string>
     <string name="widget_clock_date_none">Без даты</string>
+    <string name="widget_clock_gap">Отступ сверху</string>
     <string name="widget_clock_size">Размер времени</string>
     <string name="widget_clock_date_size">Размер даты</string>
     <string name="widget_clock_color">Цвет</string>
