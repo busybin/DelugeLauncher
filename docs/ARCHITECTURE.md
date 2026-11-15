@@ -44,6 +44,7 @@ for the current home app.
 
 ## Known gaps
 
-- No baseline profile.
-- Unit tests cover framework-free logic only; anything touching `PackageManager` or Compose needs
-  Robolectric or an instrumented test, neither of which is set up yet.
+- Instrumented tests (`app/src/androidTest`) need a connected device; `./gradlew test` runs the
+  JVM and Robolectric suites only.
+- The baseline profile is a hand-written wildcard covering this package, not one sampled on a
+  device.

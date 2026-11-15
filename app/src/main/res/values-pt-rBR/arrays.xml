@@ -10,6 +10,7 @@
         <item>As barras de cima desviam da câmera quando a barra de status está oculta.</item>
         <item>O relógio pode ajustar o widget ao que mostra, e cada linha tem seu próprio espaço acima. Os dois em Editar layout.</item>
         <item>As opções da tira A–Z agora dizem onde o alcance dela é ajustado.</item>
+        <item>Controle externo: o comando de transmissão mostrado com o token agora nomeia o receptor. Desde o Android 8 o sistema descarta transmissões sem componente, então enviar comandos não fazia nada.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Firewall por aplicativo: corte a internet dos apps que você escolher enquanto todo o resto continua online. Cada app segue o congelamento, fica bloqueado ou continua online; apps protegidos e o app de telefone nunca são tocados, e um app instalado com o firewall ativo entra na lista.</item>

@@ -10,6 +10,7 @@
         <item>Top bars stay clear of the camera cutout on phones whose status bar is hidden.</item>
         <item>The clock can size the widget to what it is showing, and each clock row gets its own space above. Both live in Edit layout.</item>
         <item>The A-Z strip settings now say where the strip\'s range is dragged.</item>
+        <item>External control: the broadcast command shown with the token now names the receiver. Android 8 and later drop a broadcast without a component, so sending commands did nothing before.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Per-app firewall: cut the apps you choose off the internet while everything else stays online. Each app follows freeze, stays blocked or stays online, protected apps and the dialer are never touched, and an app installed while the firewall is on joins the list.</item>

@@ -10,6 +10,7 @@
         <item>Les barres du haut évitent la caméra quand la barre d\'état est masquée.</item>
         <item>L\'horloge peut prendre la hauteur de ce qu\'elle affiche, et chaque ligne a son propre espace au-dessus. Les deux dans Modifier la disposition.</item>
         <item>Les réglages de la barre A–Z indiquent où se règle son étendue.</item>
+        <item>Contrôle externe : la commande de diffusion affichée avec le jeton nomme désormais le récepteur. Depuis Android 8, le système ignore les diffusions sans composant : envoyer une commande ne faisait rien.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Pare-feu par application : coupez l\'internet des applications choisies pendant que tout le reste reste en ligne. Chaque application suit le gel, reste bloquée ou reste en ligne ; les applications protégées et le téléphone ne sont jamais touchés, et une application installée pare-feu actif rejoint la liste.</item>

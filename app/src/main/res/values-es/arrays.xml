@@ -10,6 +10,7 @@
         <item>Las barras superiores esquivan la cámara cuando la barra de estado está oculta.</item>
         <item>El reloj puede ajustar el widget a lo que muestra, y cada fila tiene su propio espacio arriba. Ambas cosas en Editar diseño.</item>
         <item>Los ajustes de la tira A–Z dicen dónde se arrastra su rango.</item>
+        <item>Control externo: el comando de difusión que acompaña al token ahora nombra el receptor. Desde Android 8 el sistema descarta las difusiones sin componente, así que enviar comandos no hacía nada.</item>
     </string-array>
     <string-array name="changelog_v31">
         <item>Cortafuegos por aplicación: corta el internet de las apps que elijas mientras el resto sigue en línea. Cada app sigue la congelación, sigue bloqueada o sigue en línea; las apps protegidas y la app de teléfono no se tocan nunca, y una app instalada con el cortafuegos activo se une a la lista.</item>

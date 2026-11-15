@@ -10,8 +10,8 @@ A hard fork of [Victoria Launcher](https://github.com/adelmonte/victoria-launche
 [adelmonte](https://github.com/adelmonte), itself an open source alternative to
 [Niagara Launcher](https://niagaralauncher.app).
 
-The fork is built around freezing, and around speed and feel. That means a fast cold start, a
-thumb-reachable A-Z strip, and gestures that hold up under a real finger.
+The fork is built around freezing, and around staying quick in the hand: a cold start that
+skips icon decoding, an A-Z strip within thumb reach, and gestures tuned against real drags.
 
 | Home | Folder, opened in two columns | App list | Scrubbing the A-Z strip |
 | ---- | ------------------------------ | -------- | ----------------------- |
@@ -23,9 +23,8 @@ Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
 
 ## App freezing
 
-- **The freeze list is the home screen.** No second list to maintain, no second place to look.
-- **Frozen apps keep their place.** Folders, favorite slots, names and icons survive, including
-  after Disable or Hide, so nothing has to be re-added.
+- **The freeze list is the home screen.** A frozen row keeps its folders, favorite slots, name
+  and icon, including after Disable or Hide, so nothing has to be re-added.
 - **Four methods**, one tab each, with what each one breaks stated next to it: Stop, Suspend,
   Disable, Hide.
 - **Permanent means it stays asleep.** Unfreeze all, a folder release, select all and the
@@ -38,8 +37,8 @@ Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
   goes off — skipping the app in front, apps with notifications, and a phone on a charger.
   Unlocking thaws the list if you enable it.
 - **A tap is a temporary thaw.** The row stays and the next trigger puts it back to sleep.
-- **Fast by design.** One package-manager pass reads every app's state, and a run only touches
-  what is not already asleep. Through Shizuku each app is a single binder call, hiding included
+- **One read, then only what changed.** A single package-manager pass reads every app's state,
+  and a run only touches what is not already asleep. Through Shizuku each app is a single binder call, hiding included
   when the manager runs as root. A 170-app list settles in well under a second of IPC.
 - **Root, Shizuku or device owner.** Shizuku is recommended and works without root (Android
   11+, over wireless debugging). Hide needs root or a device owner. A device owner needs neither:
@@ -89,10 +88,6 @@ The approach follows [Hail](https://github.com/aistra0528/Hail), credited in [NO
   a folder's members can be frozen one by one from the folder itself.
 - A folder takes the whole row in the two-column layout, its name stays on one line, and its
   members open in a popup instead of pushing the screen around.
-- **Per-app firewall:** cut the apps you choose off the internet, with each app following the
-  freeze, staying blocked or staying online. Protected apps and the dialer are never touched,
-  an app installed while it is on joins the list, and the rules are written again at start-up
-  because Android forgets them on reboot.
 - A row only answers a sideways swipe, so angled drags scroll instead of opening a shortcut menu.
 - Apps open out of their icon and shrink back into it when you go back.
 - Notification text under an app name in favorites, off by default: the app's newest three, each
