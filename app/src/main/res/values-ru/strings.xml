@@ -659,6 +659,9 @@
     <string name="settings_two_column_list_portrait_detail">Два приложения делят каждую строку вертикально.</string>
     <string name="settings_two_column_list_landscape">Список в две колонки (ландшафт)</string>
     <string name="settings_two_column_list_landscape_detail">Два приложения делят каждую строку горизонтально.</string>
+    <string name="settings_two_column_labels">Название в узкой половине ячейки</string>
+    <string name="two_column_labels_beside">Рядом со значком</string>
+    <string name="two_column_labels_under">Под значком</string>
     <string name="settings_developer_mode">Режим разработчика</string>
     <string name="settings_developer_mode_detail">Маскирует имена и значки для скриншотов и прячет строку состояния.</string>
     <string name="developer_unlocked">Режим разработчика включён</string>

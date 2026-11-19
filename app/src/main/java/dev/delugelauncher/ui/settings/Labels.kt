@@ -17,6 +17,7 @@ import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.IconSide
 import dev.delugelauncher.data.TextColorMode
 import dev.delugelauncher.data.HapticFeedback
+import dev.delugelauncher.data.TwoColumnLabels
 
 /**
  * Display labels for the settings chips.
@@ -56,6 +57,12 @@ fun AzStripVisibility.labelRes(): Int = when (this) {
     AzStripVisibility.NEVER -> R.string.az_visibility_never
     AzStripVisibility.LANDSCAPE -> R.string.az_visibility_landscape
     AzStripVisibility.ALWAYS -> R.string.az_visibility_always
+}
+
+@StringRes
+fun TwoColumnLabels.labelRes(): Int = when (this) {
+    TwoColumnLabels.BESIDE -> R.string.two_column_labels_beside
+    TwoColumnLabels.UNDER -> R.string.two_column_labels_under
 }
 
 @StringRes

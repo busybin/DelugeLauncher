@@ -154,6 +154,7 @@ import dev.delugelauncher.media.NotificationGateway
 import dev.delugelauncher.media.NotificationPreviewBus
 import dev.delugelauncher.data.QuickLaunchSlot
 import dev.delugelauncher.data.HomeAlignment
+import dev.delugelauncher.data.TwoColumnLabels
 import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.ui.applist.STRIP_LETTER_REACH_DP
 import dev.delugelauncher.data.IconSide
@@ -450,6 +451,9 @@ fun HomeScreen(
     // Read here rather than passed through HomeRoute: its composable is already at the JVM
     // method limit, and this is one setting with two readers on this screen.
     val context = LocalContext.current
+    // Read here rather than passed in: HomeRoute is already at the JVM method size limit
+    // (adding an argument to it failed the build with "Method too large").
+    val twoColumnLabels = rememberTwoColumnLabels()
     val widgetHeightAuto by (context.applicationContext as DelugeApp).prefs.widgetHeightAuto
         .collectAsState(initial = false)
 
@@ -1233,10 +1237,11 @@ fun HomeScreen(
                 LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             val homeTwoColumn =
                 (if (homeLandscape) homeTwoColumnLandscape else homeTwoColumnPortrait) && !editMode
-            // A half cell narrower than this has no room for a name beside the folder icon,
-            // so the folder stacks its icon over its name instead of being cut to a letter.
-            val stackHalfCellFolders = homeTwoColumn && viewportWidth > 0 &&
-                with(density) { (viewportWidth / 2f).toDp() } < 170.dp
+            // A half cell narrower than this has no room for a name beside its icon, so both
+            // kinds of cell stack it instead of cutting it to a letter — the same rule for a
+            // folder and for an app, or a pair would read as two different rows.
+            val stackHalfCells = homeTwoColumn && twoColumnLabels == TwoColumnLabels.UNDER &&
+                viewportWidth > 0 && with(density) { (viewportWidth / 2f).toDp() } < 170.dp
             val homeCells: List<List<Pair<HomeItem, Int>>> =
                 remember(displayItems, homeTwoColumn) {
                     if (!homeTwoColumn) {
@@ -1491,7 +1496,7 @@ fun HomeScreen(
                             editMode = editMode,
                             popupContents = homeTwoColumn && item.folder.widgets.isEmpty() &&
                                 !item.folder.nowPlaying,
-                            stackedHalfCell = stackHalfCellFolders,
+                            stackedHalfCell = stackHalfCells,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
@@ -1583,6 +1588,7 @@ fun HomeScreen(
                             compactTapArea = compactTapArea,
                             shortcutSwipe = shortcutSwipe,
                             app = item.app,
+                            stackedHalfCell = stackHalfCells,
                             label = displayName(item.app),
                             notificationLines = notificationPreviews[
                                 NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
@@ -1812,6 +1818,8 @@ private fun FavoriteRow(
     /** Whether only the icon and name answer a tap, rather than the whole line. */
     compactTapArea: Boolean,
     shortcutSwipe: ShortcutSwipe,
+    /** Whether a half cell is too narrow to keep the icon and the name side by side. */
+    stackedHalfCell: Boolean = false,
     app: AppInfo,
     label: String,
     /** The newest notifications' words, newest first; empty when there is nothing to show. */
@@ -1870,93 +1878,108 @@ private fun FavoriteRow(
 
     Column(Modifier.fillMaxWidth()) {
     Box(Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                // Only the icon and name answer a tap when the row is narrowed to them; the
-                // rest of the line is the home screen again, not a button nobody can see.
-                .then(if (compactTapArea) Modifier.align(alignment.boxAlignment()) else Modifier.fillMaxWidth())
-                .padding(horizontal = (sidePaddingDp - 8).coerceAtLeast(0).dp)
-                .background(
-                    color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
-                    shape = RoundedCornerShape(18.dp),
+        // A paused app fades the same way a retired shortcut does, when the setting asks;
+        // the icon goes with the name so the whole row reads as set aside.
+        val dimmed = app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
+        val appIcon: @Composable () -> Unit = {
+            AppIcon(
+                app = app,
+                sizeDp = iconSizeDp,
+                modifier = Modifier
+                    .pressPop(interaction)
+                    .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
+            )
+        }
+        val appLabel: @Composable (Modifier) -> Unit = { labelModifier ->
+            Row(
+                modifier = labelModifier,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    label,
+                    // Same dimming a hidden app gets in the A-Z list: a shortcut its
+                    // publisher has switched off is still listed, but tapping it only
+                    // explains why it will not open.
+                    color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
+                    fontSize = labelSizeSp.sp,
+                    textAlign = alignment.textAlign(),
+                    // A name in a half row has a letter's width before it starts stacking
+                    // downwards; two lines then a cut reads like a name, not a column.
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                .then(
-                    // In edit mode the row must not claim the long press, or the reorder
-                    // drag above it never starts.
-                    if (editMode) {
-                        Modifier
-                    } else {
-                        Modifier
-                            .recordTouchPosition(touchPosition)
-                            .swipeForShortcuts(shortcutSwipe, app.kind == EntryKind.APP) {
-                                shortcutMenu = true
-                            }
-                            .combinedClickable(
-                                interactionSource = interaction,
-                                indication = null,
-                                onClick = onLaunch,
-                                onLongClick = {
-                                    onOpenMenu(
-                                        with(density) {
-                                            DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
-                                        }
-                                    )
-                                },
-                            )
-                    }
-                )
-                .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = alignment.arrangement(),
-        ) {
-            // A paused app fades the same way a retired shortcut does, when the setting asks;
-            // the icon goes with the name so the whole row reads as set aside.
-            val dimmed = app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
-            AlignedIconLabel(
-                alignment = alignment,
-                showLabel = showLabels,
-                iconSide = iconSide,
-                iconWidth = iconSizeDp.dp,
-                icon = {
-                    AppIcon(
-                        app = app,
-                        sizeDp = iconSizeDp,
-                        modifier = Modifier
-                            .pressPop(interaction)
-                            .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
+                // A lock beside the name, so which apps ask for the device lock is visible
+                // without opening each one's menu.
+                if (isLocked) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(
+                        Icons.Filled.Lock,
+                        contentDescription = stringResource(R.string.action_lock_app),
+                        tint = contentColor.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp),
                     )
-                },
-            ) { labelModifier ->
-                Row(
-                    modifier = labelModifier,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        label,
-                        // Same dimming a hidden app gets in the A-Z list: a shortcut its
-                        // publisher has switched off is still listed, but tapping it only
-                        // explains why it will not open.
-                        color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
-                        fontSize = labelSizeSp.sp,
-                        textAlign = alignment.textAlign(),
-                        // A name in a half row has a letter's width before it starts stacking
-                        // downwards; two lines then a cut reads like a name, not a column.
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    // A lock beside the name, so which apps ask for the device lock is visible
-                    // without opening each one's menu.
-                    if (isLocked) {
-                        Spacer(Modifier.width(6.dp))
-                        Icon(
-                            Icons.Filled.Lock,
-                            contentDescription = stringResource(R.string.action_lock_app),
-                            tint = contentColor.copy(alpha = 0.7f),
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
                 }
+            }
+        }
+        val rowModifier = Modifier
+            // Only the icon and name answer a tap when the row is narrowed to them; the
+            // rest of the line is the home screen again, not a button nobody can see.
+            .then(if (compactTapArea) Modifier.align(alignment.boxAlignment()) else Modifier.fillMaxWidth())
+            .padding(horizontal = (sidePaddingDp - 8).coerceAtLeast(0).dp)
+            .background(
+                color = if (pressed) contentColor.copy(alpha = 0.15f) else Color.Transparent,
+                shape = RoundedCornerShape(18.dp),
+            )
+            .then(
+                // In edit mode the row must not claim the long press, or the reorder
+                // drag above it never starts.
+                if (editMode) {
+                    Modifier
+                } else {
+                    Modifier
+                        .recordTouchPosition(touchPosition)
+                        .swipeForShortcuts(shortcutSwipe, app.kind == EntryKind.APP) {
+                            shortcutMenu = true
+                        }
+                        .combinedClickable(
+                            interactionSource = interaction,
+                            indication = null,
+                            onClick = onLaunch,
+                            onLongClick = {
+                                onOpenMenu(
+                                    with(density) {
+                                        DpOffset(touchPosition.value.x.toDp(), touchPosition.value.y.toDp())
+                                    }
+                                )
+                            },
+                        )
+                }
+            )
+            .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp)
+        // Icon over name, the same way the folder next to it draws, so a pair never has one
+        // name beside its icon and the other under it.
+        if (stackedHalfCell) {
+            Column(modifier = rowModifier, horizontalAlignment = alignment.columnAlignment()) {
+                appIcon()
+                if (showLabels) {
+                    appLabel(Modifier.padding(start = 4.dp, end = 4.dp, top = 4.dp))
+                }
+            }
+        } else {
+            Row(
+                modifier = rowModifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = alignment.arrangement(),
+            ) {
+                AlignedIconLabel(
+                    alignment = alignment,
+                    showLabel = showLabels,
+                    iconSide = iconSide,
+                    iconWidth = iconSizeDp.dp,
+                    icon = appIcon,
+                    label = { appLabel(it) },
+                )
             }
         }
 
@@ -2290,7 +2313,8 @@ private fun FolderRow(
                 .padding(start = 8.dp, end = handleReserve(dragHandle, sidePaddingDp, handleInsetDp), top = 4.dp, bottom = 4.dp)
             if (stackedHalfCell && popupContents) {
                 // Icon over name. A half cell this narrow leaves a name beside the icon a few
-                // characters, and under the icon the name gets the whole cell instead.
+                // characters, and under the icon the name gets the whole cell instead. The app
+                // in the other half is drawn the same way, so the pair reads as one row.
                 Column(modifier = rowModifier, horizontalAlignment = alignment.columnAlignment()) {
                     folderIcon()
                     if (showLabels && drawn != null) {
@@ -2298,8 +2322,8 @@ private fun FolderRow(
                             drawn,
                             color = contentColor,
                             fontSize = labelSizeSp.sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
+                            textAlign = alignment.textAlign(),
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp),
                         )
@@ -2325,9 +2349,10 @@ private fun FolderRow(
                             fontSize = labelSizeSp.sp,
                             modifier = labelModifier,
                             textAlign = alignment.textAlign(),
-                            // One line, cut with an ellipsis. Left to wrap, a narrow cell turned
-                            // a folder name into a column of single letters.
-                            maxLines = 1,
+                            // Two lines then a cut, like the app row beside it. Left to wrap
+                            // freely, a narrow cell turned a folder name into a column of
+                            // single letters.
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -3227,3 +3252,17 @@ private fun FolderEditDialog(
 /** A notification preview follows the theme unless the owner picked a colour for it. */
 private fun notificationTint(base: Color, argb: Int): Color =
     if (argb == 0) base else Color(argb)
+
+/**
+ * The two-column label setting, read where it is used.
+ *
+ * Passed down as an argument would be the usual way, but HomeRoute is already at the JVM's
+ * method size limit: one more parameter there fails the build with "Method too large". So the
+ * preference is read here, the way the app list reads the ones only it uses.
+ */
+@Composable
+private fun rememberTwoColumnLabels(): TwoColumnLabels {
+    val app = LocalContext.current.applicationContext as DelugeApp
+    val labels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.BESIDE)
+    return labels
+}

@@ -54,6 +54,7 @@ import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.DelugeApp
 import android.widget.Toast
 import dev.delugelauncher.data.IconShape
+import dev.delugelauncher.data.TwoColumnLabels
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.NetworkStatus
 import dev.delugelauncher.ui.common.LocalNetworkActions
@@ -748,6 +749,7 @@ fun DelugeNavHost(
     val homeTwoColumnLandscape by app.prefs.homeTwoColumnLandscape.collectAsState(initial = true)
     val listTwoColumnPortrait by app.prefs.listTwoColumnPortrait.collectAsState(initial = false)
     val listTwoColumnLandscape by app.prefs.listTwoColumnLandscape.collectAsState(initial = true)
+    val twoColumnLabels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.BESIDE)
     val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
     val devScalePercent by app.prefs.devScalePercent.collectAsState(initial = 100)
     // Built fresh each time the mode turns on and dropped when it turns off: nothing stored,
@@ -2050,7 +2052,9 @@ fun DelugeNavHost(
                 homeTwoColumnLandscape = homeTwoColumnLandscape,
                 listTwoColumnPortrait = listTwoColumnPortrait,
                 listTwoColumnLandscape = listTwoColumnLandscape,
+                twoColumnLabels = twoColumnLabels,
                 onSetTwoColumn = actionsB.onSetTwoColumn,
+                onSetTwoColumnLabels = { scope.launch { app.prefs.setTwoColumnLabels(it) } },
                 onSetAutoFrequentTag = actionsB.onSetAutoFrequentTag,
                 onSetAppListSearch = actionsB.onSetAppListSearch,
                 onSetAppListSearchBottom = actionsB.onSetAppListSearchBottom,

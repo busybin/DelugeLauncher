@@ -651,6 +651,9 @@
     <string name="settings_two_column_list_portrait_detail">Dos apps comparten cada fila en vertical.</string>
     <string name="settings_two_column_list_landscape">Lista en dos columnas (horizontal)</string>
     <string name="settings_two_column_list_landscape_detail">Dos apps comparten cada fila en horizontal.</string>
+    <string name="settings_two_column_labels">Nombre en media celda estrecha</string>
+    <string name="two_column_labels_beside">Junto al icono</string>
+    <string name="two_column_labels_under">Debajo del icono</string>
     <string name="settings_developer_mode">Modo desarrollador</string>
     <string name="settings_developer_mode_detail">Disfraza nombres e iconos para capturas y oculta la barra de estado.</string>
     <string name="developer_unlocked">Modo desarrollador desbloqueado</string>

@@ -163,6 +163,7 @@ import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.TextColorMode
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.TwoColumnSlot
+import dev.delugelauncher.data.TwoColumnLabels
 import android.content.Intent
 import dev.delugelauncher.ui.common.AppIcon
 import dev.delugelauncher.ui.theme.toFontFamily
@@ -228,7 +229,10 @@ class SettingsScreenModel(
     val homeTwoColumnLandscape: Boolean,
     val listTwoColumnPortrait: Boolean,
     val listTwoColumnLandscape: Boolean,
+    /** Where a name goes in a half cell with no room for it beside its icon. */
+    val twoColumnLabels: TwoColumnLabels,
     val onSetTwoColumn: (TwoColumnSlot, Boolean) -> Unit,
+    val onSetTwoColumnLabels: (TwoColumnLabels) -> Unit,
     val appListSearch: Boolean,
     val appListSearchBottom: Boolean,
     val appListSearchHidden: Boolean,
@@ -1914,6 +1918,18 @@ fun SettingsScreen(model: SettingsScreenModel) {
                         detail = landscapeDetail(stringResource(R.string.settings_two_column_list_landscape_detail)),
                         checked = listTwoColumnLandscape,
                         onCheckedChange = { onSetTwoColumn(TwoColumnSlot.LIST_LANDSCAPE, it) },
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    )
+                    // Both drawings are right for someone: a column of names reads like the
+                    // rest of the launcher, an icon grid reads like a grid. The width alone
+                    // cannot pick, so the cell draws the side of this switch either way.
+                    DialogChoiceRow(
+                        labelRes = R.string.settings_two_column_labels,
+                        optionLabelRes = TwoColumnLabels.entries.map { it.labelRes() },
+                        selectedIndex = TwoColumnLabels.entries.indexOf(twoColumnLabels),
+                        onSelect = { onSetTwoColumnLabels(TwoColumnLabels.entries[it]) },
                     )
                 }
             },

@@ -166,6 +166,9 @@
     <string name="settings_two_column_list_portrait_detail">竖屏时应用每行两个。</string>
     <string name="settings_two_column_list_landscape">列表横屏双列</string>
     <string name="settings_two_column_list_landscape_detail">横屏时应用每行两个。</string>
+    <string name="settings_two_column_labels">窄半格里的名称</string>
+    <string name="two_column_labels_beside">在图标右侧</string>
+    <string name="two_column_labels_under">在图标下方</string>
     <string name="settings_two_column_needs_rotation">需要先打开“跟随设备旋转”才会生效。</string>
     <string name="settings_developer_mode">开发者模式</string>
     <string name="settings_developer_mode_detail">将应用名和图标伪装以便截图，并隐藏状态栏。</string>

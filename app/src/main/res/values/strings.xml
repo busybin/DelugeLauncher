@@ -185,6 +185,9 @@
     <string name="settings_two_column_list_portrait_detail">Two apps share each row upright.</string>
     <string name="settings_two_column_list_landscape">List two columns (landscape)</string>
     <string name="settings_two_column_list_landscape_detail">Two apps share each row sideways.</string>
+    <string name="settings_two_column_labels">Name in a narrow half cell</string>
+    <string name="two_column_labels_beside">Beside the icon</string>
+    <string name="two_column_labels_under">Under the icon</string>
     <string name="settings_two_column_needs_rotation">Needs “Rotate with the device” on to take effect.</string>
     <string name="settings_developer_mode">Developer mode</string>
     <string name="settings_developer_mode_detail">Disguises app names and icons for screenshots, and hides the status bar.</string>

@@ -651,6 +651,9 @@
     <string name="settings_two_column_list_portrait_detail">縦向きで1行にアプリを2つ並べます。</string>
     <string name="settings_two_column_list_landscape">一覧2列（横）</string>
     <string name="settings_two_column_list_landscape_detail">横向きで1行にアプリを2つ並べます。</string>
+    <string name="settings_two_column_labels">狭い半セルの名前</string>
+    <string name="two_column_labels_beside">アイコンの横</string>
+    <string name="two_column_labels_under">アイコンの下</string>
     <string name="settings_developer_mode">開発者モード</string>
     <string name="settings_developer_mode_detail">スクショ用にアプリ名とアイコンを偽装し、ステータスバーを隠します。</string>
     <string name="developer_unlocked">開発者モードを有効化</string>

@@ -2054,7 +2054,9 @@ private fun FolderListRow(
                     text = folder.name.ifBlank { stringResource(R.string.folder_unnamed) },
                     color = contentColor,
                     fontSize = labelSizeSp.sp,
-                    maxLines = 1,
+                    // Two lines, like the app that may sit beside it in a half row: one line
+                    // against a name that wraps made the pair look unfinished.
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
@@ -2239,6 +2241,10 @@ private fun AppRow(
                         // listed, but tapping it only explains why it will not open.
                         color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
                         fontSize = labelSizeSp.sp,
+                        // Two lines then a cut. Left to wrap freely, a long name in a half row
+                        // grew the row to three lines and moved everything below it.
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                         textAlign = when (alignment) {
                             HomeAlignment.LEFT -> TextAlign.Start

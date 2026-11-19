@@ -139,6 +139,15 @@ enum class IconShape { SYSTEM, CIRCLE, ROUNDED, SQUARE }
 /** Which of the four two-column switches is meant. */
 enum class TwoColumnSlot { HOME_PORTRAIT, HOME_LANDSCAPE, LIST_PORTRAIT, LIST_LANDSCAPE }
 
+/**
+ * Where a name goes in a half cell too narrow to keep it beside its icon.
+ *
+ * A name beside its icon reads like the rest of the launcher; an icon over its name reads like
+ * a grid. Which of the two someone wants on a small screen is not something the width decides
+ * for them, so both are offered and the width only says when the question comes up.
+ */
+enum class TwoColumnLabels { BESIDE, UNDER }
+
 /** What a slot does: the corner button's tap, its slide up, either swipe under the favorites. */
 enum class CornerAction {
     /** Opens the app chosen for that slot. */
@@ -382,6 +391,7 @@ class Prefs(private val context: Context) {
         val HOME_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("home_two_column_landscape")
         val LIST_TWO_COLUMN_PORTRAIT = booleanPreferencesKey("list_two_column_portrait")
         val LIST_TWO_COLUMN_LANDSCAPE = booleanPreferencesKey("list_two_column_landscape")
+        val TWO_COLUMN_LABELS = stringPreferencesKey("two_column_labels")
         val SHOW_ALPHABET = booleanPreferencesKey("show_alphabet")
         val SCRUB_REACH = floatPreferencesKey("scrub_reach")
         val ALIGN_RIGHT = booleanPreferencesKey("align_right")
@@ -1339,6 +1349,12 @@ class Prefs(private val context: Context) {
         data.map { it[Keys.LIST_TWO_COLUMN_PORTRAIT] ?: false }.distinctUntilChanged()
     val listTwoColumnLandscape: Flow<Boolean> =
         data.map { it[Keys.LIST_TWO_COLUMN_LANDSCAPE] ?: true }.distinctUntilChanged()
+
+    /** Where the name goes when a half cell leaves no room for it beside the icon. */
+    val twoColumnLabels: Flow<TwoColumnLabels> = data.map { pref ->
+        pref[Keys.TWO_COLUMN_LABELS]?.let { runCatching { TwoColumnLabels.valueOf(it) }.getOrNull() }
+            ?: TwoColumnLabels.BESIDE
+    }.distinctUntilChanged()
 
     /** Lay icons and labels out from the right edge instead of the left. */
     val alignRight: Flow<Boolean> = data.map { it[Keys.ALIGN_RIGHT] ?: false }.distinctUntilChanged()
@@ -2573,6 +2589,10 @@ class Prefs(private val context: Context) {
                 TwoColumnSlot.LIST_LANDSCAPE -> Keys.LIST_TWO_COLUMN_LANDSCAPE
             }] = v
         }
+    }
+
+    suspend fun setTwoColumnLabels(v: TwoColumnLabels) {
+        context.dataStore.edit { it[Keys.TWO_COLUMN_LABELS] = v.name }
     }
 
     suspend fun setAlignRight(v: Boolean) {
