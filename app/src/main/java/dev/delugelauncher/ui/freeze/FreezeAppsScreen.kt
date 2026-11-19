@@ -593,8 +593,12 @@ fun FreezeAppsScreen(
             body = stringResource(R.string.freeze_all_confirm_body, totals.listed),
             onConfirm = {
                 confirmingFreezeAll = false
-                val listed = rows.filter { it.listed }.mapNotNull { byKey[it.key] }
-                brickWarning.guard(listed) { onFreezeAll() }
+                // Every key the run will touch, not only the rows on screen: a plan entry
+                // with no launcher activity is still frozen by the same call.
+                brickWarning.guardPackages(
+                    freezeMethods.keys,
+                    labelOf = { key -> byKey[key]?.label ?: key },
+                ) { onFreezeAll() }
             },
             onDismiss = { confirmingFreezeAll = false },
         )

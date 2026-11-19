@@ -74,4 +74,24 @@ class BrickWarningTest {
         assertTrue(ran)
         compose.onNodeWithText("This can leave the phone unusable").assertDoesNotExist()
     }
+
+    @Test
+    fun `a freeze-list package without a launcher entry asks too`() {
+        val state = BrickWarningState(setOf(systemUi.packageName))
+        var ran = false
+        compose.setContent { BrickWarningDialog(state) }
+
+        compose.runOnIdle {
+            state.guardPackages(listOf(systemUi.packageName), labelOf = { "System UI" }) {
+                ran = true
+            }
+        }
+
+        compose.onNodeWithText("This can leave the phone unusable").assertExists()
+        compose.onNodeWithText("System UI", substring = true).assertExists()
+        assertFalse(ran)
+
+        compose.onNodeWithText("Freeze anyway").performClick()
+        assertTrue(ran)
+    }
 }

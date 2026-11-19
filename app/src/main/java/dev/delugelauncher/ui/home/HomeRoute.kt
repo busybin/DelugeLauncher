@@ -1398,9 +1398,13 @@ fun HomeRoute(
         // The same dialog the freeze screen shows. A menu or a gesture is still a deliberate
         // freeze, and skipping the load-bearing packages behind its back was a difference
         // nobody could see in the toast.
-        // Only the apps the list carries: the warning is about what this run would touch.
-        BrickWarningHolder.current.guard(
-            appsByKey.values.filter { it.freezeKey in freezeMethods },
+        // Every key the run will touch, not only the ones with a home screen icon: a package
+        // such as System UI has no launcher entry, and a plan can still carry it.
+        BrickWarningHolder.current.guardPackages(
+            freezeMethods.keys,
+            labelOf = { packageName ->
+                appsByKey.values.firstOrNull { it.freezeKey == packageName }?.label ?: packageName
+            },
         ) {
             freezeAllNow(app, context, scope)
         }

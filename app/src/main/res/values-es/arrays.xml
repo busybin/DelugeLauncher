@@ -3,6 +3,7 @@
     <string-array name="changelog_v34">
         <item>Una media celda estrecha mantiene el aspecto de antes: el nombre de la carpeta bajo su icono y el de la app al lado. El ajuste sigue permitiendo elegir.</item>
         <item>Congelar todo desde el menú de inicio o el gesto de la esquina ahora pide confirmación antes de tomar una app que mantiene el teléfono en marcha, como ya hacía la pantalla de congelación.</item>
+        <item>«Congelar todo» ahora nombra todas las apps de la lista que podrían dejar el teléfono inservible, incluidas las que no tienen icono en la pantalla de inicio.</item>
     </string-array>
     <string-array name="changelog_v33">
         <item>En dos columnas, una media celda estrecha puede poner el nombre bajo su icono en vez de al lado. La lista de apps da dos líneas a los nombres antes de los puntos suspensivos.</item>

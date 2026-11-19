@@ -60,6 +60,7 @@ import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.NetworkStatus
 import dev.delugelauncher.ui.common.BrickWarningDialog
 import dev.delugelauncher.ui.common.BrickWarningHolder
+import dev.delugelauncher.ui.common.NoBrickWarning
 import dev.delugelauncher.ui.common.BrickWarningState
 import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.ui.common.LocalNetworkActions
@@ -1420,8 +1421,17 @@ fun DelugeNavHost(
     // down, so a menu on any screen can ask before acting without carrying a dialog itself.
     val bricking = remember { FreezeProtection.loadBearing(context) }
     val brickWarning = remember(bricking) { BrickWarningState(bricking) }
-    // Screens at the method-size limit reach it through the holder instead of the local.
-    BrickWarningHolder.current = brickWarning
+    // Screens at the method-size limit reach it through the holder instead of the local. Set
+    // for as long as this host is composed and dropped on the way out, so no pending dialog
+    // outlives the screen that would draw it.
+    DisposableEffect(brickWarning) {
+        BrickWarningHolder.current = brickWarning
+        onDispose {
+            if (BrickWarningHolder.current === brickWarning) {
+                BrickWarningHolder.current = NoBrickWarning
+            }
+        }
+    }
     CompositionLocalProvider(
         LocalFocusStarter provides startFocus,
         LocalBrickWarning provides brickWarning,

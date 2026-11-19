@@ -24,11 +24,24 @@ import dev.delugelauncher.data.AppInfo
 interface BrickWarning {
     /** Asks first when [targets] holds a package the phone needs, and runs [run] otherwise. */
     fun guard(targets: Collection<AppInfo>, run: () -> Unit)
+
+    /**
+     * The same question for callers that hold package names from the freeze list rather than
+     * launcher entries: an app without a home screen icon still has to be named before a run
+     * that would take it.
+     */
+    fun guardPackages(packages: Collection<String>, labelOf: (String) -> String, run: () -> Unit)
 }
 
 /** Used where no warning is installed (tests, previews): the action simply runs. */
 object NoBrickWarning : BrickWarning {
     override fun guard(targets: Collection<AppInfo>, run: () -> Unit) = run()
+
+    override fun guardPackages(
+        packages: Collection<String>,
+        labelOf: (String) -> String,
+        run: () -> Unit,
+    ) = run()
 }
 
 /**
@@ -61,6 +74,15 @@ class BrickWarningState(
             .filter { it.packageName in bricking }
             .map { it.label }
             .distinct()
+        if (named.isEmpty()) run() else ask(named, run)
+    }
+
+    override fun guardPackages(
+        packages: Collection<String>,
+        labelOf: (String) -> String,
+        run: () -> Unit,
+    ) {
+        val named = packages.filter { it in bricking }.map(labelOf).distinct()
         if (named.isEmpty()) run() else ask(named, run)
     }
 

@@ -3,6 +3,7 @@
     <string-array name="changelog_v34">
         <item>Uma meia célula estreita mantém o visual de antes: o nome da pasta sob o ícone e o do app ao lado. O ajuste ainda permite escolher.</item>
         <item>Congelar tudo pelo menu da tela inicial ou pelo gesto do canto agora pede confirmação antes de pegar um app que mantém o telefone funcionando, como a tela de congelamento já faz.</item>
+        <item>“Congelar tudo” agora nomeia todos os apps da lista que podem deixar o telefone inutilizável, inclusive os que não têm ícone na tela inicial.</item>
     </string-array>
     <string-array name="changelog_v33">
         <item>Em duas colunas, uma meia célula estreita pode pôr o nome sob o ícone em vez de ao lado. A lista de apps dá duas linhas aos nomes antes das reticências.</item>
