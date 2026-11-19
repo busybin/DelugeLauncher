@@ -30,6 +30,7 @@ import dev.delugelauncher.DelugeApp
 import dev.delugelauncher.MainActivity
 import dev.delugelauncher.R
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.FreezeProtection
 import dev.delugelauncher.data.FreezeRunLog
 import dev.delugelauncher.data.FreezeTargetKey
 import dev.delugelauncher.data.RuleContext
@@ -336,6 +337,9 @@ private suspend fun applyRulesOnceLocked(app: DelugeApp, source: String): Freeze
     if (decision.sleep.isEmpty() && decision.wake.isEmpty()) return null
     val frozen = mutableSetOf<String>()
     val thawed = mutableSetOf<String>()
+    // A rule runs with nobody watching: the screen, Settings and the installer are never
+    // taken by it, whatever the list says.
+    val bricked = FreezeProtection.loadBearing(app)
     for (key in decision.wake) {
         if (app.freezeManager.unfreezeKey(key, keepPermanent = true) == FreezeOutcome.DONE) thawed += key
     }
@@ -344,6 +348,7 @@ private suspend fun applyRulesOnceLocked(app: DelugeApp, source: String): Freeze
         // Work-profile and shortcut keys carry a suffix; the foreground check has to
         // compare packages, not raw keys.
         if (FreezeTargetKey.packageName(key) == foreground) continue
+        if (FreezeTargetKey.packageName(key) in bricked) continue
         if (app.freezeManager.freezeKey(key) == FreezeOutcome.DONE) frozen += key
     }
     if (frozen.isEmpty() && thawed.isEmpty()) return null

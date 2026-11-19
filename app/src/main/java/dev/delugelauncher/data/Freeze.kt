@@ -621,12 +621,18 @@ object FreezeProtection {
         "com.google.android.permissioncontroller",
     )
 
+    /**
+     * The installed packages the phone cannot do without: the screen, Settings, the installer
+     * and the permission layer. Frozen one of these and there may be nothing left to tap on
+     * and no screen left to undo it from, so a phone that can still be asked has to be asked.
+     */
+    fun loadBearing(context: Context): Set<String> = SYSTEM_CRITICAL.filterTo(mutableSetOf()) { name ->
+        runCatching { context.packageManager.getPackageInfo(name, 0) }.isSuccess
+    }
+
     fun packages(context: Context, privileged: Set<String>): Set<String> {
         val base = buildSet {
-            SYSTEM_CRITICAL.forEach { name ->
-                runCatching { context.packageManager.getPackageInfo(name, 0) }.isSuccess &&
-                    add(name)
-            }
+            addAll(loadBearing(context))
             runCatching {
                 Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
             }.getOrNull()?.substringBefore('/')?.let { if (FreezeCommands.isPackageName(it)) add(it) }
@@ -2237,7 +2243,16 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * together, and a screen that goes away mid-run must not leave an app frozen with
      * nothing on record to lift it.
      */
-    suspend fun freezeAll(auto: Boolean = false, skipInUse: Boolean = auto): FreezeBatchResult =
+    suspend fun freezeAll(
+        auto: Boolean = false,
+        skipInUse: Boolean = auto,
+        /**
+         * Whether the packages that hold the phone together are left out. On for the paths
+         * with no dialog to ask in (the tile, the corner gesture, a broadcast, a rule); the
+         * freeze screen turns it off because it asked first.
+         */
+        skipBrick: Boolean = auto,
+    ): FreezeBatchResult =
         withContext(NonCancellable) {
             gate.withLock {
                 if (!prefs.freezeEnabledNow()) return@withLock FreezeBatchResult()
@@ -2257,6 +2272,13 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 // switched to a moment ago is exactly what the stale copy would miss.
                 val guarded = protectedPackages(force = true) + listOfNotNull(focusPackage)
                 val systemEnabled = prefs.freezeSystemAppsNow()
+                // Unattended runs never take the screen, Settings or the installer: there is
+                // nobody to read a warning, and the phone would not come back on its own.
+                val bricked = if (skipBrick) {
+                    withContext(Dispatchers.IO) { FreezeProtection.loadBearing(context) }
+                } else {
+                    emptySet()
+                }
                 val skip = if (skipInUse) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
                 val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
                 val (frozenBefore, targets) = withContext(Dispatchers.IO) {
@@ -2272,6 +2294,7 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                         state?.installed != false &&
                             target.packageName != context.packageName &&
                             target.packageName !in guarded &&
+                            target.packageName !in bricked &&
                             (systemEnabled || state?.system != true)
                     }
                     // One state read per app, shared by the skip decision and the record.

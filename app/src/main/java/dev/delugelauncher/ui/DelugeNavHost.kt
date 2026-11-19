@@ -53,10 +53,14 @@ import dev.delugelauncher.TypedKey
 import dev.delugelauncher.BuildConfig
 import dev.delugelauncher.DelugeApp
 import android.widget.Toast
+import dev.delugelauncher.data.FreezeProtection
 import dev.delugelauncher.data.IconShape
 import dev.delugelauncher.data.TwoColumnLabels
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.NetworkStatus
+import dev.delugelauncher.ui.common.BrickWarningDialog
+import dev.delugelauncher.ui.common.BrickWarningState
+import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.ui.common.LocalNetworkActions
 import dev.delugelauncher.ui.common.rememberNetworkActions
 import dev.delugelauncher.ui.network.NetworkAppsScreen
@@ -1411,7 +1415,14 @@ fun DelugeNavHost(
         }
     }
 
-    CompositionLocalProvider(LocalFocusStarter provides startFocus) {
+    // The packages whose freeze can leave nothing to tap on. Asked once here and handed
+    // down, so a menu on any screen can ask before acting without carrying a dialog itself.
+    val bricking = remember { FreezeProtection.loadBearing(context) }
+    val brickWarning = remember(bricking) { BrickWarningState(bricking) }
+    CompositionLocalProvider(
+        LocalFocusStarter provides startFocus,
+        LocalBrickWarning provides brickWarning,
+    ) {
     RouterHost(router = navController) {
         composable("home") {
             // Fake names for the screenshot disguise, or nothing. Scoped to home and its
@@ -3044,6 +3055,7 @@ fun DelugeNavHost(
             },
         )
     }
+    BrickWarningDialog(brickWarning)
     }
 }
 

@@ -8,6 +8,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import dev.delugelauncher.DelugeApp
+import dev.delugelauncher.data.FreezeProtection
+import dev.delugelauncher.data.FreezeTargetKey
 import java.security.MessageDigest
 
 /**
@@ -114,6 +116,9 @@ object FreezeIntents {
      */
     private suspend fun freezeOne(app: DelugeApp, key: String) {
         if (key !in app.prefs.freezeMethodsNow()) return
+        // A script has no way to answer a warning, and taking the screen away over a link is
+        // not something anyone can undo from the phone.
+        if (FreezeTargetKey.packageName(key) in FreezeProtection.loadBearing(app)) return
         app.freezeManager.freezeKey(key)
     }
 

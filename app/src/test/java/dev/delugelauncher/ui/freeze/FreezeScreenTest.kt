@@ -2,6 +2,7 @@
 package dev.delugelauncher.ui.freeze
 
 import android.content.ComponentName
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithText
@@ -20,7 +21,11 @@ import dev.delugelauncher.data.FreezeSort
 import dev.delugelauncher.data.FreezeSourceFilter
 import dev.delugelauncher.data.FreezeStateFilter
 import dev.delugelauncher.data.FreezeStatus
+import dev.delugelauncher.ui.common.BrickWarningDialog
+import dev.delugelauncher.ui.common.BrickWarningState
+import dev.delugelauncher.ui.common.LocalBrickWarning
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -90,8 +95,11 @@ class FreezeScreenTest {
         defaultMethod: FreezeMethod? = FreezeMethod.SUSPEND,
         query: String = "",
         protected: Set<String> = emptySet(),
+        brick: BrickWarningState = BrickWarningState(emptySet()),
     ) {
         compose.setContent {
+            CompositionLocalProvider(LocalBrickWarning provides brick) {
+            BrickWarningDialog(brick)
             FreezeAppsScreen(
                 allApps = apps,
                 freezeMethods = methods,
@@ -154,6 +162,7 @@ class FreezeScreenTest {
                 onNavigateMethods = {},
                 onBack = {},
             )
+            }
         }
     }
 
@@ -189,6 +198,29 @@ class FreezeScreenTest {
 
         compose.onNodeWithText("workchat", substring = true).assertExists()
         compose.onNodeWithText("free").assertDoesNotExist()
+    }
+
+    @Test
+    fun `freezing an app that holds the phone together asks first`() {
+        val calls = Calls()
+        val system = app("systemui")
+        val brick = BrickWarningState(setOf(system.packageName))
+        showScreen(
+            calls = calls,
+            apps = listOf(system),
+            methods = mapOf(system.packageName to FreezeMethod.SUSPEND),
+            applied = emptySet(),
+            permanent = emptySet(),
+            brick = brick,
+        )
+
+        compose.onNodeWithTag("freeze-row-switch-${system.freezeKey}").performClick()
+
+        // Nothing happened yet: the row's own switch is what asked.
+        assertEquals(null, calls.applied)
+        assertTrue(brick.pending != null)
+        compose.onNodeWithText("Freeze anyway").performClick()
+        assertEquals(system to true, calls.applied)
     }
 
     @Test

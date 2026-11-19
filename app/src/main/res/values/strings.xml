@@ -690,6 +690,9 @@
 
     <string name="freeze_protect">Protect essential apps</string>
     <string name="freeze_protect_detail">Never freeze the app that answers calls, the SMS app, the current keyboard, the home app, accessibility services, or the tools that grant freeze access. With this off, freezing the first two means calls do not ring and messages do not arrive.</string>
+    <string name="freeze_brick_title">This can leave the phone unusable</string>
+    <string name="freeze_brick_body">Freezing %1$s can take away the screen, Settings, the installer or the permissions every other app runs on. There is no way back from the phone itself then, only from a computer. Freeze anyway?</string>
+    <string name="freeze_brick_confirm">Freeze anyway</string>
     <string name="freeze_protected">%1$s is protected, because it is one of the apps that keep the phone usable. Freezing it is refused.</string>
     <string name="freeze_export">Export freeze list…</string>
     <string name="freeze_export_done">Freeze list exported</string>

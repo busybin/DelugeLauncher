@@ -686,6 +686,9 @@
 
     <string name="freeze_protect">保护关键应用</string>
     <string name="freeze_protect_detail">永不冻结接听电话的应用、短信应用、当前输入法、桌面、无障碍服务，以及授予冻结权限的工具。关闭后，冻结前两者会让来电不响、短信不来。</string>
+    <string name="freeze_brick_title">这会让手机没法用</string>
+    <string name="freeze_brick_body">冻结 %1$s 可能让屏幕、设置、安装器或权限管理都打不开；之后手机上没有办法恢复，只能靠电脑。仍然冻结吗？</string>
+    <string name="freeze_brick_confirm">仍然冻结</string>
     <string name="freeze_protected">%1$s 属于保证手机可用的关键应用，已拒绝冻结。</string>
     <string name="freeze_export">导出冻结名单…</string>
     <string name="freeze_export_done">冻结名单已导出</string>

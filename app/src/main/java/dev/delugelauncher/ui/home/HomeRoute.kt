@@ -135,9 +135,11 @@ import dev.delugelauncher.ui.common.ScreenshotDisguise
 import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.ui.applist.edgeZoneWidth
 import dev.delugelauncher.data.Pinyin
+import dev.delugelauncher.ui.common.BrickWarning
 import dev.delugelauncher.ui.common.FolderPickerDialog
 import dev.delugelauncher.ui.common.FreezeActions
 import dev.delugelauncher.ui.common.FreezeToast
+import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.widget.WidgetSlotActions
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -1390,7 +1392,7 @@ fun HomeRoute(
     fun runFreezeAll() {
         scope.launch {
             FreezeToast.progress(context, R.string.freeze_working)
-            val result = app.freezeManager.freezeAll()
+            val result = app.freezeManager.freezeAll(skipBrick = true)
             if (result.noAccess) {
                 FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
             } else if (result.failed > 0) {
@@ -1835,51 +1837,7 @@ fun HomeRoute(
                     onNavigate("folder/" + android.net.Uri.encode(folder.id))
                 },
                 onFreezeFolder = if (freezeUsable) {
-                    { members ->
-                        scope.launch {
-                            val result = app.freezeManager.freezeMany(members)
-                            // Built as parts rather than one string with clauses appended: a
-                            // folder can now report a count of zero frozen, and "0 apps
-                            // frozen 3 apps left alone" is a sentence nobody wants to read.
-                            // Whatever actually happened is what gets said.
-                            val parts = buildList {
-                                if (result.done > 0) {
-                                    add(
-                                        context.getString(
-                                            R.string.freeze_folder_done,
-                                            result.done,
-                                        )
-                                    )
-                                }
-                                if (result.failed > 0) {
-                                    add(
-                                        context.getString(
-                                            R.string.freeze_folder_failed,
-                                            result.failed,
-                                        )
-                                    )
-                                }
-                                // Apps the list does not carry are left alone on purpose; not
-                                // saying so reads as a folder that silently froze nothing.
-                                if (result.skipped > 0) {
-                                    add(
-                                        context.getString(
-                                            R.string.freeze_folder_skipped,
-                                            result.skipped,
-                                        )
-                                    )
-                                }
-                            }
-                            val text = if (result.noAccess) {
-                                context.getString(R.string.freeze_needs_access)
-                            } else {
-                                parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
-                            }
-                            if (text != null) {
-                                Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
+                    folderFreezeAction(app, context, scope, LocalBrickWarning.current)
                 } else {
                     null
                 },
@@ -2599,6 +2557,73 @@ data class HomeSettings(
 /** How long a private space unlock has to put the system's lock screen up before giving up. */
 private const val PRIVATE_UNLOCK_PROMPT_MS = 1500L
 
+
+/**
+ * The folder's freeze button, warning first when a member is one the phone cannot lose.
+ *
+ * Built here rather than inline: HomeRoute is at the JVM's method size limit, and a lambda
+ * written in its body costs it bytes while a call to this does not.
+ */
+private fun folderFreezeAction(
+    app: DelugeApp,
+    context: Context,
+    scope: CoroutineScope,
+    brickWarning: BrickWarning,
+): (List<AppInfo>) -> Unit = { members ->
+    brickWarning.guard(members) { freezeFolderNow(app, context, scope, members) }
+}
+
+/** Freezes a folder's members and says what actually happened, one toast for the run. */
+private fun freezeFolderNow(
+    app: DelugeApp,
+    context: Context,
+    scope: CoroutineScope,
+    members: List<AppInfo>,
+) {
+    scope.launch {
+        val result = app.freezeManager.freezeMany(members)
+        // Built as parts rather than one string with clauses appended: a
+        // folder can now report a count of zero frozen, and "0 apps
+        // frozen 3 apps left alone" is a sentence nobody wants to read.
+        // Whatever actually happened is what gets said.
+        val parts = buildList {
+            if (result.done > 0) {
+                add(
+                    context.getString(
+                        R.string.freeze_folder_done,
+                        result.done,
+                    )
+                )
+            }
+            if (result.failed > 0) {
+                add(
+                    context.getString(
+                        R.string.freeze_folder_failed,
+                        result.failed,
+                    )
+                )
+            }
+            // Apps the list does not carry are left alone on purpose; not
+            // saying so reads as a folder that silently froze nothing.
+            if (result.skipped > 0) {
+                add(
+                    context.getString(
+                        R.string.freeze_folder_skipped,
+                        result.skipped,
+                    )
+                )
+            }
+        }
+        val text = if (result.noAccess) {
+            context.getString(R.string.freeze_needs_access)
+        } else {
+            parts.takeIf { it.isNotEmpty() }?.joinToString(" ")
+        }
+        if (text != null) {
+            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+        }
+    }
+}
 
 /**
  * The freeze-list answers a row menu offers.

@@ -686,6 +686,9 @@
 
     <string name="freeze_protect">重要なアプリを保護</string>
     <string name="freeze_protect_detail">電話に応答するアプリ、SMS アプリ、現在のキーボード、ホームアプリ、アクセシビリティサービス、凍結権限を与えるツールは凍結しません。これをオフにすると、最初の二つを凍結でき、着信が鳴らずメッセージも届かなくなります。</string>
+    <string name="freeze_brick_title">電話が使えなくなる可能性があります</string>
+    <string name="freeze_brick_body">%1$s を凍結すると、画面、設定、インストーラー、他のアプリが依存する権限が使えなくなることがあります。その場合、この端末からは元に戻せず、パソコンが必要になります。それでも凍結しますか？</string>
+    <string name="freeze_brick_confirm">それでも凍結</string>
     <string name="freeze_protected">%1$s はスマートフォンを使い続けるための重要なアプリのため、凍結を拒否しました。</string>
     <string name="freeze_export">凍結リストをエクスポート…</string>
     <string name="freeze_export_done">凍結リストをエクスポートしました</string>

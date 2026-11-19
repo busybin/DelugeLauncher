@@ -686,6 +686,9 @@
 
     <string name="freeze_protect">Proteger apps esenciales</string>
     <string name="freeze_protect_detail">Nunca congela la app que atiende llamadas, la app de SMS, el teclado actual, la app de inicio, los servicios de accesibilidad ni las herramientas que dan acceso a la congelación. Si lo desactivas, congelar las dos primeras hace que las llamadas no suenen y los mensajes no lleguen.</string>
+    <string name="freeze_brick_title">Esto puede dejar el teléfono inservible</string>
+    <string name="freeze_brick_body">Congelar %1$s puede quitar la pantalla, Ajustes, el instalador o los permisos de los que dependen las demás apps. Desde el propio teléfono ya no habrá vuelta atrás, solo desde un ordenador. ¿Congelarlo igualmente?</string>
+    <string name="freeze_brick_confirm">Congelar igualmente</string>
     <string name="freeze_protected">%1$s está protegida porque es una de las apps que mantienen usable el teléfono. Se rechazó congelarla.</string>
     <string name="freeze_export">Exportar lista de congelación…</string>
     <string name="freeze_export_done">Lista de congelación exportada</string>

@@ -48,7 +48,7 @@ class FreezeTileService : TileService() {
             val result = if (app.freezeManager.heldNowCount() > 0) {
                 app.freezeManager.unfreezeAll()
             } else {
-                app.freezeManager.freezeAll()
+                app.freezeManager.freezeAll(skipBrick = true)
             }
             withContext(Dispatchers.Main) {
                 if (result.noAccess) {

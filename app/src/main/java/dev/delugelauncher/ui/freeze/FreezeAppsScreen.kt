@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.freeze
 
+import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.ui.common.topBarInsets
 import android.net.Uri
 import android.widget.Toast
@@ -176,6 +177,8 @@ fun FreezeAppsScreen(
     var channelsOpen by rememberSaveable { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
 
+    // A freeze that can leave nothing to tap on asks first, wherever the tap came from.
+    val brickWarning = LocalBrickWarning.current
     val workSuffix = stringResource(R.string.app_work_suffix)
     val pinyin = remember { Pinyin.ordering() }
     val rows = remember(
@@ -327,7 +330,8 @@ fun FreezeAppsScreen(
                     onFreeze = {
                         val listedRows = selectedShown.filter { it.listed }
                         val ignored = selected.count { key -> shown.firstOrNull { it.key == key }?.listed != true }
-                        if (listedRows.isNotEmpty()) onFreezeManySelected(listedRows.mapNotNull { byKey[it.key] })
+                        val apps = listedRows.mapNotNull { byKey[it.key] }
+                        if (apps.isNotEmpty()) brickWarning.guard(apps) { onFreezeManySelected(apps) }
                         if (ignored > 0) {
                             Toast.makeText(
                                 context,
@@ -471,13 +475,17 @@ fun FreezeAppsScreen(
                             onOpen = { sheetKey = row.key },
                             onToggleFrozen = {
                                 if (row.listed) {
-                                    onSetApplied(app, !row.frozen)
+                                    if (row.frozen) {
+                                        onSetApplied(app, false)
+                                    } else {
+                                        brickWarning.guard(listOf(app)) { onSetApplied(app, true) }
+                                    }
                                 } else {
                                     val method = defaultMethod
                                     if (method == null || !status.supports(method)) {
                                         pendingAdd = PendingAdd.One(app)
                                     } else {
-                                        onAddAndFreeze(app, method)
+                                        brickWarning.guard(listOf(app)) { onAddAndFreeze(app, method) }
                                     }
                                 }
                             },
@@ -583,7 +591,11 @@ fun FreezeAppsScreen(
         ConfirmDialog(
             title = stringResource(R.string.freeze_freeze_all),
             body = stringResource(R.string.freeze_all_confirm_body, totals.listed),
-            onConfirm = { confirmingFreezeAll = false; onFreezeAll() },
+            onConfirm = {
+                confirmingFreezeAll = false
+                val listed = rows.filter { it.listed }.mapNotNull { byKey[it.key] }
+                brickWarning.guard(listed) { onFreezeAll() }
+            },
             onDismiss = { confirmingFreezeAll = false },
         )
     }
@@ -707,7 +719,9 @@ fun FreezeAppsScreen(
                                 pendingAdd = null
                                 onSetDefaultMethod(method)
                                 when (pending) {
-                                    is PendingAdd.One -> onAddAndFreeze(pending.app, method)
+                                    is PendingAdd.One -> brickWarning.guard(listOf(pending.app)) {
+                                        onAddAndFreeze(pending.app, method)
+                                    }
                                     is PendingAdd.Many -> onAddManySelected(pending.apps, method)
                                 }
                             },

@@ -70,6 +70,8 @@ fun FreezeMenuItems(
     onChooseMethod: () -> Unit,
 ) {
     if (actions == null) return
+    // Read outside the click, which is not composable.
+    val brickWarning = LocalBrickWarning.current
     if (app.kind != EntryKind.APP) return
     if (locked) return
     if (!app.planned) {
@@ -95,7 +97,13 @@ fun FreezeMenuItems(
         },
         onClick = {
             onDismissMenu()
-            if (app.frozen != null) actions.unfreeze(app) else actions.freezeNow(app)
+            if (app.frozen != null) {
+                actions.unfreeze(app)
+            } else {
+                // A menu is three taps from the screen that would undo a bad freeze, so the
+                // one package type that can take that screen away asks here too.
+                brickWarning.guard(listOf(app)) { actions.freezeNow(app) }
+            }
         },
     )
 }
