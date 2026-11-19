@@ -204,6 +204,10 @@ fun FreezeAppsScreen(
                 updatedAt = app.updatedAt,
             )
         }
+            // One row per package: an app with two launcher activities arrives twice, and this
+            // table acts on the package. Two rows would also share one item key and crash the
+            // list the moment both were composed.
+            .distinctBy { it.key }
     }
     val byKey = remember(allApps) { allApps.associateBy { it.freezeKey } }
     val filters = FreezeFilters(

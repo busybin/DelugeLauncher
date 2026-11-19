@@ -5,6 +5,7 @@ import android.content.ComponentName
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performScrollToNode
@@ -154,6 +155,22 @@ class FreezeScreenTest {
                 onBack = {},
             )
         }
+    }
+
+    @Test
+    fun `a package with two launcher activities is one row`() {
+        // An app can register two launcher activities; both arrive as separate [AppInfo]s and
+        // the table keys its rows by package, so keeping both would hand the list the same
+        // item key twice and throw as soon as the second row was composed.
+        val radio = app("radio")
+        val second = AppInfo(
+            componentName = ComponentName("com.example.radio", "com.example.radio.RadioActivity"),
+            label = "radio",
+        )
+
+        showScreen(apps = listOf(radio, second))
+
+        compose.onAllNodesWithText("radio").assertCountEquals(1)
     }
 
     @Test
