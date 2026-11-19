@@ -3,6 +3,7 @@ package dev.delugelauncher.service
 
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.provider.Settings
 import android.widget.Toast
@@ -13,6 +14,22 @@ import dev.delugelauncher.data.FreezeAccess
 import dev.delugelauncher.data.FreezeShell
 
 object SystemUi {
+    /**
+     * Starts the phone's voice assistant listening, the way holding the power button does.
+     *
+     * Voice command first: it asks for listening rather than for the assistant's own screen,
+     * and assist is the fallback for an assistant that only answers that.
+     *
+     * @return false when nothing on the phone took either.
+     */
+    fun startVoiceAssistant(context: Context): Boolean {
+        for (action in listOf(Intent.ACTION_VOICE_COMMAND, Intent.ACTION_ASSIST)) {
+            val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            if (runCatching { context.startActivity(intent) }.isSuccess) return true
+        }
+        return false
+    }
+
     /** Set once reflection has actually opened the shade on this device; see below. */
     @Volatile
     private var reflectionWorked = false

@@ -565,6 +565,8 @@
     <string name="corner_action_failed">この端末ではできるものがありません</string>
     <string name="corner_action_app_list">アプリ一覧を開く</string>
     <string name="corner_action_search">アプリ一覧の検索を開く</string>
+    <string name="corner_action_assistant">音声アシスタントを起動</string>
+    <string name="corner_assistant_missing">この端末では音声アシスタントが応答しません</string>
     <string name="corner_action_camera">カメラを開く</string>
     <string name="corner_action_flashlight">ライトを切り替え</string>
     <string name="corner_action_shade">通知シェードを開く</string>

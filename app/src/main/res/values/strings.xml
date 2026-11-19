@@ -247,6 +247,8 @@
     <string name="settings_corner_swipe">Button slide up does</string>
     <string name="corner_action_app_list">Open the app list</string>
     <string name="corner_action_search">Open the app list search</string>
+    <string name="corner_action_assistant">Start the voice assistant</string>
+    <string name="corner_assistant_missing">No voice assistant answers on this phone</string>
     <string name="corner_action_camera">Open the camera</string>
     <string name="corner_action_flashlight">Toggle the flashlight</string>
     <string name="corner_action_shade">Open the notification shade</string>

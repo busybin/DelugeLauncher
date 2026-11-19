@@ -394,7 +394,7 @@ fun HomeRoute(
     val scrub = remember { ScrubState() }
     var viewportHeightPx by remember { mutableIntStateOf(0) }
     var viewportWidthPx by remember { mutableIntStateOf(0) }
-    var favBand by remember { mutableStateOf<ScrubBand?>(null) }
+    var favBounds by remember { mutableStateOf<Pair<Float, Float>?>(null) }
     // The corner button's bounds in root pixels: the edge zone leaves that rect alone so a
     // tap on the button reaches the button, and the strip stops above it. Reported by the
     // button itself, nulled when it leaves.
@@ -442,6 +442,10 @@ fun HomeRoute(
     val minBandHeightPx = with(LocalDensity.current) {
         (listModel.letters.size * MIN_LETTER_HEIGHT.toPx())
     }
+    // Derived from the bounds rather than stored as a band: on a cold start the favorites are
+    // laid out before the app list has loaded, so nothing needed room for letters yet and the
+    // strip kept that height until the favorites next moved (upstream #171).
+    val favBand = favBandFor(favBounds, viewportHeightPx, minBandHeightPx)
     var homeEditMode by remember { mutableStateOf(false) }
     var folderPickerFor by remember { mutableStateOf<AppInfo?>(null) }
 
@@ -1448,6 +1452,10 @@ fun HomeRoute(
             }
             CornerAction.APP_LIST -> openCornerList()
             CornerAction.SEARCH -> openCornerSearch()
+            // Nothing to pick first: the phone's own assistant is the target.
+            CornerAction.ASSISTANT -> if (!SystemUi.startVoiceAssistant(context)) {
+                Toast.makeText(context, R.string.corner_assistant_missing, Toast.LENGTH_SHORT).show()
+            }
             CornerAction.CAMERA -> openCameraGated()
             CornerAction.FLASHLIGHT -> setTorchWanted(!torchOn)
             CornerAction.SHADE -> expandShade()
@@ -1914,18 +1922,13 @@ fun HomeRoute(
                     if (appListVisible || homeEditMode) return@HomeScreen
                     // Not the favorites' own span when that is too short to divide between
                     // the letters — see ScrubberGeometry.bandForFavorites.
-                    favBand = ScrubberGeometry.bandForFavorites(
-                        topPx = top,
-                        bottomPx = bottom,
-                        viewportPx = viewportHeightPx.toFloat(),
-                        minHeightPx = minBandHeightPx,
-                    )
+                    favBounds = top to bottom
                 },
                 onFavoritesCleared = {
                     // Same freeze as above while the overlay or the editor owns the screen;
                     // otherwise the strip falls back to the full height until favorites return.
                     if (appListVisible || homeEditMode) return@HomeScreen
-                    favBand = null
+                    favBounds = null
                 },
                 nowPlayingHasContent = nowPlayingHasContent,
                 contentColor = settings.contentColor,
@@ -2623,6 +2626,20 @@ private fun freezeFolderNow(
             Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
         }
     }
+}
+
+/** The favorites' band, worked out each time the inputs change rather than stored. */
+private fun favBandFor(
+    bounds: Pair<Float, Float>?,
+    viewportPx: Int,
+    minHeightPx: Float,
+): ScrubBand? = bounds?.let { (top, bottom) ->
+    ScrubberGeometry.bandForFavorites(
+        topPx = top,
+        bottomPx = bottom,
+        viewportPx = viewportPx.toFloat(),
+        minHeightPx = minHeightPx,
+    )
 }
 
 /**

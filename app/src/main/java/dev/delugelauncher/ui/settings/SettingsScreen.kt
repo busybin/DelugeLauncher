@@ -2981,6 +2981,7 @@ private fun CornerAction.labelRes(): Int = when (this) {
     CornerAction.OPEN_SHORTCUT -> R.string.corner_action_open_shortcut
     CornerAction.APP_LIST -> R.string.corner_action_app_list
     CornerAction.SEARCH -> R.string.corner_action_search
+    CornerAction.ASSISTANT -> R.string.corner_action_assistant
     CornerAction.CAMERA -> R.string.corner_action_camera
     CornerAction.FLASHLIGHT -> R.string.corner_action_flashlight
     CornerAction.SHADE -> R.string.corner_action_shade

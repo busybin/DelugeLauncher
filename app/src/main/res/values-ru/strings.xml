@@ -573,6 +573,8 @@
     <string name="corner_action_failed">На этом телефоне это ничем не сделаешь</string>
     <string name="corner_action_app_list">Открыть список приложений</string>
     <string name="corner_action_search">Открыть поиск в списке</string>
+    <string name="corner_action_assistant">Запустить голосового помощника</string>
+    <string name="corner_assistant_missing">Голосовой помощник на этом телефоне не отвечает</string>
     <string name="corner_action_camera">Открыть камеру</string>
     <string name="corner_action_flashlight">Включить/выключить фонарик</string>
     <string name="corner_action_shade">Открыть шторку уведомлений</string>

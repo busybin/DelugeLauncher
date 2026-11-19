@@ -156,6 +156,8 @@ enum class CornerAction {
     OPEN_SHORTCUT,
     APP_LIST,
     SEARCH,
+    /** Starts the phone's voice assistant listening. */
+    ASSISTANT,
     CAMERA,
     FLASHLIGHT,
     SHADE,

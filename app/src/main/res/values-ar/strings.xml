@@ -245,6 +245,8 @@
     <string name="settings_corner_swipe">يفعل الزر عند السحب لأعلى</string>
     <string name="corner_action_app_list">فتح قائمة التطبيقات</string>
     <string name="corner_action_search">فتح البحث في قائمة التطبيقات</string>
+    <string name="corner_action_assistant">بدء المساعد الصوتي</string>
+    <string name="corner_assistant_missing">لا يستجيب أي مساعد صوتي على هذا الهاتف</string>
     <string name="corner_action_camera">فتح الكاميرا</string>
     <string name="corner_action_flashlight">تشغيل المصباح أو إطفاؤه</string>
     <string name="corner_action_shade">فتح لوحة الإشعارات</string>

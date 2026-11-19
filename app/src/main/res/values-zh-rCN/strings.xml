@@ -226,6 +226,8 @@
     <string name="settings_corner_swipe">上滑按钮时</string>
     <string name="corner_action_app_list">打开应用列表</string>
     <string name="corner_action_search">打开应用列表搜索</string>
+    <string name="corner_action_assistant">启动语音助手</string>
+    <string name="corner_assistant_missing">这台手机没有语音助手响应</string>
     <string name="corner_action_camera">打开相机</string>
     <string name="corner_action_flashlight">切换手电筒</string>
     <string name="corner_action_shade">打开通知栏</string>

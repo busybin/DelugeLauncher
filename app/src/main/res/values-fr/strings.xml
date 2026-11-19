@@ -565,6 +565,8 @@
     <string name="corner_action_failed">Rien sur ce téléphone ne peut le faire</string>
     <string name="corner_action_app_list">Ouvrir la liste des apps</string>
     <string name="corner_action_search">Ouvrir la recherche de la liste</string>
+    <string name="corner_action_assistant">Démarrer l\'assistant vocal</string>
+    <string name="corner_assistant_missing">Aucun assistant vocal ne répond sur ce téléphone</string>
     <string name="corner_action_camera">Ouvrir l’appareil photo</string>
     <string name="corner_action_flashlight">Basculer la lampe</string>
     <string name="corner_action_shade">Ouvrir le volet de notifications</string>

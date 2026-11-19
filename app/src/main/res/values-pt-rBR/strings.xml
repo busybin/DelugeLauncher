@@ -565,6 +565,8 @@
     <string name="corner_action_failed">Nada neste celular pode fazer isso</string>
     <string name="corner_action_app_list">Abrir a lista de apps</string>
     <string name="corner_action_search">Abrir a busca da lista de apps</string>
+    <string name="corner_action_assistant">Iniciar o assistente de voz</string>
+    <string name="corner_assistant_missing">Nenhum assistente de voz responde neste telefone</string>
     <string name="corner_action_camera">Abrir a câmera</string>
     <string name="corner_action_flashlight">Alternar a lanterna</string>
     <string name="corner_action_shade">Abrir a barra de notificações</string>
