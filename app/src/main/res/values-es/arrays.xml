@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v33">
+        <item>En dos columnas, una media celda estrecha puede poner el nombre bajo su icono en vez de al lado. La lista de apps da dos líneas a los nombres antes de los puntos suspensivos.</item>
+        <item>La lista de congelación guarda una fila por app, así que una app con dos actividades de inicio ya no la cierra.</item>
+        <item>Proteger apps esenciales incluye ahora la app que atiende llamadas y la de SMS, y su descripción dice qué significa desactivarlo.</item>
+        <item>Congelar la pantalla, Ajustes, el instalador o la capa de permisos pide confirmación primero; las reglas, el mosaico, el gesto de la esquina y las difusiones no las tocan.</item>
+        <item>El botón de la esquina puede iniciar el asistente de voz del teléfono.</item>
+        <item>La tira A-Z ya no aparece aplastada tras reiniciar el launcher.</item>
+    </string-array>
     <string-array name="changelog_v32">
         <item>Las carpetas vuelven a su columna en el diseño de dos columnas. Comparten fila con una app otra vez y, en esa celda, se quita la flecha para que el nombre tenga sitio. Una carpeta con widget o Reproducción en curso conserva la fila entera, porque se abre en el sitio.</item>
         <item>La lista de apps hace lo mismo: con dos columnas, una carpeta se coloca junto a una app de su misma letra en vez de sola en una línea.</item>

@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import dev.delugelauncher.data.FreezeOutcome
 import dev.delugelauncher.service.FreezeIntents
+import dev.delugelauncher.data.FreezeProtection
 import dev.delugelauncher.data.FreezeTargetKey
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -45,6 +46,21 @@ class FreezeToggleActivity : ComponentActivity() {
                 }.getOrNull() ?: FreezeTargetKey.packageName(key)
                 // Read only once the guard is held, so it sees the other run's record.
                 val wasFrozen = key in app.prefs.freezeAppliedNow()
+                // A pinned shortcut has no way to ask, and a phone whose screen or Settings
+                // just went away cannot be fixed from the phone: that freeze stays in the
+                // list, where it can be confirmed first.
+                if (!wasFrozen &&
+                    FreezeTargetKey.packageName(key) in FreezeProtection.loadBearing(this)
+                ) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            applicationContext,
+                            getString(R.string.freeze_protected, label),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    return@runInBackground
+                }
                 val outcome = if (wasFrozen) {
                     app.freezeManager.unfreezeKey(key)
                 } else {

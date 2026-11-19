@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v33">
+        <item>In two columns, a narrow half cell can put the name under its icon instead of beside it. The app list gives names two lines before an ellipsis.</item>
+        <item>The freeze list keeps one row per app, so an app that registers two launcher activities no longer closes it.</item>
+        <item>Protect essential apps now covers the app that answers calls and the SMS app, and its description says what turning it off means.</item>
+        <item>Freezing the screen, Settings, the installer or the permission layer asks first, and rules, the tile, the corner gesture and broadcasts leave them alone.</item>
+        <item>The corner button can start the phone\'s voice assistant listening.</item>
+        <item>The A-Z strip no longer comes up squashed after the launcher restarts.</item>
+    </string-array>
     <string-array name="changelog_v32">
         <item>Folders sit in their column again in the two-column layout. A folder shares its row with an app, and the chevron is dropped in that cell so the name has room. One that holds a widget or Now Playing keeps the whole row, because it opens in place.</item>
         <item>The app list follows. With two columns on, a folder sits beside an app of its own letter instead of alone on a line.</item>

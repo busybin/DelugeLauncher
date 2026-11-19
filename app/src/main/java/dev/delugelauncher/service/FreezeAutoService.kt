@@ -340,8 +340,16 @@ private suspend fun applyRulesOnceLocked(app: DelugeApp, source: String): Freeze
     // A rule runs with nobody watching: the screen, Settings and the installer are never
     // taken by it, whatever the list says.
     val bricked = FreezeProtection.loadBearing(app)
+    // Only an app that was actually frozen is recorded as woken. An unfreeze of something
+    // that was already awake answers DONE too, and logging that let Undo freeze an app the
+    // run never touched.
+    val appliedBefore = app.prefs.freezeAppliedNow()
     for (key in decision.wake) {
-        if (app.freezeManager.unfreezeKey(key, keepPermanent = true) == FreezeOutcome.DONE) thawed += key
+        if (key in appliedBefore &&
+            app.freezeManager.unfreezeKey(key, keepPermanent = true) == FreezeOutcome.DONE
+        ) {
+            thawed += key
+        }
     }
     val foreground = if (decision.sleep.isNotEmpty()) app.freezeManager.foregroundPackage() else null
     for (key in decision.sleep) {

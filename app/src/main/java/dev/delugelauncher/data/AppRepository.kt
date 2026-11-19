@@ -1419,11 +1419,16 @@ class AppRepository(
             context.getString(R.string.freeze_limit_reached, app.label),
             Toast.LENGTH_SHORT,
         ).show()
-        scope.launch {
-            val current = prefs.limitFrozenNow()
-            val keys = if (current.day == today) current.keys + key else setOf(key)
-            prefs.setLimitFrozen(today, keys)
-            freezeManager.freezeKey(key)
+        // A limit is enforced with nobody watching. The packages the phone needs to stay
+        // openable are not counted as "over the limit": freezing one of them is a decision
+        // that has to be confirmed in the freeze list, never a side effect of a launch count.
+        if (FreezeTargetKey.packageName(key) !in FreezeProtection.loadBearing(context)) {
+            scope.launch {
+                val current = prefs.limitFrozenNow()
+                val keys = if (current.day == today) current.keys + key else setOf(key)
+                prefs.setLimitFrozen(today, keys)
+                freezeManager.freezeKey(key)
+            }
         }
         return true
     }

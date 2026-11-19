@@ -23,12 +23,12 @@ import dev.delugelauncher.data.AppInfo
  */
 interface BrickWarning {
     /** Asks first when [targets] holds a package the phone needs, and runs [run] otherwise. */
-    fun guard(targets: List<AppInfo>, run: () -> Unit)
+    fun guard(targets: Collection<AppInfo>, run: () -> Unit)
 }
 
 /** Used where no warning is installed (tests, previews): the action simply runs. */
 object NoBrickWarning : BrickWarning {
-    override fun guard(targets: List<AppInfo>, run: () -> Unit) = run()
+    override fun guard(targets: Collection<AppInfo>, run: () -> Unit) = run()
 }
 
 /**
@@ -47,7 +47,7 @@ class BrickWarningState(
     internal var pending by mutableStateOf<Pending?>(null)
         private set
 
-    override fun guard(targets: List<AppInfo>, run: () -> Unit) {
+    override fun guard(targets: Collection<AppInfo>, run: () -> Unit) {
         val named = targets
             .filter { it.packageName in bricking }
             .map { it.label }

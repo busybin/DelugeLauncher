@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v33">
+        <item>En deux colonnes, une demi-cellule étroite peut placer le nom sous son icône plutôt qu\'à côté. La liste des applis donne deux lignes aux noms avant les points de suspension.</item>
+        <item>La liste de gel garde une ligne par appli : une appli avec deux activités de lancement ne la ferme plus.</item>
+        <item>Protéger les applis essentielles couvre maintenant l\'appli qui répond aux appels et celle des SMS, et sa description dit ce que sa désactivation implique.</item>
+        <item>Geler l\'écran, les Réglages, l\'installateur ou la couche de permissions demande d\'abord confirmation ; les règles, la tuile, le geste du coin et les diffusions n\'y touchent pas.</item>
+        <item>Le bouton du coin peut lancer l\'assistant vocal du téléphone.</item>
+        <item>La bande A-Z ne s\'affiche plus écrasée après un redémarrage du lanceur.</item>
+    </string-array>
     <string-array name="changelog_v32">
         <item>Les dossiers retrouvent leur colonne en affichage à deux colonnes. Ils partagent à nouveau la ligne avec une appli, et le chevron disparaît dans cette cellule pour laisser de la place au nom. Un dossier contenant un widget ou la lecture en cours garde la ligne entière, car il s\'ouvre sur place.</item>
         <item>La liste des applis suit. En deux colonnes, un dossier se place à côté d\'une appli de sa lettre au lieu d\'occuper une ligne seul.</item>

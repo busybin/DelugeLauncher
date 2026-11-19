@@ -1396,6 +1396,9 @@ fun HomeRoute(
     fun runFreezeAll() {
         scope.launch {
             FreezeToast.progress(context, R.string.freeze_working)
+            // No dialog from a menu or a gesture: the load-bearing packages are left alone
+            // rather than frozen behind the owner's back. The freeze screen is where they can
+            // be taken, after confirming.
             val result = app.freezeManager.freezeAll(skipBrick = true)
             if (result.noAccess) {
                 FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)

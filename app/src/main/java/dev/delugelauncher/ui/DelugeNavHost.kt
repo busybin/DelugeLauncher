@@ -2912,8 +2912,15 @@ fun DelugeNavHost(
                         // The run also woke apps; putting only the frozen ones back would
                         // leave the phone in a state the log says never happened.
                         val methods = app.prefs.freezeMethodsNow()
+                        val bricked = FreezeProtection.loadBearing(context)
                         log.thawed.forEach { key ->
-                            if (methods.containsKey(key)) app.freezeManager.freezeKey(key)
+                            // Undo restores what the run did. It is not a way to freeze a
+                            // package the dialog exists to ask about.
+                            if (methods.containsKey(key) &&
+                                FreezeTargetKey.packageName(key) !in bricked
+                            ) {
+                                app.freezeManager.freezeKey(key)
+                            }
                         }
                         app.prefs.clearFreezeRun()
                     }
