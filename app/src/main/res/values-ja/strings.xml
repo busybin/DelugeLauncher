@@ -685,7 +685,7 @@
     <string name="freeze_disable_failed">%1$d 件のアプリを解除できなかったため、凍結はオンのままです。</string>
 
     <string name="freeze_protect">重要なアプリを保護</string>
-    <string name="freeze_protect_detail">現在のキーボード、ホームアプリ、アクセシビリティサービス、凍結権限を与えるツールは凍結しません。</string>
+    <string name="freeze_protect_detail">電話に応答するアプリ、SMS アプリ、現在のキーボード、ホームアプリ、アクセシビリティサービス、凍結権限を与えるツールは凍結しません。これをオフにすると、最初の二つを凍結でき、着信が鳴らずメッセージも届かなくなります。</string>
     <string name="freeze_protected">%1$s はスマートフォンを使い続けるための重要なアプリのため、凍結を拒否しました。</string>
     <string name="freeze_export">凍結リストをエクスポート…</string>
     <string name="freeze_export_done">凍結リストをエクスポートしました</string>

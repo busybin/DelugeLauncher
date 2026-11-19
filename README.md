@@ -48,8 +48,9 @@ Screenshots are 1080×2400, taken on an Android 16 emulator in its dark theme.
 - **A paused app opened from elsewhere** gets an Unpause and open button in the system dialog
   instead of a dead end.
 - **Widgets and pinned shortcuts** stay, greyed, and a tap unfreezes.
-- **Protected apps** are never frozen while the guard is on (the default): the current keyboard,
-  the home app, enabled accessibility services, Shizuku and every installed root manager.
+- **Protected apps** are never frozen while the guard is on (the default): the app that answers
+  calls, the SMS app, the current keyboard, the home app, enabled accessibility services, Shizuku
+  and every installed root manager.
 - **Work profile and private space apps** can be frozen too, each profile tracked separately from
   the main one with the same package name.
 - **More ways in and out:** a quick settings tile freezes or thaws the whole list, a listed app

@@ -689,7 +689,7 @@
     <string name="slot_no_shortcuts">No shortcuts pinned yet</string>
 
     <string name="freeze_protect">Protect essential apps</string>
-    <string name="freeze_protect_detail">Never freeze the current keyboard, the home app, accessibility services, or the tools that grant freeze access.</string>
+    <string name="freeze_protect_detail">Never freeze the app that answers calls, the SMS app, the current keyboard, the home app, accessibility services, or the tools that grant freeze access. With this off, freezing the first two means calls do not ring and messages do not arrive.</string>
     <string name="freeze_protected">%1$s is protected, because it is one of the apps that keep the phone usable. Freezing it is refused.</string>
     <string name="freeze_export">Export freeze list…</string>
     <string name="freeze_export_done">Freeze list exported</string>

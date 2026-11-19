@@ -595,8 +595,9 @@ object FreezeState {
  */
 object FreezeProtection {
     /**
-     * The app that rings. Unlike the rest of this list it is protected unconditionally: a
-     * freeze switch is not a reason to make the phone unable to answer a call.
+     * The app that rings. Protected wherever the guard reaches: a freeze switch is not a
+     * reason to make the phone unable to answer a call, and the switch itself says that
+     * turning it off takes calls and messages with it.
      */
     fun dialer(context: Context): String? = runCatching {
         context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage
@@ -2506,11 +2507,16 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
     private suspend fun systemAllowed(target: FreezeTarget, snapshot: FreezeSnapshot): Boolean =
         systemAllowed(snapshot.state(target)?.system == true)
 
-    /** The apps no freeze may touch while the guard is on; read at most every half minute. */
+    /**
+     * The apps no freeze may touch while the guard is on; read at most every half minute.
+     *
+     * The app that answers calls rides the same switch as the SMS app rather than being
+     * unreleasable: on a phone whose SIM is data only, neither can ring or arrive, and the
+     * guard's description says which two rows turning it off hands back.
+     */
     suspend fun protectedPackages(force: Boolean = false): Set<String> {
-        // The dialer is the one row the guard switch cannot release.
+        if (!prefs.freezeProtectNow()) return emptySet()
         val dialer = setOfNotNull(FreezeProtection.dialer(context))
-        if (!prefs.freezeProtectNow()) return dialer
         val now = SystemClock.elapsedRealtime()
         if (!force && now - protectedAt < PROTECT_TTL_MS) return protectedSet + dialer
         val packages = withContext(Dispatchers.IO) {

@@ -863,6 +863,14 @@ private fun AutoFreezeDialog(
                     protectEssentials,
                     onSetProtectEssentials,
                 )
+                // The switch is the only place its consequences are visible: it hands back the
+                // app that answers calls and the SMS app, and one line here says so.
+                Text(
+                    stringResource(R.string.freeze_protect_detail),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 6.dp),
+                )
             }
         },
         confirmButton = {

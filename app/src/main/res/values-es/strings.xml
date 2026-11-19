@@ -685,7 +685,7 @@
     <string name="freeze_disable_failed">No se pudieron descongelar %1$d apps; la congelación sigue activa.</string>
 
     <string name="freeze_protect">Proteger apps esenciales</string>
-    <string name="freeze_protect_detail">Nunca congela el teclado actual, la app de inicio, los servicios de accesibilidad ni las herramientas que dan acceso a la congelación.</string>
+    <string name="freeze_protect_detail">Nunca congela la app que atiende llamadas, la app de SMS, el teclado actual, la app de inicio, los servicios de accesibilidad ni las herramientas que dan acceso a la congelación. Si lo desactivas, congelar las dos primeras hace que las llamadas no suenen y los mensajes no lleguen.</string>
     <string name="freeze_protected">%1$s está protegida porque es una de las apps que mantienen usable el teléfono. Se rechazó congelarla.</string>
     <string name="freeze_export">Exportar lista de congelación…</string>
     <string name="freeze_export_done">Lista de congelación exportada</string>
