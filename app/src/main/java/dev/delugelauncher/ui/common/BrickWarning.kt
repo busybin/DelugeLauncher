@@ -82,7 +82,7 @@ class BrickWarningState(
         labelOf: (String) -> String,
         run: () -> Unit,
     ) {
-        val named = packages.filter { it in bricking }.map(labelOf).distinct()
+        val named = packages.filter { it.substringBefore('|') in bricking }.map(labelOf).distinct()
         if (named.isEmpty()) run() else ask(named, run)
     }
 

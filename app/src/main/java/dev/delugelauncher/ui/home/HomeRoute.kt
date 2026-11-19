@@ -1406,7 +1406,7 @@ fun HomeRoute(
                 appsByKey.values.firstOrNull { it.freezeKey == packageName }?.label ?: packageName
             },
         ) {
-            freezeAllNow(app, context, scope)
+            freezeAllNow(app, context, scope, freezeMethods.keys)
         }
     }
 
@@ -2561,10 +2561,15 @@ private const val PRIVATE_UNLOCK_PROMPT_MS = 1500L
 
 
 /** Freezes the whole list and reports the run; the caller has already asked if it had to. */
-private fun freezeAllNow(app: DelugeApp, context: Context, scope: CoroutineScope) {
+private fun freezeAllNow(
+    app: DelugeApp,
+    context: Context,
+    scope: CoroutineScope,
+    confirmed: Set<String>,
+) {
     scope.launch {
         FreezeToast.progress(context, R.string.freeze_working)
-        val result = app.freezeManager.freezeAll()
+        val result = app.freezeManager.freezeAll(confirmed = confirmed)
         if (result.noAccess) {
             FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
         } else if (result.failed > 0) {

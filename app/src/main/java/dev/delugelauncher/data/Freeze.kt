@@ -2252,6 +2252,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
          * freeze screen turns it off because it asked first.
          */
         skipBrick: Boolean = auto,
+        /**
+         * The plan keys the caller showed the warning for and the user accepted. A key that
+         * was never shown — merged in from a backup after the screen read the plan, a profile
+         * key the warning set did not match — is left alone rather than frozen unasked.
+         */
+        confirmed: Set<String> = emptySet(),
     ): FreezeBatchResult =
         withContext(NonCancellable) {
             gate.withLock {
@@ -2274,11 +2280,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
                 val systemEnabled = prefs.freezeSystemAppsNow()
                 // Unattended runs never take the screen, Settings or the installer: there is
                 // nobody to read a warning, and the phone would not come back on its own.
-                val bricked = if (skipBrick) {
-                    withContext(Dispatchers.IO) { FreezeProtection.loadBearing(context) }
-                } else {
-                    emptySet()
-                }
+                // A confirmed manual run takes only the ones its dialog actually named; the
+                // rest stay out, which is what closes the window where a backup merged in
+                // after the screen read the plan could slip one past the warning.
+                val loadBearing = withContext(Dispatchers.IO) { FreezeProtection.loadBearing(context) }
+                val confirmedPackages = confirmed.mapTo(HashSet()) { it.substringBefore('|') }
+                val bricked = if (skipBrick) loadBearing else loadBearing - confirmedPackages
                 val skip = if (skipInUse) withContext(Dispatchers.IO) { autoSkip() } else emptySet()
                 val snapshot = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
                 val (frozenBefore, targets) = withContext(Dispatchers.IO) {
@@ -2667,6 +2674,29 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
             val applied = prefs.freezeAppliedNow()
             val rollback = failed.filterNot { it in applied }.toSet()
             if (rollback.isNotEmpty()) deepFreeze.release(rollback)
+        }
+        // The platform can answer success without changing anything: a device owner's
+        // setPackagesSuspended returns an empty failure list for a package it will not
+        // suspend, and a shell command exits 0 on a state it could not change. Read back the
+        // two methods whose state is readable; HIDE and STOP are believed, nothing can be read
+        // for them.
+        val readable = done.filter { key ->
+            (plan[key] ?: resolved.firstOrNull { it.first == key }?.second?.first) in
+                setOf(FreezeMethod.SUSPEND, FreezeMethod.DISABLE)
+        }
+        if (readable.isNotEmpty()) {
+            val after = withContext(Dispatchers.IO) { FreezeSnapshot.read(context) }
+            val kept = readable.filter { key ->
+                val target = targetOf(key) ?: return@filter false
+                looksFrozen(after, target, plan[key])
+            }.toSet()
+            val dropped = readable - kept
+            if (dropped.isNotEmpty()) {
+                done -= dropped
+                val applied = prefs.freezeAppliedNow()
+                val rollback = dropped.filterNot { it in applied }.toSet()
+                if (rollback.isNotEmpty()) deepFreeze.release(rollback)
+            }
         }
         return done
     }

@@ -94,4 +94,21 @@ class BrickWarningTest {
         compose.onNodeWithText("Freeze anyway").performClick()
         assertTrue(ran)
     }
+
+    @Test
+    fun `a profile key asks for the package underneath it`() {
+        val state = BrickWarningState(setOf(systemUi.packageName))
+        var ran = false
+        compose.setContent { BrickWarningDialog(state) }
+
+        compose.runOnIdle {
+            state.guardPackages(
+                listOf("${systemUi.packageName}|10"),
+                labelOf = { "System UI" },
+            ) { ran = true }
+        }
+
+        compose.onNodeWithText("This can leave the phone unusable").assertExists()
+        assertFalse(ran)
+    }
 }

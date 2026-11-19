@@ -2520,7 +2520,7 @@ fun DelugeNavHost(
                 onFreezeAll = {
                     scope.launch {
                         FreezeToast.progress(context, R.string.freeze_working)
-                        val result = app.freezeManager.freezeAll()
+                        val result = app.freezeManager.freezeAll(confirmed = freezeMethods.keys)
                         withContext(Dispatchers.Main) {
                             FreezeToast.result(
                                 context,
