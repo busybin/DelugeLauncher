@@ -655,6 +655,7 @@
     <string name="settings_two_column_list_landscape_detail">Dois apps dividem cada linha na horizontal.</string>
     <string name="settings_two_column_labels">Nome em meia célula estreita</string>
     <string name="two_column_labels_beside">Ao lado do ícone</string>
+    <string name="two_column_labels_auto">Automático</string>
     <string name="two_column_labels_under">Sob o ícone</string>
     <string name="settings_developer_mode">Modo desenvolvedor</string>
     <string name="settings_developer_mode_detail">Disfarça nomes e ícones para capturas e esconde a barra de status.</string>

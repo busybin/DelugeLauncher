@@ -146,7 +146,12 @@ enum class TwoColumnSlot { HOME_PORTRAIT, HOME_LANDSCAPE, LIST_PORTRAIT, LIST_LA
  * a grid. Which of the two someone wants on a small screen is not something the width decides
  * for them, so both are offered and the width only says when the question comes up.
  */
-enum class TwoColumnLabels { BESIDE, UNDER }
+enum class TwoColumnLabels {
+    /** The width decides: a narrow cell puts a folder's name under its icon, an app's beside it. */
+    AUTO,
+    BESIDE,
+    UNDER,
+}
 
 /** What a slot does: the corner button's tap, its slide up, either swipe under the favorites. */
 enum class CornerAction {
@@ -1355,7 +1360,7 @@ class Prefs(private val context: Context) {
     /** Where the name goes when a half cell leaves no room for it beside the icon. */
     val twoColumnLabels: Flow<TwoColumnLabels> = data.map { pref ->
         pref[Keys.TWO_COLUMN_LABELS]?.let { runCatching { TwoColumnLabels.valueOf(it) }.getOrNull() }
-            ?: TwoColumnLabels.BESIDE
+            ?: TwoColumnLabels.AUTO
     }.distinctUntilChanged()
 
     /** Lay icons and labels out from the right edge instead of the left. */

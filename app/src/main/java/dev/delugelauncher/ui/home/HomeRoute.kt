@@ -136,6 +136,7 @@ import dev.delugelauncher.ui.applist.buildAppListModel
 import dev.delugelauncher.ui.applist.edgeZoneWidth
 import dev.delugelauncher.data.Pinyin
 import dev.delugelauncher.ui.common.BrickWarning
+import dev.delugelauncher.ui.common.BrickWarningHolder
 import dev.delugelauncher.ui.common.FolderPickerDialog
 import dev.delugelauncher.ui.common.FreezeActions
 import dev.delugelauncher.ui.common.FreezeToast
@@ -1394,23 +1395,14 @@ fun HomeRoute(
 
     /** The freeze list's bulk verbs, shared by the corner slot and the home long-press menu. */
     fun runFreezeAll() {
-        scope.launch {
-            FreezeToast.progress(context, R.string.freeze_working)
-            // No dialog from a menu or a gesture: the load-bearing packages are left alone
-            // rather than frozen behind the owner's back. The freeze screen is where they can
-            // be taken, after confirming.
-            val result = app.freezeManager.freezeAll(skipBrick = true)
-            if (result.noAccess) {
-                FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
-            } else if (result.failed > 0) {
-                FreezeToast.result(
-                    context,
-                    context.getString(R.string.freeze_many_partial, result.done, result.failed),
-                    long = true,
-                )
-            } else {
-                FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
-            }
+        // The same dialog the freeze screen shows. A menu or a gesture is still a deliberate
+        // freeze, and skipping the load-bearing packages behind its back was a difference
+        // nobody could see in the toast.
+        // Only the apps the list carries: the warning is about what this run would touch.
+        BrickWarningHolder.current.guard(
+            appsByKey.values.filter { it.freezeKey in freezeMethods },
+        ) {
+            freezeAllNow(app, context, scope)
         }
     }
 
@@ -2563,6 +2555,25 @@ data class HomeSettings(
 /** How long a private space unlock has to put the system's lock screen up before giving up. */
 private const val PRIVATE_UNLOCK_PROMPT_MS = 1500L
 
+
+/** Freezes the whole list and reports the run; the caller has already asked if it had to. */
+private fun freezeAllNow(app: DelugeApp, context: Context, scope: CoroutineScope) {
+    scope.launch {
+        FreezeToast.progress(context, R.string.freeze_working)
+        val result = app.freezeManager.freezeAll()
+        if (result.noAccess) {
+            FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+        } else if (result.failed > 0) {
+            FreezeToast.result(
+                context,
+                context.getString(R.string.freeze_many_partial, result.done, result.failed),
+                long = true,
+            )
+        } else {
+            FreezeToast.result(context, context.getString(R.string.freeze_many_done, result.done))
+        }
+    }
+}
 
 /**
  * The folder's freeze button, warning first when a member is one the phone cannot lose.

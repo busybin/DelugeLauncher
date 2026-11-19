@@ -61,6 +61,7 @@ fun AzStripVisibility.labelRes(): Int = when (this) {
 
 @StringRes
 fun TwoColumnLabels.labelRes(): Int = when (this) {
+    TwoColumnLabels.AUTO -> R.string.two_column_labels_auto
     TwoColumnLabels.BESIDE -> R.string.two_column_labels_beside
     TwoColumnLabels.UNDER -> R.string.two_column_labels_under
 }

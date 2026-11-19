@@ -59,6 +59,7 @@ import dev.delugelauncher.data.TwoColumnLabels
 import dev.delugelauncher.data.IconPackRepository
 import dev.delugelauncher.data.NetworkStatus
 import dev.delugelauncher.ui.common.BrickWarningDialog
+import dev.delugelauncher.ui.common.BrickWarningHolder
 import dev.delugelauncher.ui.common.BrickWarningState
 import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.ui.common.LocalNetworkActions
@@ -753,7 +754,7 @@ fun DelugeNavHost(
     val homeTwoColumnLandscape by app.prefs.homeTwoColumnLandscape.collectAsState(initial = true)
     val listTwoColumnPortrait by app.prefs.listTwoColumnPortrait.collectAsState(initial = false)
     val listTwoColumnLandscape by app.prefs.listTwoColumnLandscape.collectAsState(initial = true)
-    val twoColumnLabels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.BESIDE)
+    val twoColumnLabels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.AUTO)
     val screenshotMode by app.prefs.screenshotMode.collectAsState(initial = false)
     val devScalePercent by app.prefs.devScalePercent.collectAsState(initial = 100)
     // Built fresh each time the mode turns on and dropped when it turns off: nothing stored,
@@ -1419,6 +1420,8 @@ fun DelugeNavHost(
     // down, so a menu on any screen can ask before acting without carrying a dialog itself.
     val bricking = remember { FreezeProtection.loadBearing(context) }
     val brickWarning = remember(bricking) { BrickWarningState(bricking) }
+    // Screens at the method-size limit reach it through the holder instead of the local.
+    BrickWarningHolder.current = brickWarning
     CompositionLocalProvider(
         LocalFocusStarter provides startFocus,
         LocalBrickWarning provides brickWarning,

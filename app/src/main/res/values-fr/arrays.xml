@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v34">
+        <item>Une demi-cellule étroite garde l\'aspect d\'avant : le nom du dossier sous son icône, celui de l\'appli à côté. Le réglage permet toujours de choisir.</item>
+        <item>Tout geler depuis le menu d\'accueil ou le geste du coin demande maintenant confirmation avant de prendre une appli qui garde le téléphone utilisable, comme l\'écran de gel le fait déjà.</item>
+    </string-array>
     <string-array name="changelog_v33">
         <item>En deux colonnes, une demi-cellule étroite peut placer le nom sous son icône plutôt qu\'à côté. La liste des applis donne deux lignes aux noms avant les points de suspension.</item>
         <item>La liste de gel garde une ligne par appli : une appli avec deux activités de lancement ne la ferme plus.</item>

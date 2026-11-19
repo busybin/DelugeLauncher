@@ -37,6 +37,15 @@ object NoBrickWarning : BrickWarning {
  */
 val LocalBrickWarning = compositionLocalOf<BrickWarning> { NoBrickWarning }
 
+/**
+ * The same warning, reachable from a screen that is already at the JVM's method size limit and
+ * cannot afford the composition-local read. Set once by the screen that draws the dialog.
+ */
+object BrickWarningHolder {
+    @Volatile
+    var current: BrickWarning = NoBrickWarning
+}
+
 class BrickWarningState(
     /** Package names whose freeze can leave no way back into the phone. */
     private val bricking: Set<String>,

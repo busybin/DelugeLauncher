@@ -1237,11 +1237,15 @@ fun HomeScreen(
                 LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
             val homeTwoColumn =
                 (if (homeLandscape) homeTwoColumnLandscape else homeTwoColumnPortrait) && !editMode
-            // A half cell narrower than this has no room for a name beside its icon, so both
-            // kinds of cell stack it instead of cutting it to a letter — the same rule for a
-            // folder and for an app, or a pair would read as two different rows.
-            val stackHalfCells = homeTwoColumn && twoColumnLabels == TwoColumnLabels.UNDER &&
-                viewportWidth > 0 && with(density) { (viewportWidth / 2f).toDp() } < 170.dp
+            // A narrow half cell stacks names the way this launcher always did, unless the
+            // setting asks otherwise.
+            val halfCellDp = if (homeTwoColumn && viewportWidth > 0) {
+                with(density) { (viewportWidth / 2f).toDp().value }
+            } else {
+                null
+            }
+            val (stackFolderNames, stackAppNames) =
+                stackHalfCellNames(twoColumnLabels, halfCellDp)
             val homeCells: List<List<Pair<HomeItem, Int>>> =
                 remember(displayItems, homeTwoColumn) {
                     if (!homeTwoColumn) {
@@ -1496,7 +1500,7 @@ fun HomeScreen(
                             editMode = editMode,
                             popupContents = homeTwoColumn && item.folder.widgets.isEmpty() &&
                                 !item.folder.nowPlaying,
-                            stackedHalfCell = stackHalfCells,
+                            stackedHalfCell = stackFolderNames,
                             dragHandle = dragHandle,
                             handleInsetDp = dragHandleInsetDp,
                             iconSizeDp = liveIconSize,
@@ -1588,7 +1592,7 @@ fun HomeScreen(
                             compactTapArea = compactTapArea,
                             shortcutSwipe = shortcutSwipe,
                             app = item.app,
-                            stackedHalfCell = stackHalfCells,
+                            stackedHalfCell = stackAppNames,
                             label = displayName(item.app),
                             notificationLines = notificationPreviews[
                                 NotificationPreviewBus.key(item.app.packageName, item.app.userSerial)
@@ -3263,6 +3267,6 @@ private fun notificationTint(base: Color, argb: Int): Color =
 @Composable
 private fun rememberTwoColumnLabels(): TwoColumnLabels {
     val app = LocalContext.current.applicationContext as DelugeApp
-    val labels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.BESIDE)
+    val labels by app.prefs.twoColumnLabels.collectAsState(initial = TwoColumnLabels.AUTO)
     return labels
 }

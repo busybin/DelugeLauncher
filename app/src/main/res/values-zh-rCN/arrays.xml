@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v34">
+        <item>窄半格保持以前的样子：文件夹名在图标下方，应用名在右侧。设置里仍可手动选另一种。</item>
+        <item>从桌面菜单或角落手势执行「全部冻结」时，遇到维持手机可用的应用会像冻结页一样先确认。</item>
+    </string-array>
     <string-array name="changelog_v33">
         <item>双列时，放不下名字的窄半格可以把名字放到图标下方，也可以留在右侧。应用列表的名字最多两行再省略。</item>
         <item>冻结列表每个应用只保留一行，带两个 launcher activity 的应用不会再让列表崩溃。</item>

@@ -185,6 +185,7 @@
     <string name="settings_two_column_list_landscape_detail">يتقاسم تطبيقان كل صف في الوضع الأفقي.</string>
     <string name="settings_two_column_labels">الاسم في نصف خلية ضيق</string>
     <string name="two_column_labels_beside">بجانب الأيقونة</string>
+    <string name="two_column_labels_auto">تلقائي</string>
     <string name="two_column_labels_under">أسفل الأيقونة</string>
     <string name="settings_two_column_needs_rotation">يتطلب تفعيل “التدوير مع الجهاز” ليسري المفعول.</string>
     <string name="settings_developer_mode">وضع المطوّر</string>

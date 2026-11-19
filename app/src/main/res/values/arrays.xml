@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v34">
+        <item>A narrow half cell keeps the look it had before: a folder\'s name under its icon, an app\'s beside it. The setting can still ask for either.</item>
+        <item>Freeze all from the home menu or the corner gesture now asks before it takes a package that keeps the phone working, as the freeze screen already does.</item>
+    </string-array>
     <string-array name="changelog_v33">
         <item>In two columns, a narrow half cell can put the name under its icon instead of beside it. The app list gives names two lines before an ellipsis.</item>
         <item>The freeze list keeps one row per app, so an app that registers two launcher activities no longer closes it.</item>

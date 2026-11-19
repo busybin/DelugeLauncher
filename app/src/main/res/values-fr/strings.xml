@@ -655,6 +655,7 @@
     <string name="settings_two_column_list_landscape_detail">Deux apps partagent chaque ligne en paysage.</string>
     <string name="settings_two_column_labels">Nom dans une demi-cellule étroite</string>
     <string name="two_column_labels_beside">À côté de l’icône</string>
+    <string name="two_column_labels_auto">Automatique</string>
     <string name="two_column_labels_under">Sous l’icône</string>
     <string name="settings_developer_mode">Mode développeur</string>
     <string name="settings_developer_mode_detail">Déguise noms et icônes pour les captures et cache la barre d\'état.</string>
