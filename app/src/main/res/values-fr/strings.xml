@@ -98,9 +98,12 @@
     <string name="settings_list_headers">En-têtes de lettres</string>
     <string name="settings_list_headers_detail">Désactivé donne une liste continue. La barre A-Z permet toujours d\'accéder à une lettre</string>
     <string name="settings_notification_badges">Nombre de notifications sur les icônes</string>
-    <string name="settings_dim_paused_apps">Griser les applis en pause</string>
+    <string name="settings_frozen_look">Aspect des applis gelées</string>
+    <string name="settings_frozen_look_detail">Les applis gelées ou en pause peuvent rester normales, s\'atténuer ou perdre leurs couleurs, pour que leur état se voie même en plein jour.</string>
+    <string name="frozen_look_normal">Normal</string>
+    <string name="frozen_look_dimmed">Atténué</string>
+    <string name="frozen_look_greyscale">Niveaux de gris</string>
     <string name="settings_wallpaper_blur">Flou du fond d\'écran</string>
-    <string name="settings_dim_paused_apps_detail">Les applis en pause s\'affichent en grisé, comme mises de côté. Désactivez pour les voir comme les autres.</string>
     <string name="settings_notification_badges_detail">Nécessite le même accès aux notifications que Now Playing. Uniquement le nombre, sauf si le texte des notifications est activé ci-dessous</string>
     <string name="settings_notification_preview">Texte des notifications sur les lignes</string>
     <string name="settings_notification_preview_detail">Affiche la notification la plus récente sous le nom de l\'app. Nécessite le même accès aux notifications. Désactivé par défaut.</string>

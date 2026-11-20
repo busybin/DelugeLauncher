@@ -149,6 +149,7 @@ import dev.delugelauncher.data.folderToken
 import dev.delugelauncher.ui.common.FolderIcon
 import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.RippleParams
 import dev.delugelauncher.data.ScrubBubbleShape
 import dev.delugelauncher.data.ScrubStyle
@@ -301,7 +302,7 @@ fun AppListScreen(
     /** Which apps are hidden, so a search that turns one up can say so and put it back. */
     hiddenApps: Set<String>,
     /** Whether a paused (suspended) app is shown greyed out. */
-    dimPausedApps: Boolean,
+    frozenLook: FrozenLook,
     /** Whether the launcher's own transitions are collapsed to instant. */
     reduceMotion: Boolean,
     /** Keys that ask for the device lock before opening. */
@@ -1603,7 +1604,7 @@ fun AppListScreen(
                             else hideConfirmFor = entry.app
                         },
                         isHidden = entry.app.key in hiddenApps,
-                        dimPausedApps = dimPausedApps,
+                        frozenLook = frozenLook,
                         isLocked = entry.app.lockedBy(lockedApps),
                         onToggleLock = { onToggleLock(entry.app) },
                         onAddToPrivateSpace = onAddToPrivateSpace?.let { add ->
@@ -2137,7 +2138,7 @@ private fun AppRow(
     /** Hidden apps only ever reach this list through a search. */
     isHidden: Boolean,
     /** Whether a paused (suspended) app is shown greyed out. */
-    dimPausedApps: Boolean,
+    frozenLook: FrozenLook,
     /** Whether this app asks for the device lock before it opens. */
     isLocked: Boolean,
     onToggleLock: () -> Unit,
@@ -2157,9 +2158,11 @@ private fun AppRow(
     // The method has to be picked before the app can be added to the freeze list, and that
     // dialog has to outlive the menu it was opened from.
     var freezeChoosing by remember { mutableStateOf(false) }
-    // A paused app fades the way a hidden one does, when the setting asks; the icon goes with
-    // the name so the whole row reads as set aside.
-    val dimmed = isHidden || app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
+    // A frozen or paused app is drawn by the look setting; a hidden one always fades, since
+    // the point there is that it is not normally in this list at all.
+    val setAside = app.frozen != null || app.suspended || app.quietProfile
+    val dimmed = isHidden || app.disabled || (frozenLook == FrozenLook.DIMMED && setAside)
+    val greyscale = frozenLook == FrozenLook.GREYSCALE && setAside
 
     Box {
         Row(
@@ -2239,7 +2242,7 @@ private fun AppRow(
                         // and nothing else on the row says it is one. A shortcut its publisher
                         // has switched off gets the same treatment, for the same reason: it is
                         // listed, but tapping it only explains why it will not open.
-                        color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
+                        color = if (dimmed || greyscale) contentColor.copy(alpha = 0.5f) else contentColor,
                         fontSize = labelSizeSp.sp,
                         // Two lines then a cut. Left to wrap freely, a long name in a half row
                         // grew the row to three lines and moved everything below it.
@@ -2284,9 +2287,9 @@ private fun AppRow(
                 balance()
                 text()
                 Spacer(Modifier.width(gap))
-                AppIcon(app = app, sizeDp = iconSizeDp, modifier = iconModifier)
+                AppIcon(app = app, sizeDp = iconSizeDp, desaturate = greyscale, modifier = iconModifier)
             } else {
-                AppIcon(app = app, sizeDp = iconSizeDp, modifier = iconModifier)
+                AppIcon(app = app, sizeDp = iconSizeDp, desaturate = greyscale, modifier = iconModifier)
                 Spacer(Modifier.width(gap))
                 text()
                 balance()

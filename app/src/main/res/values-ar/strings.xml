@@ -170,7 +170,11 @@
     <string name="settings_list_headers">عناوين الحروف</string>
     <string name="settings_list_headers_detail">عند الإيقاف تصبح القائمة متصلة. ويظل شريط A-Z ينقلك إلى الحرف</string>
     <string name="settings_notification_badges">عدد الإشعارات على الأيقونات</string>
-    <string name="settings_dim_paused_apps">تعتيم التطبيقات الموقوفة</string>
+    <string name="settings_frozen_look">مظهر التطبيقات المجمّدة</string>
+    <string name="settings_frozen_look_detail">يمكن أن تظهر التطبيقات المجمّدة أو الموقوفة طبيعية أو باهتة أو بلا ألوان، ليبقى حالتها واضحًا في ضوء النهار.</string>
+    <string name="frozen_look_normal">عادي</string>
+    <string name="frozen_look_dimmed">باهت</string>
+    <string name="frozen_look_greyscale">تدرّج رمادي</string>
     <string name="haptic_off">إيقاف</string>
     <string name="haptic_light">خفيف</string>
     <string name="haptic_medium">متوسط</string>
@@ -200,7 +204,6 @@
     <string name="settings_reduce_motion_detail">تخطَّ انتقالات المشغّل نفسه؛ ففتح قائمة التطبيقات وتلاشيها يحدثان فورًا.</string>
     <string name="settings_pinch_resize">القرص لتغيير حجم الأيقونات</string>
     <string name="settings_pinch_resize_detail">إصبعان على الشاشة الرئيسية يغيّران حجم الأيقونات.</string>
-    <string name="settings_dim_paused_apps_detail">تظهر التطبيقات التي أوقفتها باهتة لتبدو كأنها جانبية. أوقف هذا لعرضها كأي تطبيق آخر.</string>
     <string name="settings_notification_badges_detail">يحتاج إذن الوصول إلى الإشعارات نفسه الذي يحتاجه «قيد التشغيل». الأعداد فقط، ما لم يتم تشغيل نص الإشعارات أدناه</string>
     <string name="settings_notification_preview">نص الإشعارات في صفوف التطبيقات</string>
     <string name="settings_notification_preview_detail">يعرض أحدث إشعار أسفل اسم التطبيق. يحتاج إلى إذن الوصول إلى الإشعارات نفسه. معطّل افتراضيًا.</string>

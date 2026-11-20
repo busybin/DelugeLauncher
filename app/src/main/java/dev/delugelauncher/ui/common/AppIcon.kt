@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -413,8 +415,13 @@ val LocalIconConfig = staticCompositionLocalOf {
     )
 }
 
+/**
+ * @param desaturate drains the icon's colour, for a frozen app drawn in the greyscale look.
+ *   A filter rather than another cached bitmap: the same drawing is reused and the look can
+ *   change without throwing the icon cache away.
+ */
 @Composable
-fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
+fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier, desaturate: Boolean = false) {
     val context = LocalContext.current
     val delugeApp = context.applicationContext as DelugeApp
     val config = LocalIconConfig.current
@@ -496,6 +503,7 @@ fun AppIcon(app: AppInfo, sizeDp: Int, modifier: Modifier = Modifier) {
                 bitmap = drawn,
                 contentDescription = app.label,
                 modifier = Modifier.size(sizeDp.dp),
+                colorFilter = if (desaturate) GrayscaleFilter else null,
             )
         }
         if (badge > 0) NotificationBadge(badge, sizeDp, Modifier.align(Alignment.TopEnd))
@@ -624,3 +632,7 @@ private fun resolveDrawable(
                 delugeApp.appRepository.loadIcon(app)
             }
         }
+
+/** Saturation 0: the icon keeps its lightness and loses its colour. */
+private val GrayscaleFilter: ColorFilter =
+    ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })

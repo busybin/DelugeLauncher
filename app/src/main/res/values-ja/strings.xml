@@ -98,9 +98,12 @@
     <string name="settings_list_headers">文字の見出し</string>
     <string name="settings_list_headers_detail">オフにすると1つの連続した一覧になります。A-Zバーは引き続きその文字にジャンプします</string>
     <string name="settings_notification_badges">アイコンの通知数</string>
-    <string name="settings_dim_paused_apps">一時停止したアプリをグレー表示</string>
+    <string name="settings_frozen_look">フリーズしたアプリの表示</string>
+    <string name="settings_frozen_look_detail">フリーズ中・一時停止中のアプリを通常表示・淡色・グレースケールから選べます。日差しの下でも状態が分かります。</string>
+    <string name="frozen_look_normal">通常</string>
+    <string name="frozen_look_dimmed">淡色</string>
+    <string name="frozen_look_greyscale">グレースケール</string>
     <string name="settings_wallpaper_blur">壁紙のぼかし</string>
-    <string name="settings_dim_paused_apps_detail">一時停止したアプリのアイコンと名前をグレーで表示し、脇に置いた状態として見せます。オフにすると他のアプリと同じ表示です。</string>
     <string name="settings_notification_badges_detail">再生中と同じ通知アクセスが必要です。下で通知の内容をオンにしない限り、数のみ表示します</string>
     <string name="settings_notification_preview">アプリ行に通知の内容を表示</string>
     <string name="settings_notification_preview_detail">アプリ名の下に最新の通知を表示します。同じ通知アクセスが必要です。既定ではオフです。</string>

@@ -98,9 +98,12 @@
     <string name="settings_list_headers">Заголовки букв</string>
     <string name="settings_list_headers_detail">Если выключено, список будет непрерывным. Полоса A-Z по-прежнему переходит к букве</string>
     <string name="settings_notification_badges">Количество уведомлений на значках</string>
-    <string name="settings_dim_paused_apps">Приглушать приостановленные приложения</string>
+    <string name="settings_frozen_look">Вид замороженных приложений</string>
+    <string name="settings_frozen_look_detail">Замороженные и приостановленные приложения могут выглядеть как обычно, приглушённо или без цвета — чтобы состояние было видно и на солнце.</string>
+    <string name="frozen_look_normal">Обычно</string>
+    <string name="frozen_look_dimmed">Приглушённо</string>
+    <string name="frozen_look_greyscale">Чёрно-белый</string>
     <string name="settings_wallpaper_blur">Размытие обоев</string>
-    <string name="settings_dim_paused_apps_detail">Приостановленные приложения показываются приглушённо, как отложенные. Выключите, чтобы они выглядели как остальные.</string>
     <string name="settings_notification_badges_detail">Требуется тот же доступ к уведомлениям, что и для «Сейчас играет». Только счётчики, если текст уведомлений не включён ниже</string>
     <string name="settings_notification_preview">Текст уведомлений в строках</string>
     <string name="settings_notification_preview_detail">Показывает последнее уведомление под названием приложения. Нужен тот же доступ к уведомлениям. По умолчанию выключено.</string>

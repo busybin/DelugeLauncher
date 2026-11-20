@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.test.core.app.ApplicationProvider
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.Folder
@@ -120,7 +121,7 @@ class HomeScreenTwoColumnTest {
                 nowPlayingHasContent = false,
                 contentColor = Color.White,
                 showFavoriteLabels = true,
-                dimPausedApps = true,
+                frozenLook = FrozenLook.DIMMED,
                 pinchToResize = false,
                 onSetIconSize = {},
                 lockedApps = emptySet(),

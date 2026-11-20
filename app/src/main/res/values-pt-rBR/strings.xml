@@ -98,9 +98,12 @@
     <string name="settings_list_headers">Cabeçalhos de letras</string>
     <string name="settings_list_headers_detail">Desativado dá uma lista contínua. A barra A-Z ainda pula para a letra</string>
     <string name="settings_notification_badges">Contagem de notificações nos ícones</string>
-    <string name="settings_dim_paused_apps">Atenuar apps pausados</string>
+    <string name="settings_frozen_look">Aparência de apps congelados</string>
+    <string name="settings_frozen_look_detail">Apps congelados ou pausados podem ficar normais, atenuados ou sem cor, para o estado aparecer mesmo no sol.</string>
+    <string name="frozen_look_normal">Normal</string>
+    <string name="frozen_look_dimmed">Atenuado</string>
+    <string name="frozen_look_greyscale">Escala de cinza</string>
     <string name="settings_wallpaper_blur">Desfoque do plano de fundo</string>
-    <string name="settings_dim_paused_apps_detail">Apps pausados aparecem atenuados, como se estivessem de lado. Desligue para vê-los como os demais.</string>
     <string name="settings_notification_badges_detail">Precisa do mesmo acesso a notificações que o Now Playing. Apenas contagens, a menos que o texto das notificações seja ativado abaixo</string>
     <string name="settings_notification_preview">Texto das notificações nas linhas</string>
     <string name="settings_notification_preview_detail">Mostra a notificação mais recente sob o nome do app. Precisa do mesmo acesso a notificações. Desativado por padrão.</string>

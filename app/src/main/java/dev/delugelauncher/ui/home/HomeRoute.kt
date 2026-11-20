@@ -96,6 +96,7 @@ import dev.delugelauncher.data.userId
 import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.RippleParams
 import dev.delugelauncher.data.ScrubBubbleShape
 import dev.delugelauncher.data.ScrubStyle
@@ -1932,7 +1933,7 @@ fun HomeRoute(
                 nowPlayingHasContent = nowPlayingHasContent,
                 contentColor = settings.contentColor,
                 showFavoriteLabels = settings.showFavoriteLabels,
-                dimPausedApps = settings.dimPausedApps,
+                frozenLook = settings.frozenLook,
                 pinchToResize = settings.pinchToResize,
                 onSetIconSize = { scope.launch { app.prefs.setIconSizeDp(it) } },
                 lockedApps = lockedApps,
@@ -2167,7 +2168,7 @@ fun HomeRoute(
                 rippleParams = settings.rippleParams,
                 statusBarHidden = settings.hideStatusBarAppList,
                 searchModel = searchModel,
-                dimPausedApps = settings.dimPausedApps,
+                frozenLook = settings.frozenLook,
                 reduceMotion = settings.reduceMotion,
                 lockedApps = lockedApps,
                 onToggleLock = { entry -> toggleLock(entry) },
@@ -2543,7 +2544,7 @@ data class HomeSettings(
     val doubleTapToLock: Boolean,
     val contentColor: Color,
     /** Whether a paused (suspended) app is shown greyed out. */
-    val dimPausedApps: Boolean,
+    val frozenLook: FrozenLook,
     /** Whether a two-finger pinch on the home screen resizes the icons. */
     val pinchToResize: Boolean,
     /** Whether the launcher's own transitions are skipped. */

@@ -111,6 +111,7 @@ import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.CrashLog
 import dev.delugelauncher.data.EDGE_ZONE_INSET_RANGE
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.FREQUENT_RANGE
 import dev.delugelauncher.data.FavoritesSource
 import dev.delugelauncher.data.HOLD_SCROLL_RANGE
@@ -172,7 +173,7 @@ class SettingsActionsA(
     val onSetNotificationPreview: (Boolean) -> Unit,
     val onSetNotificationTextSp: (Int) -> Unit,
     val onSetNotificationPanel: (Boolean) -> Unit,
-    val onSetDimPausedApps: (Boolean) -> Unit,
+    val onSetFrozenLook: (FrozenLook) -> Unit,
     val onSetAutoDark: (Boolean) -> Unit,
     val onSetCornerTapAction: (CornerAction) -> Unit,
     val onSetCornerSwipeAction: (CornerAction) -> Unit,

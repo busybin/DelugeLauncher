@@ -148,6 +148,7 @@ import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HapticFeedback
 import dev.delugelauncher.data.EntryKind
 import dev.delugelauncher.data.Folder
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.FolderWidget
 import dev.delugelauncher.media.NotificationEntry
 import dev.delugelauncher.media.NotificationGateway
@@ -335,7 +336,7 @@ fun HomeScreen(
     nowPlayingHasContent: Boolean,
     contentColor: Color,
     showFavoriteLabels: Boolean,
-    dimPausedApps: Boolean,
+    frozenLook: FrozenLook,
     /** Whether a two-finger pinch resizes the icons. */
     pinchToResize: Boolean,
     /** Commits a size chosen by pinching; the settings slider writes the same value. */
@@ -1580,7 +1581,7 @@ fun HomeScreen(
                             onMemberUnpin = onUnpinShortcut,
                             onMemberEditIconName = { member -> renameDialogFor = member },
                             onOpenSettings = onOpenSettings,
-                            dimPausedApps = dimPausedApps,
+                            frozenLook = frozenLook,
                             notificationPreviews = notificationPreviews,
                             notificationTextSp = notificationTextSp,
                             notificationColor = notificationColor,
@@ -1607,7 +1608,7 @@ fun HomeScreen(
                             sidePaddingDp = sidePaddingDp,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
-                            dimPausedApps = dimPausedApps,
+                            frozenLook = frozenLook,
                             alignment = alignment,
                             iconSide = iconSide,
                             menuExpanded = menuForKey == item.app.key,
@@ -1841,7 +1842,7 @@ private fun FavoriteRow(
     sidePaddingDp: Int,
     contentColor: Color,
     showLabels: Boolean,
-    dimPausedApps: Boolean,
+    frozenLook: FrozenLook,
     alignment: HomeAlignment,
     iconSide: IconSide,
     menuExpanded: Boolean,
@@ -1882,13 +1883,17 @@ private fun FavoriteRow(
 
     Column(Modifier.fillMaxWidth()) {
     Box(Modifier.fillMaxWidth()) {
-        // A paused app fades the same way a retired shortcut does, when the setting asks;
-        // the icon goes with the name so the whole row reads as set aside.
-        val dimmed = app.disabled || app.frozen != null || (dimPausedApps && (app.suspended || app.quietProfile))
+        // Frozen and paused apps are drawn by the look setting: faded, colourless, or as any
+        // other row. A hidden or disabled shortcut still fades, since the look is about
+        // freezing and saying so in daylight, not about hiding an app from being seen.
+        val setAside = app.frozen != null || app.suspended || app.quietProfile
+        val dimmed = app.disabled || (frozenLook == FrozenLook.DIMMED && setAside)
+        val greyscale = frozenLook == FrozenLook.GREYSCALE && setAside
         val appIcon: @Composable () -> Unit = {
             AppIcon(
                 app = app,
                 sizeDp = iconSizeDp,
+                desaturate = greyscale,
                 modifier = Modifier
                     .pressPop(interaction)
                     .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
@@ -1904,7 +1909,7 @@ private fun FavoriteRow(
                     // Same dimming a hidden app gets in the A-Z list: a shortcut its
                     // publisher has switched off is still listed, but tapping it only
                     // explains why it will not open.
-                    color = if (dimmed) contentColor.copy(alpha = 0.5f) else contentColor,
+                    color = if (dimmed || greyscale) contentColor.copy(alpha = 0.5f) else contentColor,
                     fontSize = labelSizeSp.sp,
                     textAlign = alignment.textAlign(),
                     // A name in a half row has a letter's width before it starts stacking
@@ -2231,7 +2236,7 @@ private fun FolderRow(
     onMemberEditIconName: (AppInfo) -> Unit,
     onOpenSettings: () -> Unit,
     /** Whether a paused (suspended) app is shown greyed out, like outside folders. */
-    dimPausedApps: Boolean,
+    frozenLook: FrozenLook,
     /** Newest notifications per app, for the lines under its name. */
     notificationPreviews: Map<String, List<NotificationEntry>>,
     notificationTextSp: Int,
@@ -2544,23 +2549,29 @@ private fun FolderRow(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = alignment.arrangement(),
                     ) {
+                        // Same look as outside a folder: the member row wears the setting,
+                        // not a second style of its own.
+                        val setAside = member.frozen != null || member.suspended ||
+                            member.quietProfile
+                        val dimmed = member.disabled ||
+                            (frozenLook == FrozenLook.DIMMED && setAside)
+                        val greyscale = frozenLook == FrozenLook.GREYSCALE && setAside
                         AlignedIconLabel(
                             alignment = alignment,
                             iconSide = iconSide,
                             showLabel = showLabels,
                             iconWidth = (iconSizeDp * 0.8f).dp,
                             icon = {
-                                // A paused app fades the same way a retired shortcut does, when
-                                // the setting asks; the icon goes with the name so the whole
-                                // row reads as set aside.
-                                val dimmed = member.disabled || member.frozen != null ||
-                                    (dimPausedApps && (member.suspended || member.quietProfile))
                                 Box(
                                     Modifier
                                         .pressPop(memberPress)
                                         .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier),
                                 ) {
-                                    AppIcon(app = member, sizeDp = (iconSizeDp * 0.8f).toInt())
+                                    AppIcon(
+                                        app = member,
+                                        sizeDp = (iconSizeDp * 0.8f).toInt(),
+                                        desaturate = greyscale,
+                                    )
                                 }
                             },
                         ) { labelModifier ->
@@ -2570,9 +2581,7 @@ private fun FolderRow(
                             ) {
                                 Text(
                                     displayName(member),
-                                    color = if (member.disabled || member.frozen != null ||
-                                        (dimPausedApps && (member.suspended || member.quietProfile))
-                                    ) {
+                                    color = if (dimmed || greyscale) {
                                         contentsColor.copy(alpha = 0.5f)
                                     } else {
                                         contentsColor

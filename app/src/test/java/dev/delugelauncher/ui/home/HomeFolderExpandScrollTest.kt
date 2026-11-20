@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.test.core.app.ApplicationProvider
 import dev.delugelauncher.R
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.AppInfo
 import dev.delugelauncher.data.CornerAction
 import dev.delugelauncher.data.Folder
@@ -142,7 +143,7 @@ class HomeFolderExpandScrollTest {
                 nowPlayingHasContent = false,
                 contentColor = Color.White,
                 showFavoriteLabels = true,
-                dimPausedApps = true,
+                frozenLook = FrozenLook.DIMMED,
                 pinchToResize = false,
                 onSetIconSize = {},
                 lockedApps = emptySet(),

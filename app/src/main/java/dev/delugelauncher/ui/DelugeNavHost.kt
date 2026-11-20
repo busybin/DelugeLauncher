@@ -78,6 +78,7 @@ import dev.delugelauncher.data.PrivateSpace
 import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.RippleParams
 import dev.delugelauncher.data.ScrubBubbleShape
 import dev.delugelauncher.data.ScrubStyle
@@ -745,7 +746,7 @@ fun DelugeNavHost(
     val lockedAppsOrNull by app.prefs.lockedApps.collectAsState(initial = null)
     val lockedApps = lockedAppsOrNull ?: emptySet()
     val lockLoaded = lockedAppsOrNull != null
-    val dimPausedApps by app.prefs.dimPausedApps.collectAsState(initial = true)
+    val frozenLook by app.prefs.frozenLook.collectAsState(initial = FrozenLook.DIMMED)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
     val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
     val nightEndHour by app.prefs.nightEndHour.collectAsState(initial = 7)
@@ -1263,7 +1264,7 @@ fun DelugeNavHost(
         showFavoriteLabels = showFavoriteLabels,
         doubleTapToLock = doubleTapToLock,
         contentColor = contentColor,
-        dimPausedApps = dimPausedApps,
+        frozenLook = frozenLook,
         pinchToResize = pinchToResize,
         reduceMotion = reduceMotion,
         homeTwoColumnPortrait = homeTwoColumnPortrait,
@@ -1718,7 +1719,7 @@ fun DelugeNavHost(
                     onSetAppListFolders = { scope.launch { app.prefs.setAppListFolders(it) } },
                     onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
                     onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
-                    onSetDimPausedApps = { scope.launch { app.prefs.setDimPausedApps(it) } },
+                    onSetFrozenLook = { scope.launch { app.prefs.setFrozenLook(it) } },
                     onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
                     onSetCornerTapAction = { scope.launch { app.prefs.setCornerTapAction(it) } },
                     onSetCornerSwipeAction = { scope.launch { app.prefs.setCornerSwipeAction(it) } },
@@ -1963,8 +1964,8 @@ fun DelugeNavHost(
                 notificationPanel = notificationPanel,
                 onSetNotificationPanel = actionsA.onSetNotificationPanel,
                 onOpenNotificationPanel = { navController.navigate("notifications") },
-                dimPausedApps = dimPausedApps,
-                onSetDimPausedApps = actionsA.onSetDimPausedApps,
+                frozenLook = frozenLook,
+                onSetFrozenLook = actionsA.onSetFrozenLook,
                 autoDark = autoDark,
                 onSetAutoDark = actionsA.onSetAutoDark,
                 cornerTapAction = cornerTapAction,

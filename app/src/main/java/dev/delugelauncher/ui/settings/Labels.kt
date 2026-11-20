@@ -8,6 +8,7 @@ import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.AzStripVisibility
 import dev.delugelauncher.data.ColorSchemeChoice
 import dev.delugelauncher.data.EdgeSide
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.ScrubBubbleShape
 import dev.delugelauncher.data.ScrubStyle
 import dev.delugelauncher.data.FavoritesSource
@@ -106,6 +107,13 @@ fun ShortcutSwipe.labelRes(): Int = when (this) {
     ShortcutSwipe.OFF -> R.string.shortcut_swipe_off
     ShortcutSwipe.RIGHT -> R.string.shortcut_swipe_right
     ShortcutSwipe.LEFT -> R.string.shortcut_swipe_left
+}
+
+@StringRes
+fun FrozenLook.labelRes(): Int = when (this) {
+    FrozenLook.NORMAL -> R.string.frozen_look_normal
+    FrozenLook.DIMMED -> R.string.frozen_look_dimmed
+    FrozenLook.GREYSCALE -> R.string.frozen_look_greyscale
 }
 
 @StringRes

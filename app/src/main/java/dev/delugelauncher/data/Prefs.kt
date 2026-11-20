@@ -67,6 +67,24 @@ data class RippleParams(
  */
 enum class ShortcutSwipe { OFF, RIGHT, LEFT }
 
+/**
+ * How an app that is frozen, or paused the way a frozen one reads, is drawn in the lists.
+ *
+ * NORMAL draws it like any other row. DIMMED fades the icon and the name, which is what the
+ * launcher always did. GREYSCALE drains the icon's colour instead: a fade is hard to tell
+ * from a washed-out screen in daylight, while a colourless icon stays recognisable.
+ */
+enum class FrozenLook { NORMAL, DIMMED, GREYSCALE }
+
+/**
+ * The stored look, falling back to the old "grey out paused apps" switch for installs and
+ * backups made before it became a three-way choice. A switched-off legacy value meant
+ * "draw it like any other", so NORMAL is the match, not DIMMED.
+ */
+internal fun frozenLookOf(stored: String?, legacyDim: Boolean?): FrozenLook =
+    stored?.let { name -> runCatching { FrozenLook.valueOf(name) }.getOrNull() }
+        ?: if (legacyDim == false) FrozenLook.NORMAL else FrozenLook.DIMMED
+
 /** Which edge favorites and app rows line up against. */
 enum class HomeAlignment { LEFT, CENTER, RIGHT }
 
@@ -460,7 +478,9 @@ class Prefs(private val context: Context) {
         val HANDOVER = stringPreferencesKey("handover_json")
         val HANDOVER_LOCKED = stringSetPreferencesKey("handover_locked")
         val FOCUS = stringPreferencesKey("focus_json")
+        // Retired: read only to migrate an install or backup that only has the old switch.
         val DIM_PAUSED_APPS = booleanPreferencesKey("dim_paused_apps")
+        val FROZEN_LOOK = stringPreferencesKey("frozen_look")
         val SCREENSHOT_MODE = booleanPreferencesKey("screenshot_mode")
         // Developer mode only: the whole UI at a made-up density, so one phone can stand in
         // for a smaller or larger one. 100 is off.
@@ -1639,9 +1659,10 @@ class Prefs(private val context: Context) {
     val notificationPanel: Flow<Boolean> =
         data.map { it[Keys.NOTIFICATION_PANEL] ?: false }.distinctUntilChanged()
 
-    /** Whether a paused (suspended) app is shown greyed out so it reads as set aside. */
-    val dimPausedApps: Flow<Boolean> =
-        data.map { it[Keys.DIM_PAUSED_APPS] ?: true }.distinctUntilChanged()
+    /** How a frozen (or paused) app is drawn so it reads as set aside. */
+    val frozenLook: Flow<FrozenLook> =
+        data.map { frozenLookOf(it[Keys.FROZEN_LOOK], it[Keys.DIM_PAUSED_APPS]) }
+            .distinctUntilChanged()
 
     /**
      * Screenshot disguise: mainstream names and borrowed icons everywhere, status bar hidden.
@@ -2959,8 +2980,13 @@ class Prefs(private val context: Context) {
         context.dataStore.edit { it[Keys.NOTIFICATION_PANEL] = v }
     }
 
-    suspend fun setDimPausedApps(v: Boolean) {
-        context.dataStore.edit { it[Keys.DIM_PAUSED_APPS] = v }
+    suspend fun setFrozenLook(v: FrozenLook) {
+        context.dataStore.edit {
+            it[Keys.FROZEN_LOOK] = v.name
+            // The three-way choice replaces the old switch; drop its key so there is one
+            // source, and a later downgrade still lands on a sane value.
+            it.remove(Keys.DIM_PAUSED_APPS)
+        }
     }
 
     suspend fun setScreenshotMode(v: Boolean) {

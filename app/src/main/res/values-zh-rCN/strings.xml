@@ -153,7 +153,11 @@
     <string name="settings_list_headers">字母标题</string>
     <string name="settings_list_headers_detail">关闭后列表连续排布，字母条仍可跳到对应字母</string>
     <string name="settings_notification_badges">在图标上显示通知数</string>
-    <string name="settings_dim_paused_apps">暂停的应用变灰</string>
+    <string name="settings_frozen_look">冻结应用显示</string>
+    <string name="settings_frozen_look_detail">冻结和暂停的应用可以保持原样、变淡或去掉颜色，被收起的状态在阳光下也看得出来。</string>
+    <string name="frozen_look_normal">正常</string>
+    <string name="frozen_look_dimmed">变淡</string>
+    <string name="frozen_look_greyscale">灰度</string>
     <string name="haptic_off">关</string>
     <string name="haptic_light">轻</string>
     <string name="haptic_medium">中</string>
@@ -183,7 +187,6 @@
     <string name="settings_reduce_motion_detail">跳过启动器自己的过渡：打开应用列表、淡化等瞬间完成。</string>
     <string name="settings_pinch_resize">双指缩放图标</string>
     <string name="settings_pinch_resize_detail">在主屏用两根手指捏合可调整图标大小。</string>
-    <string name="settings_dim_paused_apps_detail">被你暂停（paused）的应用，图标和名字显示为灰色，看起来像被收起；关掉则和其他应用一样显示。</string>
     <string name="settings_notification_badges_detail">需要与“正在播放”相同的通知使用权。只显示数量；除非在下方打开通知内容</string>
     <string name="settings_notification_preview">在应用行显示通知内容</string>
     <string name="settings_notification_preview_detail">在应用名下方显示最新一条通知。需要与“正在播放”相同的通知使用权。默认关闭。</string>

@@ -157,6 +157,7 @@ import dev.delugelauncher.data.RECENT_SECTION_RANGE
 import dev.delugelauncher.data.SECTION_TOP_RANGE
 import dev.delugelauncher.data.FREQUENT_RANGE
 import dev.delugelauncher.data.FavoritesSource
+import dev.delugelauncher.data.FrozenLook
 import dev.delugelauncher.data.ShortcutSwipe
 import dev.delugelauncher.data.HomeAlignment
 import dev.delugelauncher.data.IconSide
@@ -295,8 +296,8 @@ class SettingsScreenModel(
     val notificationPanel: Boolean,
     val onSetNotificationPanel: (Boolean) -> Unit,
     val onOpenNotificationPanel: () -> Unit,
-    val dimPausedApps: Boolean,
-    val onSetDimPausedApps: (Boolean) -> Unit,
+    val frozenLook: FrozenLook,
+    val onSetFrozenLook: (FrozenLook) -> Unit,
     val autoDark: Boolean,
     val onSetAutoDark: (Boolean) -> Unit,
     val nightStartHour: Int,
@@ -1191,12 +1192,12 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.PANEL, stringResource(R.string.settings_now_playing_show), "media music") {
             SwitchRow(stringResource(R.string.settings_now_playing_show), nowPlayingEnabled, onSetNowPlayingEnabled)
         },
-        SettingsEntry(SettingsSection.EFFECTS, stringResource(R.string.settings_dim_paused_apps), "paused suspended grey dim") {
-            SwitchRowWithDetail(
-                label = stringResource(R.string.settings_dim_paused_apps),
-                detail = stringResource(R.string.settings_dim_paused_apps_detail),
-                checked = dimPausedApps, onCheckedChange = onSetDimPausedApps,
-            )
+        SettingsEntry(
+            SettingsSection.EFFECTS,
+            stringResource(R.string.settings_frozen_look),
+            "frozen paused suspended grey gray grayscale greyscale dim",
+        ) {
+            FrozenLookRow(frozenLook, onSetFrozenLook)
         },
         SettingsEntry(
             SettingsSection.PANEL, stringResource(R.string.settings_notification_access_detail), "permission access",
@@ -3361,6 +3362,35 @@ private fun AlignmentRow(label: String, selected: HomeAlignment, onSelect: (Home
                 )
             }
         }
+    }
+}
+
+/**
+ * How a frozen app is drawn, as three chips rather than a switch.
+ *
+ * Greyscale is here because the old fade is unreadable in direct sunlight: a colourless icon
+ * still says "set aside" while staying recognisable, which a 50%-alpha one does not.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FrozenLookRow(selected: FrozenLook, onSelect: (FrozenLook) -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(stringResource(R.string.settings_frozen_look), style = MaterialTheme.typography.bodyMedium)
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FrozenLook.entries.forEach { look ->
+                FilledChip(stringResource(look.labelRes()), selected == look) { onSelect(look) }
+            }
+        }
+        Text(
+            stringResource(R.string.settings_frozen_look_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(top = 6.dp),
+        )
     }
 }
 
