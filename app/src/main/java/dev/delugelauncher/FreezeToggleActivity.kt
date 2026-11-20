@@ -37,8 +37,18 @@ class FreezeToggleActivity : ComponentActivity() {
             // reading the record before either had written it and both going the same way.
             if (!busy.compareAndSet(false, true)) return@runInBackground
             try {
-                // A shortcut can outlive its list entry; nothing to toggle then.
-                if (key !in app.prefs.freezeMethodsNow()) return@runInBackground
+                // A shortcut can outlive its list entry, and a button that does nothing reads
+                // as a broken app rather than a stale shortcut.
+                if (key !in app.prefs.freezeMethodsNow()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            applicationContext,
+                            getString(R.string.shortcut_unavailable),
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                    return@runInBackground
+                }
                 val label = runCatching {
                     packageManager.getApplicationLabel(
                         packageManager.getApplicationInfo(FreezeTargetKey.packageName(key), 0)

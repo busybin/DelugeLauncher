@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v35">
+        <item>Protect essential apps is a row in Settings › App freezing now, not the last switch in the automatic-freezing dialog, so the settings search finds it while freezing is on.</item>
+        <item>A pinned freeze shortcut whose app has left the freeze list says the shortcut is no longer available instead of doing nothing.</item>
+        <item>Add a home screen shortcut is only offered for apps that are on the freeze list.</item>
+    </string-array>
     <string-array name="changelog_v34">
         <item>A narrow half cell keeps the look it had before: a folder\'s name under its icon, an app\'s beside it. The setting can still ask for either.</item>
         <item>Freeze all from the home menu or the corner gesture now asks before it takes a package that keeps the phone working, as the freeze screen already does.</item>

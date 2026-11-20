@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v35">
+        <item>«Proteger apps esenciales» es ahora una fila en Ajustes › Congelar aplicaciones, no el último interruptor del diálogo de congelación automática, así que la búsqueda de ajustes lo encuentra con la congelación activada.</item>
+        <item>El acceso directo de congelación fijado de una app que ya no está en la lista avisa de que el acceso ya no está disponible en vez de no hacer nada.</item>
+        <item>«Añadir acceso directo a la pantalla de inicio» solo se ofrece para apps que están en la lista de congelación.</item>
+    </string-array>
     <string-array name="changelog_v34">
         <item>Una media celda estrecha mantiene el aspecto de antes: el nombre de la carpeta bajo su icono y el de la app al lado. El ajuste sigue permitiendo elegir.</item>
         <item>Congelar todo desde el menú de inicio o el gesto de la esquina ahora pide confirmación antes de tomar una app que mantiene el teléfono en marcha, como ya hacía la pantalla de congelación.</item>

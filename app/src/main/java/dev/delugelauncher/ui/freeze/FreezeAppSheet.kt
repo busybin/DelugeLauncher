@@ -79,7 +79,11 @@ fun FreezeAppSheet(
                 Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                 color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
             )
-            SheetAction(stringResource(R.string.freeze_menu_pin), onPin)
+            // A shortcut only toggles a key the list still carries; pinning an app that is
+            // not on it would hand out a button that does nothing.
+            if (row.listed) {
+                SheetAction(stringResource(R.string.freeze_menu_pin), onPin)
+            }
             SheetAction(stringResource(R.string.freeze_table_open), onCompareMethods)
             if (row.listed) {
                 SheetAction(

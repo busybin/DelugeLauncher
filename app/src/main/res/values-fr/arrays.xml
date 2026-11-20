@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v35">
+        <item>« Protéger les applis essentielles » est désormais une ligne dans Réglages > Geler des applications, plus le dernier interrupteur de la boîte de gel automatique, donc la recherche des réglages le trouve quand le gel est activé.</item>
+        <item>Le raccourci de gel épinglé d\'une appli qui a quitté la liste prévient que le raccourci n\'est plus disponible au lieu de ne rien faire.</item>
+        <item>« Ajouter un raccourci à l\'écran d\'accueil » n\'est proposé que pour les applis de la liste de gel.</item>
+    </string-array>
     <string-array name="changelog_v34">
         <item>Une demi-cellule étroite garde l\'aspect d\'avant : le nom du dossier sous son icône, celui de l\'appli à côté. Le réglage permet toujours de choisir.</item>
         <item>Tout geler depuis le menu d\'accueil ou le geste du coin demande maintenant confirmation avant de prendre une appli qui garde le téléphone utilisable, comme l\'écran de gel le fait déjà.</item>

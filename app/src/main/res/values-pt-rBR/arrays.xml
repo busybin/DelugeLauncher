@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v35">
+        <item>«Proteger apps essenciais» agora é uma linha em Configurações › Congelar apps, não o último interruptor da caixa de congelamento automático, então a busca das configurações o encontra com o congelamento ativado.</item>
+        <item>O atalho de congelamento fixado de um app que saiu da lista agora avisa que o atalho não está mais disponível, em vez de não fazer nada.</item>
+        <item>«Adicionar atalho à tela inicial» só aparece para apps que estão na lista de congelamento.</item>
+    </string-array>
     <string-array name="changelog_v34">
         <item>Uma meia célula estreita mantém o visual de antes: o nome da pasta sob o ícone e o do app ao lado. O ajuste ainda permite escolher.</item>
         <item>Congelar tudo pelo menu da tela inicial ou pelo gesto do canto agora pede confirmação antes de pegar um app que mantém o telefone funcionando, como a tela de congelamento já faz.</item>
