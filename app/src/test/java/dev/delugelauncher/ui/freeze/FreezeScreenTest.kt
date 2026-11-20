@@ -125,7 +125,6 @@ class FreezeScreenTest {
                 autoSkipCharging = true,
                 autoSkipForeground = true,
                 autoSkipNotifications = true,
-                protectEssentials = true,
                 onAddToPlan = { target, method ->
                     calls.added = target
                     calls.addedMethod = method
@@ -148,7 +147,6 @@ class FreezeScreenTest {
                 onSetAutoSkipCharging = {},
                 onSetAutoSkipForeground = {},
                 onSetAutoSkipNotifications = {},
-                onSetProtectEssentials = {},
                 onSetSystemAppsEnabled = {},
                 onExportPlan = {},
                 onImportPlan = {},

@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -393,6 +394,9 @@ class SettingsScreenModel(
     /** Whether the access probe has answered yet; until then the rows say "checking". */
     val freezeAccessChecked: Boolean,
     val onOpenFreezeApps: () -> Unit,
+    /** Whether freezing leaves the calling and messaging apps alone. */
+    val freezeProtect: Boolean,
+    val onSetFreezeProtect: (Boolean) -> Unit,
     /** How many apps the per-app firewall is keeping offline, for the settings row. */
     val networkCount: Int,
     /** Whether root or Shizuku is available; without one the network row is greyed out. */
@@ -1373,6 +1377,22 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 onClick = onOpenFreezeApps,
                 leading = Icons.Filled.Lock,
                 enabled = freezeAccessChecked && freezeHasAccess,
+            )
+        },
+        // Beside the list it guards, and a settings row so the search box can find it: the
+        // switch used to live only in the automatic-freezing dialog, where nobody looked for
+        // it while trying to freeze the dialer by hand.
+        SettingsEntry(
+            SettingsSection.FREEZE, stringResource(R.string.freeze_protect),
+            "essential protect calls sms phone dialer messaging keyboard brick guard",
+            visible = freezeEnabled,
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.freeze_protect),
+                detail = stringResource(R.string.freeze_protect_detail),
+                checked = freezeProtect,
+                onCheckedChange = onSetFreezeProtect,
+                leading = Icons.Filled.Phone,
             )
         },
         SettingsEntry(

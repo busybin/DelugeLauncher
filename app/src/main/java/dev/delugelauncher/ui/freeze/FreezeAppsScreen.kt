@@ -114,7 +114,6 @@ fun FreezeAppsScreen(
     autoSkipCharging: Boolean,
     autoSkipForeground: Boolean,
     autoSkipNotifications: Boolean,
-    protectEssentials: Boolean,
     freezeEnabled: Boolean = true,
     onSetFreezeEnabled: (Boolean) -> Unit = {},
     onAddToPlan: (AppInfo, FreezeMethod) -> Unit,
@@ -137,7 +136,6 @@ fun FreezeAppsScreen(
     onSetAutoSkipCharging: (Boolean) -> Unit,
     onSetAutoSkipForeground: (Boolean) -> Unit,
     onSetAutoSkipNotifications: (Boolean) -> Unit,
-    onSetProtectEssentials: (Boolean) -> Unit,
     onSetSystemAppsEnabled: (Boolean) -> Unit,
     onExportPlan: (Uri) -> Unit,
     onImportPlan: (Uri) -> Unit,
@@ -656,14 +654,12 @@ fun FreezeAppsScreen(
             skipCharging = autoSkipCharging,
             skipForeground = autoSkipForeground,
             skipNotifications = autoSkipNotifications,
-            protectEssentials = protectEssentials,
             onSetEnabled = onSetAutoEnabled,
             onSetDelay = onSetAutoDelay,
             onSetUnfreezeOnUnlock = onSetUnfreezeOnUnlock,
             onSetSkipCharging = onSetAutoSkipCharging,
             onSetSkipForeground = onSetAutoSkipForeground,
             onSetSkipNotifications = onSetAutoSkipNotifications,
-            onSetProtectEssentials = onSetProtectEssentials,
             onDismiss = { autoDialog = false },
         )
     }
@@ -814,14 +810,12 @@ private fun AutoFreezeDialog(
     skipCharging: Boolean,
     skipForeground: Boolean,
     skipNotifications: Boolean,
-    protectEssentials: Boolean,
     onSetEnabled: (Boolean) -> Unit,
     onSetDelay: (Int) -> Unit,
     onSetUnfreezeOnUnlock: (Boolean) -> Unit,
     onSetSkipCharging: (Boolean) -> Unit,
     onSetSkipForeground: (Boolean) -> Unit,
     onSetSkipNotifications: (Boolean) -> Unit,
-    onSetProtectEssentials: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
@@ -875,19 +869,6 @@ private fun AutoFreezeDialog(
                     stringResource(R.string.freeze_auto_skip_notifications),
                     skipNotifications,
                     onSetSkipNotifications,
-                )
-                ToggleRow(
-                    stringResource(R.string.freeze_protect),
-                    protectEssentials,
-                    onSetProtectEssentials,
-                )
-                // The switch is the only place its consequences are visible: it hands back the
-                // app that answers calls and the SMS app, and one line here says so.
-                Text(
-                    stringResource(R.string.freeze_protect_detail),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 6.dp),
                 )
             }
         },

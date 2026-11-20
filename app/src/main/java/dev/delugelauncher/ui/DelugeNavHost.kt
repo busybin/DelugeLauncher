@@ -1892,6 +1892,10 @@ fun DelugeNavHost(
                 freezeHasAccess = freezeStatus.access != dev.delugelauncher.data.FreezeAccess.NONE,
                 freezeAccessChecked = freezeStatus.checked,
                 onOpenFreezeApps = { navController.navigate("settings/freeze") },
+                freezeProtect = freezeProtect,
+                onSetFreezeProtect = { enabled ->
+                    scope.launch { app.prefs.setFreezeProtect(enabled) }
+                },
                 networkCount = networkApplied.size,
                 networkHasAccess = freezeStatus.access != dev.delugelauncher.data.FreezeAccess.NONE,
                 networkEnabled = networkMode.enabled,
@@ -2324,7 +2328,6 @@ fun DelugeNavHost(
                 autoSkipCharging = freezeSkipCharging,
                 autoSkipForeground = freezeSkipForeground,
                 autoSkipNotifications = freezeSkipNotifications,
-                protectEssentials = freezeProtect,
                 freezeEnabled = freezeEnabled,
                 onSetFreezeEnabled = setFreezeEnabled,
                 onAddToPlan = { appInfo, method ->
@@ -2597,9 +2600,6 @@ fun DelugeNavHost(
                 },
                 onSetAutoSkipNotifications = { enabled ->
                     scope.launch { app.prefs.setFreezeAutoSkipNotifications(enabled) }
-                },
-                onSetProtectEssentials = { enabled ->
-                    scope.launch { app.prefs.setFreezeProtect(enabled) }
                 },
                 onExportPlan = { uri ->
                     scope.launch {
