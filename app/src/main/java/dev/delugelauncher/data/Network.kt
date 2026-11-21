@@ -176,6 +176,30 @@ object NetworkState {
         val still = chunk.filter { read[it] != false }
         return before.without(chunk - still.toSet()).with(emptySet(), still.toSet(), emptySet())
     }
+
+    /**
+     * Corrects the rows the platform no longer reports as blocked.
+     *
+     * [NetworkBuckets.applied] is a cache, not a fact: chain3 keeps nothing across a reboot and
+     * another privileged caller can lift a rule, but [NetworkManager.sync] only writes the
+     * difference between the policy and that cache. Without this pass a row recorded as blocked
+     * stays blocked in the record forever while the device enforces nothing. Only a definite
+     * "allow" moves a row back to pending, where the next sync applies it again; a package that
+     * cannot be read keeps its record, because a failed read is not proof of anything.
+     */
+    fun verify(
+        before: NetworkBuckets,
+        chunk: List<String>,
+        read: Map<String, Boolean?>,
+    ): NetworkBuckets {
+        val lost = chunk.filter { read[it] == false }
+        if (lost.isEmpty()) return before
+        return NetworkBuckets(
+            applied = before.applied - lost.toSet(),
+            pending = before.pending + lost,
+            unknown = before.unknown,
+        )
+    }
 }
 
 /**
@@ -295,6 +319,15 @@ class NetworkManager(
     @Volatile private var supportProbed = false
     @Volatile private var supportAnswer = false
 
+    /**
+     * Whether the record has been read back against the platform in this process.
+     *
+     * [sync] is the one entry point every trigger goes through, so the correction has to live
+     * there: a reboot, a foreign lift or a rule changed by hand all leave rows recorded as
+     * blocked while the device enforces nothing, and the applied set alone would never notice.
+     */
+    @Volatile private var verified = false
+
     /** The cached answer, for composables that must decide before a probe can run. */
     fun supportedCached(): Boolean = supportAnswer
 
@@ -366,7 +399,38 @@ class NetworkManager(
         syncLocked()
     }
 
-    suspend fun sync(): NetworkResult = gate.withLock { syncLocked() }
+    suspend fun sync(): NetworkResult = gate.withLock {
+        if (prefs.networkModeNow().enabled && !verified) verifyLocked()
+        syncLocked()
+    }
+
+    /**
+     * Reads the platform back for every row recorded as blocked, once per process.
+     *
+     * The record is a cache: chain3 rules vanish on reboot and a privileged caller can lift one
+     * without telling this app. A row the platform no longer denies goes back to pending, so the
+     * [syncLocked] that follows this pass blocks it again; rows that cannot be read are left
+     * alone. One shell call per [BATCH] packages, only once, so neither a boot nor a wake pays
+     * for it twice.
+     */
+    private suspend fun verifyLocked() {
+        if (!supported()) return
+        verified = true
+        val applied = prefs.networkAppliedNow()
+        if (applied.isEmpty()) return
+        var buckets = NetworkBuckets(
+            applied = applied,
+            pending = prefs.networkPendingNow(),
+            unknown = prefs.networkUnknownNow(),
+        )
+        val rows = applied.toList()
+        rows.chunked(BATCH).forEach { chunk ->
+            val read = shell.runCapture(NetworkCommands.readScript(chunk), TIMEOUT)
+                ?.second?.let { NetworkCommands.parseRead(it, chunk) }.orEmpty()
+            buckets = NetworkState.verify(buckets, chunk, read)
+        }
+        prefs.setNetworkState(buckets.applied, buckets.pending, buckets.unknown)
+    }
 
     /** Lifts every rule this app owns, including the pending ones. */
     suspend fun restoreAll(): NetworkResult = gate.withLock {
@@ -379,8 +443,12 @@ class NetworkManager(
         val policy = prefs.networkPolicyNow()
         if (!policy.mode.enabled) return restoreAllLocked()
         val desired = desiredFor(policy)
-        val ours = prefs.networkAppliedNow() + prefs.networkPendingNow() + prefs.networkUnknownNow()
-        val toBlock = desired - ours
+        val applied = prefs.networkAppliedNow()
+        val ours = applied + prefs.networkPendingNow() + prefs.networkUnknownNow()
+        // Only an applied row is proof the platform keeps the rule. A pending one — a command
+        // that failed, or a rule cleared by a reboot and caught by [verifyLocked] — has to be
+        // sent again or it would be a cut-off the list promises and the device never made.
+        val toBlock = desired - applied
         val toRestore = ours - desired
         var result = NetworkResult()
         if (toRestore.isNotEmpty()) result = merge(result, restoreLocked(toRestore.toList()))

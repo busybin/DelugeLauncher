@@ -31,10 +31,17 @@ class FreezeBootReceiver : BroadcastReceiver() {
                     // chain3 keeps nothing across a reboot: put the firewall's rules back
                     // before the user sees an app that was meant to be offline. Nothing to do
                     // when the feature was never on.
-                    val network = (appContext as? dev.delugelauncher.DelugeApp)?.networkManager
+                    val app = appContext as? dev.delugelauncher.DelugeApp
+                    // The record can name a pause the system lifted while the phone was off —
+                    // the "unpause and open" dialog is not this app's call. Correct it first,
+                    // or the sync below would cut off an app that is already open.
+                    runCatching { app?.freezeManager?.reconcileApplied() }
+                    val network = app?.networkManager
                     if (network != null &&
                         (prefs.networkModeNow().enabled || prefs.networkAppliedNow().isNotEmpty())
                     ) {
+                        // sync re-reads every row it records as blocked and applies the ones
+                        // the platform no longer denies; that is what replays a reboot.
                         network.sync()
                     }
                 }

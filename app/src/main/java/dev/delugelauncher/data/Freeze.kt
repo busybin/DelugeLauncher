@@ -1486,7 +1486,13 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
      * by the system's own "Unpause and open" button gets its background app-ops
      * un-restricted. Only states the platform answers are checked, because HIDE has no
      * public answer.
+     *
+     * Called when the freeze screen opens, and when the system says it lifted a pause by
+     * itself (the "unpause and open" dialog). The network follows this record, so a pause the
+     * app does not know about would keep the app offline after it is already open.
      */
+    suspend fun reconcileApplied() = reconcile()
+
     private suspend fun reconcile() = gate.withLock {
         val plan = prefs.freezeMethodsNow()
         val applied = prefs.freezeAppliedNow()

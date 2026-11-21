@@ -208,4 +208,37 @@ class NetworkTest {
         assertTrue(after.pending.isEmpty())
         assertTrue(after.unknown.isEmpty())
     }
+
+    @Test
+    fun `a row the platform no longer denies goes back to pending`() {
+        val before = NetworkBuckets(
+            applied = setOf("com.a", "com.b", "com.c"),
+            pending = setOf("com.d"),
+            unknown = setOf("com.e"),
+        )
+
+        val after = NetworkState.verify(
+            before = before,
+            chunk = listOf("com.a", "com.b", "com.c"),
+            read = mapOf("com.a" to true, "com.b" to false, "com.c" to null),
+        )
+
+        // A package that cannot be read keeps its record; only a definite "allow" moves.
+        assertEquals(setOf("com.a", "com.c"), after.applied)
+        assertEquals(setOf("com.b", "com.d"), after.pending)
+        assertEquals(setOf("com.e"), after.unknown)
+    }
+
+    @Test
+    fun `a verify pass that reads nothing back changes nothing`() {
+        val before = NetworkBuckets(applied = setOf("com.a", "com.b"))
+
+        val after = NetworkState.verify(
+            before = before,
+            chunk = listOf("com.a", "com.b"),
+            read = emptyMap(),
+        )
+
+        assertEquals(before, after)
+    }
 }

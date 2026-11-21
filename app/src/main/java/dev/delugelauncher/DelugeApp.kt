@@ -106,6 +106,14 @@ class DelugeApp : Application() {
                 runCatching { freezeManager.writeBackup() }
             }
         }
+        // A pause the system lifted while this process was gone leaves no event behind: the
+        // dialog that offers "unpause and open" is run by the system, not by this app. Ask the
+        // device once per start, then let the firewall catch up with the record it corrected —
+        // the app must not stay offline after it is already open.
+        appScope.launch {
+            runCatching { freezeManager.reconcileApplied() }
+            if (prefs.networkModeNow().enabled) runCatching { networkManager.sync() }
+        }
         appScope.launch {
             freezeManager.changes.filter { it > 0 }.collect {
                 runCatching { freezeManager.writeBackup() }
@@ -199,6 +207,24 @@ class DelugeApp : Application() {
             },
             ContextCompat.RECEIVER_NOT_EXPORTED,
         )
+        // The system lifts a pause by itself when the user answers that dialog with "unpause
+        // and open": the launch comes from the share sheet or another app, so no freeze call
+        // ever reaches this process. Registered-only, which is why the start above also asks
+        // the device once; together they cover the pause being lifted either way.
+        ContextCompat.registerReceiver(
+            this,
+            object : android.content.BroadcastReceiver() {
+                override fun onReceive(context: android.content.Context, intent: android.content.Intent) {
+                    val names = intent.getStringArrayExtra(EXTRA_CHANGED_PACKAGE_LIST)
+                    if (names.isNullOrEmpty()) return
+                    // Reconciles the whole record rather than the named packages: the answer
+                    // is read from the device, so the list it reports is the one to correct.
+                    appScope.launch { runCatching { freezeManager.reconcileApplied() } }
+                }
+            },
+            android.content.IntentFilter(ACTION_PACKAGES_UNSUSPENDED),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
         // The automatic freeze is a running watcher rather than a scheduled job: it is started
         // and stopped from here alone, so the preference and the notification can never
         // disagree about whether something is watching the screen.
@@ -229,5 +255,13 @@ class DelugeApp : Application() {
 
     companion object {
         const val HOST_ID = 1024
+
+        /** `Intent.ACTION_PACKAGES_UNSUSPENDED`, hidden. The system sends it registered-only. */
+        private const val ACTION_PACKAGES_UNSUSPENDED =
+            "android.intent.action.PACKAGES_UNSUSPENDED"
+
+        /** `Intent.EXTRA_CHANGED_PACKAGE_LIST`. */
+        private const val EXTRA_CHANGED_PACKAGE_LIST =
+            "android.intent.extra.changed_package_list"
     }
 }
