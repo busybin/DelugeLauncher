@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v36">
+        <item>Apps congelados podem ser desenhados em escala de cinza além de esmaecidos, para continuarem visíveis à luz do dia: Configurações › Efeitos › Aparência de apps congelados.</item>
+        <item>Depois de reiniciar, o firewall relê o dispositivo em vez de confiar no registro, então um bloqueio que o telefone esqueceu é refeito.</item>
+        <item>Uma pausa que o sistema levanta sozinho — a caixa “remover pausa e abrir” — agora é percebida, então um app já aberto não fica sem conexão.</item>
+    </string-array>
     <string-array name="changelog_v35">
         <item>«Proteger apps essenciais» agora é uma linha em Configurações › Congelar apps, não o último interruptor da caixa de congelamento automático, então a busca das configurações o encontra com o congelamento ativado.</item>
         <item>O atalho de congelamento fixado de um app que saiu da lista agora avisa que o atalho não está mais disponível, em vez de não fazer nada.</item>

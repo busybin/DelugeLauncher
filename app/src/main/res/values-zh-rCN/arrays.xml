@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v36">
+        <item>冻结的应用除了变淡，还可以画成灰度，强光下也一眼能认出来：设置 › 效果 › 冻结应用外观。</item>
+        <item>重启后防火墙会回读设备状态，不再只信自己的记录，手机忘掉的断网会重新生效。</item>
+        <item>系统自己解除暂停（「解除暂停并打开」对话框）现在能察觉，已经打开的应用不会被留在断网状态。</item>
+    </string-array>
     <string-array name="changelog_v35">
         <item>「保护关键应用」现在是「设置 › 应用冻结」里的一行，不再藏在自动冻结对话框的末尾，冻结开启时设置搜索能搜到它。</item>
         <item>应用已不在冻结名单时，桌面上的冻结快捷方式会提示「此快捷方式已不可用」，不再点了没反应。</item>
