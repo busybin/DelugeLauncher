@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v36">
-        <item>Les applis gelées peuvent s\'afficher en niveaux de gris en plus d\'être atténuées, pour rester lisibles en plein soleil : Paramètres › Effets › Apparence des applis gelées.</item>
+        <item>Les applis gelées peuvent s\'afficher en niveaux de gris en plus d\'être atténuées, pour rester lisibles en plein soleil : Paramètres › Apparence › Aspect des applis gelées.</item>
         <item>Après un redémarrage, le pare-feu relit l\'appareil au lieu de se fier à son registre : un blocage que le téléphone a oublié est rétabli.</item>
         <item>Une pause levée par le système — la boîte « lever la pause et ouvrir » — est désormais remarquée, donc une appli déjà ouverte n\'est plus laissée hors ligne.</item>
     </string-array>

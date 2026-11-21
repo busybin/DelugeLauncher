@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v36">
-        <item>Las apps congeladas pueden mostrarse en escala de grises además de atenuadas, para que se distingan a la luz del día: Ajustes › Efectos › Aspecto de apps congeladas.</item>
+        <item>Las apps congeladas pueden mostrarse en escala de grises además de atenuadas, para que se distingan a la luz del día: Ajustes › Apariencia › Aspecto de apps congeladas.</item>
         <item>Tras reiniciar, el cortafuegos relee el dispositivo en lugar de fiarse de su registro, así que un bloqueo que el teléfono olvidó vuelve a aplicarse.</item>
         <item>Ahora se detecta una pausa que el sistema levanta por su cuenta —el diálogo «quitar pausa y abrir»—, así que una app ya abierta no queda sin conexión.</item>
     </string-array>

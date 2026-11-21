@@ -24,6 +24,8 @@ fun FolderIcon(
     sizeDp: Int,
     contentColor: Color,
     iconOverride: String?,
+    /** Whether a member is set aside, so its cell follows the frozen-app look like the row does. */
+    memberDesaturate: (AppInfo) -> Boolean = { false },
 ) {
     if (!LocalIconConfig.current.showIcons) return
     var drewOverride = false
@@ -56,7 +58,7 @@ fun FolderIcon(
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 preview.chunked(2).forEach { rowApps ->
                     Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        rowApps.forEach { AppIcon(app = it, sizeDp = cell) }
+                        rowApps.forEach { AppIcon(app = it, sizeDp = cell, desaturate = memberDesaturate(it)) }
                     }
                 }
             }

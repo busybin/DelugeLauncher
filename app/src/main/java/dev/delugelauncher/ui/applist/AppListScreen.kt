@@ -1550,6 +1550,7 @@ fun AppListScreen(
                             onAddToHome = { onAddFolderToHome(folderRow.folder) },
                             onRemoveFromHome = { onRemoveFolderFromHome(folderRow.folder) },
                             onDelete = { onDeleteFolder(folderRow.folder) },
+                            frozenLook = frozenLook,
                         )
                         return
                     }
@@ -2010,6 +2011,8 @@ private fun FolderListRow(
     onAddToHome: () -> Unit,
     onRemoveFromHome: () -> Unit,
     onDelete: () -> Unit,
+    /** A frozen member's square follows the look setting like its row does. */
+    frozenLook: FrozenLook,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -2062,14 +2065,18 @@ private fun FolderListRow(
                     modifier = Modifier.weight(1f, fill = false),
                 )
             }
+            val memberDesaturate: (AppInfo) -> Boolean = { member ->
+                frozenLook == FrozenLook.GREYSCALE &&
+                    (member.frozen != null || member.suspended || member.quietProfile)
+            }
             if (showIcons && iconSide == IconSide.LEFT) {
-                FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
                 Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
             }
             text()
             if (showIcons && iconSide == IconSide.RIGHT) {
                 Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
-                FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
             }
         }
 

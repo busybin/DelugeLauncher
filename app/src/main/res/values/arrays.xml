@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string-array name="changelog_v36">
-        <item>Frozen apps can be drawn in greyscale as well as faded, so they stand out in bright daylight: Settings › Effects › Frozen app look.</item>
+        <item>Frozen apps can be drawn in greyscale as well as faded, so they stand out in bright daylight: Settings › Appearance › Frozen app look.</item>
         <item>After a restart the firewall reads the device back instead of trusting its record, so a cut-off the phone forgot is made again.</item>
         <item>A pause the system lifts by itself — the “unpause and open” dialog — is noticed now, so an app that is already open is not left offline.</item>
     </string-array>

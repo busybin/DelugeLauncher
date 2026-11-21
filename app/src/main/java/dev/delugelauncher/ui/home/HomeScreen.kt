@@ -2274,7 +2274,18 @@ private fun FolderRow(
         Box(Modifier.fillMaxWidth()) {
             val folderIcon: @Composable () -> Unit = {
                 Box(Modifier.pressPop(interaction)) {
-                    FolderIcon(members, iconSizeDp, contentColor, folder.icon)
+                    FolderIcon(
+                        members = members,
+                        sizeDp = iconSizeDp,
+                        contentColor = contentColor,
+                        iconOverride = folder.icon,
+                        // A frozen member's square follows the look setting like its row does,
+                        // so a folder of greyed apps does not preview them in colour.
+                        memberDesaturate = { app ->
+                            frozenLook == FrozenLook.GREYSCALE &&
+                                (app.frozen != null || app.suspended || app.quietProfile)
+                        },
+                    )
                 }
             }
             val folderName = folderDisguise[folder.id] ?: folder.name

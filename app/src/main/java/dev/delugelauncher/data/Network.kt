@@ -415,21 +415,29 @@ class NetworkManager(
      */
     private suspend fun verifyLocked() {
         if (!supported()) return
-        verified = true
         val applied = prefs.networkAppliedNow()
-        if (applied.isEmpty()) return
+        if (applied.isEmpty()) {
+            verified = true
+            return
+        }
         var buckets = NetworkBuckets(
             applied = applied,
             pending = prefs.networkPendingNow(),
             unknown = prefs.networkUnknownNow(),
         )
+        var answered = false
         val rows = applied.toList()
         rows.chunked(BATCH).forEach { chunk ->
             val read = shell.runCapture(NetworkCommands.readScript(chunk), TIMEOUT)
-                ?.second?.let { NetworkCommands.parseRead(it, chunk) }.orEmpty()
-            buckets = NetworkState.verify(buckets, chunk, read)
+            if (read != null) answered = true
+            val parsed = read?.second?.let { NetworkCommands.parseRead(it, chunk) }.orEmpty()
+            buckets = NetworkState.verify(buckets, chunk, parsed)
         }
         prefs.setNetworkState(buckets.applied, buckets.pending, buckets.unknown)
+        // A pass the channel never answered changes nothing, so leave the flag down and let
+        // the next sync ask again: a launcher that started before access was granted would
+        // otherwise keep the stale record for the rest of the process.
+        verified = answered
     }
 
     /** Lifts every rule this app owns, including the pending ones. */
