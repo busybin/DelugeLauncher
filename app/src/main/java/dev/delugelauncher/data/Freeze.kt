@@ -346,6 +346,16 @@ object FreezeSelection {
     ): List<String> = members.filter { it in plan }
 
     /**
+     * The members of a group action whose warning should be asked: only the ones the list will
+     * freeze. A folder can hold Settings without it being on the list, and the run leaves it
+     * alone by design, so naming it in the warning would describe a freeze that never happens.
+     */
+    fun listedMembers(
+        members: List<AppInfo>,
+        plan: Map<String, FreezeMethod>,
+    ): List<AppInfo> = members.filter { it.freezeKey in plan }
+
+    /**
      * What a listed-only group run will touch, and how many it leaves alone.
      *
      * Kept here rather than in the suspend run so the counting rule — a duplicate member is one

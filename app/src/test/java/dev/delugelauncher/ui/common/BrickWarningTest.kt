@@ -6,6 +6,8 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import dev.delugelauncher.data.AppInfo
+import dev.delugelauncher.data.FreezeMethod
+import dev.delugelauncher.data.FreezeSelection
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -106,6 +108,39 @@ class BrickWarningTest {
                 listOf("${systemUi.packageName}|10"),
                 labelOf = { "System UI" },
             ) { ran = true }
+        }
+
+        compose.onNodeWithText("This can leave the phone unusable").assertExists()
+        assertFalse(ran)
+    }
+
+    @Test
+    fun `a folder warns only about the members it will freeze`() {
+        val settings = app("com.android.settings", "Settings")
+        val notes = app("com.example.notes", "Notes")
+        val plan = mapOf(notes.freezeKey to FreezeMethod.SUSPEND)
+        val state = BrickWarningState(setOf(settings.packageName))
+        var ran = false
+        compose.setContent { BrickWarningDialog(state) }
+
+        compose.runOnIdle {
+            state.guard(FreezeSelection.listedMembers(listOf(settings, notes), plan)) { ran = true }
+        }
+
+        assertTrue(ran)
+        compose.onNodeWithText("This can leave the phone unusable").assertDoesNotExist()
+    }
+
+    @Test
+    fun `a folder still warns when the system app is on the list`() {
+        val settings = app("com.android.settings", "Settings")
+        val plan = mapOf(settings.freezeKey to FreezeMethod.SUSPEND)
+        val state = BrickWarningState(setOf(settings.packageName))
+        var ran = false
+        compose.setContent { BrickWarningDialog(state) }
+
+        compose.runOnIdle {
+            state.guard(FreezeSelection.listedMembers(listOf(settings), plan)) { ran = true }
         }
 
         compose.onNodeWithText("This can leave the phone unusable").assertExists()

@@ -21,6 +21,7 @@ import android.content.Context
 import dev.delugelauncher.data.FreezeAccess
 import dev.delugelauncher.data.FreezeMethod
 import dev.delugelauncher.data.FreezeOutcome
+import dev.delugelauncher.data.FreezeSelection
 import dev.delugelauncher.data.FreezeStatus
 import dev.delugelauncher.data.LockCapabilities
 import dev.delugelauncher.data.targetKind
@@ -1845,7 +1846,7 @@ fun HomeRoute(
                     onNavigate("folder/" + android.net.Uri.encode(folder.id))
                 },
                 onFreezeFolder = if (freezeUsable) {
-                    folderFreezeAction(app, context, scope, LocalBrickWarning.current)
+                    folderFreezeAction(app, context, scope, LocalBrickWarning.current, freezeMethods)
                 } else {
                     null
                 },
@@ -2596,8 +2597,14 @@ private fun folderFreezeAction(
     context: Context,
     scope: CoroutineScope,
     brickWarning: BrickWarning,
+    plan: Map<String, FreezeMethod>,
 ): (List<AppInfo>) -> Unit = { members ->
-    brickWarning.guard(members) { freezeFolderNow(app, context, scope, members) }
+    // The warning names what this run will actually freeze. A folder can hold Settings without
+    // it being on the list; the run leaves it alone, so warning about it describes a freeze that
+    // never happens. The plan is read where the menu is drawn, so it is the same list the run uses.
+    brickWarning.guard(FreezeSelection.listedMembers(members, plan)) {
+        freezeFolderNow(app, context, scope, members)
+    }
 }
 
 /** Freezes a folder's members and says what actually happened, one toast for the run. */
