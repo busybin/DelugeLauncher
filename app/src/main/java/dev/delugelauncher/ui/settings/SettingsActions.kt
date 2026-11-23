@@ -164,6 +164,7 @@ class SettingsActionsA(
     val onSetWebSearchFallback: (Boolean) -> Unit,
     val onSetSwipeUpOpensSearch: (Boolean) -> Unit,
     val onSetHoldScroll: (Boolean) -> Unit,
+    val onSetStripFollowsPastEnds: (Boolean) -> Unit,
     val onSetHoldScrollSpeed: (Int) -> Unit,
     val onSetEdgeZoneBandOnly: (Boolean) -> Unit,
     val onSetShowSettingsRow: (Boolean) -> Unit,

@@ -1125,4 +1125,6 @@
     <string name="settings_az_range">نطاق الشريط</string>
     <string name="settings_az_range_detail">يُسحب أعلى الشريط وأسفله في «تعديل التخطيط»: اضغط مطولًا على الشاشة الرئيسية ثم «تعديل التخطيط» ثم «نطاق شريط A–Z».</string>
     <string name="folder_open_label">فتح المجلد، %1$d تطبيقات</string>
+    <string name="settings_strip_follows">يتابع الشريط بعد الطرفين</string>
+    <string name="settings_strip_follows_detail">السحب بعد A أو Z يدفع الحروف مع إصبعك ويبقي القائمة مفتوحة. بعد Z ينتقل إلى نهاية القائمة</string>
 </resources>

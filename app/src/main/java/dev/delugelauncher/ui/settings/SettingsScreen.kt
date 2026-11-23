@@ -257,6 +257,8 @@ class SettingsScreenModel(
     val onSetEdgeZoneBandOnly: (Boolean) -> Unit,
     val holdScroll: Boolean,
     val onSetHoldScroll: (Boolean) -> Unit,
+    val stripFollowsPastEnds: Boolean,
+    val onSetStripFollowsPastEnds: (Boolean) -> Unit,
     val dimOthersScrubbing: Boolean,
     val onSetDimOthersScrubbing: (Boolean) -> Unit,
     val markWorkApps: Boolean,
@@ -920,6 +922,13 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 label = stringResource(R.string.settings_dim_others),
                 detail = stringResource(R.string.settings_dim_others_detail),
                 checked = dimOthersScrubbing, onCheckedChange = onSetDimOthersScrubbing,
+            )
+        },
+        SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_strip_follows), "a-z strip drag past end follow close") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_strip_follows),
+                detail = stringResource(R.string.settings_strip_follows_detail),
+                checked = stripFollowsPastEnds, onCheckedChange = onSetStripFollowsPastEnds,
             )
         },
         SettingsEntry(SettingsSection.STRIP, stringResource(R.string.settings_hold_scroll), "a-z hold scroll") {

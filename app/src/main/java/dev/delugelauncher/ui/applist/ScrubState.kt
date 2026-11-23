@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import dev.delugelauncher.data.AzStripSide
 import dev.delugelauncher.data.EdgeSide
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * Everything that changes while a finger is on the A-Z strip, in one stable holder.
@@ -45,7 +47,11 @@ class ScrubState {
 
     private var placementCount = 0L
 
-    data class Placement(val letter: String, val count: Long)
+    /**
+     * [atEnd] asks for the very end of the list, past the last letter's apps: the finger was
+     * pushed past Z, which is a place the alphabet itself has no row for.
+     */
+    data class Placement(val letter: String, val count: Long, val atEnd: Boolean = false)
 
     /** True while a finger is down on an edge zone. */
     var active by mutableStateOf(false)
@@ -73,6 +79,12 @@ class ScrubState {
     private val releasePull = Animatable(0f)
     private var releasing by mutableStateOf(false)
 
+    // How far the strip has been pushed by a finger run off one of its ends, with "Strip
+    // follows past the ends" on. Kept for the rest of the gesture — a thing that was pushed
+    // stays where it was pushed to — and sprung home on release.
+    private var shift by mutableFloatStateOf(0f)
+    private val releaseShift = Animatable(0f)
+
     /**
      * When the strip was last tapped, so a second tap can be recognized. Deliberately not
      * snapshot state: nothing draws from it, and both edge zones share one holder so a
@@ -86,6 +98,8 @@ class ScrubState {
     fun currentY(): Float? = if (active) y else null
 
     fun currentPull(): Float = if (releasing) releasePull.value else pull
+
+    fun currentShift(): Float = if (releasing) releaseShift.value else shift
 
     /**
      * Parks the strip on the edge the settings name, so it renders on the right side before
@@ -105,6 +119,7 @@ class ScrubState {
         active = true
         scrubbing = false
         releasing = false
+        shift = 0f
         // Every gesture asks afresh, so picking the same letter twice places the list twice —
         // the second time is someone who scrolled away and wants to be back there.
         placement = null
@@ -128,11 +143,29 @@ class ScrubState {
         scrubbing = true
     }
 
-    fun update(y: Float, inwardPx: Float, letter: String?) {
+    /**
+     * [shiftPx] is how far the strip has been pushed off its ends, and [atEnd] that it is
+     * being pushed past its last letter, which places the list at its very end rather than at
+     * any letter.
+     */
+    fun update(
+        y: Float,
+        inwardPx: Float,
+        letter: String?,
+        shiftPx: Float = 0f,
+        atEnd: Boolean = false,
+    ) {
         this.y = y
         this.pull = inwardPx
+        this.shift = shiftPx
+        if (atEnd && letter != null) {
+            // No letter is being pointed at, so none is shown or singled out.
+            this.letter = null
+            if (placement?.atEnd != true) placement = Placement(letter, ++placementCount, atEnd = true)
+            return
+        }
         this.letter = letter
-        if (letter != null && letter != placement?.letter) {
+        if (letter != null && (letter != placement?.letter || placement?.atEnd == true)) {
             placement = Placement(letter, ++placementCount)
         }
     }
@@ -150,15 +183,18 @@ class ScrubState {
         letter = null
         releasing = true
         releasePull.snapTo(pull)
-        releasePull.animateTo(
-            targetValue = 0f,
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium,
-            ),
+        releaseShift.snapTo(shift)
+        val home = spring<Float>(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMedium,
         )
+        coroutineScope {
+            launch { releasePull.animateTo(0f, home) }
+            launch { releaseShift.animateTo(0f, home) }
+        }
         releasing = false
         pull = 0f
+        shift = 0f
     }
 
     /** Cancels a scrub without the spring, for dismissals that snap (the HOME key). */
@@ -170,6 +206,7 @@ class ScrubState {
         placement = null
         releasing = false
         pull = 0f
+        shift = 0f
     }
 }
 

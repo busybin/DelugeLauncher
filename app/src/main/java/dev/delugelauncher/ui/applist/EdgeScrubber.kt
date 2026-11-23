@@ -149,6 +149,8 @@ fun EdgeScrubber(
     ripple: RippleParams = RippleParams(),
     /** How far the wave reaches in from the edge, as a multiple of the built-in reach. */
     reachScale: Float = 1f,
+    /** How far a finger run off an end has pushed the column, read in the draw phase. */
+    shiftPx: () -> Float = { 0f },
     modifier: Modifier = Modifier,
 ) {
     if (letters.isEmpty()) return
@@ -167,6 +169,7 @@ fun EdgeScrubber(
     var frame by remember { mutableIntStateOf(0) }
     val scrubYState by rememberUpdatedState(scrubY)
     val pullState by rememberUpdatedState(pullPx)
+    val shiftState by rememberUpdatedState(shiftPx)
     val rippleState by rememberUpdatedState(ripple)
 
     LaunchedEffect(style, sim, centerYs, sigmaPx, bellPx) {
@@ -190,7 +193,9 @@ fun EdgeScrubber(
                 last = now
                 acc += dt
 
-                val y = scrubYState()
+                // The bulge is worked out against the column where it has been pushed to,
+                // so it stays on the letter under the finger rather than where it started.
+                val y = scrubYState()?.let { it - shiftState() }
                 val amplitude = bellPx + pullState()
                 for (i in bell.indices) {
                     bell[i] = if (y == null) 0f else {
@@ -244,7 +249,7 @@ fun EdgeScrubber(
                             outward = sim.u[index].coerceAtLeast(-EDGE_INSET_DP * density)
                             gain = (abs(outward) / bellPx).coerceIn(0f, 1f)
                         } else {
-                            val y = scrubY()
+                            val y = scrubY()?.let { it - shiftPx() }
                             gain = if (y == null) {
                                 0f
                             } else {
@@ -257,6 +262,7 @@ fun EdgeScrubber(
                         // Position only for the scrub curve; the spotlight scales
                         // instead, and stays under the size that used to go pixelated.
                         translationX = if (side == EdgeSide.LEFT) outward else -outward
+                        translationY = shiftPx()
                         val s = if (lit) SPOTLIGHT_SCALE else 1f
                         scaleX = s
                         scaleY = s

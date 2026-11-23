@@ -420,6 +420,7 @@ fun AppListScreen(
     val activeSide = scrub.side
     val scrubY = remember(scrub) { scrub::currentY }
     val pullPx = remember(scrub) { scrub::currentPull }
+    val stripShift = remember(scrub) { scrub::currentShift }
 
     // Searching is a different mode from scrubbing: the letters shrink to whatever matched,
     // so the strip is hidden and placement stays out of it until the query is cleared.
@@ -538,8 +539,19 @@ fun AppListScreen(
     // From the placement and not from the live letter: the letter is gone by the time a quick
     // tap has composed anything, and the list is placed by what was asked for, not by what is
     // still under a finger.
-    val scrubRowIndex = remember(displayModel, scrubPlacement) {
-        val letter = scrubPlacement?.letter ?: return@remember -1
+    val scrubRowIndex = remember(displayModel, scrubPlacement, showSettingsRow, cells) {
+        val placement = scrubPlacement ?: return@remember -1
+        // Pushed past the last letter: whatever follows the alphabet, or the settings row when
+        // nothing does. With neither, the list simply stays on the last letter.
+        if (placement.atEnd) {
+            val tail = cells.alphabetEnd()
+            return@remember when {
+                tail < cells.rows.size -> tail
+                showSettingsRow -> cells.rows.size
+                else -> -1
+            }
+        }
+        val letter = placement.letter ?: return@remember -1
         cells.letterIndex.firstOrNull { it.first == letter }?.second ?: -1
     }
 
@@ -1727,6 +1739,7 @@ fun AppListScreen(
                     listState = listState,
                     scrubY = scrubY,
                     pullPx = pullPx,
+                    shiftPx = stripShift,
                     band = band,
                     stripSide = stripSide,
                     scrubStyle = scrubStyle,
@@ -2557,6 +2570,7 @@ private fun AlphabetSpyStrip(
     listState: LazyListState,
     scrubY: () -> Float?,
     pullPx: () -> Float,
+    shiftPx: () -> Float,
     band: ScrubBand,
     /** Which side the strip is drawn on: the one the rows are not aligned against. */
     stripSide: EdgeSide,
@@ -2590,6 +2604,7 @@ private fun AlphabetSpyStrip(
         style = scrubStyle,
         ripple = rippleParams,
         reachScale = scrubReach,
+        shiftPx = shiftPx,
         modifier = modifier,
     )
 }

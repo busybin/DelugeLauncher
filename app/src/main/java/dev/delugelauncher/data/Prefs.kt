@@ -513,6 +513,7 @@ class Prefs(private val context: Context) {
         val FAVORITES_EVER_SET = booleanPreferencesKey("favorites_ever_set")
         val EDGE_ZONE_BAND_ONLY = booleanPreferencesKey("edge_zone_band_only")
         val HOLD_SCROLL = booleanPreferencesKey("hold_scroll")
+        val STRIP_FOLLOWS_PAST_ENDS = booleanPreferencesKey("strip_follows_past_ends")
         val WEB_SEARCH_FALLBACK = booleanPreferencesKey("web_search_fallback")
         val SWIPE_UP_OPENS_SEARCH = booleanPreferencesKey("swipe_up_opens_search")
         val HOLD_SCROLL_SPEED = intPreferencesKey("hold_scroll_speed")
@@ -1908,6 +1909,13 @@ class Prefs(private val context: Context) {
     val holdScroll: Flow<Boolean> =
         data.map { it[Keys.HOLD_SCROLL] ?: false }.distinctUntilChanged()
 
+    /**
+     * Whether dragging past either end of the strip pushes it along instead of closing the
+     * list, and whether dragging past Z goes to the end of the list.
+     */
+    val stripFollowsPastEnds: Flow<Boolean> =
+        data.map { it[Keys.STRIP_FOLLOWS_PAST_ENDS] ?: false }.distinctUntilChanged()
+
     /** Rows a second while it does. */
     val holdScrollSpeed: Flow<Int> =
         data.map { (it[Keys.HOLD_SCROLL_SPEED] ?: 4).coerceIn(HOLD_SCROLL_RANGE) }
@@ -3257,6 +3265,10 @@ class Prefs(private val context: Context) {
 
     suspend fun setHoldScroll(v: Boolean) {
         context.dataStore.edit { it[Keys.HOLD_SCROLL] = v }
+    }
+
+    suspend fun setStripFollowsPastEnds(v: Boolean) {
+        context.dataStore.edit { it[Keys.STRIP_FOLLOWS_PAST_ENDS] = v }
     }
 
     suspend fun setHoldScrollSpeed(v: Int) {

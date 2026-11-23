@@ -2355,62 +2355,102 @@ fun HomeRoute(
         }
 
         // Edge zones sit on top of everything, so one unbroken touch opens the list and then
-        // scrubs it as the finger moves.
+        // scrubs it as the finger moves. Kept out of this body, which already sits at the JVM's
+        // 64 KB method limit.
         if (!homeEditMode && !bandEditMode && appListQuery.isEmpty()) {
-            val sides = remember(settings.edgeSide) {
-                when (settings.edgeSide) {
-                    EdgeSide.LEFT -> listOf(EdgeSide.LEFT)
-                    EdgeSide.RIGHT -> listOf(EdgeSide.RIGHT)
-                    EdgeSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
-                    // Off: no zone on either side. The home A-Z strip below is unaffected
-                    // and keeps showing — the setting is about the touch area, not the art.
-                    EdgeSide.NONE -> emptyList()
-                }
-            }
-            sides.forEach { side ->
-                EdgeTouchZone(
-                    side = side,
-                    widthDp = settings.edgeZoneWidthDp.dp,
-                    insetDp = (if (side == EdgeSide.LEFT) insetLeftDp else insetRightDp).dp,
-                    letters = listModel.letters,
-                    // The true band, never the idle strip's shortened one: the app list's
-                    // strip — the one on screen while a finger is on this zone — draws the
-                    // letters over exactly this, so the letter under the fingertip is the
-                    // one that lights.
-                    band = band,
-                    bandOnly = settings.edgeZoneBandOnly,
-                    holdScroll = settings.holdScroll,
-                    hapticFeedback = settings.hapticFeedback,
-                    state = scrub,
-                    listOpen = appListVisible,
-                    // The corner button's rect in root pixels: a press starting inside it
-                    // belongs to the button, so the zone lets it through untouched. With the
-                    // list open, the button is the list's own search button instead.
-                    exclusion = if (appListVisible) appListSearchBounds else cornerBounds,
-                    onDismiss = { closeAppList() },
-                    onOpen = {
-                        appListVisible = true
-                        // Opened by touching the edge, so there is nothing to animate in.
-                        scope.launch { openAnim.snapTo(openDistancePx) }
-                    },
-                    onDoubleTap = if (settings.doubleTapToLock) ({ lockOrExplain() }) else null,
-                    // Aligned to the top when it is confined, because the offset that puts it
-                    // against the band is measured from there. Centred, it would be placed by
-                    // half the leftover height and then pushed down again by the whole of the
-                    // band's top.
-                    modifier = Modifier.align(
-                        when {
-                            settings.edgeZoneBandOnly && side == EdgeSide.LEFT -> Alignment.TopStart
-                            settings.edgeZoneBandOnly -> Alignment.TopEnd
-                            side == EdgeSide.LEFT -> Alignment.CenterStart
-                            else -> Alignment.CenterEnd
-                        }
-                    ),
-                )
-            }
+            HomeEdgeZones(
+                settings = settings,
+                letters = listModel.letters,
+                band = band,
+                appListVisible = appListVisible,
+                cornerBounds = cornerBounds,
+                appListSearchBounds = appListSearchBounds,
+                insetLeftDp = insetLeftDp,
+                insetRightDp = insetRightDp,
+                scrub = scrub,
+                onDismiss = { closeAppList() },
+                onOpen = {
+                    appListVisible = true
+                    // Opened by touching the edge, so there is nothing to animate in.
+                    scope.launch { openAnim.snapTo(openDistancePx) }
+                },
+                onLock = { lockOrExplain() },
+            )
         }
     }
 }
+
+/**
+ * The invisible edge zones: one unbroken touch opens the app list and then scrubs it.
+ *
+ * Lifted out of [HomeRoute] for the same reason as [buildFreezeActions]: that composable is
+ * already at the JVM's 64 KB method limit, and one more inline call site pushed it over.
+ */
+@Composable
+private fun BoxScope.HomeEdgeZones(
+    settings: HomeSettings,
+    letters: List<String>,
+    band: ScrubBand,
+    appListVisible: Boolean,
+    cornerBounds: androidx.compose.ui.geometry.Rect?,
+    appListSearchBounds: androidx.compose.ui.geometry.Rect?,
+    insetLeftDp: Int,
+    insetRightDp: Int,
+    scrub: ScrubState,
+    onDismiss: () -> Unit,
+    onOpen: () -> Unit,
+    onLock: () -> Unit,
+) {
+    val sides = remember(settings.edgeSide) {
+        when (settings.edgeSide) {
+            EdgeSide.LEFT -> listOf(EdgeSide.LEFT)
+            EdgeSide.RIGHT -> listOf(EdgeSide.RIGHT)
+            EdgeSide.BOTH -> listOf(EdgeSide.LEFT, EdgeSide.RIGHT)
+            // Off: no zone on either side. The home A-Z strip below is unaffected
+            // and keeps showing — the setting is about the touch area, not the art.
+            EdgeSide.NONE -> emptyList()
+        }
+    }
+    sides.forEach { side ->
+        EdgeTouchZone(
+            side = side,
+            widthDp = settings.edgeZoneWidthDp.dp,
+            insetDp = (if (side == EdgeSide.LEFT) insetLeftDp else insetRightDp).dp,
+            letters = letters,
+            // The true band, never the idle strip's shortened one: the app list's
+            // strip — the one on screen while a finger is on this zone — draws the
+            // letters over exactly this, so the letter under the fingertip is the
+            // one that lights.
+            band = band,
+            bandOnly = settings.edgeZoneBandOnly,
+            holdScroll = settings.holdScroll,
+            followPastEnds = settings.stripFollowsPastEnds,
+            hapticFeedback = settings.hapticFeedback,
+            state = scrub,
+            listOpen = appListVisible,
+            // The corner button's rect in root pixels: a press starting inside it
+            // belongs to the button, so the zone lets it through untouched. With the
+            // list open, the button is the list's own search button instead.
+            exclusion = if (appListVisible) appListSearchBounds else cornerBounds,
+            onDismiss = onDismiss,
+            onOpen = onOpen,
+            onDoubleTap = if (settings.doubleTapToLock) ({ onLock() }) else null,
+            // Aligned to the top when it is confined, because the offset that puts it
+            // against the band is measured from there. Centred, it would be placed by
+            // half the leftover height and then pushed down again by the whole of the
+            // band's top.
+            modifier = Modifier.align(
+                when {
+                    settings.edgeZoneBandOnly && side == EdgeSide.LEFT -> Alignment.TopStart
+                    settings.edgeZoneBandOnly -> Alignment.TopEnd
+                    side == EdgeSide.LEFT -> Alignment.CenterStart
+                    else -> Alignment.CenterEnd
+                }
+            ),
+        )
+    }
+}
+
 
 private fun iconPickerRoute(key: String) = "iconpicker/" + Uri.encode(key)
 
@@ -2510,6 +2550,7 @@ data class HomeSettings(
     val favoritesEverSet: Boolean,
     val edgeZoneBandOnly: Boolean,
     val holdScroll: Boolean,
+    val stripFollowsPastEnds: Boolean,
     val holdScrollSpeed: Int,
     val dimOthersScrubbing: Boolean,
     val markWorkApps: Boolean,

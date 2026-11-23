@@ -1101,4 +1101,6 @@
     <string name="settings_az_range">Strip range</string>
     <string name="settings_az_range_detail">The strip\'s top and bottom are dragged into place: long-press the home screen, choose Edit layout, then A-Z strip range.</string>
     <string name="folder_open_label">Open folder, %1$d apps</string>
+    <string name="settings_strip_follows">Strip follows past the ends</string>
+    <string name="settings_strip_follows_detail">Dragging past A or Z pushes the letters along with your finger and keeps the list open. Past Z goes to the end of the list</string>
 </resources>

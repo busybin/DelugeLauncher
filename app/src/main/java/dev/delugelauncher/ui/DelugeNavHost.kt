@@ -600,6 +600,7 @@ fun DelugeNavHost(
     val favoritesEverSet by app.prefs.favoritesEverSet.collectAsState(initial = true)
     val edgeZoneBandOnly by app.prefs.edgeZoneBandOnly.collectAsState(initial = false)
     val holdScroll by app.prefs.holdScroll.collectAsState(initial = false)
+    val stripFollowsPastEnds by app.prefs.stripFollowsPastEnds.collectAsState(initial = false)
     val dimOthersScrubbing by app.prefs.dimOthersScrubbing.collectAsState(initial = true)
     val markWorkApps by app.prefs.markWorkApps.collectAsState(initial = true)
     val textShadow by app.prefs.textShadow.collectAsState(initial = false)
@@ -1230,6 +1231,7 @@ fun DelugeNavHost(
         favoritesEverSet = favoritesEverSet,
         edgeZoneBandOnly = edgeZoneBandOnly,
         holdScroll = holdScroll,
+        stripFollowsPastEnds = stripFollowsPastEnds,
         dimOthersScrubbing = dimOthersScrubbing,
         markWorkApps = markWorkApps,
         textShadow = textShadow,
@@ -1713,6 +1715,7 @@ fun DelugeNavHost(
                     onSetWebSearchFallback = { scope.launch { app.prefs.setWebSearchFallback(it) } },
                     onSetSwipeUpOpensSearch = { scope.launch { app.prefs.setSwipeUpOpensSearch(it) } },
                     onSetHoldScroll = { scope.launch { app.prefs.setHoldScroll(it) } },
+                    onSetStripFollowsPastEnds = { scope.launch { app.prefs.setStripFollowsPastEnds(it) } },
                     onSetHoldScrollSpeed = { scope.launch { app.prefs.setHoldScrollSpeed(it) } },
                     onSetEdgeZoneBandOnly = { scope.launch { app.prefs.setEdgeZoneBandOnly(it) } },
                     onSetShowSettingsRow = { scope.launch { app.prefs.setShowSettingsRow(it) } },
@@ -1920,6 +1923,7 @@ fun DelugeNavHost(
                 appListFolders = appListFolders,
                 edgeZoneBandOnly = edgeZoneBandOnly,
                 holdScroll = holdScroll,
+                stripFollowsPastEnds = stripFollowsPastEnds,
                 dimOthersScrubbing = dimOthersScrubbing,
                 markWorkApps = markWorkApps,
                 textShadow = textShadow,
@@ -1947,6 +1951,7 @@ fun DelugeNavHost(
                 swipeUpOpensSearch = swipeUpOpensSearch,
                 onSetSwipeUpOpensSearch = actionsA.onSetSwipeUpOpensSearch,
                 onSetHoldScroll = actionsA.onSetHoldScroll,
+                onSetStripFollowsPastEnds = actionsA.onSetStripFollowsPastEnds,
                 holdScrollSpeed = holdScrollSpeed,
                 onSetHoldScrollSpeed = actionsA.onSetHoldScrollSpeed,
                 onSetEdgeZoneBandOnly = actionsA.onSetEdgeZoneBandOnly,

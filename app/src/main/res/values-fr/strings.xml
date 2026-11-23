@@ -1101,4 +1101,6 @@
     <string name="settings_az_range">Plage de la barre</string>
     <string name="settings_az_range_detail">Le haut et le bas de la barre se règlent dans Modifier la disposition : appui long sur l\'écran d\'accueil, Modifier la disposition, puis Plage de la barre A–Z.</string>
     <string name="folder_open_label">Ouvrir le dossier, %1$d applis</string>
+    <string name="settings_strip_follows">La barre suit au-delà des extrémités</string>
+    <string name="settings_strip_follows_detail">Faire glisser au-delà de A ou Z pousse les lettres avec votre doigt et garde la liste ouverte. Au-delà de Z, on va à la fin de la liste</string>
 </resources>

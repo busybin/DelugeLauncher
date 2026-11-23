@@ -1113,4 +1113,6 @@
     <string name="settings_az_range">Диапазон полосы</string>
     <string name="settings_az_range_detail">Верх и низ полосы задаются в «Изменить макет»: долгое нажатие на главном экране → «Изменить макет» → «Диапазон полосы A–Z».</string>
     <string name="folder_open_label">Открыть папку, %1$d приложений</string>
+    <string name="settings_strip_follows">Полоса следует за пальцем за краями</string>
+    <string name="settings_strip_follows_detail">Если провести дальше A или Z, буквы сдвигаются вместе с пальцем, а список остаётся открытым. Дальше Z — переход в конец списка</string>
 </resources>
