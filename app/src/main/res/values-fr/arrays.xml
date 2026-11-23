@@ -2,7 +2,7 @@
 <resources>
     <string-array name="changelog_v37">
         <item>Faire glisser la bande au-delà de A ou de Z garde les lettres sous le doigt au lieu de les bloquer au bord, et glisser vers le haut au-delà de A ne ferme plus la liste : Paramètres › Bande A–Z › La barre suit au-delà des extrémités — désactivée par défaut.</item>
-        <item>Au-delà de Z, la liste saute à sa fin : la dernière ligne est atteignable depuis la bande.</item>
+        <item>Au-delà de Z, la liste passe derrière la dernière lettre.</item>
         <item>L\'avertissement avant de geler un dossier ne nomme plus que les applis que ce gel touchera vraiment, donc un dossier qui contient simplement les Réglages ne déclenche plus l\'alerte.</item>
     </string-array>
     <string-array name="changelog_v36">

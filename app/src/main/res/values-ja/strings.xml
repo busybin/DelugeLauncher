@@ -1100,5 +1100,5 @@
     <string name="settings_az_range_detail">バーの上下は「レイアウトを編集」でドラッグします：ホーム画面を長押し →「レイアウトを編集」→「A–Z バーの範囲」。</string>
     <string name="folder_open_label">フォルダーを開く、%1$d 個のアプリ</string>
     <string name="settings_strip_follows">文字列は端を越えても追従</string>
-    <string name="settings_strip_follows_detail">A や Z を越えてドラッグすると、文字が指に合わせて動き、リストは開いたままになります。Z を越えるとリストの末尾へ移動します</string>
+    <string name="settings_strip_follows_detail">A や Z を越えてドラッグすると文字列が指についてきて、リストは開いたままです。Z を越えると最後の文字の先へ進みます。</string>
 </resources>

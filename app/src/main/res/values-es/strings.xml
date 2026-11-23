@@ -1102,5 +1102,5 @@
     <string name="settings_az_range_detail">Los extremos de la tira se arrastran en Editar diseño: mantén pulsado el inicio, elige Editar diseño y luego Rango de la tira A–Z.</string>
     <string name="folder_open_label">Abrir carpeta, %1$d apps</string>
     <string name="settings_strip_follows">La barra sigue más allá de los extremos</string>
-    <string name="settings_strip_follows_detail">Arrastrar más allá de la A o la Z empuja las letras con tu dedo y deja la lista abierta. Más allá de la Z va al final de la lista</string>
+    <string name="settings_strip_follows_detail">Arrastrar más allá de A o de Z mantiene las letras bajo el dedo y deja la lista abierta; más allá de Z la lista sigue después de la última letra.</string>
 </resources>

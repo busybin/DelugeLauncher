@@ -1102,5 +1102,5 @@
     <string name="settings_az_range_detail">O topo e a base da tira são arrastados em Editar layout: toque e segure a tela inicial, escolha Editar layout e depois Faixa da tira A–Z.</string>
     <string name="folder_open_label">Abrir pasta, %1$d apps</string>
     <string name="settings_strip_follows">A barra acompanha além das pontas</string>
-    <string name="settings_strip_follows_detail">Arrastar além do A ou do Z empurra as letras junto com o dedo e mantém a lista aberta. Além do Z vai para o fim da lista</string>
+    <string name="settings_strip_follows_detail">Arrastar além do A ou do Z mantém as letras sob o dedo e a lista aberta; depois do Z a lista vai para depois da última letra.</string>
 </resources>

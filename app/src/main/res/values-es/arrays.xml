@@ -2,7 +2,7 @@
 <resources>
     <string-array name="changelog_v37">
         <item>Arrastrar la banda más allá de A o de Z mantiene las letras bajo el dedo en lugar de frenarlas en el borde, y arrastrar hacia arriba más allá de A ya no cierra la lista: Ajustes › Banda A–Z › La barra sigue más allá de los extremos — desactivado por defecto.</item>
-        <item>Más allá de Z la lista salta a su final, así que la última fila también se alcanza desde la banda.</item>
+        <item>Más allá de Z la lista pasa a lo que viene después de la última letra.</item>
         <item>El aviso antes de congelar una carpeta ahora nombra solo las aplicaciones que esa congelación tocará de verdad, así que una carpeta que solo contiene Ajustes ya no avisa de ello.</item>
     </string-array>
     <string-array name="changelog_v36">
