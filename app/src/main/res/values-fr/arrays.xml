@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v37">
+        <item>Faire glisser la bande au-delà de A ou de Z garde les lettres sous le doigt au lieu de les bloquer au bord, et glisser vers le haut au-delà de A ne ferme plus la liste : Paramètres › Bande A–Z › La barre suit au-delà des extrémités — désactivée par défaut.</item>
+        <item>Au-delà de Z, la liste saute à sa fin : la dernière ligne est atteignable depuis la bande.</item>
+        <item>L\'avertissement avant de geler un dossier ne nomme plus que les applis que ce gel touchera vraiment, donc un dossier qui contient simplement les Réglages ne déclenche plus l\'alerte.</item>
+    </string-array>
     <string-array name="changelog_v36">
         <item>Les applis gelées peuvent s\'afficher en niveaux de gris en plus d\'être atténuées, pour rester lisibles en plein soleil : Paramètres › Apparence › Aspect des applis gelées.</item>
         <item>Après un redémarrage, le pare-feu relit l\'appareil au lieu de se fier à son registre : un blocage que le téléphone a oublié est rétabli.</item>

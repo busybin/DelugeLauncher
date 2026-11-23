@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v37">
+        <item>Dragging the strip past A or Z keeps the letters under your finger instead of stopping at the edge, and dragging up past A no longer closes the list: Settings › A–Z strip › Strip follows past the ends — off by default.</item>
+        <item>Past Z the list jumps to its end, so the last row can be reached from the strip too.</item>
+        <item>The warning before freezing a folder now names only the apps that freeze will actually touch, so a folder that merely holds Settings no longer warns about it.</item>
+    </string-array>
     <string-array name="changelog_v36">
         <item>Frozen apps can be drawn in greyscale as well as faded, so they stand out in bright daylight: Settings › Appearance › Frozen app look.</item>
         <item>After a restart the firewall reads the device back instead of trusting its record, so a cut-off the phone forgot is made again.</item>

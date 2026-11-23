@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v37">
+        <item>Arrastar a faixa além do A ou do Z mantém as letras sob o dedo em vez de travá-las na borda, e arrastar para cima além do A não fecha mais a lista: Ajustes › Faixa A–Z › A barra acompanha além das pontas — desligado por padrão.</item>
+        <item>Depois do Z a lista pula para o fim, então a última linha também é alcançável pela faixa.</item>
+        <item>O aviso antes de congelar uma pasta agora cita só os aplicativos que aquele congelamento atinge de fato, então uma pasta que apenas contém o app Ajustes não avisa mais disso.</item>
+    </string-array>
     <string-array name="changelog_v36">
         <item>Apps congelados podem ser desenhados em escala de cinza além de esmaecidos, para continuarem visíveis à luz do dia: Configurações › Aparência › Aparência de apps congelados.</item>
         <item>Depois de reiniciar, o firewall relê o dispositivo em vez de confiar no registro, então um bloqueio que o telefone esqueceu é refeito.</item>

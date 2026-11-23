@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v37">
+        <item>拖过 A 或 Z 时字母条会跟着手指走，不再停在边上；往上拖过 A 也不会再把列表关掉：设置 › 字母条 › 字母条跟随越过两端（默认关闭）。</item>
+        <item>越过 Z 会跳到列表末尾，最后一行也能从字母条摸到。</item>
+        <item>冻结文件夹前的提醒只提这次真正会冻结的应用，文件夹里只是放着「设置」不再误报。</item>
+    </string-array>
     <string-array name="changelog_v36">
         <item>冻结的应用除了变淡，还可以画成灰度，强光下也一眼能认出来：设置 › 外观 › 冻结应用显示。</item>
         <item>重启后防火墙会回读设备状态，不再只信自己的记录，手机忘掉的断网会重新生效。</item>
