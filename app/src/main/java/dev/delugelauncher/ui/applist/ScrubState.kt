@@ -72,6 +72,35 @@ class ScrubState {
     var side by mutableStateOf(EdgeSide.RIGHT)
         private set
 
+    /**
+     * True once a finger dragging off the letters is over the list itself, where letting go
+     * opens whatever it is on rather than placing the list at a letter.
+     */
+    var onApps by mutableStateOf(false)
+        private set
+
+    /**
+     * The app key under that finger, so the row it would open can say so. Null when it is over
+     * nothing, which is how letting go there becomes a dismissal.
+     */
+    var hoverKey by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Which app is at a point in root pixels, set by the list while it is open. Null while the
+     * list is not, so a drag over nothing finds nothing.
+     */
+    var appAt: ((x: Float, y: Float) -> String?)? = null
+
+    fun updateOnApps(value: Boolean) {
+        onApps = value
+        if (!value) hoverKey = null
+    }
+
+    fun setHover(key: String?) {
+        if (hoverKey != key) hoverKey = key
+    }
+
     private var y by mutableFloatStateOf(0f)
 
     // Elastic pull: follows the finger inward, then eases back to the strip on release.
@@ -117,6 +146,9 @@ class ScrubState {
     fun begin(side: EdgeSide) {
         this.side = side
         active = true
+        // Every gesture starts on the letters; being over the list is something a finger
+        // does, not something it inherits.
+        updateOnApps(false)
         scrubbing = false
         releasing = false
         shift = 0f
@@ -181,6 +213,8 @@ class ScrubState {
         active = false
         scrubbing = false
         letter = null
+        onApps = false
+        hoverKey = null
         releasing = true
         releasePull.snapTo(pull)
         releaseShift.snapTo(shift)
@@ -203,11 +237,39 @@ class ScrubState {
         active = false
         scrubbing = false
         letter = null
+        onApps = false
+        hoverKey = null
         placement = null
         releasing = false
         pull = 0f
         shift = 0f
     }
+}
+
+/**
+ * Whether a finger dragged this far in is over the list rather than still on the letters.
+ *
+ * Two thresholds, not one: a fingertip resting exactly on the boundary would otherwise flip
+ * between scrubbing and opening on every event, and the list would jump a letter each time.
+ */
+internal fun overApps(
+    inwardPx: Float,
+    alreadyOver: Boolean,
+    enterPx: Float,
+    exitPx: Float,
+): Boolean = if (alreadyOver) inwardPx > exitPx else inwardPx > enterPx
+
+/** What letting go does: open the app under the finger, take the list away, or nothing. */
+internal enum class ReleaseEffect { LAUNCH, DISMISS, PARK }
+
+/**
+ * Letting go over an app opens it; over the list but on nothing takes the list away; on the
+ * letters themselves it only parks the list, which is what the strip has always done.
+ */
+internal fun releaseEffect(onApps: Boolean, hoverKey: String?): ReleaseEffect = when {
+    !onApps -> ReleaseEffect.PARK
+    hoverKey != null -> ReleaseEffect.LAUNCH
+    else -> ReleaseEffect.DISMISS
 }
 
 /** What a tap on the strip did, so the next one in the window knows what it means. */

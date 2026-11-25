@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.settings
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 
@@ -253,6 +254,12 @@ class SettingsScreenModel(
     val onSetShowSettingsRow: (Boolean) -> Unit,
     val appListFolders: Boolean,
     val onSetAppListFolders: (Boolean) -> Unit,
+    val appListFoldersAtTop: Boolean,
+    val onSetAppListFoldersAtTop: (Boolean) -> Unit,
+    val appListHideFolderApps: Boolean,
+    val onSetAppListHideFolderApps: (Boolean) -> Unit,
+    val releaseToLaunch: Boolean,
+    val onSetReleaseToLaunch: (Boolean) -> Unit,
     val edgeZoneBandOnly: Boolean,
     val onSetEdgeZoneBandOnly: (Boolean) -> Unit,
     val holdScroll: Boolean,
@@ -456,6 +463,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
     with(model) {
     val surface = MaterialTheme.colorScheme.surface
     val context = LocalContext.current
+    val resources = LocalResources.current
     val clipboard = remember(context) {
         context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     }
@@ -805,6 +813,41 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 checked = appListFolders, onCheckedChange = onSetAppListFolders,
             )
         },
+        SettingsEntry(
+            SettingsSection.LIST_LAYOUT,
+            stringResource(R.string.settings_folders_at_top),
+            "folders grouped section top",
+            visible = appListFolders,
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_folders_at_top),
+                detail = stringResource(R.string.settings_folders_at_top_detail),
+                checked = appListFoldersAtTop, onCheckedChange = onSetAppListFoldersAtTop,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.STRIP,
+            stringResource(R.string.settings_release_to_open),
+            "release open app strip slide let go",
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_release_to_open),
+                detail = stringResource(R.string.settings_release_to_open_detail),
+                checked = releaseToLaunch, onCheckedChange = onSetReleaseToLaunch,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.LIST_LAYOUT,
+            stringResource(R.string.settings_hide_folder_apps),
+            "folders hide members duplicates",
+            visible = appListFolders,
+        ) {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_hide_folder_apps),
+                detail = stringResource(R.string.settings_hide_folder_apps_detail),
+                checked = appListHideFolderApps, onCheckedChange = onSetAppListHideFolderApps,
+            )
+        },
         SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_settings_row), "settings shortcut row") {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_settings_row),
@@ -847,7 +890,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 label = stringResource(R.string.settings_ripple_speed),
                 value = rippleParams.speed,
                 range = RippleParams.SPEED_RANGE,
-                valueLabel = { context.getString(R.string.settings_ripple_speed_value, it) },
+                valueLabel = { resources.getString(R.string.settings_ripple_speed_value, it) },
                 onValueChange = { onSetRippleParams(rippleParams.copy(speed = it)) },
             )
         },
@@ -1506,7 +1549,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
                             developerUnlocked = true
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.developer_unlocked),
+                                resources.getString(R.string.developer_unlocked),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         },

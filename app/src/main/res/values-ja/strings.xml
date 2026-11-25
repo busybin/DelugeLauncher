@@ -184,6 +184,7 @@
     <string name="settings_favorites">お気に入り</string>
     <string name="settings_favorites_detail">ホーム画面に置くアプリを選択</string>
     <string name="applist_private_space_section">プライベートスペース</string>
+    <string name="applist_folders_section">フォルダー</string>
     <string name="applist_recent_section">最近インストールしたアプリ</string>
     <string name="settings_stay_private_unlock">ロック解除後も一覧に留まる</string>
     <string name="settings_stay_private_unlock_detail">プライベートスペースをロック解除してもホーム画面に戻らず、アプリ一覧を開いたままにします</string>
@@ -729,6 +730,12 @@
 
     <string name="settings_applist_folders">アプリ一覧のフォルダー</string>
     <string name="settings_applist_folders_detail">各フォルダーを自分の名前の位置に並べ、アルファベットをたどって開けるようにします。既定ではオフです。</string>
+    <string name="settings_folders_at_top">フォルダーを先頭に</string>
+    <string name="settings_folders_at_top_detail">すべてのフォルダーを A の上にまとめ、それぞれの名前の位置には並べません。既定ではオフです。</string>
+    <string name="settings_hide_folder_apps">アプリをフォルダー内だけに</string>
+    <string name="settings_hide_folder_apps_detail">フォルダー内のアプリは自分の文字の位置に表示されなくなります。検索では見つかります。既定ではオフです。</string>
+    <string name="settings_release_to_open">離して開く</string>
+    <string name="settings_release_to_open_detail">文字からリストへスライドし、アプリの上で離すと開きます。既定ではオフです。</string>
 
     <string name="settings_favorite_rules">お気に入りのルール</string>
     <string name="settings_favorite_rules_detail">Wi-Fi、時間帯、ヘッドホン、または開いた回数でお気に入りを表示・非表示にします。</string>

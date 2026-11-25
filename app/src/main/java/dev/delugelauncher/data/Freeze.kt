@@ -572,7 +572,7 @@ object FreezeState {
             FreezeMethod.HIDE -> isHidden(info)
             // The ApplicationInfo flag is not reliably carried, and the package manager's own
             // answer is what the rest of the app already believes.
-            FreezeMethod.SUSPEND -> runCatching {
+            FreezeMethod.SUSPEND -> Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && runCatching {
                 context.packageManager.isPackageSuspended(packageName)
             }.getOrDefault(false)
             FreezeMethod.STOP ->
@@ -2985,9 +2985,12 @@ class FreezeManager(private val context: Context, private val prefs: Prefs) {
         return FreezeVerdict.free(state, suspended, parkedByPlatform(target))
     }
 
-    private fun suspendedNow(target: FreezeTarget): Boolean = target.userSerial == 0L && runCatching {
-        context.packageManager.isPackageSuspended(target.packageName)
-    }.getOrDefault(false)
+    private fun suspendedNow(target: FreezeTarget): Boolean =
+        target.userSerial == 0L &&
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q &&
+            runCatching {
+                context.packageManager.isPackageSuspended(target.packageName)
+            }.getOrDefault(false)
 
     companion object {
         /** Printed instead of a file body when the backup does not exist yet. */

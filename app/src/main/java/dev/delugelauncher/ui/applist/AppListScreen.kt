@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.applist
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.focus.FocusMenuItem
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -113,6 +115,8 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -417,6 +421,9 @@ fun AppListScreen(
     val scrubLetter = scrub.letter
     val scrubPlacement = scrub.placement
     val scrubbing = scrub.scrubbing
+    // A provider, not the value: the highlight is drawn in the draw phase, so a finger moving
+    // down the list redraws a row instead of recomposing the whole screen for every row.
+    val hoverKeyNow = remember(scrub) { { scrub.hoverKey } }
     val activeSide = scrub.side
     val scrubY = remember(scrub) { scrub::currentY }
     val pullPx = remember(scrub) { scrub::currentPull }
@@ -464,6 +471,21 @@ fun AppListScreen(
     // The model as laid out. Everything below — scrub placement, spy, gaps, keys — reads
     // this rather than the model, so indices always mean laid-out rows.
     val cells = remember(displayModel, twoColumn) { displayModel.toCells(twoColumn) }
+
+    // Where the list sits in the root, so a finger the strip reports in root pixels can be
+    // turned into a row (#175). Published rather than recomposed per event: the strip asks
+    // only while a drag is over the list.
+    var listOrigin by remember { mutableStateOf(Offset.Zero) }
+    val rowsNow = rememberUpdatedState(cells.rows)
+    // The two columns are pulled together by this much, so the right one starts early and the
+    // middle belongs to it.
+    val columnOverlapPx = with(LocalDensity.current) { 28.dp.toPx() }
+    DisposableEffect(scrub, listState) {
+        scrub.appAt = { x, y ->
+            appKeyAt(listState, listOrigin, rowsNow.value, x, y, columnOverlapPx)
+        }
+        onDispose { scrub.appAt = null }
+    }
     // Staying on the same app across the 1↔2 column switch: pairing halves the row count,
     // so keeping the raw index would land somewhere unrelated. Anchored by app key instead.
     var columnAnchorKey by remember { mutableStateOf<String?>(null) }
@@ -521,7 +543,11 @@ fun AppListScreen(
         // Not while a held letter is walking the list: the whole point of that is to read what
         // goes past, and everything that went past was faded out. That is what made it look as
         // though only the held letter's own apps ever scrolled.
-        targetValue = if (scrubLetter != null && scrubbing && dimOthers && !scrub.holdScrolling) {
+        // Not while the finger is over the list either: the row it would open has to be
+        // visible, and that row is usually under a letter other than the parked one.
+        targetValue = if (
+            scrubLetter != null && scrubbing && dimOthers && !scrub.holdScrolling && !scrub.onApps
+        ) {
             0f
         } else {
             1f
@@ -1251,6 +1277,7 @@ fun AppListScreen(
     // Long-press anywhere in the list (not just favorites) to edit that app.
     var menuForKey by remember { mutableStateOf<String?>(null) }
     val context = LocalContext.current
+    val resources = LocalResources.current
     var menuOffset by remember { mutableStateOf(DpOffset.Zero) }
     var editDialogFor by remember { mutableStateOf<AppInfo?>(null) }
     var hideConfirmFor by remember { mutableStateOf<AppInfo?>(null) }
@@ -1407,6 +1434,7 @@ fun AppListScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .onGloballyPositioned { listOrigin = it.positionInRoot() }
                 .graphicsLayer {
                     translationY = stretchProvider()
                     // The mask below blends against this layer alone, so it can take the
@@ -1644,7 +1672,9 @@ fun AppListScreen(
                 ) {
                 when (cell) {
                     is CellRow.Header -> SectionHeader(cell.text, labelSizeSp, contentColor, alignment)
-                    is CellRow.One -> ItemCell(cell.item)
+                    is CellRow.One -> Box(
+                        Modifier.appHover(cell.item, hoverKeyNow, contentColor),
+                    ) { ItemCell(cell.item) }
                     // Sideways two apps share the row, each taking half, so the columns stay
                     // level. A group ending on an odd app leaves the half empty. Pulled
                     // together by one side inset: two rows side by side otherwise double the
@@ -1653,8 +1683,10 @@ fun AppListScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(-28.dp),
                     ) {
-                        Box(Modifier.weight(1f)) { ItemCell(cell.left, compact = true) }
-                        Box(Modifier.weight(1f)) {
+                        Box(Modifier.weight(1f).appHover(cell.left, hoverKeyNow, contentColor)) {
+                            ItemCell(cell.left, compact = true)
+                        }
+                        Box(Modifier.weight(1f).appHover(cell.right, hoverKeyNow, contentColor)) {
                             cell.right?.let { ItemCell(it, compact = true) }
                         }
                     }
@@ -1856,7 +1888,7 @@ fun AppListScreen(
                     if (blocked.isNotEmpty()) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.tag_reserved, blocked.first()),
+                            resources.getString(R.string.tag_reserved, blocked.first()),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -2713,3 +2745,73 @@ private fun SearchField(
             ),
     )
 }
+
+/**
+ * The app at a point in root pixels, or null for a heading, a folder or nothing at all.
+ *
+ * Mirrors how the list lays its rows out: an item's offset is measured from the viewport start
+ * which the content padding shifts, and a two-column row is split down the middle.
+ */
+private fun appKeyAt(
+    listState: LazyListState,
+    origin: Offset,
+    rows: List<CellRow>,
+    x: Float,
+    y: Float,
+    columnOverlapPx: Float,
+): String? {
+    val info = listState.layoutInfo
+    val localY = y - origin.y
+    val item = info.visibleItemsInfo.firstOrNull {
+        val top = it.offset - info.viewportStartOffset
+        localY >= top && localY < top + it.size
+    } ?: return null
+    return when (val cell = rows.getOrNull(item.index)) {
+        is CellRow.One -> (cell.item as? ListItem.AppItem)?.entry?.app?.key
+        is CellRow.Two -> {
+            val right = isRightColumn(
+                x - origin.x,
+                info.beforeContentPadding.toFloat(),
+                (info.viewportSize.width - info.beforeContentPadding - info.afterContentPadding).toFloat(),
+                columnOverlapPx,
+            )
+            val pick = if (right) cell.right else cell.left
+            (pick as? ListItem.AppItem)?.entry?.app?.key
+        }
+        else -> null
+    }
+}
+
+/**
+ * Marks the row a release-to-open drag is over: letting go there opens this app, so the list
+ * says which one before the finger lifts.
+ */
+private fun Modifier.appHover(
+    item: ListItem?,
+    hoveredKey: () -> String?,
+    color: Color,
+): Modifier {
+    val key = (item as? ListItem.AppItem)?.entry?.app?.key ?: return this
+    return drawBehind {
+        if (hoveredKey() != key) return@drawBehind
+        drawRoundRect(
+            color = color.copy(alpha = 0.14f),
+            cornerRadius = CornerRadius(20.dp.toPx()),
+        )
+    }
+}
+
+/**
+ * Which half of a two-column row a finger is over.
+ *
+ * Not simply the middle of the viewport: the content is inset by the strip, and the two cells
+ * are pulled together by [overlapPx] so each is half of (content + overlap), which puts the
+ * boundary [overlapPx] left of centre — and the right cell is drawn last, so the overlap
+ * belongs to it.
+ */
+internal fun isRightColumn(
+    localX: Float,
+    contentLeft: Float,
+    contentWidth: Float,
+    overlapPx: Float,
+): Boolean = localX - contentLeft >= (contentWidth + overlapPx) / 2f - overlapPx

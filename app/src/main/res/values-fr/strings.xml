@@ -184,6 +184,7 @@
     <string name="settings_favorites">Favoris</string>
     <string name="settings_favorites_detail">Choisissez les applications présentes sur l\'écran d\'accueil</string>
     <string name="applist_private_space_section">Espace privé</string>
+    <string name="applist_folders_section">Dossiers</string>
     <string name="applist_recent_section">Installées récemment</string>
     <string name="settings_stay_private_unlock">Rester dans la liste après le déverrouillage</string>
     <string name="settings_stay_private_unlock_detail">Le déverrouillage de l\'espace privé garde la liste des applications ouverte au lieu de revenir à l\'écran d\'accueil</string>
@@ -729,6 +730,12 @@
 
     <string name="settings_applist_folders">Dossiers dans la liste</string>
     <string name="settings_applist_folders_detail">Place chaque dossier sous son propre nom parmi les apps, pour l\'atteindre en parcourant l\'alphabet. Désactivé par défaut.</string>
+    <string name="settings_folders_at_top">Dossiers en haut</string>
+    <string name="settings_folders_at_top_detail">Tous réunis au-dessus du A, au lieu d\'être sous leur propre lettre. Désactivé par défaut.</string>
+    <string name="settings_hide_folder_apps">Apps uniquement dans leur dossier</string>
+    <string name="settings_hide_folder_apps_detail">Une app dans un dossier n\'apparaît plus sous sa propre lettre. La recherche la trouve encore. Désactivé par défaut.</string>
+    <string name="settings_release_to_open">Relâcher pour ouvrir</string>
+    <string name="settings_release_to_open_detail">Glissez des lettres vers la liste et relâchez sur une app pour l\'ouvrir. Désactivé par défaut.</string>
 
     <string name="settings_favorite_rules">Règles des favoris</string>
     <string name="settings_favorite_rules_detail">Affiche ou masque des favoris selon le Wi-Fi, l\'heure, le casque ou le nombre d\'ouvertures.</string>

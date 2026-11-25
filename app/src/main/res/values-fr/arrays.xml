@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v39">
+        <item>Les dossiers peuvent se regrouper dans une section à eux au-dessus de la lettre A, marquée d\'un point sur la bande au lieu d\'occuper une lettre : Réglages › Liste des applications › Dossiers en haut, désactivé par défaut.</item>
+        <item>Une app dans un dossier peut quitter sa propre lettre et ne vivre que dans ce dossier, la recherche la trouve toujours : Réglages › Liste des applications › Apps uniquement dans leur dossier, désactivé par défaut.</item>
+        <item>Glisser des lettres vers la liste et relâcher sur une app l\'ouvre : Réglages › Bande A–Z › Relâcher pour ouvrir, désactivé par défaut.</item>
+        <item>Les apps d\'un dossier suivent maintenant l\'espacement de la liste.</item>
+        <item>Le raccourci d\'une app peut être épinglé aux favoris depuis son menu, avec une étoile une fois épinglé.</item>
+    </string-array>
     <string-array name="changelog_v38">
         <item>La liste peut placer l\'icône au-dessus du nom plutôt qu\'à côté, pour les noms longs et les écrans étroits.</item>
         <item>Le thème peut maintenant rester sombre à toute heure, sans suivre le système ni le programme de nuit.</item>

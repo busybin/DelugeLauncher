@@ -658,8 +658,12 @@ class AppRepository(
 
     /** Whether the platform currently suspends [packageName]. */
     suspend fun isAppSuspended(packageName: String): Boolean = withContext(Dispatchers.IO) {
-        runCatching { context.packageManager.isPackageSuspended(packageName) }
-            .getOrDefault(false)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            false
+        } else {
+            runCatching { context.packageManager.isPackageSuspended(packageName) }
+                .getOrDefault(false)
+        }
     }
 
     /**
@@ -1178,6 +1182,25 @@ class AppRepository(
             }.toSet()
         }.getOrNull() ?: return asked
         return wanted.count { it in present }
+    }
+
+    /**
+     * Pins one of [app]'s own shortcuts as an entry of its own and adds it to the favorites,
+     * the way the app's own "Add to home screen" would (#182). The pin is read back from the
+     * system's pinned set rather than trusted from the call's return, so a shortcut the system
+     * refused never turns into a favorite that cannot be opened.
+     */
+    fun pinAppShortcut(app: AppInfo, shortcut: ShortcutInfo) {
+        if (!EntryKeys.isStorableShortcutId(shortcut.id)) {
+            Toast.makeText(context, R.string.shortcut_pin_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val key = EntryKeys.shortcut(shortcut.`package`, shortcut.id, app.userSerial)
+        if (repinShortcuts(listOf(key)) != 1) {
+            Toast.makeText(context, R.string.shortcut_pin_failed, Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch { prefs.addFavorite(key) }
     }
 
     fun unpin(app: AppInfo) {

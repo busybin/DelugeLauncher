@@ -184,6 +184,7 @@
     <string name="settings_favorites">Favoritos</string>
     <string name="settings_favorites_detail">Escolha quais apps ficam na tela inicial</string>
     <string name="applist_private_space_section">Espaço privado</string>
+    <string name="applist_folders_section">Pastas</string>
     <string name="applist_recent_section">Instalados recentemente</string>
     <string name="settings_stay_private_unlock">Permanecer na lista depois de desbloquear</string>
     <string name="settings_stay_private_unlock_detail">Desbloquear o Espaço privado mantém a lista de apps aberta em vez de voltar para a tela inicial</string>
@@ -729,6 +730,12 @@
 
     <string name="settings_applist_folders">Pastas na lista de apps</string>
     <string name="settings_applist_folders_detail">Coloca cada pasta sob o próprio nome entre os apps, para alcançá-la percorrendo o alfabeto. Desativado por padrão.</string>
+    <string name="settings_folders_at_top">Pastas no topo</string>
+    <string name="settings_folders_at_top_detail">Todas juntas acima do A, em vez de sob a própria letra. Desativado por padrão.</string>
+    <string name="settings_hide_folder_apps">Apps só na pasta</string>
+    <string name="settings_hide_folder_apps_detail">Um app numa pasta não aparece mais sob a própria letra. A busca ainda o encontra. Desativado por padrão.</string>
+    <string name="settings_release_to_open">Soltar para abrir</string>
+    <string name="settings_release_to_open_detail">Deslize das letras para a lista e solte sobre um app para abri-lo. Desativado por padrão.</string>
 
     <string name="settings_favorite_rules">Regras de favoritos</string>
     <string name="settings_favorite_rules_detail">Mostra ou oculta favoritos conforme o Wi-Fi, o horário, os fones ou quantas vezes foram abertos.</string>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.home
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.topBarInsets
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.only
@@ -262,6 +263,7 @@ fun HomeRoute(
     disguiseNames: Map<String, String>,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     // An uninstall of the app that lends Deluge its freeze power asks first; everything else
     // goes straight to the system uninstaller as before.
     val uninstallGuard = rememberUninstallGuard { app.appRepository.uninstall(it) }
@@ -272,6 +274,12 @@ fun HomeRoute(
     // An unnamed folder files under the letter of the word it is shown with, so read that
     // here too: the model is built off the main thread.
     val unnamedFolderLabel = stringResource(R.string.folder_unnamed)
+    // Read here for the same reason: a section heading, and folders in the list at all are
+    // what the two switches below are about.
+    val foldersSectionLabel = stringResource(R.string.applist_folders_section)
+        .takeIf { settings.folderList.atTop }
+    val hideFolderApps = settings.folderList.hideApps && settings.appListFolders &&
+        folders.isNotEmpty()
     val recentSectionArg = if (settings.recentSection) {
         stringResource(R.string.applist_recent_section) to settings.recentSectionCount
     } else {
@@ -318,79 +326,30 @@ fun HomeRoute(
     val allTags = remember(appTags) { appTags.values.flatten().toSortedSet().toList() }
 
     // Hidden apps are left out of the model the list draws from, so reaching them by name
-    // needs a model of its own. Only built when the setting asks for it, and it falls back to
-    // the list's own model otherwise, so nothing is grouped and sorted twice for nothing.
+    // needs a model of its own. Apps left out from under their letters need one for the same
+    // reason, and both fall back to the list's own model when neither asks for one.
     val includeHiddenInSearch = settings.appListSearchHidden && hiddenApps.isNotEmpty()
-
-    // Grouping, sorting and flattening every installed app is too much to do in composition,
-    // and it re-runs whenever a name override changes.
-    val listModel by produceState(
-        initialValue = AppListModel(emptyList(), emptyList()),
-        appsByKey,
-        hiddenApps,
-        nameOverrides,
-        // Empty unless the sort is on, so an ordinary launch doesn't rebuild the whole list.
-        if (settings.sortByUsage) launchCounts else emptyMap(),
-        settings.showListHeaders,
-        japaneseSort,
-        tagSections,
-        folders,
-        settings.appListFolders,
-    ) {
-        val apps = appsByKey.values.toList()
-        val counts = if (settings.sortByUsage) launchCounts else emptyMap()
-        value = withContext(Dispatchers.Default) {
-            buildAppListModel(
-                apps,
-                hiddenApps,
-                { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
-                counts,
-                englishName = { app.appRepository.englishLabel(it) },
-                pinyin = pinyinSort,
-                japanese = japaneseSort,
-                showHeaders = settings.showListHeaders,
-                renamed = { it.key in nameOverrides },
-                privateSectionLabel = privateSectionLabel,
-                recentSection = recentSectionArg,
-                tagSections = tagSections,
-                folders = folders,
-                showFolders = settings.appListFolders,
-                unnamedFolder = unnamedFolderLabel,
-            )
-        }
-    }
-
-    val hiddenSearchModel by produceState<AppListModel?>(
-        initialValue = null,
-        appsByKey,
-        nameOverrides,
-        includeHiddenInSearch,
-        if (settings.sortByUsage) launchCounts else emptyMap(),
-        settings.showListHeaders,
-        japaneseSort,
-    ) {
-        val apps = appsByKey.values.toList()
-        val counts = if (settings.sortByUsage) launchCounts else emptyMap()
-        value = if (!includeHiddenInSearch) {
-            null
-        } else {
-            withContext(Dispatchers.Default) {
-                buildAppListModel(
-                    apps,
-                    emptySet(),
-                    { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label },
-                    counts,
-                    englishName = { app.appRepository.englishLabel(it) },
-                    pinyin = pinyinSort,
-                    japanese = japaneseSort,
-                    showHeaders = settings.showListHeaders,
-                    renamed = { it.key in nameOverrides },
-                    privateSectionLabel = privateSectionLabel,
-                    recentSection = recentSectionArg,
-                )
-            }
-        }
-    }
+    val (listModel, hiddenSearchModel) = rememberAppListModels(
+        app = app,
+        appsByKey = appsByKey,
+        hiddenApps = hiddenApps,
+        nameOverrides = nameOverrides,
+        disguiseNames = disguiseNames,
+        launchCounts = launchCounts,
+        sortByUsage = settings.sortByUsage,
+        showHeaders = settings.showListHeaders,
+        tagSections = tagSections,
+        folders = folders,
+        showFolders = settings.appListFolders,
+        foldersSectionLabel = foldersSectionLabel,
+        hideFolderApps = hideFolderApps,
+        includeHiddenInSearch = includeHiddenInSearch,
+        privateSectionLabel = privateSectionLabel,
+        recentSectionArg = recentSectionArg,
+        unnamedFolderLabel = unnamedFolderLabel,
+        pinyinSort = pinyinSort,
+        japaneseSort = japaneseSort,
+    )
     val searchModel = hiddenSearchModel ?: listModel
 
     var appListVisible by remember { mutableStateOf(false) }
@@ -558,7 +517,7 @@ fun HomeRoute(
             }.onFailure {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.settings_lock_setup),
+                    resources.getString(R.string.settings_lock_setup),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -613,7 +572,7 @@ fun HomeRoute(
         if (!SystemUi.expandNotificationShade(context)) {
             Toast.makeText(
                 context,
-                context.getString(R.string.toast_enable_accessibility_shade),
+                resources.getString(R.string.toast_enable_accessibility_shade),
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -649,7 +608,7 @@ fun HomeRoute(
         if (!started) {
             Toast.makeText(
                 context,
-                context.getString(R.string.corner_action_failed),
+                resources.getString(R.string.corner_action_failed),
                 Toast.LENGTH_SHORT,
             ).show()
         }
@@ -668,7 +627,7 @@ fun HomeRoute(
             if (!revealed) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_reveal_failed, label),
+                    resources.getString(R.string.app_lock_reveal_failed, label),
                     Toast.LENGTH_LONG,
                 ).show()
                 return@launch
@@ -721,7 +680,7 @@ fun HomeRoute(
         if (cameraManager == null || id == null) {
             Toast.makeText(
                 context,
-                context.getString(R.string.corner_action_failed),
+                resources.getString(R.string.corner_action_failed),
                 Toast.LENGTH_SHORT,
             ).show()
             return
@@ -741,14 +700,14 @@ fun HomeRoute(
                 torchOn = on
                 Toast.makeText(
                     context,
-                    context.getString(if (on) R.string.torch_on else R.string.torch_off),
+                    resources.getString(if (on) R.string.torch_on else R.string.torch_off),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
             .onFailure {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.corner_action_failed),
+                    resources.getString(R.string.corner_action_failed),
                     Toast.LENGTH_SHORT,
                 ).show()
             }
@@ -860,7 +819,7 @@ fun HomeRoute(
                 if (!revealed) {
                     Toast.makeText(
                         context,
-                        context.getString(
+                        resources.getString(
                             R.string.app_lock_reveal_failed,
                             entry?.label ?: packageName,
                         ),
@@ -872,7 +831,7 @@ fun HomeRoute(
                     withContext(Dispatchers.IO) { app.appRepository.rehideLockedApps() }
                     Toast.makeText(
                         context,
-                        context.getString(R.string.now_playing_open_failed),
+                        resources.getString(R.string.now_playing_open_failed),
                         Toast.LENGTH_SHORT,
                     ).show()
                 }
@@ -1002,7 +961,7 @@ fun HomeRoute(
         if (step == ProtectStep.DONE) {
             Toast.makeText(
                 context,
-                context.getString(R.string.app_lock_space_done, protectLabel(entry)),
+                resources.getString(R.string.app_lock_space_done, protectLabel(entry)),
                 Toast.LENGTH_LONG,
             ).show()
             scope.launch {
@@ -1042,7 +1001,7 @@ fun HomeRoute(
             if (!deviceSecure()) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_no_device_lock),
+                    resources.getString(R.string.app_lock_no_device_lock),
                     Toast.LENGTH_LONG,
                 ).show()
                 return
@@ -1091,14 +1050,14 @@ fun HomeRoute(
                     if (profile == null) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.app_lock_space_install_failed, label),
+                            resources.getString(R.string.app_lock_space_install_failed, label),
                             Toast.LENGTH_LONG,
                         ).show()
                         return@launch
                     }
                     Toast.makeText(
                         context,
-                        context.getString(R.string.app_lock_space_installing, label),
+                        resources.getString(R.string.app_lock_space_installing, label),
                         Toast.LENGTH_SHORT,
                     ).show()
                     if (app.appRepository.installInProfile(entry.packageName, profile)) {
@@ -1106,7 +1065,7 @@ fun HomeRoute(
                     } else {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.app_lock_space_install_failed, label),
+                            resources.getString(R.string.app_lock_space_install_failed, label),
                             Toast.LENGTH_LONG,
                         ).show()
                     }
@@ -1162,7 +1121,7 @@ fun HomeRoute(
                 if (released != FreezeOutcome.DONE) {
                     Toast.makeText(
                         context,
-                        context.getString(
+                        resources.getString(
                             if (released == FreezeOutcome.NO_ACCESS) {
                                 R.string.freeze_needs_access
                             } else {
@@ -1185,7 +1144,7 @@ fun HomeRoute(
                         restorePreviousFreeze()
                         Toast.makeText(
                             context,
-                            context.getString(R.string.app_lock_system_failed, entry.label),
+                            resources.getString(R.string.app_lock_system_failed, entry.label),
                             Toast.LENGTH_LONG,
                         ).show()
                         return@launch
@@ -1199,7 +1158,7 @@ fun HomeRoute(
                     if (!hidden) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.app_lock_hide_failed, entry.label),
+                            resources.getString(R.string.app_lock_hide_failed, entry.label),
                             Toast.LENGTH_LONG,
                         ).show()
                     }
@@ -1210,7 +1169,7 @@ fun HomeRoute(
             if (capabilities.canGuard && mainApp && !guardOk) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_guard_failed),
+                    resources.getString(R.string.app_lock_guard_failed),
                     Toast.LENGTH_LONG,
                 ).show()
             }
@@ -1250,7 +1209,7 @@ fun HomeRoute(
             if (!revealed) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_reveal_failed, entry.label),
+                    resources.getString(R.string.app_lock_reveal_failed, entry.label),
                     Toast.LENGTH_LONG,
                 ).show()
                 return@launch
@@ -1294,7 +1253,7 @@ fun HomeRoute(
             if (!deviceSecure()) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_no_device_lock),
+                    resources.getString(R.string.app_lock_no_device_lock),
                     Toast.LENGTH_LONG,
                 ).show()
                 return
@@ -1333,7 +1292,7 @@ fun HomeRoute(
             if (!revealed) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_reveal_failed, entry.label),
+                    resources.getString(R.string.app_lock_reveal_failed, entry.label),
                     Toast.LENGTH_LONG,
                 ).show()
                 return@launch
@@ -1417,20 +1376,20 @@ fun HomeRoute(
             FreezeToast.progress(context, R.string.unfreeze_working)
             val result = app.freezeManager.unfreezeAll()
             if (result.noAccess) {
-                FreezeToast.result(context, context.getString(R.string.freeze_needs_access), long = true)
+                FreezeToast.result(context, resources.getString(R.string.freeze_needs_access), long = true)
             } else if (result.failed > 0) {
                 FreezeToast.result(
                     context,
-                    context.getString(R.string.unfreeze_many_partial, result.done, result.failed),
+                    resources.getString(R.string.unfreeze_many_partial, result.done, result.failed),
                     long = true,
                 )
             } else if (result.keptPermanent > 0) {
                 FreezeToast.result(
                     context,
-                    context.getString(R.string.freeze_unfrozen_pinned, result.done, result.keptPermanent),
+                    resources.getString(R.string.freeze_unfrozen_pinned, result.done, result.keptPermanent),
                 )
             } else {
-                FreezeToast.result(context, context.getString(R.string.freeze_all_done))
+                FreezeToast.result(context, resources.getString(R.string.freeze_all_done))
             }
         }
     }
@@ -1501,6 +1460,37 @@ fun HomeRoute(
 
     // Set for the length of a private space unlock that was asked to keep the list open.
     var keepListThroughPause by remember { mutableStateOf(false) }
+
+    /**
+     * An app opened from the list, however the finger asked for it.
+     *
+     * Tapping a row and letting go on one after sliding off the letters are the same request,
+     * so they finish the same way: the list gets out of the way once the app is up, and a
+     * private space the user asked to stay in is left open.
+     */
+    fun launchFromList(appInfo: AppInfo) {
+        // A launch that never got off the ground leaves nothing to wait for, and the
+        // private-space row has nothing coming to the foreground either — it changes what
+        // this very list holds, so it wants the list out of the way. Unless asked to stay,
+        // in which case the list is where the space's apps are about to appear.
+        val stay = appInfo.kind == EntryKind.PRIVATE_SPACE && settings.stayAfterPrivateUnlock
+        if (stay) {
+            keepListThroughPause = true
+            // A phone with no screen lock unlocks without showing anything, so no pause comes
+            // to use this up. Left standing it would let the next real departure keep the list
+            // open, so it lapses if the lock screen has not appeared by now.
+            scope.launch {
+                delay(PRIVATE_UNLOCK_PROMPT_MS)
+                keepListThroughPause = false
+            }
+        }
+        val acted = launchEntry(appInfo)
+        when {
+            stay -> Unit
+            acted && appInfo.kind == EntryKind.APP -> closeAfterLaunch()
+            else -> closeAppList()
+        }
+    }
 
     // Leaving the launcher (screen off, another app) should always drop us back to the home
     // screen rather than reopening onto the overlay.
@@ -1846,7 +1836,7 @@ fun HomeRoute(
                     onNavigate("folder/" + android.net.Uri.encode(folder.id))
                 },
                 onFreezeFolder = if (freezeUsable) {
-                    folderFreezeAction(app, context, scope, LocalBrickWarning.current, freezeMethods)
+                    folderFreezeAction(app, context, scope, LocalBrickWarning.current)
                 } else {
                     null
                 },
@@ -1856,11 +1846,11 @@ fun HomeRoute(
                             val result = app.freezeManager.unfreezeMany(members)
                             val text = when {
                                 result.noAccess ->
-                                    context.getString(R.string.freeze_needs_access)
+                                    resources.getString(R.string.freeze_needs_access)
                                 // Every member is permanent: the run did nothing on purpose,
                                 // and a tap that produces no toast reads as a broken button.
                                 result.keptPermanent > 0 && result.failed == 0 ->
-                                    context.getString(
+                                    resources.getString(
                                         R.string.freeze_unfrozen_pinned,
                                         result.done,
                                         result.keptPermanent,
@@ -1868,7 +1858,7 @@ fun HomeRoute(
                                 result.done == 0 && result.failed == 0 -> null
                                 else -> buildString {
                                     append(
-                                        context.getString(
+                                        resources.getString(
                                             R.string.freeze_folder_released,
                                             result.done,
                                         )
@@ -1876,7 +1866,7 @@ fun HomeRoute(
                                     if (result.failed > 0) {
                                         append(" ")
                                         append(
-                                            context.getString(
+                                            resources.getString(
                                                 R.string.freeze_folder_failed,
                                                 result.failed,
                                             )
@@ -2055,7 +2045,7 @@ fun HomeRoute(
                     if (!started) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.wallpaper_no_picker),
+                            resources.getString(R.string.wallpaper_no_picker),
                             Toast.LENGTH_SHORT,
                         ).show()
                     }
@@ -2118,31 +2108,7 @@ fun HomeRoute(
                     }
                 },
                 appsByKey = appsByKey,
-                onLaunch = { appInfo ->
-                    // A launch that never got off the ground leaves nothing to wait for, and
-                    // the private-space row has nothing coming to the foreground either — it
-                    // changes what this very list holds, so it wants the list out of the way.
-                    // Unless asked to stay, in which case the list is where the space's apps
-                    // are about to appear, and closing it means opening it again to see them.
-                    val stay = appInfo.kind == EntryKind.PRIVATE_SPACE && settings.stayAfterPrivateUnlock
-                    if (stay) {
-                        keepListThroughPause = true
-                        // A phone with no screen lock unlocks without showing anything, so no
-                        // pause comes to use this up. Left standing it would let the next real
-                        // departure keep the list open, so it lapses if the lock screen has not
-                        // appeared by now — which it does at once when there is one.
-                        scope.launch {
-                            delay(PRIVATE_UNLOCK_PROMPT_MS)
-                            keepListThroughPause = false
-                        }
-                    }
-                    val acted = launchEntry(appInfo)
-                    when {
-                        stay -> Unit
-                        acted && appInfo.kind == EntryKind.APP -> closeAfterLaunch()
-                        else -> closeAppList()
-                    }
-                },
+                onLaunch = { launchFromList(it) },
                 onSetFavorite = { appInfo, add ->
                     scope.launch {
                         if (add) app.prefs.addFavorite(appInfo.key) else app.prefs.removeFavorite(appInfo.key)
@@ -2368,6 +2334,7 @@ fun HomeRoute(
                 insetLeftDp = insetLeftDp,
                 insetRightDp = insetRightDp,
                 scrub = scrub,
+                onReleaseToLaunch = { key -> appsByKey[key]?.let { launchFromList(it) } },
                 onDismiss = { closeAppList() },
                 onOpen = {
                     appListVisible = true
@@ -2397,6 +2364,8 @@ private fun BoxScope.HomeEdgeZones(
     insetLeftDp: Int,
     insetRightDp: Int,
     scrub: ScrubState,
+    /** Opens the app a finger was let go on after sliding off the letters (#175). */
+    onReleaseToLaunch: (String) -> Unit,
     onDismiss: () -> Unit,
     onOpen: () -> Unit,
     onLock: () -> Unit,
@@ -2425,6 +2394,8 @@ private fun BoxScope.HomeEdgeZones(
             bandOnly = settings.edgeZoneBandOnly,
             holdScroll = settings.holdScroll,
             followPastEnds = settings.stripFollowsPastEnds,
+            releaseToLaunch = settings.releaseToLaunch,
+            onReleaseToLaunch = onReleaseToLaunch,
             hapticFeedback = settings.hapticFeedback,
             state = scrub,
             listOpen = appListVisible,
@@ -2513,6 +2484,18 @@ private fun BoxScope.IdleStrips(
     }
 }
 
+/**
+ * Where folders listed among the apps go (#178), and whether their apps leave the alphabet
+ * (#176). Grouped because HomeSettings is at the size a data class constructor still resolves.
+ */
+@Immutable
+data class FolderListOptions(
+    /** Whether all the folders sit together under a heading of their own above the letters. */
+    val atTop: Boolean = false,
+    /** Whether an app inside a listed folder is left out from under its own letter. */
+    val hideApps: Boolean = false,
+)
+
 /** Display and behavior settings the home destination reads, grouped so they travel as one. */
 @Immutable
 data class HomeSettings(
@@ -2546,6 +2529,10 @@ data class HomeSettings(
     val showSettingsRow: Boolean,
     /** Whether folders stand in the A-Z list by their own names. */
     val appListFolders: Boolean,
+    /** Where those folders sit, and whether their apps stay under their own letters. */
+    val folderList: FolderListOptions = FolderListOptions(),
+    /** Whether letting go on an app after sliding off the letters opens it. */
+    val releaseToLaunch: Boolean = false,
     val showFavoriteIcons: Boolean,
     val favoritesEverSet: Boolean,
     val edgeZoneBandOnly: Boolean,
@@ -2638,13 +2625,17 @@ private fun folderFreezeAction(
     context: Context,
     scope: CoroutineScope,
     brickWarning: BrickWarning,
-    plan: Map<String, FreezeMethod>,
 ): (List<AppInfo>) -> Unit = { members ->
     // The warning names what this run will actually freeze. A folder can hold Settings without
     // it being on the list; the run leaves it alone, so warning about it describes a freeze that
-    // never happens. The plan is read where the menu is drawn, so it is the same list the run uses.
-    brickWarning.guard(FreezeSelection.listedMembers(members, plan)) {
-        freezeFolderNow(app, context, scope, members)
+    // never happens. The plan is read here, where the button is pressed, rather than where the
+    // menu was drawn: a backup imported between the two would otherwise be warned about by a
+    // list the run no longer uses.
+    scope.launch {
+        val plan = app.prefs.freezeMethodsNow()
+        brickWarning.guard(FreezeSelection.listedMembers(members, plan)) {
+            freezeFolderNow(app, context, scope, members)
+        }
     }
 }
 
@@ -2795,4 +2786,109 @@ private fun buildFreezeActions(
             .eachCount(),
         supports = { method, serial -> freezeStatus.offered(method, serial) },
     )
+}
+
+/**
+ * The model the app list draws from, and the one a search needs when apps are left out of it.
+ *
+ * A composable of its own because HomeRoute is at the edge of what one method may hold, and
+ * grouping, sorting and flattening every installed app is the biggest thing in it.
+ */
+@Composable
+private fun rememberAppListModels(
+    app: DelugeApp,
+    appsByKey: Map<String, AppInfo>,
+    hiddenApps: Set<String>,
+    nameOverrides: Map<String, String>,
+    disguiseNames: Map<String, String>,
+    launchCounts: Map<String, Int>,
+    sortByUsage: Boolean,
+    showHeaders: Boolean,
+    tagSections: List<Pair<String, List<AppInfo>>>,
+    folders: List<Folder>,
+    showFolders: Boolean,
+    foldersSectionLabel: String?,
+    hideFolderApps: Boolean,
+    includeHiddenInSearch: Boolean,
+    privateSectionLabel: String?,
+    recentSectionArg: Pair<String, Int>?,
+    unnamedFolderLabel: String,
+    pinyinSort: Boolean,
+    japaneseSort: Boolean,
+): Pair<AppListModel, AppListModel?> {
+    // Empty unless the sort is on, so an ordinary launch doesn't rebuild the whole list.
+    val counts = if (sortByUsage) launchCounts else emptyMap()
+    val name: (AppInfo) -> String = { disguiseNames[it.key] ?: nameOverrides[it.key] ?: it.label }
+    val separateSearch = includeHiddenInSearch || hideFolderApps
+
+    val listModel by produceState(
+        initialValue = AppListModel(emptyList(), emptyList()),
+        appsByKey,
+        hiddenApps,
+        nameOverrides,
+        counts,
+        showHeaders,
+        japaneseSort,
+        tagSections,
+        folders,
+        showFolders,
+        foldersSectionLabel,
+        hideFolderApps,
+    ) {
+        val apps = appsByKey.values.toList()
+        value = withContext(Dispatchers.Default) {
+            buildAppListModel(
+                apps,
+                hiddenApps,
+                name,
+                counts,
+                englishName = { app.appRepository.englishLabel(it) },
+                pinyin = pinyinSort,
+                japanese = japaneseSort,
+                showHeaders = showHeaders,
+                renamed = { it.key in nameOverrides },
+                privateSectionLabel = privateSectionLabel,
+                recentSection = recentSectionArg,
+                tagSections = tagSections,
+                folders = folders,
+                showFolders = showFolders,
+                unnamedFolder = unnamedFolderLabel,
+                foldersSection = foldersSectionLabel,
+                hideFolderApps = hideFolderApps,
+            )
+        }
+    }
+
+    val searchModel by produceState<AppListModel?>(
+        initialValue = null,
+        appsByKey,
+        nameOverrides,
+        includeHiddenInSearch,
+        hideFolderApps,
+        counts,
+        showHeaders,
+        japaneseSort,
+    ) {
+        val apps = appsByKey.values.toList()
+        value = if (!separateSearch) {
+            null
+        } else {
+            withContext(Dispatchers.Default) {
+                buildAppListModel(
+                    apps,
+                    if (includeHiddenInSearch) emptySet() else hiddenApps,
+                    name,
+                    counts,
+                    englishName = { app.appRepository.englishLabel(it) },
+                    pinyin = pinyinSort,
+                    japanese = japaneseSort,
+                    showHeaders = showHeaders,
+                    renamed = { it.key in nameOverrides },
+                    privateSectionLabel = privateSectionLabel,
+                    recentSection = recentSectionArg,
+                )
+            }
+        }
+    }
+    return listModel to searchModel
 }

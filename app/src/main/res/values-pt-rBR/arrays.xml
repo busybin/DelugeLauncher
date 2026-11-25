@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v39">
+        <item>As pastas podem ficar juntas numa seção própria acima do A, marcada com um ponto na tira em vez de ocupar uma letra: Configurações › Lista de apps › Pastas no topo, desativado por padrão.</item>
+        <item>Um app dentro de uma pasta pode sair da própria letra e ficar só naquela pasta, e a busca ainda o encontra: Configurações › Lista de apps › Apps só na pasta, desativado por padrão.</item>
+        <item>Deslizar das letras para a lista e soltar sobre um app o abre: Configurações › Faixa A–Z › Soltar para abrir, desativado por padrão.</item>
+        <item>Os apps dentro de uma pasta agora seguem o espaçamento da lista.</item>
+        <item>O atalho de um app pode ser fixado nos favoritos pelo menu, e mostra uma estrela depois de fixado.</item>
+    </string-array>
     <string-array name="changelog_v38">
         <item>A lista pode pôr o ícone acima do nome em vez de ao lado, para nomes longos e telas estreitas.</item>
         <item>Agora o tema pode ficar escuro a qualquer hora, sem seguir o sistema nem o horário noturno.</item>

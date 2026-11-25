@@ -184,6 +184,7 @@
     <string name="settings_favorites">Favoritos</string>
     <string name="settings_favorites_detail">Elige qué aplicaciones se sitúan en la pantalla de inicio</string>
     <string name="applist_private_space_section">Espacio privado</string>
+    <string name="applist_folders_section">Carpetas</string>
     <string name="applist_recent_section">Instaladas recientemente</string>
     <string name="settings_stay_private_unlock">Quedarse en la lista tras desbloquear</string>
     <string name="settings_stay_private_unlock_detail">Desbloquear el espacio privado mantiene abierta la lista de aplicaciones en lugar de volver a la pantalla de inicio</string>
@@ -729,6 +730,12 @@
 
     <string name="settings_applist_folders">Carpetas en la lista de apps</string>
     <string name="settings_applist_folders_detail">Coloca cada carpeta bajo su propio nombre entre las apps, para llegar a ella recorriendo el alfabeto. Desactivado por defecto.</string>
+    <string name="settings_folders_at_top">Carpetas arriba</string>
+    <string name="settings_folders_at_top_detail">Todas juntas encima de la A, en vez de bajo su propia letra. Desactivado por defecto.</string>
+    <string name="settings_hide_folder_apps">Apps solo en su carpeta</string>
+    <string name="settings_hide_folder_apps_detail">Una app en una carpeta ya no aparece bajo su propia letra. La búsqueda todavía la encuentra. Desactivado por defecto.</string>
+    <string name="settings_release_to_open">Soltar para abrir</string>
+    <string name="settings_release_to_open_detail">Desliza desde las letras hasta la lista y suelta sobre una app para abrirla. Desactivado por defecto.</string>
 
     <string name="settings_favorite_rules">Reglas de favoritos</string>
     <string name="settings_favorite_rules_detail">Muestra u oculta favoritos según el Wi-Fi, la hora, los auriculares o cuántas veces se han abierto.</string>

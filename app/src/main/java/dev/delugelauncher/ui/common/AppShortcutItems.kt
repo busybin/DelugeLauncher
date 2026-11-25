@@ -7,6 +7,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -23,6 +25,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +59,7 @@ fun AppShortcutItems(
     onStarted: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val delugeApp = context.applicationContext as DelugeApp
     val density = LocalConfiguration.current.densityDpi
     var shortcuts by remember(app.key) { mutableStateOf<List<ShortcutInfo>>(emptyList()) }
@@ -92,6 +96,18 @@ fun AppShortcutItems(
             leadingIcon = icon?.let {
                 { Image(bitmap = it, contentDescription = null, modifier = Modifier.size(iconDp)) }
             },
+            // Kept as an entry of its own, so it can be a favorite, go in a folder and so on.
+            trailingIcon = {
+                IconButton(onClick = {
+                    delugeApp.appRepository.pinAppShortcut(app, shortcut)
+                    onStarted()
+                }) {
+                    Icon(
+                        DelugeIcons.StarBorder,
+                        contentDescription = resources.getString(R.string.applist_add_favorite),
+                    )
+                }
+            },
             onClick = {
                 val locked = lockedApps
                 fun open() {
@@ -102,7 +118,7 @@ fun AppShortcutItems(
                         if (!revealed) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.app_lock_reveal_failed, app.label),
+                                resources.getString(R.string.app_lock_reveal_failed, app.label),
                                 Toast.LENGTH_LONG,
                             ).show()
                             return@launch

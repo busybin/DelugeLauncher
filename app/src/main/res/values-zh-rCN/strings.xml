@@ -286,6 +286,7 @@
     <string name="settings_favorites">收藏</string>
     <string name="settings_favorites_detail">选择放在主屏幕上的应用</string>
     <string name="applist_private_space_section">私密空间</string>
+    <string name="applist_folders_section">文件夹</string>
     <string name="applist_recent_section">最近安装</string>
     <string name="settings_stay_private_unlock">解锁后留在列表</string>
     <string name="settings_stay_private_unlock_detail">解锁私密空间后仍停留在应用列表，而不是回到主屏幕</string>
@@ -729,6 +730,12 @@
 
     <string name="settings_applist_folders">应用列表中的文件夹</string>
     <string name="settings_applist_folders_detail">把文件夹按自己的名字排进应用字母表，滚动到对应字母就能找到。默认关闭。</string>
+    <string name="settings_folders_at_top">文件夹置顶</string>
+    <string name="settings_folders_at_top_detail">所有文件夹集中排在 A 之上，不再按各自的名字分散在字母里。默认关闭。</string>
+    <string name="settings_hide_folder_apps">应用只显示在文件夹里</string>
+    <string name="settings_hide_folder_apps_detail">文件夹内的应用不再出现在自己的字母下，搜索仍能找到。默认关闭。</string>
+    <string name="settings_release_to_open">松手即打开</string>
+    <string name="settings_release_to_open_detail">从字母条滑到列表上，在某个应用上松手就打开它。默认关闭。</string>
 
     <string name="settings_favorite_rules">收藏规则</string>
     <string name="settings_favorite_rules_detail">按 Wi-Fi、时间段、耳机或当天打开次数显示或隐藏收藏。</string>

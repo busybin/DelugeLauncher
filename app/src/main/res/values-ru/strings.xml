@@ -184,6 +184,7 @@
     <string name="settings_favorites">Избранное</string>
     <string name="settings_favorites_detail">Выберите, какие приложения будут на домашнем экране</string>
     <string name="applist_private_space_section">Личное пространство</string>
+    <string name="applist_folders_section">Папки</string>
     <string name="applist_recent_section">Недавно установленные</string>
     <string name="settings_stay_private_unlock">Оставаться в списке после разблокировки</string>
     <string name="settings_stay_private_unlock_detail">После разблокировки личного пространства список приложений остаётся открытым, а не закрывается до домашнего экрана</string>
@@ -737,6 +738,12 @@
 
     <string name="settings_applist_folders">Папки в списке приложений</string>
     <string name="settings_applist_folders_detail">Ставит каждую папку под её именем среди приложений, чтобы до неё можно было добраться по алфавиту. По умолчанию выключено.</string>
+    <string name="settings_folders_at_top">Папки сверху</string>
+    <string name="settings_folders_at_top_detail">Все вместе над A, а не под собственной буквой. По умолчанию выключено.</string>
+    <string name="settings_hide_folder_apps">Приложения только в папке</string>
+    <string name="settings_hide_folder_apps_detail">Приложение в папке больше не показывается под своей буквой. Поиск его по-прежнему находит. По умолчанию выключено.</string>
+    <string name="settings_release_to_open">Отпустить, чтобы открыть</string>
+    <string name="settings_release_to_open_detail">Проведите от букв к списку и отпустите на приложении, чтобы открыть его. По умолчанию выключено.</string>
 
     <string name="settings_favorite_rules">Правила избранного</string>
     <string name="settings_favorite_rules_detail">Показывает или скрывает избранное по Wi-Fi, времени, наушникам или числу открытий.</string>

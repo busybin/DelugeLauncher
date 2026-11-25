@@ -41,8 +41,10 @@
 
     <!-- Asked for only when a favorite rule is set to depend on a Wi-Fi network, never at
          install: Android hides the network name from an app without it. Nothing about the
-         network is stored or sent; the rule itself only holds the names the user typed. -->
+         network is stored or sent; the rule itself only holds the names the user typed.
+         Coarse is declared beside fine because the platform demands both for a fine request. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Read-only state, granted at install without a prompt: whether there is a network at
          all, and which one, for that same rule. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -74,6 +76,11 @@
     <!-- No camera of our own is required, so a device without one can still install this. -->
     <uses-feature
         android:name="android.hardware.camera"
+        android:required="false" />
+    <!-- Same for location: the permission above is a way to read the network name, not a
+         reason to keep the app off a device whose ROM reports no location hardware. -->
+    <uses-feature
+        android:name="android.hardware.location"
         android:required="false" />
 
     <application

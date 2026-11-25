@@ -97,6 +97,9 @@ internal object Pinyin {
                 .filter { it in 'a'..'z' || it in 'A'..'Z' }
                 .lowercase()
         }
+        // Transliterator is API 29; the lazy below is null before then, and this guard keeps the
+        // type out of reach on those builds as well.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return ""
         val t = transliterator ?: return ""
         return chars.getOrPut(ch) {
             runCatching { t.transliterate(ch.toString()) }

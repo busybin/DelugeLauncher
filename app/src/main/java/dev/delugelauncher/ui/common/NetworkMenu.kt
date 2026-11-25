@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.delugelauncher.DelugeApp
@@ -193,6 +194,7 @@ fun rememberNetworkActions(
     open: () -> Unit,
 ): NetworkActions? {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     val mode by app.prefs.networkMode.collectAsState(initial = NetworkMode.OFF)
     val freezeStatus by app.freezeManager.status.collectAsState()
@@ -222,7 +224,7 @@ fun rememberNetworkActions(
                     if (result.noAccess) {
                         Toast.makeText(
                             context,
-                            context.getString(R.string.network_needs_access),
+                            resources.getString(R.string.network_needs_access),
                             Toast.LENGTH_LONG,
                         ).show()
                     }

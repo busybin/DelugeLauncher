@@ -501,6 +501,9 @@ class Prefs(private val context: Context) {
         val CLOSE_FOLDER_ON_LAUNCH = booleanPreferencesKey("close_folder_on_launch")
         val SHOW_SETTINGS_ROW = booleanPreferencesKey("show_settings_row")
         val APPLIST_FOLDERS = booleanPreferencesKey("applist_folders")
+        val APPLIST_FOLDERS_AT_TOP = booleanPreferencesKey("applist_folders_at_top")
+        val APPLIST_HIDE_FOLDER_APPS = booleanPreferencesKey("applist_hide_folder_apps")
+        val RELEASE_TO_LAUNCH = booleanPreferencesKey("release_to_launch")
         val CORNER_BUTTON_KEY = stringPreferencesKey(PREF_CORNER_BUTTON_KEY)
         val CORNER_SWIPE_KEY = stringPreferencesKey(PREF_CORNER_SWIPE_KEY)
         val CORNER_X_PORTRAIT = floatPreferencesKey("corner_x_portrait")
@@ -1469,8 +1472,8 @@ class Prefs(private val context: Context) {
      * Whether the release page may be asked on its own, without being asked first.
      *
      * True only after the first-launch question was answered with "allow"; the manual "check for
-     * updates" in Settings always works. A check nobody opted into is what F-Droid labels as
-     * tracking, so the request happens only after that answer. The check itself reads the public
+     * updates" in Settings always works. A check nobody opted into reads as tracking to some
+     * stores, so the request happens only after that answer. The check itself reads the public
      * release page and sends nothing else; see [UpdateChecker].
      */
     val updateAutoCheck: Flow<Boolean> =
@@ -1932,6 +1935,22 @@ class Prefs(private val context: Context) {
     /** Whether folders stand in the A-Z list by their own names. Off by default. */
     val appListFolders: Flow<Boolean> =
         data.map { it[Keys.APPLIST_FOLDERS] ?: false }.distinctUntilChanged()
+
+    /** Whether those folders get a section of their own above the letters. Off by default. */
+    val appListFoldersAtTop: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_FOLDERS_AT_TOP] ?: false }.distinctUntilChanged()
+
+    /** Whether an app in a listed folder is left out from under its own letter. Off by default. */
+    val appListHideFolderApps: Flow<Boolean> =
+        data.map { it[Keys.APPLIST_HIDE_FOLDER_APPS] ?: false }.distinctUntilChanged()
+
+    /**
+     * Whether sliding off the letters onto the list and letting go on an app opens it. Off by
+     * default: it turns the strip from an index into a launcher, and only some people want the
+     * alphabet to also be a menu.
+     */
+    val releaseToLaunch: Flow<Boolean> =
+        data.map { it[Keys.RELEASE_TO_LAUNCH] ?: false }.distinctUntilChanged()
 
     val closeFolderOnLaunch: Flow<Boolean> =
         data.map { it[Keys.CLOSE_FOLDER_ON_LAUNCH] ?: false }.distinctUntilChanged()
@@ -3296,6 +3315,18 @@ class Prefs(private val context: Context) {
 
     suspend fun setAppListFolders(v: Boolean) {
         context.dataStore.edit { it[Keys.APPLIST_FOLDERS] = v }
+    }
+
+    suspend fun setAppListFoldersAtTop(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_FOLDERS_AT_TOP] = v }
+    }
+
+    suspend fun setAppListHideFolderApps(v: Boolean) {
+        context.dataStore.edit { it[Keys.APPLIST_HIDE_FOLDER_APPS] = v }
+    }
+
+    suspend fun setReleaseToLaunch(v: Boolean) {
+        context.dataStore.edit { it[Keys.RELEASE_TO_LAUNCH] = v }
     }
 
     suspend fun setShowSettingsRow(v: Boolean) {

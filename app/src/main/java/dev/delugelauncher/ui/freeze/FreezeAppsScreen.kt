@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.freeze
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.LocalBrickWarning
 import dev.delugelauncher.ui.common.topBarInsets
 import android.net.Uri
@@ -150,6 +151,7 @@ fun FreezeAppsScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val exportLauncher = rememberLauncherForActivityResult(
@@ -333,7 +335,7 @@ fun FreezeAppsScreen(
                         if (ignored > 0) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.freeze_bulk_unlisted, ignored),
+                                resources.getString(R.string.freeze_bulk_unlisted, ignored),
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
@@ -355,7 +357,7 @@ fun FreezeAppsScreen(
                         if (ignored > 0) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.freeze_bulk_unlisted, ignored),
+                                resources.getString(R.string.freeze_bulk_unlisted, ignored),
                                 Toast.LENGTH_LONG,
                             ).show()
                         }

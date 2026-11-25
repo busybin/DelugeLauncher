@@ -41,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -138,6 +139,7 @@ import dev.delugelauncher.ui.home.rememberRuleContext
 import dev.delugelauncher.ui.settings.FavoriteRulesScreen
 import dev.delugelauncher.ui.home.HomeRoute
 import dev.delugelauncher.ui.home.HomeSettings
+import dev.delugelauncher.ui.home.FolderListOptions
 import dev.delugelauncher.ui.settings.AppPickerScreen
 import dev.delugelauncher.ui.settings.FolderAppsScreen
 import dev.delugelauncher.ui.freeze.FreezeAppsScreen
@@ -229,6 +231,7 @@ fun DelugeNavHost(
 ) {
     val navController = rememberSaveable(saver = RouterSaver) { Router("home") }
     val context = LocalContext.current
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
     // Bumped on every package event, so the widget pages re-read their provider: a frozen
     // provider reads null and shows the dead page, and only a fresh read brings it back when
@@ -549,10 +552,10 @@ fun DelugeNavHost(
         scope.launch {
             val result = app.freezeManager.setEnabled(enabled)
             val message = when {
-                result.noAccess -> context.getString(R.string.freeze_needs_access)
+                result.noAccess -> resources.getString(R.string.freeze_needs_access)
                 result.failed > 0 ->
-                    context.getString(R.string.freeze_disable_failed, result.failed)
-                !enabled -> context.getString(R.string.freeze_disabled_done, result.done)
+                    resources.getString(R.string.freeze_disable_failed, result.failed)
+                !enabled -> resources.getString(R.string.freeze_disabled_done, result.done)
                 else -> null
             }
             if (message != null) withContext(Dispatchers.Main) {
@@ -714,6 +717,9 @@ fun DelugeNavHost(
     val showListHeaders by app.prefs.showListHeaders.collectAsState(initial = true)
     val showSettingsRow by app.prefs.showSettingsRow.collectAsState(initial = true)
     val appListFolders by app.prefs.appListFolders.collectAsState(initial = false)
+    val appListFoldersAtTop by app.prefs.appListFoldersAtTop.collectAsState(initial = false)
+    val appListHideFolderApps by app.prefs.appListHideFolderApps.collectAsState(initial = false)
+    val releaseToLaunch by app.prefs.releaseToLaunch.collectAsState(initial = false)
     val favoriteRules by app.prefs.favoriteRules.collectAsState(initial = emptyList())
     val dailyOpens by app.prefs.dailyOpens.collectAsState(initial = DailyOpens("", emptyMap()))
     val cornerButtonKey by app.prefs.cornerButtonKey.collectAsState(initial = null)
@@ -1020,11 +1026,11 @@ fun DelugeNavHost(
             Toast.makeText(
                 context,
                 when {
-                    !ok -> context.getString(R.string.settings_backup_failed)
+                    !ok -> resources.getString(R.string.settings_backup_failed)
                     // Saying "done" over a file whose entries were dropped leaves the user
                     // wondering why half their settings look wrong.
-                    dropped > 0 -> context.getString(R.string.settings_import_partial, dropped)
-                    else -> context.getString(R.string.settings_import_done)
+                    dropped > 0 -> resources.getString(R.string.settings_import_partial, dropped)
+                    else -> resources.getString(R.string.settings_import_done)
                 },
                 Toast.LENGTH_SHORT,
             ).show()
@@ -1228,6 +1234,8 @@ fun DelugeNavHost(
         showListHeaders = showListHeaders,
         showSettingsRow = showSettingsRow,
         appListFolders = appListFolders,
+        folderList = FolderListOptions(appListFoldersAtTop, appListHideFolderApps),
+        releaseToLaunch = releaseToLaunch,
         showFavoriteIcons = showFavoriteIcons,
         favoritesEverSet = favoritesEverSet,
         edgeZoneBandOnly = edgeZoneBandOnly,
@@ -1584,7 +1592,7 @@ fun DelugeNavHost(
                             if (!revealed) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.app_lock_reveal_failed, label),
+                                    resources.getString(R.string.app_lock_reveal_failed, label),
                                     Toast.LENGTH_LONG,
                                 ).show()
                                 return@launch
@@ -1609,7 +1617,7 @@ fun DelugeNavHost(
                             if (!launched) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(R.string.notification_open_failed),
+                                    resources.getString(R.string.notification_open_failed),
                                     Toast.LENGTH_LONG,
                                 ).show()
                                 return@launch
@@ -1721,6 +1729,9 @@ fun DelugeNavHost(
                     onSetEdgeZoneBandOnly = { scope.launch { app.prefs.setEdgeZoneBandOnly(it) } },
                     onSetShowSettingsRow = { scope.launch { app.prefs.setShowSettingsRow(it) } },
                     onSetAppListFolders = { scope.launch { app.prefs.setAppListFolders(it) } },
+                    onSetAppListFoldersAtTop = { scope.launch { app.prefs.setAppListFoldersAtTop(it) } },
+                    onSetAppListHideFolderApps = { scope.launch { app.prefs.setAppListHideFolderApps(it) } },
+                    onSetReleaseToLaunch = { scope.launch { app.prefs.setReleaseToLaunch(it) } },
                     onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
                     onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
                     onSetFrozenLook = { scope.launch { app.prefs.setFrozenLook(it) } },
@@ -1923,6 +1934,12 @@ fun DelugeNavHost(
                 showListHeaders = showListHeaders,
                 showSettingsRow = showSettingsRow,
                 appListFolders = appListFolders,
+                appListFoldersAtTop = appListFoldersAtTop,
+                onSetAppListFoldersAtTop = actionsA.onSetAppListFoldersAtTop,
+                appListHideFolderApps = appListHideFolderApps,
+                onSetAppListHideFolderApps = actionsA.onSetAppListHideFolderApps,
+                releaseToLaunch = releaseToLaunch,
+                onSetReleaseToLaunch = actionsA.onSetReleaseToLaunch,
                 edgeZoneBandOnly = edgeZoneBandOnly,
                 holdScroll = holdScroll,
                 stripFollowsPastEnds = stripFollowsPastEnds,
@@ -2343,9 +2360,9 @@ fun DelugeNavHost(
                 onAddToPlan = { appInfo, method ->
                     scope.launch {
                         val message = when (app.freezeManager.addToPlan(appInfo, method)) {
-                            FreezeOutcome.SYSTEM_APPS_OFF -> context.getString(R.string.freeze_system_off_blocked)
+                            FreezeOutcome.SYSTEM_APPS_OFF -> resources.getString(R.string.freeze_system_off_blocked)
                             FreezeOutcome.PROTECTED ->
-                                context.getString(R.string.freeze_protected, appInfo.label)
+                                resources.getString(R.string.freeze_protected, appInfo.label)
                             else -> null
                         }
                         if (message != null) withContext(Dispatchers.Main) {
@@ -2359,10 +2376,10 @@ fun DelugeNavHost(
                         if (added != FreezeOutcome.DONE) {
                             val message = when (added) {
                                 FreezeOutcome.SYSTEM_APPS_OFF ->
-                                    context.getString(R.string.freeze_system_off_blocked)
+                                    resources.getString(R.string.freeze_system_off_blocked)
                                 FreezeOutcome.PROTECTED ->
-                                    context.getString(R.string.freeze_protected, appInfo.label)
-                                else -> context.getString(R.string.freeze_failed, appInfo.label)
+                                    resources.getString(R.string.freeze_protected, appInfo.label)
+                                else -> resources.getString(R.string.freeze_failed, appInfo.label)
                             }
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -2371,8 +2388,8 @@ fun DelugeNavHost(
                             val result = app.freezeManager.freeze(appInfo)
                             if (result != FreezeOutcome.DONE) {
                                 val message = when (result) {
-                                    FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
-                                    else -> context.getString(R.string.freeze_failed, appInfo.label)
+                                    FreezeOutcome.NO_ACCESS -> resources.getString(R.string.freeze_needs_access)
+                                    else -> resources.getString(R.string.freeze_failed, appInfo.label)
                                 }
                                 withContext(Dispatchers.Main) {
                                     Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -2390,12 +2407,12 @@ fun DelugeNavHost(
                         }
                         val message = when (result) {
                             FreezeOutcome.DONE -> null
-                            FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
+                            FreezeOutcome.NO_ACCESS -> resources.getString(R.string.freeze_needs_access)
                             FreezeOutcome.SYSTEM_APPS_OFF ->
-                                context.getString(R.string.freeze_system_off_blocked)
+                                resources.getString(R.string.freeze_system_off_blocked)
                             FreezeOutcome.PROTECTED ->
-                                context.getString(R.string.freeze_protected, appInfo.label)
-                            else -> context.getString(
+                                resources.getString(R.string.freeze_protected, appInfo.label)
+                            else -> resources.getString(
                                 if (freeze) R.string.freeze_failed else R.string.freeze_unfreeze_failed,
                                 appInfo.label,
                             )
@@ -2409,10 +2426,10 @@ fun DelugeNavHost(
                     scope.launch {
                         val message = when (app.freezeManager.setMethod(appInfo.freezeKey, method)) {
                             FreezeOutcome.DONE, FreezeOutcome.SKIPPED -> null
-                            FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
+                            FreezeOutcome.NO_ACCESS -> resources.getString(R.string.freeze_needs_access)
                             FreezeOutcome.SYSTEM_APPS_OFF ->
-                                context.getString(R.string.freeze_system_off_blocked)
-                            else -> context.getString(R.string.freeze_failed, appInfo.label)
+                                resources.getString(R.string.freeze_system_off_blocked)
+                            else -> resources.getString(R.string.freeze_failed, appInfo.label)
                         }
                         if (message != null) withContext(Dispatchers.Main) {
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -2430,15 +2447,15 @@ fun DelugeNavHost(
                             FreezeToast.result(
                                 context,
                                 if (result.noAccess) {
-                                    context.getString(R.string.freeze_needs_access)
+                                    resources.getString(R.string.freeze_needs_access)
                                 } else if (result.failed > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.freeze_many_partial,
                                         result.done,
                                         result.failed,
                                     )
                                 } else {
-                                    context.getString(R.string.freeze_many_done, result.done)
+                                    resources.getString(R.string.freeze_many_done, result.done)
                                 },
                                 long = result.noAccess || result.failed > 0,
                             )
@@ -2454,21 +2471,21 @@ fun DelugeNavHost(
                             FreezeToast.result(
                                 context,
                                 if (result.noAccess) {
-                                    context.getString(R.string.freeze_needs_access)
+                                    resources.getString(R.string.freeze_needs_access)
                                 } else if (result.failed > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.unfreeze_many_partial,
                                         result.done,
                                         result.failed,
                                     )
                                 } else if (kept > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.freeze_unfrozen_pinned,
                                         result.done,
                                         kept,
                                     )
                                 } else {
-                                    context.getString(R.string.freeze_all_done)
+                                    resources.getString(R.string.freeze_all_done)
                                 },
                                 long = result.noAccess || result.failed > 0,
                             )
@@ -2481,7 +2498,7 @@ fun DelugeNavHost(
                         if (changed > 0) withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.freeze_bulk_changed, changed),
+                                resources.getString(R.string.freeze_bulk_changed, changed),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
@@ -2493,7 +2510,7 @@ fun DelugeNavHost(
                         if (changed > 0) withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.freeze_bulk_changed, changed),
+                                resources.getString(R.string.freeze_bulk_changed, changed),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
@@ -2505,7 +2522,7 @@ fun DelugeNavHost(
                         if (changed > 0) withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.freeze_bulk_changed, changed),
+                                resources.getString(R.string.freeze_bulk_changed, changed),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }
@@ -2518,8 +2535,8 @@ fun DelugeNavHost(
                     scope.launch {
                         val result = app.freezeManager.removeFromPlan(appInfo)
                         val message = when (result) {
-                            FreezeOutcome.NO_ACCESS -> context.getString(R.string.freeze_needs_access)
-                            FreezeOutcome.FAILED -> context.getString(
+                            FreezeOutcome.NO_ACCESS -> resources.getString(R.string.freeze_needs_access)
+                            FreezeOutcome.FAILED -> resources.getString(
                                 R.string.freeze_unfreeze_failed,
                                 appInfo.label,
                             )
@@ -2538,15 +2555,15 @@ fun DelugeNavHost(
                             FreezeToast.result(
                                 context,
                                 if (result.noAccess) {
-                                    context.getString(R.string.freeze_needs_access)
+                                    resources.getString(R.string.freeze_needs_access)
                                 } else if (result.failed > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.freeze_many_partial,
                                         result.done,
                                         result.failed,
                                     )
                                 } else {
-                                    context.getString(R.string.freeze_many_done, result.done)
+                                    resources.getString(R.string.freeze_many_done, result.done)
                                 },
                                 long = result.noAccess || result.failed > 0,
                             )
@@ -2566,21 +2583,21 @@ fun DelugeNavHost(
                             FreezeToast.result(
                                 context,
                                 if (result.noAccess) {
-                                    context.getString(R.string.freeze_needs_access)
+                                    resources.getString(R.string.freeze_needs_access)
                                 } else if (result.failed > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.unfreeze_many_partial,
                                         result.done,
                                         result.failed,
                                     )
                                 } else if (kept > 0) {
-                                    context.getString(
+                                    resources.getString(
                                         R.string.freeze_unfrozen_pinned,
                                         result.done,
                                         kept,
                                     )
                                 } else {
-                                    context.getString(R.string.freeze_all_done)
+                                    resources.getString(R.string.freeze_all_done)
                                 },
                                 long = result.noAccess || result.failed > 0,
                             )
@@ -2624,7 +2641,7 @@ fun DelugeNavHost(
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 context,
-                                context.getString(
+                                resources.getString(
                                     if (done) R.string.freeze_export_done else R.string.freeze_export_failed
                                 ),
                                 Toast.LENGTH_SHORT,
@@ -2652,9 +2669,9 @@ fun DelugeNavHost(
                         }.getOrDefault("")
                         val added = if (text.isEmpty()) -1 else app.freezeManager.importPlan(text)
                         val message = when {
-                            added < 0 -> context.getString(R.string.freeze_import_failed)
-                            added == 0 -> context.getString(R.string.freeze_import_none)
-                            else -> context.getString(R.string.freeze_import_done, added)
+                            added < 0 -> resources.getString(R.string.freeze_import_failed)
+                            added == 0 -> resources.getString(R.string.freeze_import_none)
+                            else -> resources.getString(R.string.freeze_import_done, added)
                         }
                         withContext(Dispatchers.Main) {
                             Toast.makeText(context, message, Toast.LENGTH_LONG).show()
@@ -2665,12 +2682,12 @@ fun DelugeNavHost(
                     scope.launch {
                         val result = app.freezeManager.setSystemAppsEnabled(enabled)
                         val message = when {
-                            result.noAccess -> context.getString(R.string.freeze_needs_access)
-                            result.failed > 0 -> context.getString(
+                            result.noAccess -> resources.getString(R.string.freeze_needs_access)
+                            result.failed > 0 -> resources.getString(
                                 R.string.freeze_system_unfreeze_failed,
                                 result.failed,
                             )
-                            !enabled -> context.getString(R.string.freeze_system_disabled_done, result.done)
+                            !enabled -> resources.getString(R.string.freeze_system_disabled_done, result.done)
                             else -> null
                         }
                         if (message != null) withContext(Dispatchers.Main) {
@@ -2752,7 +2769,7 @@ fun DelugeNavHost(
                         if (result.noAccess) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.network_needs_access),
+                                resources.getString(R.string.network_needs_access),
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
@@ -2765,7 +2782,7 @@ fun DelugeNavHost(
                         if (result.noAccess) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.network_needs_access),
+                                resources.getString(R.string.network_needs_access),
                                 Toast.LENGTH_LONG,
                             ).show()
                         }
@@ -2811,7 +2828,7 @@ fun DelugeNavHost(
                     PackageManager.PERMISSION_GRANTED
             }
             val locationLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
+                ActivityResultContracts.RequestMultiplePermissions()
             ) { grantTick++ }
             val currentSsid = remember(grantTick) { readWifiSsid(context) }
             FavoriteRulesScreen(
@@ -2829,7 +2846,13 @@ fun DelugeNavHost(
                 currentSsid = if (locationGranted) currentSsid else null,
                 locationGranted = locationGranted,
                 onRequestLocation = {
-                    locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    // The platform ignores a fine-only request besides hiding the network name.
+                    locationLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
                 },
                 onUpsert = { rule -> scope.launch { app.prefs.upsertFavoriteRule(rule) } },
                 onDelete = { id -> scope.launch { app.prefs.deleteFavoriteRule(id) } },
@@ -2844,7 +2867,7 @@ fun DelugeNavHost(
                     PackageManager.PERMISSION_GRANTED
             }
             val locationLauncher = rememberLauncherForActivityResult(
-                ActivityResultContracts.RequestPermission()
+                ActivityResultContracts.RequestMultiplePermissions()
             ) { grantTick++ }
             val currentSsid = remember(grantTick) { readWifiSsid(context) }
             val rules by app.prefs.sleepRules.collectAsState(initial = emptyList())
@@ -2897,7 +2920,13 @@ fun DelugeNavHost(
                 currentSsid = if (locationGranted) currentSsid else null,
                 locationGranted = locationGranted,
                 onRequestLocation = {
-                    locationLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                    // The platform ignores a fine-only request besides hiding the network name.
+                    locationLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION,
+                        ),
+                    )
                 },
                 onSave = { rule ->
                     scope.launch {
@@ -2908,7 +2937,7 @@ fun DelugeNavHost(
                             withContext(Dispatchers.Main) {
                                 Toast.makeText(
                                     context,
-                                    context.getString(
+                                    resources.getString(
                                         R.string.sleep_rules_full,
                                         dev.delugelauncher.data.MAX_SLEEP_RULES,
                                     ),

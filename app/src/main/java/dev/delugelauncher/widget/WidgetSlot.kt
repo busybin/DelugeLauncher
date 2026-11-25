@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.widget
 
+import androidx.compose.ui.platform.LocalResources
 import kotlin.math.abs
 import kotlin.math.roundToInt
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -329,6 +330,7 @@ internal fun WidgetPage(
     onContentHeight: ((Int) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val app = context.applicationContext as DelugeApp
     val appWidgetManager = remember { AppWidgetManager.getInstance(context) }
     // Re-read on every package event, not just when the id changes: a frozen provider reads
@@ -370,7 +372,7 @@ internal fun WidgetPage(
             if (!revealed) {
                 Toast.makeText(
                     context,
-                    context.getString(R.string.app_lock_reveal_failed, label),
+                    resources.getString(R.string.app_lock_reveal_failed, label),
                     Toast.LENGTH_LONG,
                 ).show()
                 return@launch
@@ -410,12 +412,12 @@ internal fun WidgetPage(
                 }
                 FreezeOutcome.NO_ACCESS -> Toast.makeText(
                     context,
-                    context.getString(R.string.freeze_needs_access),
+                    resources.getString(R.string.freeze_needs_access),
                     Toast.LENGTH_LONG,
                 ).show()
                 else -> Toast.makeText(
                     context,
-                    context.getString(R.string.freeze_unfreeze_failed, packageName),
+                    resources.getString(R.string.freeze_unfreeze_failed, packageName),
                     Toast.LENGTH_SHORT,
                 ).show()
             }

@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v39">
+        <item>Las carpetas pueden agruparse en una sección propia encima de la A, marcada con un punto en la tira en vez de ocupar una letra: Ajustes › Lista de aplicaciones › Carpetas arriba, desactivado por defecto.</item>
+        <item>Una app dentro de una carpeta puede quedar fuera de su propia letra y vivir solo en esa carpeta, y la búsqueda la sigue encontrando: Ajustes › Lista de aplicaciones › Apps solo en su carpeta, desactivado por defecto.</item>
+        <item>Deslizar desde las letras hasta la lista y soltar sobre una app la abre: Ajustes › Banda A–Z › Soltar para abrir, desactivado por defecto.</item>
+        <item>Las apps dentro de una carpeta ahora siguen el espaciado de la lista.</item>
+        <item>El acceso directo de una app puede fijarse a los favoritos desde su menú, y muestra una estrella cuando lo está.</item>
+    </string-array>
     <string-array name="changelog_v38">
         <item>La lista puede poner el icono encima del nombre en vez de al lado, para nombres largos y pantallas estrechas.</item>
         <item>Ahora el tema puede quedarse oscuro a cualquier hora, sin seguir al sistema ni al horario nocturno.</item>

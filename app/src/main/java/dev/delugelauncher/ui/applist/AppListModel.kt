@@ -190,6 +190,9 @@ internal fun tagStripLabel(label: String): String =
 /** How many characters of a tag the strip shows. Three reads, one does not. */
 internal const val STRIP_LABEL_CHARS = 3
 
+/** The strip's mark for the folders when they have a section of their own, above the letters. */
+internal const val FOLDERS_LETTER = "•"
+
 /** The auto-tagger's word in every shipped language, read from `tag_frequent`. */
 internal fun autoTagWords(context: Context): Set<String> {
     val base = context.resources.configuration
@@ -488,6 +491,16 @@ fun buildAppListModel(
     showFolders: Boolean = false,
     /** What an unnamed folder is called here, so it files under the letter it is shown with. */
     unnamedFolder: String = "Folder",
+    /**
+     * Heading for a section of all the folders above the alphabet, or null to file each under
+     * its own letter (#178).
+     */
+    foldersSection: String? = null,
+    /**
+     * Whether an app inside one of [folders] is listed only there, not under its own letter
+     * too (#176). A search still finds it.
+     */
+    hideFolderApps: Boolean = false,
     /** Heading and how many, for a section of what was installed most recently. */
     recentSection: Pair<String, Int>? = null,
     /** Whether names that are not A-Z file under kana rows and kanji, as a Japanese phone sorts. */
@@ -545,26 +558,50 @@ fun buildAppListModel(
             ).forEach { rows += AppListRow.Entry(it, section = tagSectionToken(label)) }
         }
     }
-    val alphabetStart = rows.size
+    // A folder is listed even with nothing in it: it is still a place to put an app. Only its
+    // members that are actually in the list can be taken out of the alphabet (#176).
+    val folderLabel: (Folder) -> String = { it.name.ifBlank { unnamedFolder } }
+    val folderRows = if (!showFolders) emptyList() else folders.map { AppListRow.FolderRow(it) }
+    val inFolders = if (hideFolderApps) {
+        val visibleByKey = visible.associateBy { it.key }
+        folderRows.flatMap { row -> row.folder.apps.filter { it in visibleByKey } }.toSet()
+    } else {
+        emptySet()
+    }
 
-    val byLetter = visible.groupBy { app ->
+    val byLetter = visible.filterNot { it.key in inFolders }.groupBy { app ->
         filingLetter(displayName(app), renamed(app), pinyin, japanese) { englishName(app) }
     }
     // A folder files under the first letter of its own name, and sorts among the apps rather
     // than in a section of its own: the point of having it in the list is to reach it where
-    // its name says it is.
-    val foldersByLetter = if (!showFolders) {
+    // its name says it is. Given a section of its own, it is listed there instead.
+    val foldersByLetter = if (folderRows.isEmpty() || foldersSection != null) {
         emptyMap()
     } else {
-        folders.groupBy { folder ->
+        folderRows.groupBy { row ->
             filingLetter(
-                folder.name.ifBlank { unnamedFolder },
+                folderLabel(row.folder),
                 renamed = true,
                 pinyin = pinyin,
                 japanese = japanese,
             ) { null }
         }
     }
+
+    // Above the alphabet and below the tags: the tags are what the top of the list is, and a
+    // place of its own is the whole point of the switch. The strip marks it with a dot rather
+    // than a letter, which it is not.
+    if (foldersSection != null && folderRows.isNotEmpty()) {
+        letterIndex += FOLDERS_LETTER to rows.size
+        if (showHeaders) rows += AppListRow.Header(foldersSection)
+        folderRows.sortedWith(
+            compareBy(
+                { folderLabel(it.folder).lowercase(java.util.Locale.ROOT) },
+                { folderToken(it.folder.id) },
+            )
+        ).forEach { rows += it }
+    }
+    val alphabetStart = rows.size
 
     (byLetter.keys + foldersByLetter.keys).toSortedSet().forEach { letter ->
         letterIndex += letter.toString() to rows.size
@@ -578,13 +615,13 @@ fun buildAppListModel(
                 key = app.key,
             )
         }
-        foldersByLetter[letter]?.forEach { folder ->
+        foldersByLetter[letter]?.forEach { row ->
             items += AlphabetItem(
                 app = null,
-                folder = folder,
+                folder = row.folder,
                 count = 0,
-                order = folder.name.ifBlank { unnamedFolder }.lowercase(java.util.Locale.ROOT),
-                key = folderToken(folder.id),
+                order = folderLabel(row.folder).lowercase(java.util.Locale.ROOT),
+                key = folderToken(row.folder.id),
             )
         }
         items.sortedWith(
@@ -638,8 +675,9 @@ fun AppListModel.filtered(match: (AppInfo) -> Boolean): AppListModel {
     var cursor = 0
     var letter: String? = null
     var letterKept = false
-    // Where the alphabet begins in the kept rows: everything before it is tag groups, and the
-    // spy must start past them or the strip goes dark.
+    // Where the alphabet begins in the kept rows: everything before it is tag groups and,
+    // when they have one, the folders' own section — the spy must start past them or the
+    // strip goes dark.
     var keptAlphabetStart = 0
     var alphabetPassed = alphabetStart <= 0
 
@@ -655,8 +693,8 @@ fun AppListModel.filtered(match: (AppInfo) -> Boolean): AppListModel {
         }
         when (row) {
             is AppListRow.Header -> pendingHeader = row
-            // A query searches apps by name; a folder's members are still found by their own
-            // names under their own letters.
+            // A query searches apps by name; what a folder hides from the alphabet is still
+            // searched for against a model that lists it.
             is AppListRow.FolderRow -> Unit
             is AppListRow.Entry -> if (match(row.app)) {
                 // Recorded before the heading is added, so the letter points at the heading

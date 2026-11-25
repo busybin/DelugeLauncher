@@ -246,6 +246,9 @@ class FreezeBinder(private val context: Context) {
         }
 
         private fun service(name: String, className: String): Any {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                throw IllegalStateException("hidden calls need API 28")
+            }
             val binder = SystemServiceHelper.getSystemService(name)
                 ?: throw IllegalStateException("no $name service")
             val stub = Class.forName("$className\$Stub")
@@ -253,8 +256,12 @@ class FreezeBinder(private val context: Context) {
                 ?: throw IllegalStateException("no $className")
         }
 
-        private fun call(target: Any, method: String, vararg args: Any?): Any? =
-            HiddenApiBypass.invoke(target.javaClass, target, method, *args)
+        private fun call(target: Any, method: String, vararg args: Any?): Any? {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+                throw IllegalStateException("hidden calls need API 28")
+            }
+            return HiddenApiBypass.invoke(target.javaClass, target, method, *args)
+        }
     }
 
     companion object {
@@ -288,8 +295,11 @@ class FreezeBinder(private val context: Context) {
             "android:run_in_background",
         )
 
-        private fun opCode(name: String): Int? = runCatching {
-            HiddenApiBypass.invoke(AppOpsManager::class.java, null, "strOpToOp", name) as? Int
-        }.getOrNull()
+        private fun opCode(name: String): Int? {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+            return runCatching {
+                HiddenApiBypass.invoke(AppOpsManager::class.java, null, "strOpToOp", name) as? Int
+            }.getOrNull()
+        }
     }
 }

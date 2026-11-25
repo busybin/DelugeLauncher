@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.home
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.topBarInsets
 import dev.delugelauncher.ui.common.DelugeIcons
 import dev.delugelauncher.ui.focus.FocusMenuItem
@@ -1507,6 +1508,7 @@ fun HomeScreen(
                             iconSizeDp = liveIconSize,
                             labelSizeSp = labelSizeSp,
                             sidePaddingDp = sidePaddingDp,
+                            itemSpacingDp = itemSpacingDp,
                             controlsInset = folderControlsInset,
                             contentColor = contentColor,
                             showLabels = showFavoriteLabels,
@@ -2201,6 +2203,8 @@ private fun FolderRow(
     iconSizeDp: Int,
     labelSizeSp: Int,
     sidePaddingDp: Int,
+    /** The home screen's spacing between apps; the apps inside follow it, scaled to their size. */
+    itemSpacingDp: Int,
     /** Keeps this folder's own controls out from under the edge zone. */
     controlsInset: Modifier,
     contentColor: Color,
@@ -2491,6 +2495,7 @@ private fun FolderRow(
                     // opens without it looks like it lost it. Only a playing card is a way in;
                     // an empty one is a placeholder, so it does not pretend to be tappable.
                     val context = LocalContext.current
+                    val resources = LocalResources.current
                     val playing by NowPlayingBus.state.collectAsState()
                     NowPlayingWidget(
                         contentColor = contentsColor,
@@ -2508,7 +2513,7 @@ private fun FolderRow(
                                         if (!onOpenNowPlaying()) {
                                             Toast.makeText(
                                                 context,
-                                                context.getString(R.string.now_playing_open_failed),
+                                                resources.getString(R.string.now_playing_open_failed),
                                                 Toast.LENGTH_SHORT,
                                             ).show()
                                         }
@@ -2556,7 +2561,8 @@ private fun FolderRow(
                                     memberMenuFor = member.key
                                 },
                             )
-                            .padding(vertical = 4.dp),
+                            // 4dp at the default spacing of 10, as it always was (#174).
+                            .padding(vertical = (itemSpacingDp * 0.4f).dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = alignment.arrangement(),
                     ) {
@@ -2806,6 +2812,7 @@ private fun NowPlayingBlock(
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
+    val resources = LocalResources.current
 
     PaddingHandle(
         editMode = editMode,
@@ -2832,7 +2839,7 @@ private fun NowPlayingBlock(
                         if (!onOpenNowPlaying()) {
                             Toast.makeText(
                                 context,
-                                context.getString(R.string.now_playing_open_failed),
+                                resources.getString(R.string.now_playing_open_failed),
                                 Toast.LENGTH_SHORT,
                             ).show()
                         }

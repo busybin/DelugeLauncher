@@ -305,6 +305,7 @@
     <string name="settings_favorites">المفضّلة</string>
     <string name="settings_favorites_detail">اختر التطبيقات التي تظهر في الشاشة الرئيسية</string>
     <string name="applist_private_space_section">المساحة الخاصة</string>
+    <string name="applist_folders_section">المجلدات</string>
     <string name="applist_recent_section">المثبَّتة حديثًا</string>
     <string name="settings_stay_private_unlock">البقاء في القائمة بعد إلغاء القفل</string>
     <string name="settings_stay_private_unlock_detail">إلغاء قفل المساحة الخاصة يبقي قائمة التطبيقات مفتوحة بدلًا من العودة إلى الشاشة الرئيسية</string>
@@ -745,6 +746,12 @@
 
     <string name="settings_applist_folders">المجلدات في قائمة التطبيقات</string>
     <string name="settings_applist_folders_detail">يضع كل مجلد تحت اسمه بين التطبيقات، ليصل إليه بالتمرير عبر الأبجدية. معطّل افتراضيًا.</string>
+    <string name="settings_folders_at_top">المجلدات في الأعلى</string>
+    <string name="settings_folders_at_top_detail">كلها معًا فوق A بدلًا من تحت حرفها. معطّل افتراضيًا.</string>
+    <string name="settings_hide_folder_apps">التطبيقات داخل مجلداتها فقط</string>
+    <string name="settings_hide_folder_apps_detail">لم يعد التطبيق داخل مجلد يظهر تحت حرفه. ما زال البحث يجده. معطّل افتراضيًا.</string>
+    <string name="settings_release_to_open">أفلت للفتح</string>
+    <string name="settings_release_to_open_detail">اسحب من الحروف إلى القائمة وأفلت فوق تطبيق لفتحه. معطّل افتراضيًا.</string>
 
     <string name="settings_favorite_rules">قواعد المفضلة</string>
     <string name="settings_favorite_rules_detail">يعرض أو يخفي المفضلة بحسب Wi-Fi أو الوقت أو السماعات أو عدد مرات الفتح.</string>

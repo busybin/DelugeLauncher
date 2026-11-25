@@ -307,6 +307,7 @@
     <string name="settings_favorites">Favorites</string>
     <string name="settings_favorites_detail">Choose which apps sit on the home screen</string>
     <string name="applist_private_space_section">Private Space</string>
+    <string name="applist_folders_section">Folders</string>
     <string name="applist_recent_section">Recently installed</string>
     <string name="settings_stay_private_unlock">Stay in the list after unlocking</string>
     <string name="settings_stay_private_unlock_detail">Unlocking Private Space keeps the app list open instead of going back to the home screen</string>
@@ -733,6 +734,12 @@
 
     <string name="settings_applist_folders">Folders in the app list</string>
     <string name="settings_applist_folders_detail">Files each folder under its own name among the apps, so one is reachable by scrolling the alphabet. Off by default.</string>
+    <string name="settings_folders_at_top">Folders at the top</string>
+    <string name="settings_folders_at_top_detail">All of them together above A, instead of under their own letters. Off by default.</string>
+    <string name="settings_hide_folder_apps">Apps only in their folder</string>
+    <string name="settings_hide_folder_apps_detail">An app in a folder no longer shows under its own letter. A search still finds it. Off by default.</string>
+    <string name="settings_release_to_open">Release to open</string>
+    <string name="settings_release_to_open_detail">Slide off the letters onto the list and let go on an app to open it. Off by default.</string>
 
     <string name="settings_favorite_rules">Favorites rules</string>
     <string name="settings_favorite_rules_detail">Show or hide favorites by Wi-Fi, time, headphones or how often they have been opened.</string>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package dev.delugelauncher.ui.network
 
+import androidx.compose.ui.platform.LocalResources
 import dev.delugelauncher.ui.common.topBarInsets
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -586,17 +587,18 @@ private fun NetworkToggle(blocked: Boolean, enabled: Boolean, onClick: () -> Uni
 @Composable
 private fun statusLine(status: NetworkStatus): String {
     val context = LocalContext.current
+    val resources = LocalResources.current
     val parts = buildList {
         if (status.applied.isNotEmpty()) {
-            add(context.getString(R.string.network_status_applied, status.applied.size))
+            add(resources.getString(R.string.network_status_applied, status.applied.size))
         }
         if (status.pending.isNotEmpty()) {
-            add(context.getString(R.string.network_status_pending, status.pending.size))
+            add(resources.getString(R.string.network_status_pending, status.pending.size))
         }
         if (status.unknown.isNotEmpty()) {
-            add(context.getString(R.string.network_status_unknown, status.unknown.size))
+            add(resources.getString(R.string.network_status_unknown, status.unknown.size))
         }
-        if (isEmpty()) add(context.getString(R.string.network_status_none))
+        if (isEmpty()) add(resources.getString(R.string.network_status_none))
     }
     return parts.joinToString(" · ")
 }

@@ -1,0 +1,1811 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 9.4.0" type="baseline" client="gradle" dependencies="false" name="AGP (9.4.0)" variant="all" version="9.4.0">
+
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                valueLabel = { String.format(&quot;%02d:00&quot;, it.roundToInt()) },"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/settings/SettingsScreen.kt"
+            line="700"
+            column="32"/>
+    </issue>
+    <issue
+        id="DefaultLocale"
+        message="Implicitly using the default locale is a common source of bugs: Use `String.format(Locale, ...)` instead"
+        errorLine1="                valueLabel = { String.format(&quot;%02d:00&quot;, it.roundToInt()) },"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/settings/SettingsScreen.kt"
+            line="712"
+            column="32"/>
+    </issue>
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 35 (current min is 26): `android.os.UserManager#USER_TYPE_PROFILE_MANAGED`"
+        errorLine1="        return type == UserManager.USER_TYPE_PROFILE_MANAGED"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/AppRepository.kt"
+            line="390"
+            column="24"/>
+    </issue>
+    <issue
+        id="PrivateApi"
+        message="Accessing internal APIs via reflection is not supported and may not work on all devices or in the future"
+        errorLine1="            val builderClass = Class.forName(&quot;android.content.pm.SuspendDialogInfo\$Builder&quot;)"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/FreezeBinder.kt"
+            line="103"
+            column="32"/>
+    </issue>
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `localeConfig` is only used in API level 33 and higher (current min is 26)"
+        errorLine1="        android:localeConfig=&quot;@xml/locales_config&quot;"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="86"
+            column="9"/>
+    </issue>
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `targetCellWidth` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:targetCellWidth=&quot;3&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_clock_info.xml"
+            line="5"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `targetCellHeight` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:targetCellHeight=&quot;2&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_clock_info.xml"
+            line="6"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `previewLayout` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="    android:previewLayout=&quot;@layout/widget_clock&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_clock_info.xml"
+            line="10"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `widgetFeatures` is only used in API level 28 and higher (current min is 26)"
+        errorLine1="    android:widgetFeatures=&quot;reconfigurable|configuration_optional&quot;"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/xml/widget_clock_info.xml"
+            line="12"
+            column="5"/>
+    </issue>
+    <issue
+        id="AppBundleLocaleChanges"
+        message="Found dynamic locale changes, but did not find corresponding Play Core library calls for downloading languages and splitting by language is not disabled in the `bundle` configuration"
+        errorLine1="            val config = Configuration(res.configuration).apply { setLocale(Locale.ENGLISH) }"
+        errorLine2="                                                                  ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/AppRepository.kt"
+            line="1338"
+            column="67"/>
+    </issue>
+    <issue
+        id="AndroidGradlePluginVersion"
+        message="A newer version of Gradle than 9.8.1 is available: 9.9.2"
+        errorLine1="distributionUrl=https\://services.gradle.org/distributions/gradle-9.8.1-bin.zip"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="gradle/wrapper/gradle-wrapper.properties"
+            line="3"
+            column="17"/>
+    </issue>
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.compose:compose-bom than 2026.06.01 is available: 2026.11.01"
+        errorLine1="composeBom = &quot;2026.06.01&quot;"
+        errorLine2="             ~~~~~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="6"
+            column="14"/>
+    </issue>
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.lifecycle:lifecycle-runtime-ktx than 2.11.0 is available: 2.11.1"
+        errorLine1="lifecycleRuntimeKtx = &quot;2.11.0&quot;"
+        errorLine2="                      ~~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="8"
+            column="23"/>
+    </issue>
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.datastore:datastore-preferences than 1.2.1 is available: 1.3.0"
+        errorLine1="datastorePreferences = &quot;1.2.1&quot;"
+        errorLine2="                       ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="10"
+            column="24"/>
+    </issue>
+    <issue
+        id="GradleDependency"
+        message="A newer version of androidx.test.uiautomator:uiautomator than 2.4.0 is available: 2.4.1"
+        errorLine1="androidxTestUiautomator = &quot;2.4.0&quot;"
+        errorLine2="                          ~~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="24"
+            column="27"/>
+    </issue>
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.lsposed.hiddenapibypass:hiddenapibypass than 6.1 is available: 6.2"
+        errorLine1="hiddenApiBypass = &quot;6.1&quot;"
+        errorLine2="                  ~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="13"
+            column="19"/>
+    </issue>
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.robolectric:robolectric than 4.17 is available: 4.18.1"
+        errorLine1="robolectric = &quot;4.17&quot;"
+        errorLine2="              ~~~~~~">
+        <location
+            file="gradle/libs.versions.toml"
+            line="19"
+            column="15"/>
+    </issue>
+    <issue
+        id="ComposableNaming"
+        message="Composable functions with a return type should start with a lowercase letter"
+        errorLine1="fun FolderIconImage(override: String, sizeDp: Int, modifier: Modifier = Modifier): Boolean {"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/FolderIconImage.kt"
+            line="25"
+            column="5"/>
+    </issue>
+    <issue
+        id="ConfigurationScreenWidthHeight"
+        message="Using Configuration.screenHeightDp instead of LocalWindowInfo.current.containerSize"
+        errorLine1="            rootHeightDp = LocalConfiguration.current.screenHeightDp.dp"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/test/java/dev/delugelauncher/ui/home/HomeFolderExpandScrollTest.kt"
+            line="81"
+            column="28"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/applist/AppListScreen.kt"
+            line="2652"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/applist/EdgeScrubber.kt"
+            line="154"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/applist/EdgeTouchZone.kt"
+            line="115"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be named modifier"
+        errorLine1="    dragHandle: Modifier?,"
+        errorLine2="    ~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/home/HomeScreen.kt"
+            line="1837"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be named modifier"
+        errorLine1="    dragHandle: Modifier?,"
+        errorLine2="    ~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/home/HomeScreen.kt"
+            line="2198"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be named modifier"
+        errorLine1="    controlsInset: Modifier,"
+        errorLine2="    ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/home/HomeScreen.kt"
+            line="2891"
+            column="5"/>
+    </issue>
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/media/NowPlayingWidget.kt"
+            line="116"
+            column="5"/>
+    </issue>
+    <issue
+        id="DiscouragedApi"
+        message="Use of this function is discouraged because resource reflection makes it harder to perform build optimizations and compile-time verification of code. It is much more efficient to retrieve resources by identifier (e.g. `R.foo.bar`) than by name (e.g. `getIdentifier(&quot;bar&quot;, &quot;foo&quot;, null)`)."
+        errorLine1="            val xmlResId = res.getIdentifier(&quot;appfilter&quot;, &quot;xml&quot;, packPackage)"
+        errorLine2="                               ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/IconPackRepository.kt"
+            line="63"
+            column="32"/>
+    </issue>
+    <issue
+        id="DiscouragedApi"
+        message="Use of this function is discouraged because resource reflection makes it harder to perform build optimizations and compile-time verification of code. It is much more efficient to retrieve resources by identifier (e.g. `R.foo.bar`) than by name (e.g. `getIdentifier(&quot;bar&quot;, &quot;foo&quot;, null)`)."
+        errorLine1="            val drawableXml = res.getIdentifier(&quot;drawable&quot;, &quot;xml&quot;, packPackage)"
+        errorLine2="                                  ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/IconPackRepository.kt"
+            line="105"
+            column="35"/>
+    </issue>
+    <issue
+        id="DiscouragedApi"
+        message="Use of this function is discouraged because resource reflection makes it harder to perform build optimizations and compile-time verification of code. It is much more efficient to retrieve resources by identifier (e.g. `R.foo.bar`) than by name (e.g. `getIdentifier(&quot;bar&quot;, &quot;foo&quot;, null)`)."
+        errorLine1="            val resId = res.getIdentifier(drawableName, &quot;drawable&quot;, packPackage)"
+        errorLine2="                            ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/IconPackRepository.kt"
+            line="128"
+            column="29"/>
+    </issue>
+    <issue
+        id="DiscouragedApi"
+        message="Use of this function is discouraged because resource reflection makes it harder to perform build optimizations and compile-time verification of code. It is much more efficient to retrieve resources by identifier (e.g. `R.foo.bar`) than by name (e.g. `getIdentifier(&quot;bar&quot;, &quot;foo&quot;, null)`)."
+        errorLine1="            val resId = res.getIdentifier(drawableName, &quot;drawable&quot;, packPackage)"
+        errorLine2="                            ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/IconPackRepository.kt"
+            line="141"
+            column="29"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_notification_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="541"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_notification_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="541"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_notification_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="541"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_minutes&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="545"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_minutes&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="545"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_minutes&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="545"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_hours&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="549"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_hours&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="549"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_hours&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="549"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;settings_frequent_excluded_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="553"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;settings_frequent_excluded_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="553"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;settings_frequent_excluded_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="553"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;rules_tokens_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="772"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;rules_tokens_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="772"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;rules_tokens_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="772"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;es&quot; (Spanish) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;settings_favorite_rules_on&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-es/strings.xml"
+            line="776"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;fr&quot; (French) the following quantity should also be defined: `many` (e.g. &quot;1000000 de jours&quot;)"
+        errorLine1="    &lt;plurals name=&quot;settings_favorite_rules_on&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-fr/strings.xml"
+            line="776"
+            column="5"/>
+    </issue>
+    <issue
+        id="MissingQuantity"
+        message="For locale &quot;pt&quot; (Portuguese) the following quantity should also be defined: `many`"
+        errorLine1="    &lt;plurals name=&quot;settings_favorite_rules_on&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-pt-rBR/strings.xml"
+            line="776"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;selected&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;tag_selected_count&quot;>%1$d selected&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="45"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;options&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_section_count&quot;>%1$d options&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="165"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;hidden&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;hidden_count&quot;>%1$d hidden from the app list&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="332"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;hidden&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_hidden_count&quot;>%1$d hidden&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="335"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;frozen&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_freeze_count&quot;>%1$d frozen&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="341"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_many_done&quot;>Froze %1$d apps&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="351"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;selected&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_selected_count&quot;>%1$d selected&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="355"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_select_all_body&quot;>%1$d apps will join the freeze list under %2$s. Nothing is frozen yet — run Freeze all when you are ready. System apps are included: freezing the wrong one can stop the device from booting.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="357"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_invert_body&quot;>%1$d apps will join the list under %3$s, and %2$d will leave it. Apps that leave and are frozen now will be unfrozen. Apps on another method\&apos;s list are left alone.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="359"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_invert_failed&quot;>%1$d apps could not be unfrozen while inverting, so they stay on the list.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="360"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_disabled_done&quot;>App freezing is off. %1$d apps unfrozen and the list cleared.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="364"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_disable_failed&quot;>%1$d apps could not be unfrozen, so app freezing stays on.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="365"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_added_done&quot;>%1$d apps added to the list&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="371"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;minutes&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_auto_delay_minutes&quot;>%1$d minutes&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="382"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;seconds&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_auto_delay_seconds&quot;>%1$d seconds&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="383"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;listed&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_all_confirm_body&quot;>Put all %1$d listed apps to sleep?&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="394"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;listed&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;unfreeze_all_confirm_body&quot;>Wake all %1$d listed apps?&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="395"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_many_partial&quot;>Froze %1$d apps; %2$d could not be&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="397"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;unfreeze_many_partial&quot;>Woke %1$d apps; %2$d could not be&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="398"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;system&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_system_unfreeze_failed&quot;>%1$d system apps could not be unfrozen, so system apps stay shown.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="454"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;unfrozen&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_system_disabled_done&quot;>System apps hidden; %1$d unfrozen.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="455"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_auto_done&quot;>Frozen %1$d apps after the screen went off.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="461"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_auto_failed&quot;>%1$d apps could not be frozen.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="463"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;could&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;settings_import_partial&quot;>Settings restored, but %1$d could not be applied&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="524"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;folder_picker_app_count&quot;>%1$d apps&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="567"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_import_done&quot;>Added %1$d apps to the freeze list&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="711"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;opens&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;rules_summary_limit&quot;>%1$d opens a day&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="774"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_folder_done&quot;>%1$d apps frozen&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="797"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_folder_skipped&quot;>%1$d apps left alone, not on the freeze list&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="798"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_folder_released&quot;>%1$d apps released&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="799"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;failed&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_folder_failed&quot;>%1$d failed&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="800"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;offline&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;network_status_applied&quot;>%1$d offline&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="825"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;waiting&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;network_status_pending&quot;>%1$d waiting&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="826"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;unconfirmed&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;network_status_unknown&quot;>%1$d unconfirmed&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="827"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;asleep&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_rule_done&quot;>Sleep rule: %1$d asleep, %2$d awake&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="877"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;put&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;sleep_run_line&quot;>%1$d put to sleep, %2$d woken&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="896"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;rules&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;sleep_rules_full&quot;>A maximum of %1$d rules. Delete one to add another.&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="906"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;handover_enter_done&quot;>%1$d apps asleep while the phone is handed over&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="928"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;handover_exit_done&quot;>%1$d apps woken up&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="929"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;unfrozen&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_unfrozen_pinned&quot;>%1$d unfrozen, %2$d kept frozen&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1041"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_bulk_changed&quot;>Updated %1$d apps&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1048"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;not&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_bulk_unlisted&quot;>%1$d not on the list were skipped&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1061"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;frozen&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_state_title&quot;>%1$d frozen&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1087"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;permanent&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;freeze_state_body&quot;>%1$d on the list · %2$d permanent&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1088"
+            column="5"/>
+    </issue>
+    <issue
+        id="PluralsCandidate"
+        message="Formatting %d followed by words (&quot;apps&quot;): This should probably be a plural rather than a string"
+        errorLine1="    &lt;string name=&quot;folder_open_label&quot;>Open folder, %1$d apps&lt;/string>"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1107"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;ja&quot; (Japanese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_notification_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="541"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;ja&quot; (Japanese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_minutes&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="545"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;ja&quot; (Japanese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_hours&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="549"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;ja&quot; (Japanese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;settings_frequent_excluded_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-ja/strings.xml"
+            line="553"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;zh&quot; (Chinese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_notification_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="644"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;zh&quot; (Chinese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_minutes&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="648"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;zh&quot; (Chinese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;widget_clock_event_in_hours&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="652"
+            column="5"/>
+    </issue>
+    <issue
+        id="UnusedQuantity"
+        message="For language &quot;zh&quot; (Chinese) the following quantities are not relevant: `one`"
+        errorLine1="    &lt;plurals name=&quot;settings_frequent_excluded_count&quot;>"
+        errorLine2="    ^">
+        <location
+            file="src/main/res/values-zh-rCN/strings.xml"
+            line="656"
+            column="5"/>
+    </issue>
+    <issue
+        id="ExportedReceiver"
+        message="Exported receiver does not require permission"
+        errorLine1="        &lt;receiver"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="180"
+            column="10"/>
+    </issue>
+    <issue
+        id="ExportedReceiver"
+        message="Exported receiver does not require permission"
+        errorLine1="        &lt;receiver"
+        errorLine2="         ~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="260"
+            column="10"/>
+    </issue>
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `NotificationGateway` which has field `listener` pointing to `NotificationListenerService`); this is a memory leak"
+        errorLine1="/**"
+        errorLine2="^">
+        <location
+            file="src/main/java/dev/delugelauncher/media/NotificationPanelBus.kt"
+            line="77"
+            column="1"/>
+    </issue>
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields; this is a memory leak"
+        errorLine1="    @Volatile"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/dev/delugelauncher/media/NotificationPanelBus.kt"
+            line="85"
+            column="5"/>
+    </issue>
+    <issue
+        id="StaticFieldLeak"
+        message="Do not place Android context classes in static fields (static reference to `FreezeShell` which has field `context` pointing to `Context`); this is a memory leak"
+        errorLine1="    /** Probes root once per process; a refused prompt is retried by FreezeShell. */"
+        errorLine2="    ^">
+        <location
+            file="src/main/java/dev/delugelauncher/service/SystemUi.kt"
+            line="37"
+            column="5"/>
+    </issue>
+    <issue
+        id="FrequentlyChangingValue"
+        message="Reading a value annotated with @FrequentlyChangingValue inside composition"
+        errorLine1="                    if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {"
+        errorLine2="                                  ~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/freeze/FreezeAppsScreen.kt"
+            line="525"
+            column="35"/>
+    </issue>
+    <issue
+        id="FrequentlyChangingValue"
+        message="Reading a value annotated with @FrequentlyChangingValue inside composition"
+        errorLine1="                    if (listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0) {"
+        errorLine2="                                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/freeze/FreezeAppsScreen.kt"
+            line="525"
+            column="74"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="            var panelResumeTick by remember { mutableStateOf(0) }"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/DelugeNavHost.kt"
+            line="1537"
+            column="47"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="            var settingsResumeTick by remember { mutableStateOf(0) }"
+        errorLine2="                                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/DelugeNavHost.kt"
+            line="1653"
+            column="50"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var resumeTick by remember { mutableStateOf(0) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/home/HomeRoute.kt"
+            line="462"
+            column="34"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="            var width by remember { mutableStateOf(1) }"
+        errorLine2="                                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/home/HomeScreen.kt"
+            line="3147"
+            column="37"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    private var homeIntentTick by mutableStateOf(0)"
+        errorLine2="                                  ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/MainActivity.kt"
+            line="91"
+            column="35"/>
+    </issue>
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var menuForId by remember { mutableStateOf(-1) }"
+        errorLine2="                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/widget/WidgetSlot.kt"
+            line="140"
+            column="33"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.mipmap.ic_launcher_round` appears to be unused"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml"
+            line="2"
+            column="1"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.integer.app_open_slide_ms` appears to be unused"
+        errorLine1="    &lt;integer name=&quot;app_open_slide_ms&quot;>220&lt;/integer>"
+        errorLine2="             ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/integers.xml"
+            line="4"
+            column="14"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_freeze_enable` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_freeze_enable&quot;>Enable app freezing&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="338"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.settings_freeze_enable_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;settings_freeze_enable_detail&quot;>Turning this off unfreezes everything and clears the list. Its rows and actions disappear.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="339"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_listed_with` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_listed_with&quot;>Listed as %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="352"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_invert` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_invert&quot;>Invert&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="354"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_select_all_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_select_all_title&quot;>Add every app?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="356"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_select_all_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_select_all_body&quot;>%1$d apps will join the freeze list under %2$s. Nothing is frozen yet — run Freeze all when you are ready. System apps are included: freezing the wrong one can stop the device from booting.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="357"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_invert_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_invert_title&quot;>Invert the selection?&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="358"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_invert_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_invert_body&quot;>%1$d apps will join the list under %3$s, and %2$d will leave it. Apps that leave and are frozen now will be unfrozen. Apps on another method\&apos;s list are left alone.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="359"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_invert_failed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_invert_failed&quot;>%1$d apps could not be unfrozen while inverting, so they stay on the list.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="360"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_list_section` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_list_section&quot;>In the list (%1$d)&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="366"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_added_done` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_added_done&quot;>%1$d apps added to the list&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="371"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_menu_keep` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_menu_keep&quot;>Keep frozen when unfreezing all&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="374"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_menu_unkeep` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_menu_unkeep&quot;>Don\&apos;t keep frozen&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="375"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_auto_enable_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_auto_enable_detail&quot;>Keeps a background service running, with a notification, while this is on.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="379"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_value_suffix` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_value_suffix&quot;> · %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="396"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_recommend_shizuku` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_recommend_shizuku&quot;>Recommended: Shizuku — no root needed, and freezing is faster than through su.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="400"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_grant_shizuku` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_grant_shizuku&quot;>Grant Shizuku&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="401"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_open_shizuku` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_open_shizuku&quot;>Open Shizuku&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="402"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_shizuku_missing` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_shizuku_missing&quot;>Shizuku is not installed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="403"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_hide_needs_root` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_hide_needs_root&quot;>Hiding apps needs root or the device owner. Disable and Suspend work without either.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="404"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_title&quot;>Stronger isolation: Private space&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="405"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_body` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_body&quot;>Android 15\&apos;s Private space is a separate profile with its own copy of each app. While it is locked, those apps are stopped and invisible to Deluge, other apps, search, recents and notifications.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="406"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_how` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_how&quot;>Deluge shows the space as a padlock row at the end of the app list while it is your default launcher; tap it to unlock. Apps have to be installed again inside.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="407"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_note` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_note&quot;>Unlike hiding, this is a real boundary: other apps cannot enumerate it. One space per device, main user only; it can share the phone with a work profile.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="408"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_open` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_open&quot;>Open Private space settings&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="409"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_private_space_missing` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_private_space_missing&quot;>This system has no Private space settings page.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="410"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_add_section` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_add_section&quot;>Other apps&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="411"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_tab_empty` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_tab_empty&quot;>No apps frozen this way&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="412"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_system_warning` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_system_warning&quot;>Freezing or hiding system apps can stop the device from booting. Only do it if you know how to recover.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="413"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_method_pros` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_method_pros&quot;>Advantage: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="433"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_method_cons` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_method_cons&quot;>Drawback: %1$s&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="434"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_system_apps_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_system_apps_detail&quot;>Off by default. System apps are left out of the freeze list.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="446"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_auto_skip_foreground_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_auto_skip_foreground_detail&quot;>Read through root or Shizuku, so no usage-access permission is needed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="458"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_auto_skip_notifications_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_auto_skip_notifications_detail&quot;>Read through root or Shizuku, so no notification-listener permission is needed.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="460"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.access_summary_ready` appears to be unused"
+        errorLine1="    &lt;string name=&quot;access_summary_ready&quot;>Ready&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1010"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.access_summary_not_installed` appears to be unused"
+        errorLine1="    &lt;string name=&quot;access_summary_not_installed&quot;>Not installed&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1011"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_channel_active` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_channel_active&quot;>Freezing through %1$s.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1012"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_method_needs_shell` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_method_needs_shell&quot;>This method needs root or Shizuku; the device owner cannot disable or force-stop apps.&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1013"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_access_details` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_access_details&quot;>Details&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1059"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_filter_state` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_filter_state&quot;>Status&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1064"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_sort_label` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_sort_label&quot;>Sort&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1065"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_method_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_method_title&quot;>Freeze method&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1067"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_permanent_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_permanent_detail&quot;>Only a single unfreeze lifts it&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1068"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_now` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_now&quot;>Frozen now&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1069"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_now_detail` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_now_detail&quot;>Turning it off thaws the app; the list keeps it&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1070"
+            column="13"/>
+    </issue>
+    <issue
+        id="UnusedResources"
+        message="The resource `R.string.freeze_entries_title` appears to be unused"
+        errorLine1="    &lt;string name=&quot;freeze_entries_title&quot;>Access&lt;/string>"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/res/values/strings.xml"
+            line="1089"
+            column="13"/>
+    </issue>
+    <issue
+        id="MonochromeLauncherIcon"
+        message="The application adaptive icon is missing a monochrome tag"
+        errorLine1="&lt;adaptive-icon xmlns:android=&quot;http://schemas.android.com/apk/res/android&quot;>"
+        errorLine2="^">
+        <location
+            file="src/main/res/mipmap-anydpi-v26/ic_launcher.xml"
+            line="2"
+            column="1"/>
+    </issue>
+    <issue
+        id="ReportShortcutUsage"
+        message="Calling this method indicates use of dynamic shortcuts, but there are no calls to methods that track shortcut usage, such as `pushDynamicShortcut` or `reportShortcutUsed`. Calling these methods is recommended, as they track shortcut usage and allow launchers to adjust which shortcuts appear based on activation history. Please see https://developer.android.com/develop/ui/views/launch/shortcuts/managing-shortcuts#track-usage"
+        errorLine1="            manager.dynamicShortcuts = listOf("
+        errorLine2="            ^">
+        <location
+            file="src/main/java/dev/delugelauncher/service/FreezeShortcuts.kt"
+            line="40"
+            column="13"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="        val uri = Uri.parse(override)"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/AppIcon.kt"
+            line="610"
+            column="19"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/widget/ClockWidgetConfig.kt"
+            line="171"
+            column="13"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/widget/ClockWidgetConfig.kt"
+            line="207"
+            column="13"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/widget/ClockWidgetWeather.kt"
+            line="57"
+            column="9"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                Intent(Intent.ACTION_VIEW, Uri.parse(UpdateChecker.RELEASES_URL))"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/DelugeNavHost.kt"
+            line="277"
+            column="44"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                    Intent(Intent.ACTION_VIEW, Uri.parse(&quot;https://shizuku.rikka.app/download/&quot;))"
+        errorLine2="                                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/DelugeNavHost.kt"
+            line="2961"
+            column="48"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="    val bleed = Bitmap.createBitmap(full, full, Bitmap.Config.ARGB_8888)"
+        errorLine2="                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/IconStyling.kt"
+            line="72"
+            column="17"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="    val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/IconStyling.kt"
+            line="79"
+            column="15"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="    val bitmap = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)"
+        errorLine2="                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/IconStyling.kt"
+            line="90"
+            column="18"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX function `createBitmap` instead?"
+        errorLine1="    val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)"
+        errorLine2="              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/common/IconStyling.kt"
+            line="110"
+            column="15"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        context.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().apply {"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/data/LanguagePrefs.kt"
+            line="33"
+            column="9"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            getSharedPreferences(NotificationCountBus.PERSIST_FILE, MODE_PRIVATE).edit()"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/media/NowPlayingListenerService.kt"
+            line="271"
+            column="13"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))"
+        errorLine2="                                           ~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/ui/settings/SettingsScreen.kt"
+            line="538"
+            column="44"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            seen.edit().putInt(A11Y_NUDGED_KEY, BuildConfig.VERSION_CODE).apply()"
+        errorLine2="            ~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/service/SystemUi.kt"
+            line="166"
+            column="13"/>
+    </issue>
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            context.getSharedPreferences(A11Y_SEEN_FILE, Context.MODE_PRIVATE)"
+        errorLine2="            ^">
+        <location
+            file="src/main/java/dev/delugelauncher/service/SystemUi.kt"
+            line="177"
+            column="13"/>
+    </issue>
+    <issue
+        id="ClickableViewAccessibility"
+        message="Custom view `LongPressFrameLayout` overrides `onTouchEvent` but not `performClick`"
+        errorLine1="    override fun onTouchEvent(event: MotionEvent): Boolean {"
+        errorLine2="                 ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/dev/delugelauncher/widget/LongPressFrameLayout.kt"
+            line="161"
+            column="18"/>
+    </issue>
+
+</issues>

@@ -2,8 +2,9 @@ name: Release
 
 on:
   push:
-    # Current tags are plain integers (= versionCode); v19-v23 are the old style.
-    tags: ['v*', '[0-9]*']
+    # Plain integer tags only (= versionCode). The inherited upstream semver tags and the
+    # old v-prefixed ones must never start a signed release of this fork.
+    tags: ['[0-9]', '[0-9][0-9]']
 
 permissions:
   contents: write

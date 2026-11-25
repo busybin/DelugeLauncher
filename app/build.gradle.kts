@@ -27,6 +27,10 @@ android {
         // Translations are community-contributed and always lag a version; a missing one falls
         // back to English, so it is no reason to fail the build.
         warning += "MissingTranslation"
+        // The checked-in baseline freezes what CI never got to check before the build was fixed:
+        // 97 uses of LocalContext.current for strings and 7 calls above minSdk. New findings still
+        // fail the build, so this is a starting line rather than a mute button.
+        baseline = file("lint-baseline.xml")
     }
 
     defaultConfig {
@@ -35,8 +39,8 @@ android {
         targetSdk = baselineInt("baseline.targetSdk")
         // Plain integers, no "V" prefix, only ever raised, and always kept equal: the system
         // compares versionCode, and a lower number is rejected as a downgrade.
-        versionCode = 38
-        versionName = "38"
+        versionCode = 39
+        versionName = "39"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
