@@ -135,6 +135,7 @@ fun IconShape.labelRes(): Int = when (this) {
 fun IconSide.labelRes(): Int = when (this) {
     IconSide.LEFT -> R.string.alignment_left
     IconSide.RIGHT -> R.string.alignment_right
+    IconSide.BELOW -> R.string.alignment_below
 }
 
 @StringRes

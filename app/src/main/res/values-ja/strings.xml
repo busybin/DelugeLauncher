@@ -403,6 +403,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">左</string>
+    <string name="alignment_below">下</string>
+    <string name="settings_icon_side_detail">「下」はアプリ一覧だけに適用され、ホーム画面はそのままです。</string>
     <string name="alignment_center">中央</string>
     <string name="alignment_right">右</string>
 
@@ -663,6 +665,8 @@
     <string name="settings_developer_mode">開発者モード</string>
     <string name="settings_developer_mode_detail">スクショ用にアプリ名とアイコンを偽装し、ステータスバーを隠します。</string>
     <string name="developer_unlocked">開発者モードを有効化</string>
+    <string name="settings_always_dark">常にダーク</string>
+    <string name="settings_always_dark_detail">システム設定も夜間スケジュールも無視して、常にダークテーマのままにします。</string>
     <string name="settings_auto_dark">夜間ダークテーマ</string>
     <string name="settings_auto_dark_detail">システムに従わず、夜はダーク・朝はライトに切り替えます。</string>
     <string name="settings_reduce_motion">モーション軽減</string>

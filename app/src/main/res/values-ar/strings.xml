@@ -196,6 +196,8 @@
     <string name="settings_developer_mode_detail">يخفي أسماء التطبيقات وأيقوناتها الحقيقية عند أخذ لقطات الشاشة، ويخفي شريط الحالة.</string>
     <string name="developer_unlocked">تم فتح وضع المطوّر</string>
     <string name="settings_wallpaper_blur">تمويه الخلفية</string>
+    <string name="settings_always_dark">داكن دائمًا</string>
+    <string name="settings_always_dark_detail">أبقِ المظهر الداكن في كل الأوقات، دون اتباع النظام أو جدول الليل.</string>
     <string name="settings_auto_dark">المظهر الداكن ليلًا</string>
     <string name="settings_auto_dark_detail">التبديل إلى المظهر الداكن مساءً والعودة عنه صباحًا، بدلًا من اتباع النظام.</string>
     <string name="settings_night_start">بداية الليل</string>
@@ -523,6 +525,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">يسار</string>
+    <string name="alignment_below">أسفل</string>
+    <string name="settings_icon_side_detail">«أسفل» يخص قائمة التطبيقات فقط، وتبقى الشاشة الرئيسية كما هي.</string>
     <string name="alignment_center">وسط</string>
     <string name="alignment_right">يمين</string>
 

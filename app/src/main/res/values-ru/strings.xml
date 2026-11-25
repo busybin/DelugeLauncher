@@ -403,6 +403,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">Влево</string>
+    <string name="alignment_below">Снизу</string>
+    <string name="settings_icon_side_detail">«Снизу» действует только в списке; главный экран остаётся как был.</string>
     <string name="alignment_center">По центру</string>
     <string name="alignment_right">Вправо</string>
 
@@ -671,6 +673,8 @@
     <string name="settings_developer_mode">Режим разработчика</string>
     <string name="settings_developer_mode_detail">Маскирует имена и значки для скриншотов и прячет строку состояния.</string>
     <string name="developer_unlocked">Режим разработчика включён</string>
+    <string name="settings_always_dark">Всегда тёмная</string>
+    <string name="settings_always_dark_detail">Держит тёмную тему в любое время, не глядя ни на систему, ни на ночное расписание.</string>
     <string name="settings_auto_dark">Тёмная тема ночью</string>
     <string name="settings_auto_dark_detail">Вечером переходит на тёмную, утром обратно, а не следует за системой.</string>
     <string name="settings_reduce_motion">Уменьшить движение</string>

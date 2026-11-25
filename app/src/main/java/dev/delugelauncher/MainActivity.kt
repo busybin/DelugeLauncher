@@ -192,13 +192,15 @@ class MainActivity : ComponentActivity() {
 
             // Dark by the clock rather than by the system, when asked. Sleeps until the
             // next hour, since whole hours are all the schedule resolves to.
+            val alwaysDark by app.prefs.alwaysDark.collectAsState(initial = false)
             val autoDark by app.prefs.autoDark.collectAsState(initial = false)
             val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
             val nightEndHour by app.prefs.nightEndHour.collectAsState(initial = 7)
             var nightNow by remember { mutableStateOf(isNightHour(nightStartHour, nightEndHour)) }
-            LaunchedEffect(autoDark, nightStartHour, nightEndHour) {
+            LaunchedEffect(alwaysDark, autoDark, nightStartHour, nightEndHour) {
                 nightNow = isNightHour(nightStartHour, nightEndHour)
-                while (autoDark) {
+                // With always-dark on, the schedule has nothing left to decide.
+                while (autoDark && !alwaysDark) {
                     delay(msToNextHour())
                     nightNow = isNightHour(nightStartHour, nightEndHour)
                 }
@@ -247,7 +249,7 @@ class MainActivity : ComponentActivity() {
                 font = font,
                 fontFile = fontFile,
                 scheme = colorSchemeChoice,
-                forceDark = if (autoDark) nightNow else null,
+                forceDark = themeForceDark(alwaysDark, autoDark, nightNow),
             ) {
                 CompositionLocalProvider(
                     LocalIconConfig provides iconConfig,

@@ -2066,7 +2066,7 @@ private fun FolderListRow(
                 HomeAlignment.RIGHT -> Arrangement.End
             },
         ) {
-            val text: @Composable () -> Unit = {
+            val text: @Composable (Modifier) -> Unit = { labelMod ->
                 Text(
                     text = folder.name.ifBlank { stringResource(R.string.folder_unnamed) },
                     color = contentColor,
@@ -2075,21 +2075,36 @@ private fun FolderListRow(
                     // against a name that wraps made the pair look unfinished.
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
+                    modifier = labelMod,
                 )
             }
             val memberDesaturate: (AppInfo) -> Boolean = { member ->
                 frozenLook == FrozenLook.GREYSCALE &&
                     (member.frozen != null || member.suspended || member.quietProfile)
             }
-            if (showIcons && iconSide == IconSide.LEFT) {
-                FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
-                Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
-            }
-            text()
-            if (showIcons && iconSide == IconSide.RIGHT) {
-                Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
-                FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
+            if (showIcons && iconSide == IconSide.BELOW) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = when (alignment) {
+                        HomeAlignment.LEFT -> Alignment.Start
+                        HomeAlignment.CENTER -> Alignment.CenterHorizontally
+                        HomeAlignment.RIGHT -> Alignment.End
+                    },
+                ) {
+                    FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
+                    Spacer(Modifier.height(4.dp))
+                    text(Modifier)
+                }
+            } else {
+                if (showIcons && iconSide == IconSide.LEFT) {
+                    FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
+                    Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
+                }
+                text(Modifier.weight(1f, fill = false))
+                if (showIcons && iconSide == IconSide.RIGHT) {
+                    Spacer(Modifier.width(if (compact) 8.dp else 16.dp))
+                    FolderIcon(members, iconSizeDp, contentColor, folder.icon, memberDesaturate)
+                }
             }
         }
 
@@ -2235,7 +2250,7 @@ private fun AppRow(
             val matched = remember(label, highlightTerm) {
                 if (highlightTerm.isEmpty()) null else Pinyin.highlight(label, highlightTerm)
             }
-            val text: @Composable () -> Unit = {
+            val text: @Composable (Modifier) -> Unit = { labelMod ->
                 // The name, with whatever the query matched picked out. A pinyin hit marks the
                 // characters it was read from, not the letters that were typed — typing "wx"
                 // underlines the Chinese name rather than leaving the row looking unmatched.
@@ -2253,7 +2268,7 @@ private fun AppRow(
                     }
                 }
                 Row(
-                    modifier = labelModifier,
+                    modifier = labelMod,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -2303,15 +2318,32 @@ private fun AppRow(
             val iconModifier = Modifier
                 .pressPop(interaction)
                 .then(if (dimmed) Modifier.graphicsLayer { alpha = 0.5f } else Modifier)
-            if (side == IconSide.RIGHT) {
+            if (showIcons && side == IconSide.BELOW) {
+                // The name sits under the icon instead of beside it: a taller row, but the
+                // icon keeps its full width for the label rather than sharing the line.
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = when (alignment) {
+                        HomeAlignment.LEFT -> Alignment.Start
+                        HomeAlignment.CENTER -> Alignment.CenterHorizontally
+                        HomeAlignment.RIGHT -> Alignment.End
+                    },
+                ) {
+                    AppIcon(app = app, sizeDp = iconSizeDp, desaturate = greyscale, modifier = iconModifier)
+                    Spacer(Modifier.height(4.dp))
+                    // Wrap rather than fill: a filled label would start at the row's edge and
+                    // ignore the column's alignment.
+                    text(Modifier)
+                }
+            } else if (side == IconSide.RIGHT) {
                 balance()
-                text()
+                text(labelModifier)
                 Spacer(Modifier.width(gap))
                 AppIcon(app = app, sizeDp = iconSizeDp, desaturate = greyscale, modifier = iconModifier)
             } else {
                 AppIcon(app = app, sizeDp = iconSizeDp, desaturate = greyscale, modifier = iconModifier)
                 Spacer(Modifier.width(gap))
-                text()
+                text(labelModifier)
                 balance()
             }
         }

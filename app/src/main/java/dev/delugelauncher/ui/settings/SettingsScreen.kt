@@ -300,6 +300,8 @@ class SettingsScreenModel(
     val onOpenNotificationPanel: () -> Unit,
     val frozenLook: FrozenLook,
     val onSetFrozenLook: (FrozenLook) -> Unit,
+    val alwaysDark: Boolean,
+    val onSetAlwaysDark: (Boolean) -> Unit,
     val autoDark: Boolean,
     val onSetAutoDark: (Boolean) -> Unit,
     val nightStartHour: Int,
@@ -637,7 +639,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         SettingsEntry(SettingsSection.LIST_LAYOUT, stringResource(R.string.settings_alignment_applist), "align left right center") {
             AlignmentRow(stringResource(R.string.settings_alignment_applist), appListAlignment, onSetAppListAlignment)
         },
-        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icon_side), "left right") {
+        SettingsEntry(SettingsSection.ICONS_TEXT, stringResource(R.string.settings_icon_side), "left right below") {
             IconSideRow(iconSide, onSetIconSide)
         },
         SettingsEntry(SettingsSection.HOME, stringResource(R.string.settings_show_names), "labels") {
@@ -671,7 +673,17 @@ fun SettingsScreen(model: SettingsScreenModel) {
                 step = 1f,
             )
         },
-        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_auto_dark), "dark night theme schedule") {
+        SettingsEntry(SettingsSection.THEME, stringResource(R.string.settings_always_dark), "dark theme always") {
+            SwitchRowWithDetail(
+                label = stringResource(R.string.settings_always_dark),
+                detail = stringResource(R.string.settings_always_dark_detail),
+                checked = alwaysDark, onCheckedChange = onSetAlwaysDark,
+            )
+        },
+        SettingsEntry(
+            SettingsSection.THEME, stringResource(R.string.settings_auto_dark),
+            "dark night theme schedule", visible = !alwaysDark
+        ) {
             SwitchRowWithDetail(
                 label = stringResource(R.string.settings_auto_dark),
                 detail = stringResource(R.string.settings_auto_dark_detail),
@@ -680,7 +692,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.THEME, stringResource(R.string.settings_night_start),
-            "dark night theme schedule start evening", visible = autoDark) {
+            "dark night theme schedule start evening", visible = autoDark && !alwaysDark) {
             SliderRow(
                 label = stringResource(R.string.settings_night_start),
                 value = nightStartHour.toFloat(),
@@ -692,7 +704,7 @@ fun SettingsScreen(model: SettingsScreenModel) {
         },
         SettingsEntry(
             SettingsSection.THEME, stringResource(R.string.settings_night_end),
-            "dark night theme schedule end morning", visible = autoDark) {
+            "dark night theme schedule end morning", visible = autoDark && !alwaysDark) {
             SliderRow(
                 label = stringResource(R.string.settings_night_end),
                 value = nightEndHour.toFloat(),
@@ -3371,6 +3383,12 @@ private fun AlignmentRow(label: String, selected: HomeAlignment, onSelect: (Home
                 )
             }
         }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.settings_icon_side_detail),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -3408,7 +3426,10 @@ private fun IconSideRow(selected: IconSide, onSelect: (IconSide) -> Unit) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(stringResource(R.string.settings_icon_side), style = MaterialTheme.typography.bodyMedium)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             IconSide.entries.forEach { option ->
                 FilledChip(
                     label = stringResource(option.labelRes()),

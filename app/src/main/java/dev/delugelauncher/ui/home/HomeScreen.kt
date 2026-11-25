@@ -1873,7 +1873,7 @@ private fun FavoriteRow(
 
     // The notification line sits below the row rather than inside its label column, so a long
     // one cannot widen the label and push a centered icon off its mark.
-    val iconLeft = iconSide == IconSide.LEFT && alignment != HomeAlignment.RIGHT
+    val iconLeft = iconSide != IconSide.RIGHT && alignment != HomeAlignment.RIGHT
     val showIconsHere = LocalIconConfig.current.showIcons
     val previewStart = when {
         alignment == HomeAlignment.CENTER -> sidePaddingDp

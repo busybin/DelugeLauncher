@@ -89,7 +89,7 @@ internal fun frozenLookOf(stored: String?, legacyDim: Boolean?): FrozenLook =
 enum class HomeAlignment { LEFT, CENTER, RIGHT }
 
 /** Which side of an app's name its icon sits on. */
-enum class IconSide { LEFT, RIGHT }
+enum class IconSide { LEFT, RIGHT, BELOW }
 
 /** The palette the launcher draws itself in. Deluge blue until told otherwise. */
 enum class ColorSchemeChoice {
@@ -485,6 +485,7 @@ class Prefs(private val context: Context) {
         // Developer mode only: the whole UI at a made-up density, so one phone can stand in
         // for a smaller or larger one. 100 is off.
         val DEV_SCALE_PERCENT = intPreferencesKey("dev_scale_percent")
+        val ALWAYS_DARK = booleanPreferencesKey("always_dark")
         val AUTO_DARK = booleanPreferencesKey("auto_dark")
         val NIGHT_START_HOUR = intPreferencesKey("night_start_hour")
         val NIGHT_END_HOUR = intPreferencesKey("night_end_hour")
@@ -1691,6 +1692,10 @@ class Prefs(private val context: Context) {
             it[Keys.DEV_SCALE_PERCENT] = percent.coerceIn(MIN_DEV_SCALE, MAX_DEV_SCALE)
         }
     }
+
+    /** Dark theme all the time, whatever the system and the night window say. */
+    val alwaysDark: Flow<Boolean> =
+        data.map { it[Keys.ALWAYS_DARK] ?: false }.distinctUntilChanged()
 
     /** Dark theme on a nightly schedule instead of following the system. */
     val autoDark: Flow<Boolean> =
@@ -3003,6 +3008,10 @@ class Prefs(private val context: Context) {
             // Leaving developer mode must not leave the launcher looking like another phone.
             if (!v) pref[Keys.DEV_SCALE_PERCENT] = 100
         }
+    }
+
+    suspend fun setAlwaysDark(v: Boolean) {
+        context.dataStore.edit { it[Keys.ALWAYS_DARK] = v }
     }
 
     suspend fun setAutoDark(v: Boolean) {

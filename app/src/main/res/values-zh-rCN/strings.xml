@@ -179,6 +179,8 @@
     <string name="settings_developer_mode_detail">将应用名和图标伪装以便截图，并隐藏状态栏。</string>
     <string name="developer_unlocked">开发者模式已解锁</string>
     <string name="settings_wallpaper_blur">壁纸模糊</string>
+    <string name="settings_always_dark">常驻深色</string>
+    <string name="settings_always_dark_detail">全天保持深色，既不看系统设置，也不走夜间时段。</string>
     <string name="settings_auto_dark">深色主题（夜间自动）</string>
     <string name="settings_auto_dark_detail">傍晚自动切到深色、早上切回，不跟随系统。</string>
     <string name="settings_night_start">夜间开始</string>
@@ -504,6 +506,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">左</string>
+    <string name="alignment_below">下方</string>
+    <string name="settings_icon_side_detail">「下方」只作用于应用列表，主屏保持原样。</string>
     <string name="alignment_center">居中</string>
     <string name="alignment_right">右</string>
 

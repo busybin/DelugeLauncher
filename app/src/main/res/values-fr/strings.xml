@@ -403,6 +403,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">Gauche</string>
+    <string name="alignment_below">Dessous</string>
+    <string name="settings_icon_side_detail">Dessous ne s\'applique qu\'à la liste ; l\'écran d\'accueil garde ses lignes.</string>
     <string name="alignment_center">Centré</string>
     <string name="alignment_right">Droite</string>
 
@@ -663,6 +665,8 @@
     <string name="settings_developer_mode">Mode développeur</string>
     <string name="settings_developer_mode_detail">Déguise noms et icônes pour les captures et cache la barre d\'état.</string>
     <string name="developer_unlocked">Mode développeur déverrouillé</string>
+    <string name="settings_always_dark">Toujours sombre</string>
+    <string name="settings_always_dark_detail">Garde le thème sombre à toute heure, sans suivre le système ni le programme de nuit.</string>
     <string name="settings_auto_dark">Thème sombre la nuit</string>
     <string name="settings_auto_dark_detail">Passe au sombre le soir et revient le matin, au lieu de suivre le système.</string>
     <string name="settings_reduce_motion">Réduire les animations</string>

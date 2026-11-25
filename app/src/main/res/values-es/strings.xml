@@ -403,6 +403,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">Izquierda</string>
+    <string name="alignment_below">Debajo</string>
+    <string name="settings_icon_side_detail">Debajo solo se aplica a la lista; la pantalla de inicio mantiene sus filas.</string>
     <string name="alignment_center">Centro</string>
     <string name="alignment_right">Derecha</string>
 
@@ -663,6 +665,8 @@
     <string name="settings_developer_mode">Modo desarrollador</string>
     <string name="settings_developer_mode_detail">Disfraza nombres e iconos para capturas y oculta la barra de estado.</string>
     <string name="developer_unlocked">Modo desarrollador desbloqueado</string>
+    <string name="settings_always_dark">Siempre oscuro</string>
+    <string name="settings_always_dark_detail">Mantén el tema oscuro a cualquier hora, sin hacer caso al sistema ni al horario nocturno.</string>
     <string name="settings_auto_dark">Tema oscuro de noche</string>
     <string name="settings_auto_dark_detail">Pasa al tema oscuro por la noche y vuelve por la mañana, en vez de seguir al sistema.</string>
     <string name="settings_reduce_motion">Reducir movimiento</string>

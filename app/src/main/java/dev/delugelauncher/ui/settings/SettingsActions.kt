@@ -175,6 +175,7 @@ class SettingsActionsA(
     val onSetNotificationTextSp: (Int) -> Unit,
     val onSetNotificationPanel: (Boolean) -> Unit,
     val onSetFrozenLook: (FrozenLook) -> Unit,
+    val onSetAlwaysDark: (Boolean) -> Unit,
     val onSetAutoDark: (Boolean) -> Unit,
     val onSetCornerTapAction: (CornerAction) -> Unit,
     val onSetCornerSwipeAction: (CornerAction) -> Unit,

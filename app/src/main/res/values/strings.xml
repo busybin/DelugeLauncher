@@ -198,6 +198,8 @@
     <string name="settings_developer_mode_detail">Disguises app names and icons for screenshots, and hides the status bar.</string>
     <string name="developer_unlocked">Developer mode unlocked</string>
     <string name="settings_wallpaper_blur">Wallpaper blur</string>
+    <string name="settings_always_dark">Always dark</string>
+    <string name="settings_always_dark_detail">Keep the dark theme on at any hour, ignoring both the system setting and the night schedule.</string>
     <string name="settings_auto_dark">Dark theme at night</string>
     <string name="settings_auto_dark_detail">Switch to the dark theme in the evening and back in the morning, instead of following the system.</string>
     <string name="settings_night_start">Night starts</string>
@@ -539,6 +541,8 @@
 
     <!-- Alignment choices -->
     <string name="alignment_left">Left</string>
+    <string name="alignment_below">Below</string>
+    <string name="settings_icon_side_detail">Below applies to the app list; the home screen keeps its rows.</string>
     <string name="alignment_center">Center</string>
     <string name="alignment_right">Right</string>
 

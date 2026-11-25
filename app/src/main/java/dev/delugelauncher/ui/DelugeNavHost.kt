@@ -748,6 +748,7 @@ fun DelugeNavHost(
     val lockedApps = lockedAppsOrNull ?: emptySet()
     val lockLoaded = lockedAppsOrNull != null
     val frozenLook by app.prefs.frozenLook.collectAsState(initial = FrozenLook.DIMMED)
+    val alwaysDark by app.prefs.alwaysDark.collectAsState(initial = false)
     val autoDark by app.prefs.autoDark.collectAsState(initial = false)
     val nightStartHour by app.prefs.nightStartHour.collectAsState(initial = 19)
     val nightEndHour by app.prefs.nightEndHour.collectAsState(initial = 7)
@@ -1723,6 +1724,7 @@ fun DelugeNavHost(
                     onSetShowListHeaders = { scope.launch { app.prefs.setShowListHeaders(it) } },
                     onSetNotificationBadges = { scope.launch { app.prefs.setNotificationBadges(it) } },
                     onSetFrozenLook = { scope.launch { app.prefs.setFrozenLook(it) } },
+                    onSetAlwaysDark = { scope.launch { app.prefs.setAlwaysDark(it) } },
                     onSetAutoDark = { scope.launch { app.prefs.setAutoDark(it) } },
                     onSetCornerTapAction = { scope.launch { app.prefs.setCornerTapAction(it) } },
                     onSetCornerSwipeAction = { scope.launch { app.prefs.setCornerSwipeAction(it) } },
@@ -1971,6 +1973,8 @@ fun DelugeNavHost(
                 onOpenNotificationPanel = { navController.navigate("notifications") },
                 frozenLook = frozenLook,
                 onSetFrozenLook = actionsA.onSetFrozenLook,
+                alwaysDark = alwaysDark,
+                onSetAlwaysDark = actionsA.onSetAlwaysDark,
                 autoDark = autoDark,
                 onSetAutoDark = actionsA.onSetAutoDark,
                 cornerTapAction = cornerTapAction,
