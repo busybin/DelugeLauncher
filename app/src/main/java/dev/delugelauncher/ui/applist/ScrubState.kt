@@ -101,6 +101,27 @@ class ScrubState {
         if (hoverKey != key) hoverKey = key
     }
 
+    /** Where the finger over the list last was, in root pixels. */
+    private var appsX = 0f
+    private var appsY = 0f
+
+    fun noteAppsFinger(x: Float, y: Float) {
+        appsX = x
+        appsY = y
+    }
+
+    /**
+     * Asks the list again what is under the finger.
+     *
+     * The list keeps settling while the finger moves inward, so a row taken at the last move
+     * can have slid away by the time the finger lifts — and that row would be the one opened.
+     * Asked again every frame while the finger is over the list, and once more on release.
+     */
+    fun refreshHover() {
+        val at = appAt ?: return
+        setHover(at(appsX, appsY))
+    }
+
     private var y by mutableFloatStateOf(0f)
 
     // Elastic pull: follows the finger inward, then eases back to the strip on release.

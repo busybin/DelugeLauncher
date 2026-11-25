@@ -179,6 +179,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
@@ -485,6 +486,18 @@ fun AppListScreen(
             appKeyAt(listState, listOrigin, rowsNow.value, x, y, columnOverlapPx)
         }
         onDispose { scrub.appAt = null }
+    }
+
+    // While a finger is over the list the rows keep settling under it, so the row it points
+    // at is asked again every frame — otherwise the highlight, and the app a release opens,
+    // are whatever happened to be there while the list was still moving.
+    LaunchedEffect(scrub) {
+        snapshotFlow { scrub.onApps }.collectLatest { over ->
+            while (over) {
+                scrub.refreshHover()
+                withFrameNanos { }
+            }
+        }
     }
     // Staying on the same app across the 1↔2 column switch: pairing halves the row count,
     // so keeping the raw index would land somewhere unrelated. Anchored by app key instead.
@@ -1667,7 +1680,14 @@ fun AppListScreen(
                     modifier = Modifier
                         .then(if (searching) Modifier.animateItem() else Modifier)
                         .graphicsLayer {
-                            alpha = if (index in highlightRange) 1f else othersAlpha
+                            // Read here rather than in the tween's target: the finger crossing
+                            // onto the list must bring the rows back at once, and this is the
+                            // phase that is certain to see it.
+                            alpha = when {
+                                index in highlightRange -> 1f
+                                scrub.onApps -> 1f
+                                else -> othersAlpha
+                            }
                         },
                 ) {
                 when (cell) {

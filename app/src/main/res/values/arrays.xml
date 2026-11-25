@@ -2,7 +2,7 @@
 <resources>
     <string-array name="changelog_v39">
         <item>Folders can now sit together in a section of their own above A, marked with a dot on the strip instead of taking a letter: Settings › App list › Folders at the top, off by default.</item>
-        <item>An app inside a folder can be left out of its own letter and live only in that folder, while a search still finds it: Settings › App list › Folder apps only in their folder, off by default.</item>
+        <item>An app inside a folder can be left out of its own letter and live only in that folder, while a search still finds it: Settings › App list › Apps only in their folder, off by default.</item>
         <item>Sliding off the letters onto the list and letting go on an app opens it: Settings › A–Z strip › Release to open, off by default.</item>
         <item>The apps inside a folder now follow the list\'s own item spacing.</item>
         <item>An app\'s own shortcut can be pinned to the favorites from its menu, and shows a star once it is.</item>

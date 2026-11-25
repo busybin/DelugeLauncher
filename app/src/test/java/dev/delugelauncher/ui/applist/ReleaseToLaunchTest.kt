@@ -100,4 +100,44 @@ class ReleaseToLaunchTest {
         // In the gutter before the content, which is no cell at all.
         assertFalse(isRightColumn(localX = 20f, contentLeft = 40f, contentWidth = 1000f, overlapPx = 28f))
     }
+
+    @Test
+    fun `the row under a still finger is asked again, not remembered`() {
+        val state = ScrubState()
+        state.begin(EdgeSide.RIGHT)
+        var asked = 0
+        state.appAt = { _, _ -> asked++; if (asked == 1) "com.stale/.Main" else "com.fresh/.Main" }
+        state.updateOnApps(true)
+        state.noteAppsFinger(100f, 300f)
+        state.refreshHover()
+        assertEquals("com.stale/.Main", state.hoverKey)
+        // The list settled under the finger: the same point is a different row now.
+        state.refreshHover()
+        assertEquals("com.fresh/.Main", state.hoverKey)
+        assertEquals(ReleaseEffect.LAUNCH, releaseEffect(state.onApps, state.hoverKey))
+    }
+
+    @Test
+    fun `asking without a list leaves the hover alone`() {
+        val state = ScrubState()
+        state.begin(EdgeSide.RIGHT)
+        state.updateOnApps(true)
+        state.setHover("com.example.alpha/.Main")
+        state.refreshHover()
+        assertEquals("com.example.alpha/.Main", state.hoverKey)
+    }
+
+    @Test
+    fun `letting go decisions come from the refreshed row`() {
+        val state = ScrubState()
+        state.begin(EdgeSide.RIGHT)
+        var key: String? = "com.first/.Main"
+        state.appAt = { _, _ -> key }
+        state.updateOnApps(true)
+        state.noteAppsFinger(0f, 0f)
+        state.refreshHover()
+        key = null // the row under the finger slid away into a heading
+        state.refreshHover()
+        assertEquals(ReleaseEffect.DISMISS, releaseEffect(state.onApps, state.hoverKey))
+    }
 }

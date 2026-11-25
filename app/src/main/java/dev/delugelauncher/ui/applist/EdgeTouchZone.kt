@@ -251,10 +251,12 @@ fun EdgeTouchZone(
                                 )
                                 // The list itself owns the hit test: it is the only thing
                                 // that knows where its rows ended up.
-                                val hit = state.appAt?.invoke(zoneOrigin.x + x, y)
-                                val changed = hit != state.hoverKey
-                                state.setHover(hit)
-                                if (changed && hit != null) HapticUtil.tick(view, hapticFeedback)
+                                state.noteAppsFinger(zoneOrigin.x + x, y)
+                                val before = state.hoverKey
+                                state.refreshHover()
+                                if (state.hoverKey != before && state.hoverKey != null) {
+                                    HapticUtil.tick(view, hapticFeedback)
+                                }
                                 return
                             }
                         }
@@ -362,8 +364,10 @@ fun EdgeTouchZone(
                     }
 
                     cancelHold()
-                    // Read before the spring clears them: letting go over an app opens it, and
-                    // over the list but on nothing takes the list away.
+                    // Asked again before the spring clears anything: the row under a still
+                    // finger can have changed while the list settled, and opening the one it
+                    // was over a moment ago is opening the wrong app.
+                    state.refreshHover()
                     val releasedOn = state.hoverKey
                     val effect = if (releaseToLaunch) {
                         releaseEffect(state.onApps, releasedOn)
