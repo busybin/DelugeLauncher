@@ -11,6 +11,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: No absolute paths
+        # A lint baseline generated on a build machine once carried its $HOME into the
+        # repository; tracked files describe the project, not where it was built.
+        run: |
+          if git grep -nE '\$HOME/|/home/[a-z]' -- . ':!.github/workflows/build.yml'; then
+            echo "::error::a tracked file carries an absolute workspace path"
+            exit 1
+          fi
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
