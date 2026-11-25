@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>A lista pode pôr o ícone acima do nome em vez de ao lado, para nomes longos e telas estreitas.</item>
+        <item>Agora o tema pode ficar escuro a qualquer hora, sem seguir o sistema nem o horário noturno.</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>Arrastar a faixa além do A ou do Z mantém as letras sob o dedo em vez de travá-las na borda, e arrastar para cima além do A não fecha mais a lista: Ajustes › Faixa A–Z › A barra acompanha além das pontas — desligado por padrão.</item>
         <item>Depois do Z a lista avança para o que vem depois da última letra.</item>

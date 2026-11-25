@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>La lista puede poner el icono encima del nombre en vez de al lado, para nombres largos y pantallas estrechas.</item>
+        <item>Ahora el tema puede quedarse oscuro a cualquier hora, sin seguir al sistema ni al horario nocturno.</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>Arrastrar la banda más allá de A o de Z mantiene las letras bajo el dedo en lugar de frenarlas en el borde, y arrastrar hacia arriba más allá de A ya no cierra la lista: Ajustes › Banda A–Z › La barra sigue más allá de los extremos — desactivado por defecto.</item>
         <item>Más allá de Z la lista pasa a lo que viene después de la última letra.</item>

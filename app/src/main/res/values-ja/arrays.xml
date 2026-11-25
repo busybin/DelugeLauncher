@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>アプリ一覧で、アイコンを名前の横ではなく上に置けるようになりました。名前が長いときや画面が狭いときに読みやすくなります。</item>
+        <item>システム設定や夜間スケジュールに関係なく、いつでもダークテーマのままにできるようになりました。</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>A や Z を越えてドラッグすると、文字列は端で止まらず指についてきます。A より上へドラッグしてもリストは閉じません：設定 › A–Z ストリップ › 文字列は端を越えても追従（デフォルトはオフ）。</item>
         <item>Z を越えると最後の文字の先へリストが進みます。</item>

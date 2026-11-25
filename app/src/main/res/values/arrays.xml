@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>The app list can put each icon above its name instead of beside it, for long names and narrow screens.</item>
+        <item>The theme can now stay dark at any hour, without following the system or the night schedule.</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>Dragging the strip past A or Z keeps the letters under your finger instead of stopping at the edge, and dragging up past A no longer closes the list: Settings › A–Z strip › Strip follows past the ends — off by default.</item>
         <item>Past Z carries the list past the last letter, so whatever follows the alphabet is one drag away.</item>

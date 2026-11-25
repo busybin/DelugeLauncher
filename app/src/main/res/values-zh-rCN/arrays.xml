@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>列表里的图标可以放到名字上面，不再只有左右两边；名字长或者屏幕窄时更好读。</item>
+        <item>现在可以把主题固定在深色，不看系统设置，也不走夜间时段。</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>拖过 A 或 Z 时字母条会跟着手指走，不再停在边上；往上拖过 A 也不会再把列表关掉：设置 › 字母条 › 字母条跟随越过两端（默认关闭）。</item>
         <item>拖过 Z 会把列表带到最后一个字母之后，字母区后面的内容一拖就到。</item>

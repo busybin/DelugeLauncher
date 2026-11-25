@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string-array name="changelog_v38">
+        <item>La liste peut placer l\'icône au-dessus du nom plutôt qu\'à côté, pour les noms longs et les écrans étroits.</item>
+        <item>Le thème peut maintenant rester sombre à toute heure, sans suivre le système ni le programme de nuit.</item>
+    </string-array>
     <string-array name="changelog_v37">
         <item>Faire glisser la bande au-delà de A ou de Z garde les lettres sous le doigt au lieu de les bloquer au bord, et glisser vers le haut au-delà de A ne ferme plus la liste : Paramètres › Bande A–Z › La barre suit au-delà des extrémités — désactivée par défaut.</item>
         <item>Au-delà de Z, la liste passe derrière la dernière lettre.</item>
